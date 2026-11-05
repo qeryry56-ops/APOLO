@@ -31,6 +31,66 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Color _blue = Color(0xFFE31B23);
   static const Color _heroBlue = Color(0xFFC81018);
   static const Color _gold = Color(0xFFF5B942);
+  static const Color _border = Color(0xFFEDEFF3);
+
+  static const List<Map<String, dynamic>> _defaultCategories = [
+    {
+      'id': 3,
+      'name_ar': 'سيارات ومركبات',
+      'name_fr': 'Voitures & Auto',
+      'icon': Icons.directions_car_filled_rounded,
+      'bg': 0xFFFEECEE,
+      'tint': 0xFFE31B23,
+    },
+    {
+      'id': 2,
+      'name_ar': 'عقارات وشقق',
+      'name_fr': 'Immobilier',
+      'icon': Icons.home_work_rounded,
+      'bg': 0xFFEFF6FF,
+      'tint': 0xFF2563EB,
+    },
+    {
+      'id': 1,
+      'name_ar': 'هواتف وإلكترونيات',
+      'name_fr': 'Téléphones & Tech',
+      'icon': Icons.smartphone_rounded,
+      'bg': 0xFFF5F3FF,
+      'tint': 0xFF7C3AED,
+    },
+    {
+      'id': 4,
+      'name_ar': 'حواسيب ومعدات',
+      'name_fr': 'Informatique',
+      'icon': Icons.laptop_mac_rounded,
+      'bg': 0xFFECFDF5,
+      'tint': 0xFF059669,
+    },
+    {
+      'id': 5,
+      'name_ar': 'أثاث وديكور',
+      'name_fr': 'Maison & Déco',
+      'icon': Icons.chair_rounded,
+      'bg': 0xFFFFFBEB,
+      'tint': 0xFFD97706,
+    },
+    {
+      'id': 6,
+      'name_ar': 'أزياء وموضة',
+      'name_fr': 'Mode & Beauté',
+      'icon': Icons.shopping_bag_rounded,
+      'bg': 0xFFFDF2F8,
+      'tint': 0xFFDB2777,
+    },
+    {
+      'id': 7,
+      'name_ar': 'وظائف وخدمات',
+      'name_fr': 'Emploi & Services',
+      'icon': Icons.work_rounded,
+      'bg': 0xFFF0FDF4,
+      'tint': 0xFF16A34A,
+    },
+  ];
 
   static const List<Map<String, String>> _fallbackPopular = [
     {
@@ -98,6 +158,41 @@ class _HomeScreenState extends State<HomeScreen> {
     return raw.split(' ').first;
   }
 
+  IconData _iconForCategory(String name, int idx) {
+    final lower = name.toLowerCase();
+    if (lower.contains('voiture') || lower.contains('auto') || lower.contains('moto') || lower.contains('سيار') || lower.contains('مركبات')) {
+      return Icons.directions_car_filled_rounded;
+    }
+    if (lower.contains('immo') || lower.contains('appart') || lower.contains('villa') || lower.contains('عقار') || lower.contains('شقق')) {
+      return Icons.home_work_rounded;
+    }
+    if (lower.contains('télé') || lower.contains('phone') || lower.contains('tech') || lower.contains('هواتف') || lower.contains('إلكترون')) {
+      return Icons.smartphone_rounded;
+    }
+    if (lower.contains('info') || lower.contains('pc') || lower.contains('حواسيب')) {
+      return Icons.laptop_mac_rounded;
+    }
+    if (lower.contains('maison') || lower.contains('meuble') || lower.contains('أثاث') || lower.contains('منزل')) {
+      return Icons.chair_rounded;
+    }
+    if (lower.contains('mode') || lower.contains('vêt') || lower.contains('أزياء') || lower.contains('ملابس')) {
+      return Icons.checkroom_rounded;
+    }
+    if (lower.contains('emploi') || lower.contains('service') || lower.contains('وظائف') || lower.contains('خدمات')) {
+      return Icons.work_rounded;
+    }
+    final fallbackIcons = [
+      Icons.directions_car_filled_rounded,
+      Icons.home_work_rounded,
+      Icons.smartphone_rounded,
+      Icons.laptop_mac_rounded,
+      Icons.chair_rounded,
+      Icons.shopping_bag_rounded,
+      Icons.work_rounded,
+    ];
+    return fallbackIcons[idx % fallbackIcons.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
@@ -108,6 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     final heroAd = allAds.isNotEmpty ? allAds.first : null;
     final moreAds = allAds.length > 1 ? allAds.sublist(1) : <Map<String, dynamic>>[];
+
+    final displayCategories = _categories.isNotEmpty ? _categories : _defaultCategories;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -165,9 +262,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Hero Card (Apolo Brand Primary Red #E31B23 Card — Right side left empty for 3D Car!)
+            // Hero Card (Apolo Brand Primary Red #E31B23 Card + 3D Memoji Car on the trailing side!)
             Container(
-              margin: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              margin: const EdgeInsets.fromLTRB(24, 22, 24, 0),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFE31B23), _heroBlue],
@@ -177,8 +274,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: _blue.withValues(alpha: 0.22),
-                    blurRadius: 20,
+                    color: _blue.withValues(alpha: 0.24),
+                    blurRadius: 22,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -186,18 +283,39 @@ class _HomeScreenState extends State<HomeScreen> {
               clipBehavior: Clip.antiAlias,
               child: Stack(
                 children: [
-                  // Reserved empty slot on the right side for the upcoming 3D Car ("tonbil 3d")
-                  const Positioned(
-                    right: -52,
-                    top: 0,
-                    bottom: 0,
-                    width: 224,
-                    child: SizedBox.expand(
-                      // Empty space reserved for 3D Car image
+                  // Subtle radial glow behind the 3D Memoji car
+                  PositionedDirectional(
+                    end: -30,
+                    top: -20,
+                    child: Container(
+                      width: 190,
+                      height: 190,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.20),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 3D Memoji Car placed in its reserved slot!
+                  PositionedDirectional(
+                    end: -28,
+                    bottom: 6,
+                    width: 192,
+                    height: 146,
+                    child: IgnorePointer(
+                      child: Image.asset(
+                        'assets/images/hero_car.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 145, 24),
+                    padding: const EdgeInsetsDirectional.fromSTEB(24, 24, 142, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -213,14 +331,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               s.tr('مساعد أبولو الذكي', 'AI Deal Planner'),
                               style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: AlignmentDirectional.centerStart,
@@ -228,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             s.tr('بيع ولا شري فـ 30 ثانية', 'Plan your next deal'),
                             maxLines: 1,
                             style: const TextStyle(
-                              fontSize: 26,
+                              fontSize: 25,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.6,
                               color: Colors.white,
@@ -242,13 +360,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             'Tell us what you want to buy or sell — we\'ll build the listing.',
                           ),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13.5,
                             height: 1.4,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.90),
+                            color: Colors.white.withValues(alpha: 0.92),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
                         GestureDetector(
                           onTap: () {
                             if (widget.onOpenPostAd != null) {
@@ -260,11 +378,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
-                              vertical: 12,
+                              vertical: 11,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(999),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.12),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -272,8 +397,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   s.tr('ابدا دابا', 'Get started'),
                                   style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
                                     color: _blue,
                                   ),
                                 ),
@@ -294,16 +419,132 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // NEW Section: Categories ("تصفح الأقسام" / "Catégories")
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    s.categories,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: _ink,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => widget.onOpenSearch(null),
+                    child: Row(
+                      children: [
+                        Text(
+                          s.tr('عرض الكل', 'Tout voir'),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _blue,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: _blue,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(
+              height: 118,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
+                scrollDirection: Axis.horizontal,
+                itemCount: displayCategories.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, idx) {
+                  final cat = displayCategories[idx];
+                  final int? catId = int.tryParse(cat['id']?.toString() ?? '');
+                  final String name = (s.isAr
+                          ? (cat['name_ar'] ?? cat['name'] ?? '')
+                          : (cat['name_fr'] ?? cat['name'] ?? ''))
+                      .toString();
+                  final IconData icon = cat['icon'] is IconData
+                      ? cat['icon'] as IconData
+                      : _iconForCategory(name, idx);
+                  final Color badgeBg = cat['bg'] is int
+                      ? Color(cat['bg'] as int)
+                      : (idx == 0 ? const Color(0xFFFEECEE) : const Color(0xFFF4F6F9));
+                  final Color iconTint = cat['tint'] is int
+                      ? Color(cat['tint'] as int)
+                      : (idx == 0 ? _blue : _ink);
+
+                  return GestureDetector(
+                    onTap: () => widget.onOpenSearch(catId),
+                    child: Container(
+                      width: 106,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: idx == 0 ? _blue.withValues(alpha: 0.25) : _border,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _ink.withValues(alpha: 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(icon, size: 22, color: iconTint),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: _ink,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
             // Section 1: "Your trips" -> "Annonces à la une"
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     s.tr('إعلانات مميزة', 'Featured listings'),
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                       color: _ink,
@@ -316,12 +557,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           s.tr('عرض الكل', 'See all'),
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                             color: _blue,
                           ),
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 2),
                         const Icon(
                           Icons.chevron_right_rounded,
                           size: 18,
@@ -348,46 +589,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Section 2: "Popular destinations" -> Popular Categories / Pro Stores
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+              padding: const EdgeInsets.fromLTRB(24, 30, 24, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     s.tr('الأكثر طلباً في المغرب', 'Popular categories'),
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                       color: _ink,
                     ),
                   ),
-                  if (_stores.isNotEmpty)
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const StoresScreen()),
-                        );
-                      },
-                      child: Row(
-                        children: [
-                          Text(
-                            s.tr('المتاجر', 'Stores'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: _blue,
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            size: 18,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StoresScreen()),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Text(
+                          s.tr('المتاجر', 'Boutiques'),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                             color: _blue,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: _blue,
+                        ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),
@@ -523,14 +763,14 @@ class _HomeScreenState extends State<HomeScreen> {
             // Section 3: More Recent Listings in Triply Showcase Card format
             if (moreAds.isNotEmpty) ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 4),
+                padding: const EdgeInsets.fromLTRB(24, 30, 24, 4),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       s.tr('أحدث الإعلانات', 'Recent listings'),
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.5,
                         color: _ink,
@@ -543,12 +783,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             s.tr('الكل', 'See all'),
                             style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
                               color: _blue,
                             ),
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 2),
                           const Icon(
                             Icons.chevron_right_rounded,
                             size: 18,
@@ -755,8 +995,8 @@ class _TriplyShowcaseCard extends StatelessWidget {
                         priceFormatted,
                         style: const TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: _muted,
+                          fontWeight: FontWeight.w700,
+                          color: _blue,
                         ),
                       ),
                     ],
@@ -767,7 +1007,7 @@ class _TriplyShowcaseCard extends StatelessWidget {
                         s.tr('عرض', 'View'),
                         style: const TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: _blue,
                         ),
                       ),
