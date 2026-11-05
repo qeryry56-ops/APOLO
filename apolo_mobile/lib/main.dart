@@ -52,9 +52,17 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
     return MaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
-      useInheritedMediaQuery: true,
       locale: _state.locale,
-      builder: DevicePreview.appBuilder,
+      builder: (context, child) {
+        final previewed = DevicePreview.appBuilder(context, child);
+        return DefaultTextStyle.merge(
+          style: const TextStyle(
+            fontFamily: AppConfig.fontPrimary,
+            fontFamilyFallback: AppConfig.fontFallback,
+          ),
+          child: previewed,
+        );
+      },
       supportedLocales: const [
         Locale('ar'),
         Locale('fr'),

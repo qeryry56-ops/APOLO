@@ -8,6 +8,11 @@ class AppConfig {
   // Default to production API; switchable to staging in Profile Settings
   static String currentBaseUrl = prodBaseUrl;
 
+  // 2026 UI/UX Typography Pairing:
+  // Plus Jakarta Sans (Latin + Geometric Numerals) + IBM Plex Sans Arabic (Modern Arabic UI)
+  static const String fontPrimary = 'PlusJakartaSans';
+  static const List<String> fontFallback = ['IBMPlexSansArabic', 'PlusJakartaSans'];
+
   // Apolo.ma Official Brand Identity + 2026 Unslop / Triply Neutral Ramp
   static const Color primary = Color(0xFFE31B23); // Official Brand Primary Red RGB(227, 27, 35)
   static const Color primaryDark = Color(0xFFC81018); // Deep Brand Red
@@ -37,8 +42,10 @@ class AppConfig {
       ];
 
   static ThemeData buildTheme(Locale locale) {
-    return ThemeData(
+    final baseTheme = ThemeData(
       useMaterial3: true,
+      fontFamily: fontPrimary,
+      fontFamilyFallback: fontFallback,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
         primary: primary,
@@ -46,12 +53,32 @@ class AppConfig {
         surface: cardBg,
       ),
       scaffoldBackgroundColor: bgLight,
+    );
+
+    final textTheme = baseTheme.textTheme.apply(
+      fontFamily: fontPrimary,
+      fontFamilyFallback: fontFallback,
+      bodyColor: textPrimary,
+      displayColor: textPrimary,
+    );
+
+    return baseTheme.copyWith(
+      textTheme: textTheme,
+      primaryTextTheme: textTheme,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: fontPrimary,
+          fontFamilyFallback: fontFallback,
+          color: textPrimary,
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.4,
+        ),
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
@@ -64,6 +91,20 @@ class AppConfig {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceGray,
+        hintStyle: const TextStyle(
+          fontFamily: fontPrimary,
+          fontFamilyFallback: fontFallback,
+          color: textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        labelStyle: const TextStyle(
+          fontFamily: fontPrimary,
+          fontFamilyFallback: fontFallback,
+          color: textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
@@ -85,7 +126,13 @@ class AppConfig {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: const StadiumBorder(),
           elevation: 0,
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          textStyle: const TextStyle(
+            fontFamily: fontPrimary,
+            fontFamilyFallback: fontFallback,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            letterSpacing: -0.2,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -94,7 +141,13 @@ class AppConfig {
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
           side: const BorderSide(color: borderGray, width: 1.5),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          textStyle: const TextStyle(
+            fontFamily: fontPrimary,
+            fontFamilyFallback: fontFallback,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            letterSpacing: -0.2,
+          ),
         ),
       ),
     );

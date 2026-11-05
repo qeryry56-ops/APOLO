@@ -272,9 +272,8 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Small Terms & Privacy Policy footer
-                  RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
+                  Text.rich(
+                    TextSpan(
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.65),
                         fontSize: 11.5,
@@ -303,6 +302,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

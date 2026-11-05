@@ -428,8 +428,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   Center(
                     child: GestureDetector(
                       onTap: () => _switchMode(!_isLogin),
-                      child: RichText(
-                        text: TextSpan(
+                      child: Text.rich(
+                        TextSpan(
                           style: const TextStyle(fontSize: 15, color: _muted),
                           children: [
                             TextSpan(
