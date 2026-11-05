@@ -21,7 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<dynamic> _savedSearches = [];
 
   static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFF2F6BE4);
+  static const Color _blue = Color(0xFFE31B23);
   static const Color _muted = Color(0xFF8A94A6);
   static const Color _border = Color(0xFFEDEFF3);
   static const Color _divider = Color(0xFFF0F2F5);
@@ -719,7 +719,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 72,
                   height: 72,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF22488F),
+                    color: Color(0xFFE31B23),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
@@ -1049,11 +1049,11 @@ class _ProfileStatCol extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: const BoxDecoration(
-                color: Color(0xFFEAF1FE),
+                color: Color(0xFFFEECEE),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(icon, size: 20, color: Color(0xFF3A6EDA)),
+              child: Icon(icon, size: 20, color: const Color(0xFFE31B23)),
             ),
             const SizedBox(height: 10),
             Text(

@@ -25,13 +25,13 @@ class _AuthScreenState extends State<AuthScreen> {
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
-  // Design tokens
+  // Design tokens (Apolo Official Brand Red #E31B23 + Pure White #FFFFFF)
   static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFF2F6BE4);
+  static const Color _blue = Color(0xFFE31B23);
   static const Color _muted = Color(0xFF8A94A6);
   static const Color _border = Color(0xFFE7EAF0);
   static const Color _fill = Color(0xFFF1F3F7);
-  static const Color _danger = Color(0xFFE5484D);
+  static const Color _danger = Color(0xFFE31B23);
 
   @override
   void dispose() {
@@ -202,7 +202,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       height: 56,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF6BA5F8), Color(0xFF2F6BE4)],
+                          colors: [Color(0xFFFF5258), Color(0xFFE31B23)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),

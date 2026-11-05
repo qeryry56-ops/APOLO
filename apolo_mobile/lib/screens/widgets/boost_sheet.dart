@@ -23,6 +23,12 @@ class _BoostSheetState extends State<BoostSheet> {
   bool _purchasing = false;
   StreamSubscription<List<PurchaseDetails>>? _iapSub;
 
+  static const Color _ink = Color(0xFF0F1B2D);
+  static const Color _muted = Color(0xFF8A94A6);
+  static const Color _red = Color(0xFFE31B23);
+  static const Color _badgeBg = Color(0xFFFEECEE);
+  static const Color _border = Color(0xFFE7EAF0);
+
   @override
   void initState() {
     super.initState();
@@ -59,18 +65,18 @@ class _BoostSheetState extends State<BoostSheet> {
           'name_fr': 'Annonce Mise en avant (7 jours)',
           'price_mad': 49,
           'duration_days': 7,
-          'features_ar': ['ظهور أعلى نتائج البحث', 'شارة مميز ذهبية', 'مشاهدات مضاعفة 3x'],
+          'features_ar': ['ظهور أعلى نتائج البحث', 'شارة مميز رسمية', 'مشاهدات مضاعفة 3x'],
           'features_fr': ['En tête des résultats', 'Badge spécial', '3x plus de vues'],
         },
         {
           'id': 'vip',
           'iap_product_id': 'ma.apolo.boost.vip',
-          'name_ar': 'باقة VIP الذهبية (15 يوم)',
-          'name_fr': 'Pack VIP Or (15 jours)',
+          'name_ar': 'باقة VIP الاحترافية (15 يوم)',
+          'name_fr': 'Pack VIP Pro (15 jours)',
           'price_mad': 99,
           'duration_days': 15,
-          'features_ar': ['الظهور في الصفحة الرئيسية VIP', 'أولوية قصوى في البحث', 'شارة VIP ذهبية', 'مشاهدات مضاعفة 7x'],
-          'features_fr': ['Affichage accueil VIP', 'Priorité maximale', 'Badge VIP Or', '7x plus de vues'],
+          'features_ar': ['الظهور في الصفحة الرئيسية VIP', 'أولوية قصوى في البحث', 'شارة VIP رسمية', 'مشاهدات مضاعفة 7x'],
+          'features_fr': ['Affichage accueil VIP', 'Priorité maximale', 'Badge VIP Pro', '7x plus de vues'],
         }
       ];
       _loading = false;
@@ -166,42 +172,52 @@ class _BoostSheetState extends State<BoostSheet> {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: _loading
-          ? const SizedBox(height: 220, child: Center(child: CircularProgressIndicator()))
+          ? const SizedBox(height: 220, child: Center(child: CircularProgressIndicator(color: _red)))
           : Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Center(
                   child: Container(
-                    width: 44,
-                    height: 5,
-                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: _border, borderRadius: BorderRadius.circular(99)),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 Row(
                   children: [
-                    const Icon(Icons.bolt, color: AppConfig.vipGold, size: 28),
-                    const SizedBox(width: 8),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(color: _badgeBg, shape: BoxShape.circle),
+                      child: const Icon(Icons.bolt_rounded, color: _red, size: 24),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        s.tr('ميّز إعلانك وضاعف مبيعاتك', 'Boostez votre annonce et vendez plus vite'),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.tr('ميّز إعلانك وضاعف مبيعاتك', 'Boostez votre annonce'),
+                            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.4),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.adTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: _muted, fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.adTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppConfig.textSecondary, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 ..._plans.map((plan) {
                   final String id = plan['id'].toString();
                   final bool selected = _selectedPlanId == id;
@@ -211,13 +227,13 @@ class _BoostSheetState extends State<BoostSheet> {
                     onTap: () => setState(() => _selectedPlanId = id),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: selected ? AppConfig.vipGold.withValues(alpha: 0.08) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        color: selected ? _badgeBg.withValues(alpha: 0.55) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: selected ? AppConfig.vipGold : const Color(0xFFE2E8F0),
-                          width: selected ? 2 : 1,
+                          color: selected ? _red : _border,
+                          width: selected ? 1.8 : 1,
                         ),
                       ),
                       child: Column(
@@ -227,29 +243,41 @@ class _BoostSheetState extends State<BoostSheet> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
-                                child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5, color: _ink, letterSpacing: -0.2),
+                                ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: AppConfig.vipGold,
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: selected ? _red : const Color(0xFFF1F3F7),
+                                  borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
                                   '${plan['price_mad']} MAD',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: selected ? Colors.white : _ink,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           ...features.map((f) => Padding(
-                                padding: const EdgeInsets.only(bottom: 3),
+                                padding: const EdgeInsets.only(bottom: 4),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.check_circle, size: 15, color: AppConfig.success),
-                                    const SizedBox(width: 6),
-                                    Expanded(child: Text(f.toString(), style: const TextStyle(fontSize: 12.5))),
+                                    Icon(Icons.check_circle_rounded, size: 16, color: selected ? _red : AppConfig.success),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        f.toString(),
+                                        style: const TextStyle(fontSize: 13, color: _ink, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               )),
@@ -258,22 +286,23 @@ class _BoostSheetState extends State<BoostSheet> {
                     ),
                   );
                 }),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
+                  height: 54,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppConfig.vipGold,
+                      backgroundColor: _red,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: const StadiumBorder(),
                     ),
                     onPressed: _purchasing ? null : _startPurchase,
                     icon: _purchasing
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.workspace_premium),
+                        : const Icon(Icons.bolt_rounded, size: 20),
                     label: Text(
                       s.tr('تفعيل التمييز الآن', 'Activer le Boost maintenant'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5),
                     ),
                   ),
                 ),

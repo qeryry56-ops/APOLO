@@ -142,13 +142,13 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
 
-                  // Button 1: Continue with Email (Ocean Blue #2563EB Pill)
+                  // Button 1: Continue with Email (Apolo Brand Primary Red #E31B23 Pill)
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: const Color(0xFFE31B23),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: const StadiumBorder(),
@@ -287,7 +287,7 @@ class WelcomeScreen extends StatelessWidget {
                         TextSpan(
                           text: s.tr('شروط الاستخدام', 'Conditions d\'utilisation'),
                           style: const TextStyle(
-                            color: Color(0xFF60A5FA),
+                            color: Colors.white,
                             fontWeight: FontWeight.w700,
                             decoration: TextDecoration.underline,
                           ),
@@ -296,7 +296,7 @@ class WelcomeScreen extends StatelessWidget {
                         TextSpan(
                           text: s.tr('سياسة الخصوصية', 'Politique de confidentialité'),
                           style: const TextStyle(
-                            color: Color(0xFF60A5FA),
+                            color: Colors.white,
                             fontWeight: FontWeight.w700,
                             decoration: TextDecoration.underline,
                           ),

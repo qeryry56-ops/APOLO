@@ -20,7 +20,7 @@ class _MainShellState extends State<MainShell> {
   int? _searchInitialCategory;
 
   static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFF2F6BE4);
+  static const Color _blue = Color(0xFFE31B23); // Apolo Brand Primary Red
 
   @override
   void initState() {
@@ -148,7 +148,7 @@ class _MainShellState extends State<MainShell> {
                               curve: Curves.easeOutCubic,
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? _ink.withValues(alpha: 0.07)
+                                    ? const Color(0xFFFEECEE)
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(30),
                               ),

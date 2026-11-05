@@ -26,10 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _latestAds = [];
   List<dynamic> _stores = [];
 
-  // Exact Triply-AI color tokens
+  // Exact Triply-AI + Apolo Official Brand Red (#E31B23) color tokens
   static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFF2F6BE4);
-  static const Color _heroBlue = Color(0xFF5B8DEF);
+  static const Color _blue = Color(0xFFE31B23);
+  static const Color _heroBlue = Color(0xFFC81018);
   static const Color _gold = Color(0xFFF5B942);
 
   static const List<Map<String, String>> _fallbackPopular = [
@@ -165,12 +165,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Hero Card (Exact Triply-AI Blue Card — Right side left empty for 3D Car!)
+            // Hero Card (Apolo Brand Primary Red #E31B23 Card — Right side left empty for 3D Car!)
             Container(
               margin: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF4280F0), _heroBlue],
+                  colors: [Color(0xFFE31B23), _heroBlue],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -580,7 +580,7 @@ class _TriplyShowcaseCard extends StatelessWidget {
   const _TriplyShowcaseCard({required this.ad});
 
   static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFF2F6BE4);
+  static const Color _blue = Color(0xFFE31B23);
   static const Color _muted = Color(0xFF8A94A6);
 
   @override

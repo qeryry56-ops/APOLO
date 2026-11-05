@@ -34,10 +34,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   int _currentImgIndex = 0;
 
   static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFF2F6BE4);
+  static const Color _blue = Color(0xFFE31B23);
   static const Color _muted = Color(0xFF8A94A6);
-  static const Color _badgeBg = Color(0xFFE7F0FE);
-  static const Color _cardBlue = Color(0xFFEAF1FE);
+  static const Color _badgeBg = Color(0xFFFEECEE);
+  static const Color _cardBlue = Color(0xFFFDF2F2);
   static const Color _border = Color(0xFFE7EAF0);
 
   @override

@@ -8,17 +8,20 @@ class AppConfig {
   // Default to production API; switchable to staging in Profile Settings
   static String currentBaseUrl = prodBaseUrl;
 
-  // Ultra-Modern 2026 Startup Aesthetic Palette (Inspired by Roamly / Plately / Luma / DentaCare)
-  static const Color primary = Color(0xFF2563EB); // Vibrant Ocean Royal Blue
-  static const Color primaryDark = Color(0xFF1E3A8A);
-  static const Color accent = Color(0xFFFF6B4A); // Warm Coral-Orange CTA
-  static const Color vipGold = Color(0xFFF59E0B); // Luxury Amber Gold
+  // Apolo.ma Official Brand Identity + 2026 Unslop / Triply Neutral Ramp
+  static const Color primary = Color(0xFFE31B23); // Official Brand Primary Red RGB(227, 27, 35)
+  static const Color primaryDark = Color(0xFFC81018); // Deep Brand Red
+  static const Color accent = Color(0xFFE31B23); // Primary Red CTA
+  static const Color badgeBg = Color(0xFFFEECEE); // Soft Rose Tint for Icon Badges
+  static const Color vipGold = Color(0xFFF59E0B); // Luxury Amber Gold for VIP
   static const Color success = Color(0xFF10B981); // Emerald Verified Green
-  static const Color danger = Color(0xFFEF4444);
-  static const Color bgLight = Color(0xFFFAFAF8); // Airy Editorial Off-White
-  static const Color cardBg = Colors.white;
-  static const Color textPrimary = Color(0xFF1F1F1F); // Deep Charcoal
-  static const Color textSecondary = Color(0xFF8A8A8A); // Soft Editorial Gray
+  static const Color danger = Color(0xFFE31B23);
+  static const Color bgLight = Colors.white; // Pure White #FFFFFF
+  static const Color cardBg = Colors.white; // Pure White #FFFFFF
+  static const Color surfaceGray = Color(0xFFF1F3F7); // Calm Neutral Pill/Input Fill
+  static const Color borderGray = Color(0xFFE7EAF0); // Hairline Card/Input Border
+  static const Color textPrimary = Color(0xFF0F1B2D); // Deep Slate Ink
+  static const Color textSecondary = Color(0xFF8A94A6); // Muted Neutral Gray
 
   static List<BoxShadow> get softShadow => [
         BoxShadow(
@@ -54,25 +57,25 @@ class AppConfig {
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFFF1F5F9)),
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: borderGray),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: surfaceGray,
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: const BorderSide(color: borderGray),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderSide: const BorderSide(color: borderGray),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: primary, width: 1.8),
+          borderSide: const BorderSide(color: primary, width: 1.6),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -89,7 +92,7 @@ class AppConfig {
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+          side: const BorderSide(color: borderGray, width: 1.5),
           shape: const StadiumBorder(),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
