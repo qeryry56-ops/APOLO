@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
@@ -16,19 +17,31 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final AppState _state = AppState();
   List<dynamic> _conversations = [];
   bool _loading = true;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
+    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && _state.isLoggedIn) {
+        _loadConversations(silent: true);
+      }
+    });
   }
 
-  Future<void> _loadConversations() async {
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadConversations({bool silent = false}) async {
     if (!_state.isLoggedIn) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
       return;
     }
-    setState(() => _loading = true);
+    if (!silent) setState(() => _loading = true);
     try {
       final res = await _state.api.dio.get('/chat/conversations');
       if (res.data is Map && res.data['status'] == 'success') {
@@ -41,7 +54,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         return;
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (!silent && mounted) setState(() => _loading = false);
   }
 
   @override
@@ -56,10 +69,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
             children: [
               const Icon(Icons.forum_outlined, size: 64, color: AppConfig.primary),
               const SizedBox(height: 14),
-              Text(s.tr('سجّل دخولك لعرض رسائلك ومحادثاتك', 'Connectez-vous pour voir vos messages')),
+              Text(
+                s.tr(
+                  'سجّل دخولك لعرض رسائلك ومحادثاتك',
+                  'Connectez-vous pour voir vos messages',
+                ),
+              ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen())).then((_) => _loadConversations()),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AuthScreen()),
+                ).then((_) => _loadConversations()),
                 child: Text(s.login),
               ),
             ],
@@ -75,9 +96,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
           : _conversations.isEmpty
               ? Center(child: Text(s.tr('لا توجد محادثات حالياً', 'Aucune conversation')))
               : RefreshIndicator(
-                  onRefresh: _loadConversations,
+                  onRefresh: () => _loadConversations(),
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
                     itemCount: _conversations.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, idx) {
@@ -86,7 +107,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       final peer = conv['other_user'] ?? {};
                       final ad = conv['ad'] ?? {};
                       final lastMsg = conv['latest_message'];
-                      final int unread = int.tryParse((conv['unread_count'] ?? 0).toString()) ?? 0;
+                      final int unread =
+                          int.tryParse((conv['unread_count'] ?? 0).toString()) ?? 0;
                       final avatar = peer['avatar_url'] ?? peer['avatar'];
 
                       return Card(
@@ -101,7 +123,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   adTitle: (ad['title'] ?? '').toString(),
                                 ),
                               ),
-                            ).then((_) => _loadConversations());
+                            ).then((_) => _loadConversations(silent: true));
                           },
                           leading: AppAvatar(
                             url: avatar?.toString(),
@@ -119,7 +141,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   ad['title'].toString(),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: AppConfig.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    color: AppConfig.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               if (lastMsg != null)
                                 Text(
@@ -133,7 +159,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ? CircleAvatar(
                                   radius: 11,
                                   backgroundColor: AppConfig.accent,
-                                  child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  child: Text(
+                                    '$unread',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 )
                               : const Icon(Icons.chevron_right),
                         ),

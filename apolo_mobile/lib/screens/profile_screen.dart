@@ -4,6 +4,7 @@ import '../core/state/app_state.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/boost_sheet.dart';
 import 'auth_screen.dart';
+import 'post_ad_screen.dart';
 import 'stores_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -89,6 +90,219 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (_) {}
     }
+  }
+
+  void _openEditProfileModal() {
+    final s = _state.s;
+    final user = _state.currentUser ?? {};
+    final nameCtrl = TextEditingController(text: (user['name'] ?? '').toString());
+    final emailCtrl = TextEditingController(text: (user['email'] ?? '').toString());
+    final phoneCtrl = TextEditingController(text: (user['phone'] ?? '').toString());
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                s.tr('تعديل المعلومات الشخصية', 'Modifier mon profil'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: _ink,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  labelText: s.tr('الاسم الكامل', 'Nom complet'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: s.tr('البريد الإلكتروني', 'Email'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: s.tr('رقم الهاتف', 'Téléphone'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _blue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  onPressed: () async {
+                    try {
+                      final res = await _state.api.dio.post('/auth/profile', data: {
+                        'name': nameCtrl.text.trim(),
+                        'email': emailCtrl.text.trim(),
+                        'phone': phoneCtrl.text.trim(),
+                      });
+                      if (res.data is Map && res.data['status'] == 'success') {
+                        await _state.fetchMe();
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppConfig.success,
+                              content: Text(
+                                s.tr('تم تحديث حسابك بنجاح', 'Profil mis à jour'),
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (_) {}
+                  },
+                  child: Text(s.tr('حفظ التغييرات', 'Enregistrer')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openChangePasswordModal() {
+    final s = _state.s;
+    final oldCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                s.tr('تغيير كلمة المرور', 'Changer le mot de passe'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: _ink,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: oldCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: s.tr('كلمة المرور الحالية', 'Mot de passe actuel'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: newCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: s.tr('كلمة المرور الجديدة', 'Nouveau mot de passe'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: s.tr('تأكيد كلمة المرور الجديدة', 'Confirmer le mot de passe'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _blue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  onPressed: () async {
+                    try {
+                      final res = await _state.api.dio.post('/auth/password', data: {
+                        'old_password': oldCtrl.text,
+                        'new_password': newCtrl.text,
+                        'new_password_confirmation': confirmCtrl.text,
+                      });
+                      if (res.data is Map && res.data['status'] == 'success') {
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppConfig.success,
+                              content: Text(
+                                s.tr('تم تغيير كلمة المرور بنجاح', 'Mot de passe modifié'),
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (_) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppConfig.danger,
+                            content: Text(
+                              s.tr('تأكد من كلمة المرور الحالية وتطابق الجديدة', 'Vérifiez vos mots de passe'),
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: Text(s.tr('تحديث كلمة المرور', 'Mettre à jour')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _openMyStoreModal() async {
@@ -215,6 +429,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openSavedSearchesSheet() {
+    final s = _state.s;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.65,
+          maxChildSize: 0.9,
+          builder: (_, controller) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.tr('تنبيهات البحث المحفوظة', 'Recherches sauvegardées'),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Expanded(
+                  child: _savedSearches.isEmpty
+                      ? Center(
+                          child: Text(
+                            s.tr('لا توجد تنبيهات بحث محفوظة حالياً', 'Aucune alerte enregistrée'),
+                            style: const TextStyle(color: _muted, fontSize: 15),
+                          ),
+                        )
+                      : ListView.separated(
+                          controller: controller,
+                          itemCount: _savedSearches.length,
+                          separatorBuilder: (_, __) => const Divider(color: _divider),
+                          itemBuilder: (_, idx) {
+                            final ss = _savedSearches[idx];
+                            final title = (ss['title'] ?? ss['query'] ?? s.tr('بحث محفوظ', 'Recherche')).toString();
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Container(
+                                width: 42,
+                                height: 42,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEAF1FE),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_active_outlined,
+                                  color: _blue,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: _ink,
+                                ),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: AppConfig.danger,
+                                ),
+                                onPressed: () async {
+                                  await _state.api.dio.delete('/saved-searches/${ss['id']}');
+                                  await _loadProfileData();
+                                  setModalState(() {});
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openItemsSheet(String title, List<dynamic> items, {bool isMyAds = false}) {
     final s = _state.s;
     showModalBottomSheet(
@@ -257,13 +559,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         itemBuilder: (_, idx) {
                           final ad = Map<String, dynamic>.from(items[idx]);
                           final int adId = int.tryParse(ad['id'].toString()) ?? 0;
+                          final bool isSold = ad['status'] == 2 || ad['status'] == '2';
                           return Column(
                             children: [
                               AdCard(ad: ad, horizontal: true),
                               if (isMyAds)
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
+                                Wrap(
+                                  alignment: WrapAlignment.end,
+                                  spacing: 4,
                                   children: [
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => PostAdScreen(initialAd: ad),
+                                          ),
+                                        ).then((updated) {
+                                          if (updated == true) _loadProfileData();
+                                        });
+                                      },
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        color: _blue,
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                        s.tr('تعديل', 'Modifier'),
+                                        style: const TextStyle(
+                                          color: _blue,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isSold)
+                                      TextButton.icon(
+                                        onPressed: () async {
+                                          await _state.api.dio.post('/ads/$adId/sold');
+                                          if (ctx.mounted) Navigator.pop(ctx);
+                                          _loadProfileData();
+                                        },
+                                        icon: const Icon(
+                                          Icons.check_circle_outline_rounded,
+                                          color: AppConfig.success,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          s.tr('مباع', 'Vendu'),
+                                          style: const TextStyle(
+                                            color: AppConfig.success,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
                                     TextButton.icon(
                                       onPressed: () {
                                         Navigator.pop(ctx);
@@ -403,7 +752,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         _state.isLoggedIn
                             ? email
-                            : s.tr('سجل الدخول لإدارة إعلاناتك ومتجرك', 'Connectez-vous pour gérer vos annonces'),
+                            : s.tr(
+                                'سجل الدخول لإدارة إعلاناتك ومتجرك',
+                                'Connectez-vous pour gérer vos annonces',
+                              ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -488,7 +840,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.notifications_none_rounded,
                   value: '${_savedSearches.length}',
                   label: s.tr('تنبيهات', 'Alertes'),
-                  onTap: () {},
+                  onTap: _openSavedSearchesSheet,
                 ),
               ],
             ),
@@ -507,6 +859,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   isMyAds: true,
                 ),
               ),
+              if (_state.isLoggedIn)
+                _SettingsRowSpec(
+                  icon: Icons.person_outline_rounded,
+                  label: s.tr('تعديل المعلومات الشخصية', 'Modifier mon profil'),
+                  onTap: _openEditProfileModal,
+                ),
+              if (_state.isLoggedIn)
+                _SettingsRowSpec(
+                  icon: Icons.lock_outline_rounded,
+                  label: s.tr('تغيير كلمة المرور', 'Changer le mot de passe'),
+                  onTap: _openChangePasswordModal,
+                ),
               _SettingsRowSpec(
                 icon: Icons.storefront_outlined,
                 label: s.tr('إدارة متجري الاحترافي (Pro)', 'Ma Boutique Pro'),
@@ -538,7 +902,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             rows: [
               _SettingsRowSpec(
                 icon: Icons.translate_rounded,
-                label: s.tr('اللغة (العربية / Français)', 'Language (${s.isAr ? "العربية" : "Français"})'),
+                label: s.tr(
+                  'اللغة (العربية / Français)',
+                  'Language (${s.isAr ? "العربية" : "Français"})',
+                ),
                 onTap: () async {
                   await _state.toggleLanguage();
                   setState(() {});
@@ -551,6 +918,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   s.tr('المفضلة', 'Favoris'),
                   _favorites,
                 ),
+              ),
+              _SettingsRowSpec(
+                icon: Icons.notifications_active_outlined,
+                label: s.tr('تنبيهات البحث المحفوظة', 'Alertes de recherche'),
+                onTap: _openSavedSearchesSheet,
               ),
               _SettingsRowSpec(
                 icon: Icons.cloud_done_outlined,

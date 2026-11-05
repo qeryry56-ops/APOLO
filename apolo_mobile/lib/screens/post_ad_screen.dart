@@ -6,10 +6,17 @@ import 'package:dio/dio.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import 'auth_screen.dart';
+import 'widgets/app_image.dart';
 
 class PostAdScreen extends StatefulWidget {
   final VoidCallback? onSuccess;
-  const PostAdScreen({super.key, this.onSuccess});
+  final Map<String, dynamic>? initialAd;
+
+  const PostAdScreen({
+    super.key,
+    this.onSuccess,
+    this.initialAd,
+  });
 
   @override
   State<PostAdScreen> createState() => _PostAdScreenState();
@@ -32,14 +39,51 @@ class _PostAdScreenState extends State<PostAdScreen> {
   bool _submitting = false;
 
   final List<XFile> _pickedImages = [];
+  List<String> _existingImageUrls = [];
   final Map<String, dynamic> _dynamicValues = {};
+
+  bool get _isEditing => widget.initialAd != null;
 
   @override
   void initState() {
     super.initState();
-    if (_state.currentUser != null && _state.currentUser!['phone'] != null) {
+    final ad = widget.initialAd;
+    if (ad != null) {
+      _titleCtrl.text = (ad['title'] ?? '').toString();
+      _descCtrl.text = (ad['description'] ?? '').toString();
+      final rawPrice = ad['price']?.toString() ?? '';
+      _priceCtrl.text = rawPrice == '0' ? '' : rawPrice;
+      _phoneCtrl.text = (ad['phone_call'] ?? ad['phone_whatsapp'] ?? '').toString();
+      _categoryId = int.tryParse(
+        (ad['category_id'] ?? (ad['category'] is Map ? ad['category']['id'] : '')).toString(),
+      );
+      _cityId = int.tryParse(
+        (ad['city_id'] ?? (ad['city'] is Map ? ad['city']['id'] : '')).toString(),
+      );
+      final meta = ad['metadata'] is Map ? Map<String, dynamic>.from(ad['metadata']) : <String, dynamic>{};
+      _negotiable = meta['negotiable'] == true || ad['negotiable'] == true;
+      _free = meta['free'] == true || ad['free'] == true || ad['offer_type'] == 'free';
+      _hidePhone = meta['hide_phone'] == true;
+      meta.forEach((k, v) {
+        if (!['negotiable', 'free', 'additional_images', 'hide_phone', 'internal_chat'].contains(k) && v != null) {
+          _dynamicValues[k] = v;
+        }
+      });
+      if (ad['images'] is List) {
+        _existingImageUrls = (ad['images'] as List).map((e) => e.toString()).toList();
+      }
+    } else if (_state.currentUser != null && _state.currentUser!['phone'] != null) {
       _phoneCtrl.text = _state.currentUser!['phone'].toString();
     }
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _phoneCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _pickImages() async {
@@ -73,9 +117,19 @@ class _PostAdScreenState extends State<PostAdScreen> {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen()));
       return;
     }
-    if (_categoryId == null || _cityId == null || _titleCtrl.text.trim().length < 6 || _pickedImages.isEmpty) {
+    if (_categoryId == null ||
+        _cityId == null ||
+        _titleCtrl.text.trim().length < 6 ||
+        (!_isEditing && _pickedImages.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.tr('يرجى ملء الحقول الأساسية وإضافة صورة واحدة على الأقل', 'Veuillez remplir les champs obligatoires et ajouter au moins une photo'))),
+        SnackBar(
+          content: Text(
+            s.tr(
+              'يرجى ملء الحقول الأساسية وإضافة صورة واحدة على الأقل',
+              'Veuillez remplir les champs obligatoires et ajouter au moins une photo',
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -101,25 +155,46 @@ class _PostAdScreenState extends State<PostAdScreen> {
         'category_fields': jsonEncode(_dynamicValues),
       };
 
-      for (int i = 0; i < _pickedImages.length && i < 4; i++) {
+      // Upload all picked images (up to 8) via images[] AND image_1..image_4
+      final List<MultipartFile> allMultipartImages = [];
+      for (int i = 0; i < _pickedImages.length && i < 8; i++) {
         final bytes = await _pickedImages[i].readAsBytes();
-        map['image_${i + 1}'] = MultipartFile.fromBytes(
-          bytes,
-          filename: _pickedImages[i].name.isNotEmpty ? _pickedImages[i].name : 'photo_${i + 1}.jpg',
-        );
+        final fileName = _pickedImages[i].name.isNotEmpty
+            ? _pickedImages[i].name
+            : 'photo_${i + 1}.jpg';
+        allMultipartImages.add(MultipartFile.fromBytes(bytes, filename: fileName));
+        if (i < 4) {
+          map['image_${i + 1}'] = MultipartFile.fromBytes(bytes, filename: fileName);
+        }
+      }
+      if (allMultipartImages.isNotEmpty) {
+        map['images[]'] = allMultipartImages;
       }
 
       final formData = FormData.fromMap(map);
-      final res = await _state.api.dio.post('/ads', data: formData);
+      final String endpoint = _isEditing
+          ? '/ads/${widget.initialAd!['id']}'
+          : '/ads';
+      final res = await _state.api.dio.post(endpoint, data: formData);
+
       if (mounted) {
         setState(() => _submitting = false);
         if (res.data is Map && res.data['status'] == 'success') {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: AppConfig.success,
-              content: Text(res.data['message']?.toString() ?? s.tr('تم إرسال إعلانك بنجاح!', 'Annonce soumise avec succès !')),
+              content: Text(
+                res.data['message']?.toString() ??
+                    (_isEditing
+                        ? s.tr('تم تحديث الإعلان بنجاح!', 'Annonce mise à jour avec succès !')
+                        : s.tr('تم إرسال إعلانك بنجاح!', 'Annonce soumise avec succès !')),
+              ),
             ),
           );
+          if (_isEditing) {
+            Navigator.pop(context, true);
+            return;
+          }
           _titleCtrl.clear();
           _descCtrl.clear();
           _priceCtrl.clear();
@@ -134,7 +209,14 @@ class _PostAdScreenState extends State<PostAdScreen> {
       if (mounted) {
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.tr('حدث خطأ أثناء نشر الإعلان، تأكد من طول الوصف وعدم وجود أرقام بالوصف', 'Erreur lors de la publication'))),
+          SnackBar(
+            content: Text(
+              s.tr(
+                'حدث خطأ أثناء حفظ الإعلان، تأكد من طول الوصف وعدم وجود أرقام بالوصف',
+                'Erreur lors de l\'enregistrement de l\'annonce',
+              ),
+            ),
+          ),
         );
       }
     }
@@ -155,13 +237,19 @@ class _PostAdScreenState extends State<PostAdScreen> {
                 const Icon(Icons.add_photo_alternate_outlined, size: 70, color: AppConfig.primary),
                 const SizedBox(height: 16),
                 Text(
-                  s.tr('سجّل دخولك لإضافة إعلان مجاناً على Apolo.ma', 'Connectez-vous pour publier une annonce gratuitement'),
+                  s.tr(
+                    'سجّل دخولك لإضافة إعلان مجاناً على Apolo.ma',
+                    'Connectez-vous pour publier une annonce gratuitement',
+                  ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen())).then((_) => setState(() {})),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AuthScreen()),
+                  ).then((_) => setState(() {})),
                   child: Text(s.login),
                 ),
               ],
@@ -174,39 +262,69 @@ class _PostAdScreenState extends State<PostAdScreen> {
     final dynamicFields = _fieldsForCategory(_categoryId);
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.postAd)),
+      appBar: AppBar(
+        title: Text(
+          _isEditing
+              ? s.tr('تعديل الإعلان', 'Modifier l\'annonce')
+              : s.postAd,
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
         children: [
           // Photos Picker
-          Text(s.tr('صور الإعلان (حتى 8 صور)', 'Photos de l\'annonce'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                s.tr('صور الإعلان (حتى 8 صور)', 'Photos de l\'annonce (jusqu\'à 8)'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              Text(
+                '${_pickedImages.length} / 8',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppConfig.primary,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           SizedBox(
             height: 105,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                GestureDetector(
-                  onTap: _pickImages,
-                  child: Container(
-                    width: 105,
-                    height: 105,
-                    margin: const EdgeInsets.only(left: 10, right: 4),
-                    decoration: BoxDecoration(
-                      color: AppConfig.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppConfig.primary, style: BorderStyle.solid),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.add_a_photo_outlined, color: AppConfig.primary, size: 28),
-                        const SizedBox(height: 6),
-                        Text(s.tr('إضافة صور', 'Ajouter'), style: const TextStyle(fontSize: 12, color: AppConfig.primary, fontWeight: FontWeight.bold)),
-                      ],
+                if (_pickedImages.length < 8)
+                  GestureDetector(
+                    onTap: _pickImages,
+                    child: Container(
+                      width: 105,
+                      height: 105,
+                      margin: const EdgeInsets.only(left: 10, right: 4),
+                      decoration: BoxDecoration(
+                        color: AppConfig.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppConfig.primary, style: BorderStyle.solid),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add_a_photo_outlined, color: AppConfig.primary, size: 28),
+                          const SizedBox(height: 6),
+                          Text(
+                            s.tr('إضافة صور', 'Ajouter'),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppConfig.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 ..._pickedImages.asMap().entries.map((entry) {
                   return Stack(
                     children: [
@@ -240,6 +358,17 @@ class _PostAdScreenState extends State<PostAdScreen> {
                     ],
                   );
                 }),
+                if (_pickedImages.isEmpty && _existingImageUrls.isNotEmpty)
+                  ..._existingImageUrls.map(
+                    (url) => Container(
+                      width: 105,
+                      height: 105,
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14)),
+                      child: AppImage(url: url, fit: BoxFit.cover),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -247,13 +376,17 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 18),
 
           DropdownButtonFormField<int>(
-            value: _categoryId,
+            initialValue: _categoryId,
             decoration: InputDecoration(labelText: s.categories),
             items: _state.categories
-                .map((c) => DropdownMenuItem<int>(
-                      value: int.tryParse(c['id'].toString()),
-                      child: Text((s.isAr ? (c['name_ar'] ?? c['name']) : (c['name_fr'] ?? c['name'])).toString()),
-                    ))
+                .map(
+                  (c) => DropdownMenuItem<int>(
+                    value: int.tryParse(c['id'].toString()),
+                    child: Text(
+                      (s.isAr ? (c['name_ar'] ?? c['name']) : (c['name_fr'] ?? c['name'])).toString(),
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (v) => setState(() {
               _categoryId = v;
@@ -264,13 +397,17 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 14),
 
           DropdownButtonFormField<int>(
-            value: _cityId,
+            initialValue: _cityId,
             decoration: InputDecoration(labelText: s.tr('المدينة', 'Ville')),
             items: _state.cities
-                .map((c) => DropdownMenuItem<int>(
-                      value: int.tryParse(c['id'].toString()),
-                      child: Text((s.isAr ? (c['name_ar'] ?? c['name']) : (c['name_fr'] ?? c['name'])).toString()),
-                    ))
+                .map(
+                  (c) => DropdownMenuItem<int>(
+                    value: int.tryParse(c['id'].toString()),
+                    child: Text(
+                      (s.isAr ? (c['name_ar'] ?? c['name']) : (c['name_fr'] ?? c['name'])).toString(),
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (v) => setState(() => _cityId = v),
           ),
@@ -278,7 +415,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
           // Dynamic Category Fields
           if (dynamicFields.isNotEmpty) ...[
             const SizedBox(height: 18),
-            Text(s.tr('مواصفات القسم', 'Détails de la catégorie'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(
+              s.tr('مواصفات القسم', 'Détails de la catégorie'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
             const SizedBox(height: 10),
             ...dynamicFields.map((field) {
               final String key = field['key'].toString();
@@ -290,7 +430,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: DropdownButtonFormField<String>(
-                    value: _dynamicValues[key]?.toString(),
+                    initialValue: _dynamicValues[key]?.toString(),
                     decoration: InputDecoration(labelText: label),
                     items: options.map((o) {
                       final val = (o is Map ? o['value'] : o).toString();
@@ -303,7 +443,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
               }
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: TextField(
+                child: TextFormField(
+                  initialValue: _dynamicValues[key]?.toString(),
                   keyboardType: type == 'number' ? TextInputType.number : TextInputType.text,
                   decoration: InputDecoration(labelText: label),
                   onChanged: (v) => _dynamicValues[key] = v,
@@ -315,20 +456,26 @@ class _PostAdScreenState extends State<PostAdScreen> {
           const SizedBox(height: 6),
           TextField(
             controller: _titleCtrl,
-            decoration: InputDecoration(labelText: s.tr('عنوان الإعلان', 'Titre de l\'annonce')),
+            decoration: InputDecoration(
+              labelText: s.tr('عنوان الإعلان', 'Titre de l\'annonce'),
+            ),
           ),
           const SizedBox(height: 14),
           TextField(
             controller: _descCtrl,
             maxLines: 4,
-            decoration: InputDecoration(labelText: s.tr('وصف مفصل للمنتج أو الخدمة', 'Description détaillée')),
+            decoration: InputDecoration(
+              labelText: s.tr('وصف مفصل للمنتج أو الخدمة', 'Description détaillée'),
+            ),
           ),
           const SizedBox(height: 14),
           if (!_free)
             TextField(
               controller: _priceCtrl,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: s.tr('الثمن بالدرهم (DH)', 'Prix en DH')),
+              decoration: InputDecoration(
+                labelText: s.tr('الثمن بالدرهم (DH)', 'Prix en DH'),
+              ),
             ),
           const SizedBox(height: 8),
           SwitchListTile(
@@ -347,11 +494,18 @@ class _PostAdScreenState extends State<PostAdScreen> {
           TextField(
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
-            decoration: InputDecoration(labelText: s.tr('رقم الهاتف للتواصل', 'Numéro de téléphone')),
+            decoration: InputDecoration(
+              labelText: s.tr('رقم الهاتف للتواصل', 'Numéro de téléphone'),
+            ),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(s.tr('إخفاء رقم الهاتف (التواصل عبر الدردشة فقط)', 'Masquer le numéro (Chat uniquement)')),
+            title: Text(
+              s.tr(
+                'إخفاء رقم الهاتف (التواصل عبر الدردشة فقط)',
+                'Masquer le numéro (Chat uniquement)',
+              ),
+            ),
             value: _hidePhone,
             onChanged: (v) => setState(() => _hidePhone = v),
           ),
@@ -361,10 +515,16 @@ class _PostAdScreenState extends State<PostAdScreen> {
             child: ElevatedButton.icon(
               onPressed: _submitting ? null : _submitAd,
               icon: _submitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
                   : const Icon(Icons.check_circle_outline),
               label: Text(
-                s.tr('نشر الإعلان الآن', 'Publier l\'annonce'),
+                _isEditing
+                    ? s.tr('حفظ التعديلات', 'Enregistrer les modifications')
+                    : s.tr('نشر الإعلان الآن', 'Publier l\'annonce'),
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
