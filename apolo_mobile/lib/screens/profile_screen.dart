@@ -683,27 +683,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: ListView(
         padding: EdgeInsets.only(top: topPadding + 14, bottom: 130),
         children: [
-          // Oversized Title (Exact Triply-AI "Profile" header)
+          // Balanced Title ("Profile" header)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               s.tr('حسابي', 'Profile'),
               style: const TextStyle(
-                fontSize: 36,
+                fontSize: 28,
                 fontWeight: FontWeight.w800,
-                letterSpacing: -0.9,
+                letterSpacing: -0.6,
                 color: _ink,
               ),
             ),
           ),
 
-          // User Card (Exact Triply-AI rounded-[20px] border #EDEFF3)
+          // User Card (rounded-[22px] border #EDEFF3)
           Container(
-            margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(color: _border),
               boxShadow: [
                 BoxShadow(
@@ -716,8 +716,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 72,
-                  height: 72,
+                  width: 60,
+                  height: 60,
                   decoration: const BoxDecoration(
                     color: Color(0xFFE31B23),
                     shape: BoxShape.circle,
@@ -726,13 +726,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     initial,
                     style: const TextStyle(
-                      fontSize: 30,
+                      fontSize: 24,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -742,7 +742,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 22,
+                          fontSize: 18.5,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.3,
                           color: _ink,
@@ -759,7 +759,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 13.5,
                           color: _muted,
                         ),
                       ),
@@ -797,13 +797,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
-          // 3-Column Stats Card (Exact Triply-AI stats card)
+          // 3-Column Stats Card
           Container(
-            margin: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(color: _border),
               boxShadow: [
                 BoxShadow(
@@ -1046,20 +1046,20 @@ class _ProfileStatCol extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               decoration: const BoxDecoration(
                 color: Color(0xFFFEECEE),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(icon, size: 20, color: const Color(0xFFE31B23)),
+              child: Icon(icon, size: 19, color: const Color(0xFFE31B23)),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               value,
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 19,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF0F1B2D),
               ),
@@ -1068,8 +1068,9 @@ class _ProfileStatCol extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 12.5,
                 color: Color(0xFF8A94A6),
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -1103,17 +1104,17 @@ class _SectionGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 26, 24, 0),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4, right: 4, bottom: 10),
+            padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
                 color: Color(0xFF8A94A6),
               ),
             ),
@@ -1121,7 +1122,7 @@ class _SectionGroup extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(color: const Color(0xFFEDEFF3)),
               boxShadow: [
                 BoxShadow(
@@ -1139,7 +1140,7 @@ class _SectionGroup extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   onTap: r.onTap,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                     decoration: BoxDecoration(
                       border: idx > 0
                           ? const Border(top: BorderSide(color: Color(0xFFF0F2F5)))
@@ -1147,21 +1148,21 @@ class _SectionGroup extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(r.icon, size: 22, color: const Color(0xFF5A6475)),
-                        const SizedBox(width: 14),
+                        Icon(r.icon, size: 20, color: const Color(0xFF5A6475)),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             r.label,
                             style: const TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
                               color: Color(0xFF0F1B2D),
                             ),
                           ),
                         ),
                         const Icon(
                           Icons.chevron_right_rounded,
-                          size: 20,
+                          size: 19,
                           color: Color(0xFF9BA3B0),
                         ),
                       ],

@@ -228,19 +228,19 @@ class _AuthScreenState extends State<AuthScreen> {
                               ? s.tr('مرحباً بعودتك 👋', 'Welcome back 👋')
                               : s.tr('أنشئ حسابك', 'Create account'),
                           style: const TextStyle(
-                            fontSize: 34,
+                            fontSize: 28,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -0.8,
+                            letterSpacing: -0.6,
                             color: _ink,
                             height: 1.15,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
                           _isLogin
                               ? s.tr('دخل لحسابك باش تتابع إعلاناتك ورسائلك.', 'Connectez-vous pour gérer vos annonces et messages.')
                               : s.tr('انضم لآلاف المغاربة اللي كيبيعو ويشريو على Apolo.', 'Rejoignez des milliers de Marocains sur Apolo.'),
-                          style: const TextStyle(fontSize: 16, height: 1.4, color: _muted),
+                          style: const TextStyle(fontSize: 14.5, height: 1.4, color: _muted),
                         ),
                       ],
                     ),

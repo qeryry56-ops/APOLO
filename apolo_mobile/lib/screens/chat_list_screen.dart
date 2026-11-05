@@ -141,14 +141,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
         color: _blue,
         onRefresh: () => _loadConversations(),
         child: ListView(
-          padding: EdgeInsets.fromLTRB(24, topInset + 14, 24, 130),
+          padding: EdgeInsets.fromLTRB(20, topInset + 14, 20, 120),
           children: [
             Text(
               s.messages,
               style: const TextStyle(
-                fontSize: 36,
+                fontSize: 28,
                 fontWeight: FontWeight.w800,
-                letterSpacing: -0.9,
+                letterSpacing: -0.6,
                 color: _ink,
               ),
             ),
@@ -160,7 +160,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       '${_conversations.length} محادثات نشطة',
                       '${_conversations.length} conversations actives',
                     ),
-              style: const TextStyle(fontSize: 16, color: _muted),
+              style: const TextStyle(fontSize: 14.5, color: _muted),
             ),
             const SizedBox(height: 20),
             if (_loading)

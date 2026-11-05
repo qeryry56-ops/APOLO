@@ -84,11 +84,11 @@ class _StoresScreenState extends State<StoresScreen> {
                     child: Text(
                       s.stores,
                       style: const TextStyle(
-                        fontSize: 34,
+                        fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: _ink,
-                        letterSpacing: -0.9,
-                        height: 1.05,
+                        letterSpacing: -0.6,
+                        height: 1.1,
                       ),
                     ),
                   ),

@@ -24,71 +24,65 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _categories = [];
   List<dynamic> _featuredAds = [];
   List<dynamic> _latestAds = [];
-  List<dynamic> _stores = [];
 
   // Exact Triply-AI + Apolo Official Brand Red (#E31B23) color tokens
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _blue = Color(0xFFE31B23);
   static const Color _heroBlue = Color(0xFFC81018);
   static const Color _gold = Color(0xFFF5B942);
+  static const Color _muted = Color(0xFF8A94A6);
   static const Color _border = Color(0xFFEDEFF3);
+  static const Color _pillBg = Color(0xFFF1F3F7);
 
   static const List<Map<String, dynamic>> _defaultCategories = [
     {
       'id': 3,
       'name_ar': 'سيارات ومركبات',
       'name_fr': 'Voitures & Auto',
-      'icon': Icons.directions_car_filled_rounded,
+      'asset': 'assets/images/hero_car.png',
       'bg': 0xFFFEECEE,
-      'tint': 0xFFE31B23,
     },
     {
       'id': 2,
       'name_ar': 'عقارات وشقق',
       'name_fr': 'Immobilier',
-      'icon': Icons.home_work_rounded,
+      'asset': 'assets/images/cat_realestate.png',
       'bg': 0xFFEFF6FF,
-      'tint': 0xFF2563EB,
     },
     {
       'id': 1,
-      'name_ar': 'هواتف وإلكترونيات',
-      'name_fr': 'Téléphones & Tech',
-      'icon': Icons.smartphone_rounded,
+      'name_ar': 'هواتف وتقنية',
+      'name_fr': 'Téléphones',
+      'asset': 'assets/images/cat_phones.png',
       'bg': 0xFFF5F3FF,
-      'tint': 0xFF7C3AED,
     },
     {
       'id': 4,
       'name_ar': 'حواسيب ومعدات',
       'name_fr': 'Informatique',
-      'icon': Icons.laptop_mac_rounded,
+      'asset': 'assets/images/cat_computers.png',
       'bg': 0xFFECFDF5,
-      'tint': 0xFF059669,
     },
     {
       'id': 5,
       'name_ar': 'أثاث وديكور',
       'name_fr': 'Maison & Déco',
-      'icon': Icons.chair_rounded,
+      'asset': 'assets/images/cat_home.png',
       'bg': 0xFFFFFBEB,
-      'tint': 0xFFD97706,
     },
     {
       'id': 6,
       'name_ar': 'أزياء وموضة',
       'name_fr': 'Mode & Beauté',
-      'icon': Icons.shopping_bag_rounded,
+      'asset': 'assets/images/cat_fashion.png',
       'bg': 0xFFFDF2F8,
-      'tint': 0xFFDB2777,
     },
     {
       'id': 7,
       'name_ar': 'وظائف وخدمات',
-      'name_fr': 'Emploi & Services',
-      'icon': Icons.work_rounded,
+      'name_fr': 'Emploi & Pro',
+      'asset': 'assets/images/cat_jobs.png',
       'bg': 0xFFF0FDF4,
-      'tint': 0xFF16A34A,
     },
   ];
 
@@ -142,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _categories = data['categories'] ?? _state.categories;
             _featuredAds = data['vip_ads'] ?? [];
             _latestAds = data['latest_ads'] ?? [];
-            _stores = data['featured_stores'] ?? [];
             _loading = false;
           });
         }
@@ -158,39 +151,138 @@ class _HomeScreenState extends State<HomeScreen> {
     return raw.split(' ').first;
   }
 
-  IconData _iconForCategory(String name, int idx) {
+  String _assetForCategory(String name, int idx) {
     final lower = name.toLowerCase();
     if (lower.contains('voiture') || lower.contains('auto') || lower.contains('moto') || lower.contains('سيار') || lower.contains('مركبات')) {
-      return Icons.directions_car_filled_rounded;
+      return 'assets/images/hero_car.png';
     }
     if (lower.contains('immo') || lower.contains('appart') || lower.contains('villa') || lower.contains('عقار') || lower.contains('شقق')) {
-      return Icons.home_work_rounded;
+      return 'assets/images/cat_realestate.png';
     }
     if (lower.contains('télé') || lower.contains('phone') || lower.contains('tech') || lower.contains('هواتف') || lower.contains('إلكترون')) {
-      return Icons.smartphone_rounded;
+      return 'assets/images/cat_phones.png';
     }
     if (lower.contains('info') || lower.contains('pc') || lower.contains('حواسيب')) {
-      return Icons.laptop_mac_rounded;
+      return 'assets/images/cat_computers.png';
     }
     if (lower.contains('maison') || lower.contains('meuble') || lower.contains('أثاث') || lower.contains('منزل')) {
-      return Icons.chair_rounded;
+      return 'assets/images/cat_home.png';
     }
     if (lower.contains('mode') || lower.contains('vêt') || lower.contains('أزياء') || lower.contains('ملابس')) {
-      return Icons.checkroom_rounded;
+      return 'assets/images/cat_fashion.png';
     }
     if (lower.contains('emploi') || lower.contains('service') || lower.contains('وظائف') || lower.contains('خدمات')) {
-      return Icons.work_rounded;
+      return 'assets/images/cat_jobs.png';
     }
-    final fallbackIcons = [
-      Icons.directions_car_filled_rounded,
-      Icons.home_work_rounded,
-      Icons.smartphone_rounded,
-      Icons.laptop_mac_rounded,
-      Icons.chair_rounded,
-      Icons.shopping_bag_rounded,
-      Icons.work_rounded,
+    const assets = [
+      'assets/images/hero_car.png',
+      'assets/images/cat_realestate.png',
+      'assets/images/cat_phones.png',
+      'assets/images/cat_computers.png',
+      'assets/images/cat_home.png',
+      'assets/images/cat_fashion.png',
+      'assets/images/cat_jobs.png',
     ];
-    return fallbackIcons[idx % fallbackIcons.length];
+    return assets[idx % assets.length];
+  }
+
+  void _openNotificationsSheet() {
+    final s = _state.s;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _border,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEECEE),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.notifications_active_rounded, color: _blue, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    s.tr('الإشعارات والتنبيهات', 'Notifications & Alertes'),
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      color: _ink,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _pillBg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: _border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Image.asset('assets/images/hero_car.png', fit: BoxFit.contain),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s.tr('مرحباً بك فـ النسخة الجديدة ديال Apolo.ma 🎉', 'Bienvenue sur le nouveau Apolo.ma 🎉'),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _ink),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          s.tr(
+                            'اكتشف أحدث عروض السيارات والعقارات أو ضيف إعلانك مجاناً فـ 30 ثانية.',
+                            'Découvrez les dernières offres ou publiez votre annonce en 30 secondes.',
+                          ),
+                          style: const TextStyle(fontSize: 12.5, color: _muted, height: 1.35),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -212,11 +304,11 @@ class _HomeScreenState extends State<HomeScreen> {
         color: _blue,
         onRefresh: _loadHome,
         child: ListView(
-          padding: EdgeInsets.only(top: topPadding + 14, bottom: 120),
+          padding: EdgeInsets.only(top: topPadding + 12, bottom: 115),
           children: [
-            // Top Greeting Row (Exact Triply-AI style: "Hi, Name 👋")
+            // Top Greeting Row + Notifications Bell Button (Balanced 28px Title, 20px Padding)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -228,33 +320,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 36,
+                        fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.9,
+                        letterSpacing: -0.6,
                         color: _ink,
                         height: 1.15,
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
+                  // Notifications Bell Button (Replaced language icon as requested!)
                   GestureDetector(
-                    onTap: () async {
-                      await _state.toggleLanguage();
-                      await _loadHome();
-                    },
+                    onTap: _openNotificationsSheet,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      width: 42,
+                      height: 42,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F3F7),
-                        borderRadius: BorderRadius.circular(999),
+                        color: _pillBg,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _border),
                       ),
-                      child: Text(
-                        s.isAr ? 'FR' : 'عربي',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: _ink,
-                        ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(
+                            Icons.notifications_none_rounded,
+                            size: 22,
+                            color: _ink,
+                          ),
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _blue,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1.5),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -262,152 +369,161 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Hero Card (Apolo Brand Primary Red #E31B23 Card + 3D Memoji Car on the trailing side!)
-            Container(
-              margin: const EdgeInsets.fromLTRB(24, 22, 24, 0),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFE31B23), _heroBlue],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: _blue.withValues(alpha: 0.24),
-                    blurRadius: 22,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
+            // Hero Card with 3D Memoji Car popping slightly OUTSIDE the red card!
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  // Subtle radial glow behind the 3D Memoji car
-                  PositionedDirectional(
-                    end: -24,
-                    top: -16,
-                    child: Container(
-                      width: 190,
-                      height: 190,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white.withValues(alpha: 0.22),
-                            Colors.white.withValues(alpha: 0.0),
-                          ],
-                        ),
+                  // Red Gradient Hero Container
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE31B23), _heroBlue],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _blue.withValues(alpha: 0.24),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(24, 24, 142, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              s.tr('مساعد أبولو الذكي', 'AI Deal Planner'),
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                        PositionedDirectional(
+                          end: -20,
+                          top: -20,
+                          child: Container(
+                            width: 170,
+                            height: 170,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.22),
+                                  Colors.white.withValues(alpha: 0.0),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(
-                            s.tr('بيع ولا شري فـ 30 ثانية', 'Plan your next deal'),
-                            maxLines: 1,
-                            style: const TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.6,
-                              color: Colors.white,
-                            ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          s.tr(
-                            'قول لينا شنو باغي تبيع ولا تشري — غادي نقادو ليك كلشي.',
-                            'Tell us what you want to buy or sell — we\'ll build the listing.',
-                          ),
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            height: 1.4,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.92),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        GestureDetector(
-                          onTap: () {
-                            if (widget.onOpenPostAd != null) {
-                              widget.onOpenPostAd!();
-                            } else {
-                              widget.onOpenSearch(null);
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 11,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.12),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  s.tr('ابدا دابا', 'Get started'),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 134, 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 15,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    s.tr('مساعد أبولو الذكي', 'AI Deal Planner'),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Text(
+                                  s.tr('بيع ولا شري فـ 30 ثانية', 'Plan your next deal'),
+                                  maxLines: 1,
                                   style: const TextStyle(
-                                    fontSize: 14.5,
+                                    fontSize: 21,
                                     fontWeight: FontWeight.w800,
-                                    color: _blue,
+                                    letterSpacing: -0.5,
+                                    color: Colors.white,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 16,
-                                  color: _blue,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                s.tr(
+                                  'قول لينا شنو باغي تبيع ولا تشري — غادي نقادو ليك كلشي.',
+                                  'Tell us what you want to buy or sell — we\'ll build the listing.',
                                 ),
-                              ],
-                            ),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  height: 1.38,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.92),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              GestureDetector(
+                                onTap: () {
+                                  if (widget.onOpenPostAd != null) {
+                                    widget.onOpenPostAd!();
+                                  } else {
+                                    widget.onOpenSearch(null);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(999),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.12),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        s.tr('ابدا دابا', 'Get started'),
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: _blue,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Icon(
+                                        Icons.arrow_forward_rounded,
+                                        size: 15,
+                                        color: _blue,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // 3D Memoji Car placed on top in the trailing slot (flipped in RTL so headlights face inward!)
+
+                  // 3D Memoji Car popping slightly OUTSIDE the red Hero Card (end: -12, bottom: -14)!
                   PositionedDirectional(
-                    end: -14,
-                    bottom: 8,
-                    width: 176,
-                    height: 142,
+                    end: -12,
+                    bottom: -14,
+                    width: 178,
+                    height: 146,
                     child: IgnorePointer(
                       child: Transform.flip(
                         flipX: s.isAr,
@@ -422,18 +538,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // NEW Section: Categories ("تصفح الأقسام" / "Catégories")
+            // Categories Section with 3D Clay / Memoji Icons!
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     s.categories,
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 18.5,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.3,
                       color: _ink,
                     ),
                   ),
@@ -444,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           s.tr('عرض الكل', 'Tout voir'),
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: _blue,
                           ),
@@ -452,7 +568,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 2),
                         const Icon(
                           Icons.chevron_right_rounded,
-                          size: 18,
+                          size: 17,
                           color: _blue,
                         ),
                       ],
@@ -463,12 +579,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             SizedBox(
-              height: 118,
+              height: 114,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                 scrollDirection: Axis.horizontal,
                 itemCount: displayCategories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, idx) {
                   final cat = displayCategories[idx];
                   final int? catId = int.tryParse(cat['id']?.toString() ?? '');
@@ -476,31 +592,30 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? (cat['name_ar'] ?? cat['name'] ?? '')
                           : (cat['name_fr'] ?? cat['name'] ?? ''))
                       .toString();
-                  final IconData icon = cat['icon'] is IconData
-                      ? cat['icon'] as IconData
-                      : _iconForCategory(name, idx);
+                  final String assetPath = cat['asset'] is String
+                      ? cat['asset'] as String
+                      : _assetForCategory(name, idx);
                   final Color badgeBg = cat['bg'] is int
                       ? Color(cat['bg'] as int)
-                      : (idx == 0 ? const Color(0xFFFEECEE) : const Color(0xFFF4F6F9));
-                  final Color iconTint = cat['tint'] is int
-                      ? Color(cat['tint'] as int)
-                      : (idx == 0 ? _blue : _ink);
+                      : _defaultCategories[idx % _defaultCategories.length]['bg'] is int
+                          ? Color(_defaultCategories[idx % _defaultCategories.length]['bg'] as int)
+                          : const Color(0xFFF4F6F9);
 
                   return GestureDetector(
                     onTap: () => widget.onOpenSearch(catId),
                     child: Container(
-                      width: 106,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      width: 96,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: idx == 0 ? _blue.withValues(alpha: 0.25) : _border,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: _ink.withValues(alpha: 0.04),
-                            blurRadius: 12,
+                            blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
                         ],
@@ -509,22 +624,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            width: 44,
-                            height: 44,
+                            width: 48,
+                            height: 48,
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
                               color: badgeBg,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(icon, size: 22, color: iconTint),
+                            child: Image.asset(
+                              assetPath,
+                              fit: BoxFit.contain,
+                            ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 7),
                           Text(
                             name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              fontSize: 12.5,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               color: _ink,
                               letterSpacing: -0.2,
@@ -538,18 +657,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Section 1: "Your trips" -> "Annonces à la une"
+            // Section 1: "Featured listings"
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     s.tr('إعلانات مميزة', 'Featured listings'),
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 18.5,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.3,
                       color: _ink,
                     ),
                   ),
@@ -560,7 +679,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           s.tr('عرض الكل', 'See all'),
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: _blue,
                           ),
@@ -568,7 +687,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 2),
                         const Icon(
                           Icons.chevron_right_rounded,
-                          size: 18,
+                          size: 17,
                           color: _blue,
                         ),
                       ],
@@ -578,30 +697,29 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Featured Showcase Card (Exact Triply-AI "3 Days in Osaka" card layout)
             if (_loading)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
+                padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(child: CircularProgressIndicator(color: _blue)),
               )
             else if (heroAd != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: _TriplyShowcaseCard(ad: heroAd),
               ),
 
-            // Section 2: "Popular destinations" -> Popular Categories / Pro Stores
+            // Section 2: "Popular categories"
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 30, 24, 0),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     s.tr('الأكثر طلباً في المغرب', 'Popular categories'),
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 18.5,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.3,
                       color: _ink,
                     ),
                   ),
@@ -617,7 +735,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           s.tr('المتاجر', 'Boutiques'),
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: _blue,
                           ),
@@ -625,7 +743,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 2),
                         const Icon(
                           Icons.chevron_right_rounded,
-                          size: 18,
+                          size: 17,
                           color: _blue,
                         ),
                       ],
@@ -636,12 +754,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             SizedBox(
-              height: 246,
+              height: 214,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 scrollDirection: Axis.horizontal,
                 itemCount: _fallbackPopular.length + (_categories.length > 3 ? 2 : 0),
-                separatorBuilder: (_, __) => const SizedBox(width: 14),
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, idx) {
                   final item = _fallbackPopular[idx % _fallbackPopular.length];
                   final int? catId = int.tryParse(item['id'] ?? '');
@@ -650,10 +768,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   return GestureDetector(
                     onTap: () => widget.onOpenSearch(catId),
                     child: Container(
-                      width: 168,
-                      height: 230,
+                      width: 156,
+                      height: 202,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
                             color: _ink.withValues(alpha: 0.08),
@@ -674,7 +792,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            height: 120,
+                            height: 105,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -682,20 +800,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.65),
+                                    Colors.black.withValues(alpha: 0.68),
                                   ],
                                 ),
                               ),
                             ),
                           ),
-                          // Top-right Rating Badge
                           Positioned(
                             top: 10,
                             right: 10,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
+                                horizontal: 9,
+                                vertical: 4,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.45),
@@ -706,14 +823,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   const Icon(
                                     Icons.star_rounded,
-                                    size: 14,
+                                    size: 13,
                                     color: _gold,
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 3),
                                   Text(
                                     item['rating'] ?? '4.9',
                                     style: const TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white,
                                     ),
@@ -722,7 +839,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          // Bottom-left Title & Subtitle
                           Positioned(
                             left: 12,
                             right: 12,
@@ -735,9 +851,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 15.5,
                                     fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.4,
+                                    letterSpacing: -0.3,
                                     color: Colors.white,
                                   ),
                                 ),
@@ -747,7 +863,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color: Colors.white.withValues(alpha: 0.85),
                                   ),
@@ -763,19 +879,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Section 3: More Recent Listings in Triply Showcase Card format
+            // Section 3: More Recent Listings in balanced Showcase Card format
             if (moreAds.isNotEmpty) ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 30, 24, 4),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 2),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       s.tr('أحدث الإعلانات', 'Recent listings'),
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 18.5,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
+                        letterSpacing: -0.3,
                         color: _ink,
                       ),
                     ),
@@ -786,7 +902,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             s.tr('الكل', 'See all'),
                             style: const TextStyle(
-                              fontSize: 15,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w700,
                               color: _blue,
                             ),
@@ -794,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 2),
                           const Icon(
                             Icons.chevron_right_rounded,
-                            size: 18,
+                            size: 17,
                             color: _blue,
                           ),
                         ],
@@ -805,7 +921,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               ...moreAds.take(8).map(
                     (ad) => Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                       child: _TriplyShowcaseCard(ad: ad),
                     ),
                   ),
@@ -859,13 +975,13 @@ class _TriplyShowcaseCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(color: const Color(0xFFEDEFF3)),
           boxShadow: [
             BoxShadow(
-              color: _ink.withValues(alpha: 0.09),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
+              color: _ink.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -874,7 +990,7 @@ class _TriplyShowcaseCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              height: 210,
+              height: 186,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
@@ -884,7 +1000,7 @@ class _TriplyShowcaseCard extends StatelessWidget {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    height: 120,
+                    height: 105,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -892,20 +1008,19 @@ class _TriplyShowcaseCard extends StatelessWidget {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.62),
+                            Colors.black.withValues(alpha: 0.64),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  // Top-right translucent pill badge
                   Positioned(
-                    top: 12,
-                    right: 12,
+                    top: 10,
+                    right: 10,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: 10,
+                        vertical: 5,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.45),
@@ -915,15 +1030,15 @@ class _TriplyShowcaseCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
-                            Icons.calendar_today_rounded,
-                            size: 13,
+                            Icons.local_offer_outlined,
+                            size: 12,
                             color: Colors.white,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 5),
                           Text(
                             category,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
@@ -932,11 +1047,10 @@ class _TriplyShowcaseCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Bottom-left Title + Location overlay
                   Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 16,
+                    left: 14,
+                    right: 14,
+                    bottom: 12,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -945,18 +1059,18 @@ class _TriplyShowcaseCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 24,
+                            fontSize: 19,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
+                            letterSpacing: -0.4,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Row(
                           children: [
                             const Icon(
                               Icons.location_on_rounded,
-                              size: 15,
+                              size: 14,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 4),
@@ -966,7 +1080,7 @@ class _TriplyShowcaseCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white.withValues(alpha: 0.95),
                                 ),
@@ -980,9 +1094,8 @@ class _TriplyShowcaseCard extends StatelessWidget {
                 ],
               ),
             ),
-            // White Footer Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -990,15 +1103,15 @@ class _TriplyShowcaseCard extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.account_balance_wallet_outlined,
-                        size: 18,
+                        size: 17,
                         color: _muted,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 7),
                       Text(
                         priceFormatted,
                         style: const TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                           color: _blue,
                         ),
                       ),
@@ -1007,17 +1120,17 @@ class _TriplyShowcaseCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        s.tr('عرض', 'View'),
+                        s.tr('عرض', 'Voir'),
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: _blue,
                         ),
                       ),
-                      const SizedBox(width: 3),
+                      const SizedBox(width: 2),
                       const Icon(
                         Icons.chevron_right_rounded,
-                        size: 18,
+                        size: 17,
                         color: _blue,
                       ),
                     ],

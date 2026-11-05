@@ -31,6 +31,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/hero_car.png
+    - assets/images/cat_realestate.png
+    - assets/images/cat_phones.png
+    - assets/images/cat_computers.png
+    - assets/images/cat_home.png
+    - assets/images/cat_fashion.png
+    - assets/images/cat_jobs.png
   fonts:
     - family: PlusJakartaSans
       fonts:
