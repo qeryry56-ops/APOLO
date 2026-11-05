@@ -285,8 +285,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Subtle radial glow behind the 3D Memoji car
                   PositionedDirectional(
-                    end: -30,
-                    top: -20,
+                    end: -24,
+                    top: -16,
                     child: Container(
                       width: 190,
                       height: 190,
@@ -294,23 +294,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            Colors.white.withValues(alpha: 0.20),
+                            Colors.white.withValues(alpha: 0.22),
                             Colors.white.withValues(alpha: 0.0),
                           ],
                         ),
-                      ),
-                    ),
-                  ),
-                  // 3D Memoji Car placed in its reserved slot!
-                  PositionedDirectional(
-                    end: -28,
-                    bottom: 6,
-                    width: 192,
-                    height: 146,
-                    child: IgnorePointer(
-                      child: Image.asset(
-                        'assets/images/hero_car.png',
-                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
@@ -413,6 +400,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  // 3D Memoji Car placed on top in the trailing slot (flipped in RTL so headlights face inward!)
+                  PositionedDirectional(
+                    end: -14,
+                    bottom: 8,
+                    width: 176,
+                    height: 142,
+                    child: IgnorePointer(
+                      child: Transform.flip(
+                        flipX: s.isAr,
+                        child: Image.asset(
+                          'assets/images/hero_car.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
                 ],

@@ -7,6 +7,11 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Apolo.ma — السوق المغربي الحديث للإعلانات والمتاجر الاحترافية">
 
+  <!-- Prevent stale Service Worker / browser cache -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -25,6 +30,16 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Automatically unregister any legacy Flutter service workers so new builds show up immediately
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js?v=20261105_3d" async></script>
 </body>
 </html>
