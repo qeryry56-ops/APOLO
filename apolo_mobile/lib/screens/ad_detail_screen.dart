@@ -7,6 +7,7 @@ import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
 import 'widgets/boost_sheet.dart';
 import 'chat_room_screen.dart';
+import 'widgets/chat_utils.dart';
 import 'store_detail_screen.dart';
 import 'auth_screen.dart';
 
@@ -104,6 +105,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         'Apolo User')
                     .toString(),
                 adTitle: (_ad?['title'] ?? '').toString(),
+                peerAvatar: (conv['other_user']?['avatar_url'] ??
+                        _ad?['seller']?['avatar_url'] ??
+                        _ad?['seller']?['avatar'])
+                    ?.toString(),
+                adImage: chatAdImage(_ad),
+                adPrice: (_ad?['price_formatted'] ?? '').toString(),
               ),
             ),
           );
