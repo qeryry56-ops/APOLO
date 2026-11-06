@@ -1,12 +1,20 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 
-/// Login / Register screen — Triply-AI / Cal-AI 2026 design system.
+/// Login / Register screen — Triply-AI / Unslop 2026 design system + Official Apolo.ma Google OAuth.
 class AuthScreen extends StatefulWidget {
   final bool startWithRegister;
-  const AuthScreen({super.key, this.startWithRegister = false});
+  final bool autoTriggerGoogle;
+
+  const AuthScreen({
+    super.key,
+    this.startWithRegister = false,
+    this.autoTriggerGoogle = false,
+  });
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -33,6 +41,16 @@ class _AuthScreenState extends State<AuthScreen> {
   static const Color _border = Color(0xFFE7EAF0);
   static const Color _fill = Color(0xFFF1F3F7);
   static const Color _danger = Color(0xFFE31B23);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoTriggerGoogle) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _signInWithGoogle();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -128,23 +146,44 @@ class _AuthScreenState extends State<AuthScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
+  Future<void> _signInWithGoogle() async {
+    final s = _state.s;
+    final Uri googleUri = Uri.parse(
+      'https://accounts.google.com/o/oauth2/v2/auth'
+      '?client_id=${Uri.encodeComponent(AppConfig.googleClientId)}'
+      '&redirect_uri=${Uri.encodeComponent(AppConfig.googleOAuthRedirectUri)}'
+      '&response_type=code'
+      '&scope=${Uri.encodeComponent("openid profile email")}'
+      '&prompt=select_account',
+    );
+    try {
+      final launched = await launchUrl(
+        googleUri,
+        mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        await launchUrl(Uri.parse(AppConfig.googleAuthUrl));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: _ink,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            content: Text(s.tr('تعذر فتح صفحة الدخول عبر Google', 'Impossible d\'ouvrir Google Sign-In')),
+          ),
+        );
+      }
+    }
+  }
+
   void _switchMode(bool login) {
     if (_isLogin == login) return;
     setState(() {
       _isLogin = login;
       _error = null;
     });
-  }
-
-  void _comingSoon(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _ink,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        content: Text(_state.s.tr('الدخول عبر $provider قريباً', 'Connexion $provider bientôt disponible')),
-      ),
-    );
   }
 
   @override
@@ -193,17 +232,18 @@ class _AuthScreenState extends State<AuthScreen> {
 
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
                 children: [
-                  // Brand mark
+                  // Official Apolo Brand Mark (#E31B23 squircle + Pure White #FFFFFF olo smile mark!)
                   Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: Container(
                       width: 56,
                       height: 56,
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFF5258), Color(0xFFE31B23)],
+                          colors: [Color(0xFFE31B23), Color(0xFFC21018)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -212,10 +252,13 @@ class _AuthScreenState extends State<AuthScreen> {
                           BoxShadow(color: _blue.withValues(alpha: 0.28), blurRadius: 16, offset: const Offset(0, 8)),
                         ],
                       ),
-                      child: const Icon(CupertinoIcons.sparkles, color: Colors.white, size: 26),
+                      child: Image.asset(
+                        'assets/images/apolo_icon_white.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 18),
 
                   // Title
                   AnimatedSwitcher(
@@ -246,11 +289,11 @@ class _AuthScreenState extends State<AuthScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 22),
 
                   // Segmented control
                   Container(
-                    height: 50,
+                    height: 48,
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(color: _fill, borderRadius: BorderRadius.circular(999)),
                     child: Row(
@@ -260,7 +303,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // Fields
                   AnimatedSize(
@@ -277,7 +320,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             icon: CupertinoIcons.person,
                             action: TextInputAction.next,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                         ],
                         _field(
                           label: _isLogin
@@ -289,7 +332,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           keyboard: TextInputType.emailAddress,
                           action: TextInputAction.next,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         if (!_isLogin) ...[
                           _field(
                             label: s.tr('رقم الهاتف', 'Téléphone'),
@@ -299,7 +342,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             keyboard: TextInputType.phone,
                             action: TextInputAction.next,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                         ],
                         _field(
                           label: s.tr('كلمة المرور', 'Mot de passe'),
@@ -312,7 +355,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           onSubmitted: _isLogin ? (_) => _submit() : null,
                         ),
                         if (!_isLogin) ...[
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                           _field(
                             label: s.tr('تأكيد كلمة المرور', 'Confirmer le mot de passe'),
                             controller: _confirmCtrl,
@@ -328,20 +371,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
 
-                  if (_isLogin)
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: TextButton(
-                        onPressed: () => _comingSoon(s.tr('استرجاع كلمة المرور', 'récupération')),
-                        style: TextButton.styleFrom(foregroundColor: _blue),
-                        child: Text(
-                          s.tr('نسيت كلمة المرور؟', 'Mot de passe oublié ?'),
-                          style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(height: 14),
+                  const SizedBox(height: 18),
 
                   // Inline error
                   if (_error != null)
@@ -354,12 +384,12 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: _danger, size: 20),
+                          const Icon(CupertinoIcons.exclamationmark_circle, color: _danger, size: 19),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               _error!,
-                              style: const TextStyle(color: _danger, fontSize: 14, fontWeight: FontWeight.w600),
+                              style: const TextStyle(color: _danger, fontSize: 13.5, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -368,7 +398,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
                   // Primary CTA
                   SizedBox(
-                    height: 56,
+                    height: 52,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _blue,
@@ -386,11 +416,11 @@ class _AuthScreenState extends State<AuthScreen> {
                             )
                           : Text(
                               _isLogin ? s.login : s.tr('إنشاء الحساب', 'Créer mon compte'),
-                              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                             ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // Divider "or"
                   Row(
@@ -400,30 +430,24 @@ class _AuthScreenState extends State<AuthScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Text(
                           s.tr('أو', 'ou'),
-                          style: const TextStyle(color: _muted, fontSize: 14, fontWeight: FontWeight.w500),
+                          style: const TextStyle(color: _muted, fontSize: 13.5, fontWeight: FontWeight.w600),
                         ),
                       ),
                       const Expanded(child: Divider(color: _border, thickness: 1)),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                  // Social buttons
+                  // Official Google OAuth Button (Apple Login removed as requested!)
                   _socialButton(
                     leading: const Text(
                       'G',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFFEA4335)),
+                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Color(0xFFEA4335)),
                     ),
                     label: s.tr('المتابعة عبر Google', 'Continuer avec Google'),
-                    onTap: () => _comingSoon('Google'),
+                    onTap: _signInWithGoogle,
                   ),
-                  const SizedBox(height: 12),
-                  _socialButton(
-                    leading: const Icon(Icons.apple_rounded, size: 24, color: _ink),
-                    label: s.tr('المتابعة عبر Apple', 'Continuer avec Apple'),
-                    onTap: () => _comingSoon('Apple'),
-                  ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 22),
 
                   // Footer switch
                   Center(
@@ -431,7 +455,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       onTap: () => _switchMode(!_isLogin),
                       child: Text.rich(
                         TextSpan(
-                          style: const TextStyle(fontSize: 15, color: _muted),
+                          style: const TextStyle(fontSize: 14.5, color: _muted),
                           children: [
                             TextSpan(
                               text: _isLogin
@@ -447,7 +471,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   Text(
                     s.tr(
                       'بالمتابعة، فإنك توافق على شروط الاستخدام وسياسة الخصوصية.',
@@ -484,7 +508,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 14.5,
               fontWeight: active ? FontWeight.w700 : FontWeight.w600,
               color: active ? _ink : _muted,
             ),
@@ -513,10 +537,10 @@ class _AuthScreenState extends State<AuthScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 8),
+          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 7),
           child: Text(
             label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _ink),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _ink),
           ),
         ),
         TextField(
@@ -528,15 +552,15 @@ class _AuthScreenState extends State<AuthScreen> {
           onChanged: (_) {
             if (_error != null) setState(() => _error = null);
           },
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _ink),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: _ink),
           cursorColor: _blue,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Color(0xFFB0B8C6), fontWeight: FontWeight.w400),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
-            prefixIcon: Icon(icon, color: _muted, size: 22),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+            prefixIcon: Icon(icon, color: _muted, size: 20),
             suffixIcon: onToggleObscure == null
                 ? null
                 : IconButton(
@@ -544,7 +568,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     icon: Icon(
                       (obscure ?? false) ? CupertinoIcons.eye_slash : CupertinoIcons.eye,
                       color: _muted,
-                      size: 20,
+                      size: 19,
                     ),
                   ),
             border: outline,
@@ -558,7 +582,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _socialButton({required Widget leading, required String label, required VoidCallback onTap}) {
     return SizedBox(
-      height: 56,
+      height: 52,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
@@ -570,9 +594,9 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(width: 26, child: Center(child: leading)),
+            SizedBox(width: 24, child: Center(child: leading)),
             const SizedBox(width: 10),
-            Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
+            Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _ink)),
           ],
         ),
       ),

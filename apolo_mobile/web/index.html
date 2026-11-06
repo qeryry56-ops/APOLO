@@ -6,6 +6,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Apolo.ma — السوق المغربي الحديث للإعلانات والمتاجر الاحترافية">
+  <meta name="theme-color" content="#E31B23">
 
   <!-- Prevent stale Service Worker / browser cache -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -14,7 +15,7 @@
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Apolo.ma">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
@@ -28,10 +29,52 @@
 
   <title>Apolo.ma</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #E31B23;
+      height: 100%;
+      overflow: hidden;
+    }
+    #apolo-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: linear-gradient(145deg, #E31B23 0%, #C21018 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    #apolo-splash img {
+      width: 112px;
+      height: 112px;
+      border-radius: 28px;
+      box-shadow: 0 20px 44px rgba(0, 0, 0, 0.22);
+      animation: apoloPulse 1.6s ease-in-out infinite;
+    }
+    #apolo-splash .brand-sub {
+      margin-top: 18px;
+      color: rgba(255, 255, 255, 0.92);
+      font-family: 'Plus Jakarta Sans', 'IBM Plex Sans Arabic', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+    @keyframes apoloPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+  </style>
 </head>
 <body>
+  <div id="apolo-splash">
+    <img src="icons/Icon-512.png" alt="Apolo.ma">
+    <div class="brand-sub">apolo.ma</div>
+  </div>
   <script>
-    // Automatically unregister any legacy Flutter service workers so new builds show up immediately
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for (let registration of registrations) {
@@ -39,7 +82,14 @@
         }
       });
     }
+    window.addEventListener('flutter-first-frame', function() {
+      var splash = document.getElementById('apolo-splash');
+      if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(function() { splash.remove(); }, 460);
+      }
+    });
   </script>
-  <script src="flutter_bootstrap.js?v=20261105_memoji" async></script>
+  <script src="flutter_bootstrap.js?v=20261105_brand" async></script>
 </body>
 </html>

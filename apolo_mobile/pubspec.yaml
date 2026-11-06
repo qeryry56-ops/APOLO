@@ -37,6 +37,8 @@ flutter:
     - assets/images/cat_home.png
     - assets/images/cat_fashion.png
     - assets/images/cat_jobs.png
+    - assets/images/apolo_icon_white.png
+    - assets/images/apolo_logo_white.png
   fonts:
     - family: PlusJakartaSans
       fonts:

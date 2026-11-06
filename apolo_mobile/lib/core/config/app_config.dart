@@ -5,6 +5,12 @@ class AppConfig {
   static const String stagingBaseUrl = 'https://staging.apolo.ma/api/v1';
   static const String prodBaseUrl = 'https://apolo.ma/api/v1';
 
+  // Official Apolo.ma Google OAuth Configuration (extracted from apolo.ma/auth/google)
+  static const String googleClientId =
+      '130661413276-vbif91ct12ojofmo2kejhjl71it1j4gd.apps.googleusercontent.com';
+  static const String googleAuthUrl = 'https://apolo.ma/auth/google';
+  static const String googleOAuthRedirectUri = 'https://apolo.ma/auth/google/callback';
+
   // Default to production API; switchable to staging in Profile Settings
   static String currentBaseUrl = prodBaseUrl;
 

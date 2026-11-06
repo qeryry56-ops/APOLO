@@ -1,11 +1,11 @@
 {
-    "name": "apolo_mobile",
-    "short_name": "apolo_mobile",
+    "name": "Apolo.ma — السوق المغربي الحديث",
+    "short_name": "Apolo.ma",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#E31B23",
+    "theme_color": "#E31B23",
+    "description": "Apolo.ma — المنصة المغربية الأولى للإعلانات المبوبة والمتاجر الاحترافية",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
