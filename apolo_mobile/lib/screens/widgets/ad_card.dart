@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
@@ -107,7 +108,7 @@ class AdCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.location_on_rounded, size: 11, color: Colors.white),
+                  const Icon(CupertinoIcons.location_solid, size: 10.5, color: Colors.white),
                   const SizedBox(width: 3),
                   Text(
                     cityName,
@@ -133,7 +134,7 @@ class AdCard extends StatelessWidget {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.bolt_rounded, size: 12, color: Colors.white),
+                  Icon(CupertinoIcons.bolt_fill, size: 11, color: Colors.white),
                   SizedBox(width: 2),
                   Text('VIP', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
                 ],
@@ -156,7 +157,7 @@ class AdCard extends StatelessWidget {
                 ],
               ),
               child: Icon(
-                isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                isFav ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
                 size: 16,
                 color: isFav ? _red : _ink,
               ),

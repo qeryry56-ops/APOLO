@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -283,8 +284,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.add_photo_alternate_outlined,
-                    size: 34,
+                    CupertinoIcons.camera,
+                    size: 32,
                     color: _blue,
                   ),
                 ),
@@ -400,9 +401,9 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.auto_awesome_rounded,
+                        CupertinoIcons.sparkles,
                         color: Colors.white,
-                        size: 22,
+                        size: 21,
                       ),
                     ),
                     const SizedBox(width: 12),

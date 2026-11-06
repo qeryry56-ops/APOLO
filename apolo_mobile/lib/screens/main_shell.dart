@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import 'home_screen.dart';
@@ -67,28 +68,28 @@ class _MainShellState extends State<MainShell> {
 
     final items = [
       _TabSpec(
-        icon: Icons.home_outlined,
-        activeIcon: Icons.home_rounded,
+        icon: CupertinoIcons.house,
+        activeIcon: CupertinoIcons.house_fill,
         label: s.tr('الرئيسية', 'Home'),
       ),
       _TabSpec(
-        icon: Icons.auto_awesome_outlined,
-        activeIcon: Icons.auto_awesome_rounded,
+        icon: CupertinoIcons.sparkles,
+        activeIcon: CupertinoIcons.sparkles,
         label: s.tr('نشر ذكي', 'Publier'),
       ),
       _TabSpec(
-        icon: Icons.map_outlined,
-        activeIcon: Icons.map_rounded,
+        icon: CupertinoIcons.compass,
+        activeIcon: CupertinoIcons.compass_fill,
         label: s.tr('إعلانات', 'Annonces'),
       ),
       _TabSpec(
-        icon: Icons.chat_bubble_outline_rounded,
-        activeIcon: Icons.chat_bubble_rounded,
+        icon: CupertinoIcons.chat_bubble_2,
+        activeIcon: CupertinoIcons.chat_bubble_2_fill,
         label: s.tr('رسائل', 'Messages'),
       ),
       _TabSpec(
-        icon: Icons.person_outline_rounded,
-        activeIcon: Icons.person_rounded,
+        icon: CupertinoIcons.person,
+        activeIcon: CupertinoIcons.person_fill,
         label: s.tr('حسابي', 'Profile'),
       ),
     ];

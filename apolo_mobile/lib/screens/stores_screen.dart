@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import 'store_detail_screen.dart';
@@ -101,7 +102,7 @@ class _StoresScreenState extends State<StoresScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.verified_rounded, size: 15, color: _red),
+                        const Icon(CupertinoIcons.checkmark_seal_fill, size: 14, color: _red),
                         const SizedBox(width: 5),
                         Text(
                           'PRO',
@@ -127,7 +128,7 @@ class _StoresScreenState extends State<StoresScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    const Icon(Icons.storefront_rounded, color: _muted, size: 21),
+                    const Icon(CupertinoIcons.bag, color: _muted, size: 19),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
@@ -155,7 +156,7 @@ class _StoresScreenState extends State<StoresScreen> {
                           color: _red,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.search_rounded, size: 17, color: Colors.white),
+                        child: const Icon(CupertinoIcons.search, size: 16, color: Colors.white),
                       ),
                     ),
                   ],

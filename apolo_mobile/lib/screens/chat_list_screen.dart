@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import 'chat_room_screen.dart';
@@ -187,9 +188,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.forum_outlined,
+                        CupertinoIcons.chat_bubble_2,
                         color: _blue,
-                        size: 28,
+                        size: 26,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -350,9 +351,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         ),
                         const SizedBox(width: 8),
                         const Icon(
-                          Icons.chevron_right_rounded,
+                          CupertinoIcons.chevron_forward,
                           color: Color(0xFF9BA3B0),
-                          size: 20,
+                          size: 16,
                         ),
                       ],
                     ),

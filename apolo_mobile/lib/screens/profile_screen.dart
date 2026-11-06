@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
@@ -816,7 +817,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               children: [
                 _ProfileStatCol(
-                  icon: Icons.campaign_outlined,
+                  icon: CupertinoIcons.square_stack_3d_up,
                   value: '${_myAds.length}',
                   label: s.tr('إعلاناتي', 'Annonces'),
                   onTap: () => _openItemsSheet(
@@ -827,7 +828,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Container(width: 1, height: 52, color: _divider),
                 _ProfileStatCol(
-                  icon: Icons.favorite_border_rounded,
+                  icon: CupertinoIcons.heart,
                   value: '${_favorites.length}',
                   label: s.tr('المفضلة', 'Favoris'),
                   onTap: () => _openItemsSheet(
@@ -837,7 +838,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Container(width: 1, height: 52, color: _divider),
                 _ProfileStatCol(
-                  icon: Icons.notifications_none_rounded,
+                  icon: CupertinoIcons.bell,
                   value: '${_savedSearches.length}',
                   label: s.tr('تنبيهات', 'Alertes'),
                   onTap: _openSavedSearchesSheet,
@@ -851,7 +852,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: s.tr('الحساب والمتجر', 'Account'),
             rows: [
               _SettingsRowSpec(
-                icon: Icons.tune_rounded,
+                icon: CupertinoIcons.slider_horizontal_3,
                 label: s.tr('إعلاناتي المنشورة', 'Mes annonces publiées'),
                 onTap: () => _openItemsSheet(
                   s.tr('إعلاناتي', 'Mes annonces'),
@@ -861,18 +862,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               if (_state.isLoggedIn)
                 _SettingsRowSpec(
-                  icon: Icons.person_outline_rounded,
+                  icon: CupertinoIcons.person_crop_circle,
                   label: s.tr('تعديل المعلومات الشخصية', 'Modifier mon profil'),
                   onTap: _openEditProfileModal,
                 ),
               if (_state.isLoggedIn)
                 _SettingsRowSpec(
-                  icon: Icons.lock_outline_rounded,
+                  icon: CupertinoIcons.lock,
                   label: s.tr('تغيير كلمة المرور', 'Changer le mot de passe'),
                   onTap: _openChangePasswordModal,
                 ),
               _SettingsRowSpec(
-                icon: Icons.storefront_outlined,
+                icon: CupertinoIcons.bag,
                 label: s.tr('إدارة متجري الاحترافي (Pro)', 'Ma Boutique Pro'),
                 onTap: () {
                   if (_state.isLoggedIn) {
@@ -886,7 +887,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
               _SettingsRowSpec(
-                icon: Icons.verified_outlined,
+                icon: CupertinoIcons.checkmark_seal,
                 label: s.tr('تصفح المتاجر الموثوقة', 'Boutiques Pro Vérifiées'),
                 onTap: () => Navigator.push(
                   context,
@@ -901,7 +902,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: s.tr('الإعدادات', 'Preferences'),
             rows: [
               _SettingsRowSpec(
-                icon: Icons.translate_rounded,
+                icon: CupertinoIcons.globe,
                 label: s.tr(
                   'اللغة (العربية / Français)',
                   'Language (${s.isAr ? "العربية" : "Français"})',
@@ -912,7 +913,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
               _SettingsRowSpec(
-                icon: Icons.favorite_outline_rounded,
+                icon: CupertinoIcons.heart,
                 label: s.tr('الإعلانات المحفوظة', 'Saved listings'),
                 onTap: () => _openItemsSheet(
                   s.tr('المفضلة', 'Favoris'),
@@ -920,12 +921,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               _SettingsRowSpec(
-                icon: Icons.notifications_active_outlined,
+                icon: CupertinoIcons.bell,
                 label: s.tr('تنبيهات البحث المحفوظة', 'Alertes de recherche'),
                 onTap: _openSavedSearchesSheet,
               ),
               _SettingsRowSpec(
-                icon: Icons.cloud_done_outlined,
+                icon: CupertinoIcons.cloud,
                 label: AppConfig.currentBaseUrl == AppConfig.prodBaseUrl
                     ? s.tr('الخادم: الإنتاج (Production)', 'Server: Production (apolo.ma)')
                     : s.tr('الخادم: التجريبي (Staging)', 'Server: Staging (staging.apolo.ma)'),
@@ -948,18 +949,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 setState(() {});
               },
               child: Container(
-                margin: const EdgeInsets.fromLTRB(24, 28, 24, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(color: _border),
                 ),
                 child: Row(
                   children: [
                     const Icon(
-                      Icons.logout_rounded,
-                      size: 22,
+                      CupertinoIcons.square_arrow_right,
+                      size: 20,
                       color: Color(0xFF111827),
                     ),
                     const SizedBox(width: 14),
@@ -967,7 +968,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Text(
                         s.tr('تسجيل الخروج', 'Log out'),
                         style: const TextStyle(
-                          fontSize: 17,
+                          fontSize: 15.5,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF111827),
                         ),
@@ -980,28 +981,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             GestureDetector(
               onTap: _confirmDeleteAccount,
               child: Container(
-                margin: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(color: _border),
                 ),
                 child: Row(
                   children: [
                     const Icon(
-                      Icons.delete_outline_rounded,
-                      size: 22,
-                      color: Color(0xFFEF4444),
+                      CupertinoIcons.trash,
+                      size: 20,
+                      color: Color(0xFFE31B23),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
                         s.deleteAccount,
                         style: const TextStyle(
-                          fontSize: 17,
+                          fontSize: 15.5,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFFEF4444),
+                          color: Color(0xFFE31B23),
                         ),
                       ),
                     ),
@@ -1161,8 +1162,8 @@ class _SectionGroup extends StatelessWidget {
                           ),
                         ),
                         const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 19,
+                          CupertinoIcons.chevron_forward,
+                          size: 16,
                           color: Color(0xFF9BA3B0),
                         ),
                       ],

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
@@ -242,7 +243,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: _border),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 17, color: _ink),
+                        child: const Icon(CupertinoIcons.chevron_back, size: 18, color: _ink),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -269,7 +270,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: _red.withValues(alpha: 0.16)),
                       ),
-                      child: const Icon(Icons.notifications_active_outlined, size: 20, color: _red),
+                      child: const Icon(CupertinoIcons.bell, size: 19, color: _red),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -284,8 +285,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         border: Border.all(color: _border),
                       ),
                       child: Icon(
-                        _gridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
-                        size: 20,
+                        _gridView ? CupertinoIcons.list_bullet : CupertinoIcons.square_grid_2x2,
+                        size: 19,
                         color: _ink,
                       ),
                     ),
@@ -310,7 +311,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: [
-                          const Icon(Icons.search_rounded, color: _muted, size: 21),
+                          const Icon(CupertinoIcons.search, color: _muted, size: 19),
                           const SizedBox(width: 10),
                           Expanded(
                             child: TextField(
@@ -335,7 +336,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 _queryCtrl.clear();
                                 _searchAds();
                               },
-                              child: const Icon(Icons.close_rounded, size: 18, color: _muted),
+                              child: const Icon(CupertinoIcons.xmark_circle_fill, size: 18, color: _muted),
                             ),
                         ],
                       ),
@@ -358,7 +359,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.tune_rounded, color: Colors.white, size: 21),
+                      child: const Icon(CupertinoIcons.slider_horizontal_3, color: Colors.white, size: 20),
                     ),
                   ),
                 ],

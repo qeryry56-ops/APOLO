@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import 'ad_detail_screen.dart';
@@ -220,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Color(0xFFFEECEE),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.notifications_active_rounded, color: _blue, size: 20),
+                  child: const Icon(CupertinoIcons.bell_fill, color: _blue, size: 19),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -344,8 +345,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         alignment: Alignment.center,
                         children: [
                           const Icon(
-                            Icons.notifications_none_rounded,
-                            size: 22,
+                            CupertinoIcons.bell,
+                            size: 20,
                             color: _ink,
                           ),
                           Positioned(
@@ -422,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(
-                                    Icons.auto_awesome_rounded,
+                                    CupertinoIcons.sparkles,
                                     size: 15,
                                     color: Colors.white,
                                   ),
@@ -503,8 +504,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       const SizedBox(width: 6),
                                       const Icon(
-                                        Icons.arrow_forward_rounded,
-                                        size: 15,
+                                        CupertinoIcons.arrow_right,
+                                        size: 14,
                                         color: _blue,
                                       ),
                                     ],
@@ -567,8 +568,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 2),
                         const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 17,
+                          CupertinoIcons.chevron_forward,
+                          size: 15,
                           color: _blue,
                         ),
                       ],
@@ -686,8 +687,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 2),
                         const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 17,
+                          CupertinoIcons.chevron_forward,
+                          size: 15,
                           color: _blue,
                         ),
                       ],
@@ -742,8 +743,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 2),
                         const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 17,
+                          CupertinoIcons.chevron_forward,
+                          size: 15,
                           color: _blue,
                         ),
                       ],
@@ -822,8 +823,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(
-                                    Icons.star_rounded,
-                                    size: 13,
+                                    CupertinoIcons.star_fill,
+                                    size: 12,
                                     color: _gold,
                                   ),
                                   const SizedBox(width: 3),
@@ -1030,7 +1031,7 @@ class _TriplyShowcaseCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
-                            Icons.local_offer_outlined,
+                            CupertinoIcons.tag,
                             size: 12,
                             color: Colors.white,
                           ),
@@ -1069,8 +1070,8 @@ class _TriplyShowcaseCard extends StatelessWidget {
                         Row(
                           children: [
                             const Icon(
-                              Icons.location_on_rounded,
-                              size: 14,
+                              CupertinoIcons.location_solid,
+                              size: 13,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 4),
@@ -1102,8 +1103,8 @@ class _TriplyShowcaseCard extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(
-                        Icons.account_balance_wallet_outlined,
-                        size: 17,
+                        CupertinoIcons.tag,
+                        size: 16,
                         color: _muted,
                       ),
                       const SizedBox(width: 7),
