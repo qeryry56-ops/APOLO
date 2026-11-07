@@ -1,24 +1,21 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
-import 'privacy_compliance_screen.dart';
+import 'widgets/kinetic_widgets.dart';
 
-/// 2026 Login & 4-Step Animated Registration Wizard
-/// Step 1: Account Type (Individual vs Boutique Pro)
-/// Step 2: Full Name (or Store Name) + Phone / WhatsApp
-/// Step 3: Email + Password (with live strength meter)
-/// Step 4: City + Favorite Categories (for Smart Feed Algorithm)
 class AuthScreen extends StatefulWidget {
-  final bool startWithRegister;
+  final VoidCallback? onSuccess;
+  final bool initialRegisterMode;
+  final bool initialIsLogin;
   final bool autoTriggerGoogle;
 
   const AuthScreen({
     super.key,
-    this.startWithRegister = false,
+    this.onSuccess,
+    this.initialRegisterMode = false,
+    this.initialIsLogin = true,
     this.autoTriggerGoogle = false,
   });
 
@@ -28,103 +25,35 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final AppState _state = AppState();
-  late bool _isLogin = !widget.startWithRegister;
-  int _regStep = 0; // 0..3 for 4-step registration
+
+  late bool _isLogin;
+  int _registerStep = 0; // 0..3 (4 steps)
+  String _accountType = 'individual'; // 'individual' | 'pro'
+  int? _selectedCityId;
+  final Set<int> _selectedCategoryIds = {1, 4};
+
   bool _loading = false;
-  bool _obscure = true;
+  bool _obscurePassword = true;
   String? _error;
 
-  // Step 1: Account Type ('individual' | 'pro')
-  String _accountType = 'individual';
-
-  // Step 2: Name & Phone
   final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
 
-  // Step 3: Email & Password
-  final _loginCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  List<Map<String, dynamic>> _cities = [];
+  List<Map<String, dynamic>> _categories = [];
 
-  // Step 4: City & Interests
-  int? _selectedCityId = 1;
-  final Set<int> _selectedInterests = {3, 2, 1};
-
-  static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _redSoft = Color(0xFFFEECEE);
-  static const Color _muted = Color(0xFF8A94A6);
-  static const Color _border = Color(0xFFE7EAF0);
-  static const Color _fill = Color(0xFFF3F5F9);
-  static const Color _emerald = Color(0xFF10B981);
-
-  static const List<Map<String, dynamic>> _fallbackCities = [
-    {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-    {'id': 2, 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
-    {'id': 3, 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
-    {'id': 4, 'name_ar': 'طنجة', 'name_fr': 'Tanger'},
-    {'id': 5, 'name_ar': 'أكادير', 'name_fr': 'Agadir'},
-    {'id': 6, 'name_ar': 'فاس', 'name_fr': 'Fès'},
-    {'id': 7, 'name_ar': 'مكناس', 'name_fr': 'Meknès'},
-    {'id': 8, 'name_ar': 'وجدة', 'name_fr': 'Oujda'},
-  ];
-
-  static const List<Map<String, dynamic>> _interestShowcase = [
-    {
-      'id': 3,
-      'name_ar': 'وسائل النقل',
-      'name_fr': 'Véhicules',
-      'asset': 'assets/images/hero_car.png',
-    },
-    {
-      'id': 2,
-      'name_ar': 'عقارات',
-      'name_fr': 'Immobilier',
-      'asset': 'assets/images/cat_realestate.png',
-    },
-    {
-      'id': 1,
-      'name_ar': 'إعلاميات وتقنية',
-      'name_fr': 'Informatique',
-      'asset': 'assets/images/cat_computers.png',
-    },
-    {
-      'id': 4,
-      'name_ar': 'أزياء وجمال',
-      'name_fr': 'Mode & Beauté',
-      'asset': 'assets/images/cat_fashion.png',
-    },
-    {
-      'id': 5,
-      'name_ar': 'أدوات السفر',
-      'name_fr': 'Voyage',
-      'asset': 'assets/images/cat_travel.png',
-    },
-    {
-      'id': 6,
-      'name_ar': 'بارافارماسي',
-      'name_fr': 'Parapharmacie',
-      'asset': 'assets/images/cat_parapharmacy.png',
-    },
-    {
-      'id': 10,
-      'name_ar': 'المجوهرات',
-      'name_fr': 'Bijoux',
-      'asset': 'assets/images/cat_jewelry.png',
-    },
-    {
-      'id': 8,
-      'name_ar': 'بريكولاج',
-      'name_fr': 'Bricolage',
-      'asset': 'assets/images/cat_bricolage.png',
-    },
-  ];
+  static const Color _bg = Color(0xFFF8FAFC);
+  static const Color _primary = Color(0xFFE31B23);
+  static const Color _ink = Color(0xFF0F172A);
+  static const Color _muted = Color(0xFF64748B);
 
   @override
   void initState() {
     super.initState();
-    _passCtrl.addListener(() {
-      if (mounted) setState(() {});
-    });
+    _isLogin = widget.initialRegisterMode ? false : widget.initialIsLogin;
+    _loadMetadata();
     if (widget.autoTriggerGoogle) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _signInWithGoogle();
@@ -135,888 +64,686 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _loginCtrl.dispose();
+    _emailCtrl.dispose();
     _phoneCtrl.dispose();
-    _passCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
-  String _platform() {
-    if (kIsWeb) return 'web';
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.iOS:
-        return 'ios';
-      case TargetPlatform.android:
-        return 'android';
-      default:
-        return 'web';
+  Future<void> _loadMetadata() async {
+    if (_state.categories.isEmpty || _state.cities.isEmpty) {
+      await _state.fetchTaxonomy();
+    }
+    if (mounted) {
+      setState(() {
+        final rawCities = _state.cities
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        final rawCats = _state.categories
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _cities = rawCities.isNotEmpty ? rawCities : _fallbackCities();
+        _categories = rawCats.isNotEmpty ? rawCats : _fallbackCategories();
+        _selectedCityId ??= int.tryParse((_cities.first['id'] ?? 1).toString()) ?? 1;
+      });
     }
   }
 
-  int _passwordStrength(String pass) {
-    if (pass.isEmpty) return 0;
-    int s = 0;
-    if (pass.length >= 8) s++;
-    if (RegExp(r'[A-Z]').hasMatch(pass) || RegExp(r'[0-9]').hasMatch(pass)) s++;
-    if (pass.length >= 10 && RegExp(r'[0-9]').hasMatch(pass)) s++;
-    return s.clamp(1, 3);
+  List<Map<String, dynamic>> _fallbackCities() => [
+        {'id': 1, 'name': 'Casablanca', 'name_fr': 'Casablanca', 'name_ar': 'الدار البيضاء'},
+        {'id': 2, 'name': 'Rabat', 'name_fr': 'Rabat', 'name_ar': 'الرباط'},
+        {'id': 3, 'name': 'Marrakech', 'name_fr': 'Marrakech', 'name_ar': 'مراكش'},
+        {'id': 4, 'name': 'Tanger', 'name_fr': 'Tanger', 'name_ar': 'طنجة'},
+        {'id': 5, 'name': 'Agadir', 'name_fr': 'Agadir', 'name_ar': 'أكادير'},
+        {'id': 6, 'name': 'Fès', 'name_fr': 'Fès', 'name_ar': 'فاس'},
+      ];
+
+  List<Map<String, dynamic>> _fallbackCategories() => [
+        {'id': 1, 'name': 'Véhicules', 'name_fr': 'Véhicules', 'name_ar': 'سيارات ومركبات'},
+        {'id': 2, 'name': 'Immobilier', 'name_fr': 'Immobilier', 'name_ar': 'عقارات'},
+        {'id': 3, 'name': 'Informatique', 'name_fr': 'Informatique', 'name_ar': 'معلوميات'},
+        {'id': 4, 'name': 'Téléphones', 'name_fr': 'Téléphones', 'name_ar': 'هواتف ذكية'},
+        {'id': 5, 'name': 'Maison & Déco', 'name_fr': 'Maison & Déco', 'name_ar': 'منزل وديكور'},
+        {'id': 6, 'name': 'Mode & Beauté', 'name_fr': 'Mode & Beauté', 'name_ar': 'موضة وأزياء'},
+      ];
+
+  double get _passwordStrength {
+    final p = _passwordCtrl.text;
+    if (p.isEmpty) return 0;
+    double score = 0.25;
+    if (p.length >= 6) score += 0.25;
+    if (p.length >= 8 && RegExp(r'[0-9]').hasMatch(p)) score += 0.25;
+    if (RegExp(r'[A-Z]').hasMatch(p) || RegExp(r'[^a-zA-Z0-9]').hasMatch(p)) {
+      score += 0.25;
+    }
+    return score.clamp(0.0, 1.0);
   }
 
-  bool _validateCurrentRegStep() {
-    final s = _state.s;
+  String _step3DAsset() {
+    if (_isLogin) return 'assets/images/auth_hero_3d.png';
+    switch (_registerStep) {
+      case 0:
+        return 'assets/images/auth_hero_3d.png';
+      case 1:
+        return 'assets/images/cat_phones.png';
+      case 2:
+        return 'assets/images/auth_hero_3d.png';
+      case 3:
+        return 'assets/images/hero_car.png';
+      default:
+        return 'assets/images/auth_hero_3d.png';
+    }
+  }
+
+  bool _validateCurrentRegisterStep(bool isAr) {
     setState(() => _error = null);
-    if (_regStep == 0) {
-      return true;
-    } else if (_regStep == 1) {
+    if (_registerStep == 1) {
       if (_nameCtrl.text.trim().length < 2) {
         setState(() {
-          _error = s.tr(
-            'دخل الاسم الكامل أو اسم المتجر',
-            'Veuillez saisir votre nom complet',
-          );
+          _error = isAr
+              ? 'يرجى إدخال الاسم الكامل أو اسم المتجر'
+              : 'Veuillez saisir votre nom complet ou le nom de la boutique';
         });
         return false;
       }
-      if (_phoneCtrl.text.trim().length < 9) {
+      if (_phoneCtrl.text.trim().length < 8) {
         setState(() {
-          _error = s.tr(
-            'دخل رقم الهاتف أو الواتساب الصحيح (مثال: 06XXXXXXXX)',
-            'Numéro de téléphone invalide',
-          );
+          _error = isAr
+              ? 'يرجى إدخال رقم هاتف أو واتساب صحيح'
+              : 'Veuillez saisir un numéro de téléphone valide';
         });
         return false;
       }
-      return true;
-    } else if (_regStep == 2) {
-      if (!_loginCtrl.text.trim().contains('@')) {
+    } else if (_registerStep == 2) {
+      if (!_emailCtrl.text.contains('@')) {
         setState(() {
-          _error = s.tr(
-            'دخل بريد إلكتروني صحيح',
-            'Veuillez saisir une adresse e-mail valide',
-          );
+          _error = isAr
+              ? 'يرجى إدخال بريد إلكتروني صحيح'
+              : 'Veuillez saisir une adresse e-mail valide';
         });
         return false;
       }
-      if (_passCtrl.text.length < 8) {
+      if (_passwordCtrl.text.length < 6) {
         setState(() {
-          _error = s.tr(
-            'كلمة المرور خاصها 8 حروف أو أرقام على الأقل',
-            'Le mot de passe doit contenir au moins 8 caractères',
-          );
+          _error = isAr
+              ? 'كلمة المرور يجب أن تتكون من 6 أحرف على الأقل'
+              : 'Le mot de passe doit contenir au moins 6 caractères';
         });
         return false;
       }
-      return true;
     }
     return true;
   }
 
-  Future<void> _submitLogin() async {
-    final s = _state.s;
-    FocusScope.of(context).unfocus();
-    if (_loginCtrl.text.trim().isEmpty || _passCtrl.text.isEmpty) {
-      setState(() {
-        _error = s.tr(
-          'دخل البريد الإلكتروني/الهاتف وكلمة المرور',
-          'Entrez votre e-mail/téléphone et votre mot de passe',
-        );
-      });
+  void _nextStepOrSubmit(bool isAr) {
+    if (_isLogin) {
+      _submitAuth(isAr);
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final res = await _state.api.dio.post('/auth/login', data: {
-        'login': _loginCtrl.text.trim(),
-        'password': _passCtrl.text,
-        'platform': _platform(),
-      });
-      if (res.data is Map && res.data['status'] == 'success') {
-        await _state.setAuthSession(
-          res.data['token'].toString(),
-          Map<String, dynamic>.from(res.data['user']),
-        );
-        if (mounted) Navigator.pop(context, true);
-        return;
-      }
-      _error = (res.data is Map ? res.data['message'] : null)?.toString() ??
-          s.tr('وقع مشكل، عاود من جديد', 'Une erreur est survenue');
-    } catch (_) {
-      _error = s.tr(
-        'البريد/الهاتف أو كلمة المرور غير صحيحة',
-        'Identifiants incorrects',
-      );
+    if (!_validateCurrentRegisterStep(isAr)) return;
+    if (_registerStep < 3) {
+      setState(() => _registerStep++);
+    } else {
+      _submitAuth(isAr);
     }
-    if (mounted) setState(() => _loading = false);
   }
 
-  Future<void> _submitRegister() async {
-    final s = _state.s;
-    FocusScope.of(context).unfocus();
+  Future<void> _submitAuth(bool isAr) async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
-    // Save onboarding preferences into Smart Feed Engine immediately
-    await _state.saveOnboardingPreferences(
-      accType: _accountType,
-      cityId: _selectedCityId,
-      selectedCategories: _selectedInterests,
-    );
-
     try {
-      final res = await _state.api.dio.post('/auth/register', data: {
-        'name': _nameCtrl.text.trim(),
-        'email': _loginCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
-        'password': _passCtrl.text,
-        'password_confirmation': _passCtrl.text,
-        'account_type': _accountType,
-        'city_id': _selectedCityId,
-        'referral_source': 'mobile_app',
-      });
-      if (res.data is Map && res.data['status'] == 'success') {
-        await _state.setAuthSession(
-          res.data['token'].toString(),
-          Map<String, dynamic>.from(res.data['user']),
+      if (_isLogin) {
+        final res = await _state.api.dio.post('/auth/login', data: {
+          'email': _emailCtrl.text.trim(),
+          'password': _passwordCtrl.text,
+        });
+        final data = res.data is Map ? res.data as Map : const {};
+        final token = (data['token'] ?? data['access_token'] ?? '').toString();
+        if (token.isNotEmpty) {
+          final userMap = data['user'] is Map
+              ? Map<String, dynamic>.from(data['user'] as Map)
+              : {'email': _emailCtrl.text.trim()};
+          await _state.setAuthSession(token, userMap);
+          widget.onSuccess?.call();
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.pop(context, true);
+          }
+          return;
+        }
+      } else {
+        await _state.saveOnboardingPreferences(
+          accType: _accountType,
+          cityId: _selectedCityId,
+          selectedCategories: _selectedCategoryIds,
         );
-        if (mounted) Navigator.pop(context, true);
-        return;
+        final res = await _state.api.dio.post('/auth/register', data: {
+          'name': _nameCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
+          'password': _passwordCtrl.text,
+          'password_confirmation': _passwordCtrl.text,
+          'phone': _phoneCtrl.text.trim(),
+          'city_id': _selectedCityId,
+        });
+        final data = res.data is Map ? res.data as Map : const {};
+        final token = (data['token'] ?? data['access_token'] ?? '').toString();
+        if (token.isNotEmpty) {
+          final userMap = data['user'] is Map
+              ? Map<String, dynamic>.from(data['user'] as Map)
+              : {
+                  'name': _nameCtrl.text.trim(),
+                  'email': _emailCtrl.text.trim(),
+                  'phone': _phoneCtrl.text.trim(),
+                  'account_type': _accountType,
+                };
+          await _state.setAuthSession(token, userMap);
+          widget.onSuccess?.call();
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.pop(context, true);
+          }
+          return;
+        }
       }
-      _error = (res.data is Map ? res.data['message'] : null)?.toString() ??
-          s.tr('وقع مشكل، عاود من جديد', 'Une erreur est survenue');
+      setState(() {
+        _error = isAr ? 'تأكد من المعلومات المدخلة' : 'Vérifiez vos identifiants';
+      });
     } catch (_) {
-      _error = s.tr(
-        'هاد الحساب مسجل من قبل أو المعلومات غير صحيحة',
-        'Ce compte existe déjà ou les données sont invalides',
-      );
+      setState(() {
+        _error = isAr
+            ? 'تعذر الاتصال بالخادم، تأكد من المعلومات أو جرب الدخول عبر Google'
+            : 'Impossible de se connecter, vérifiez vos informations ou utilisez Google';
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _signInWithGoogle() async {
-    final s = _state.s;
-    final Uri googleUri = Uri.parse(
+    final redirectUri = Uri.encodeComponent('https://apolo.ma/auth/google/callback');
+    final googleOAuthUrl = Uri.parse(
       'https://accounts.google.com/o/oauth2/v2/auth'
-      '?client_id=${Uri.encodeComponent(AppConfig.googleClientId)}'
-      '&redirect_uri=${Uri.encodeComponent(AppConfig.googleOAuthRedirectUri)}'
-      '&response_type=code'
-      '&scope=${Uri.encodeComponent("openid profile email")}'
+      '?client_id=${AppConfig.googleClientId}'
+      '&redirect_uri=$redirectUri'
+      '&response_type=token'
+      '&scope=email%20profile%20openid'
       '&prompt=select_account',
     );
-    try {
-      final launched = await launchUrl(
-        googleUri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched && mounted) {
-        setState(() {
-          _error = s.tr(
-            'تعذر فتح نافذة Google، جرب مرة أخرى.',
-            'Impossible d\'ouvrir Google Sign-In.',
-          );
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _error = s.tr(
-            'تعذر الاتصال بـ Google حالياً.',
-            'Connexion Google indisponible.',
-          );
-        });
-      }
-    }
+    await launchUrl(googleOAuthUrl, mode: LaunchMode.externalApplication);
   }
 
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
-    final cities =
-        _state.cities.isNotEmpty ? _state.cities : _fallbackCities;
+    final isAr = s.isAr;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            s.isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left,
-            color: _ink,
-            size: 21,
-          ),
-          onPressed: () {
-            if (!_isLogin && _regStep > 0) {
-              setState(() {
-                _regStep--;
-                _error = null;
-              });
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: GestureDetector(
-              onTap: () async {
-                await _state.toggleLanguage();
-                if (mounted) setState(() {});
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: _fill,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: _border),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  s.isAr ? 'Français' : 'العربية',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(22, 6, 22, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: _bg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 1. Minimal Quiet Chrome Top Navigation
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Mode Switcher (Login vs 4-Step Register)
+                    if (Navigator.canPop(context) || (!_isLogin && _registerStep > 0))
+                      PressableScale(
+                        onTap: () {
+                          if (!_isLogin && _registerStep > 0) {
+                            setState(() {
+                              _registerStep--;
+                              _error = null;
+                            });
+                          } else {
+                            Navigator.maybePop(context);
+                          }
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Icon(
+                            isAr
+                                ? CupertinoIcons.chevron_right
+                                : CupertinoIcons.chevron_left,
+                            color: _ink,
+                            size: 18,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 40),
+
+                    // Segmented Switcher (Login vs 4-Step Register)
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        color: _fill,
-                        borderRadius: BorderRadius.circular(16),
+                        color: const Color(0xFFE2E8F0).withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() {
-                                _isLogin = true;
-                                _error = null;
-                              }),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 220),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 11),
-                                decoration: BoxDecoration(
-                                  color:
-                                      _isLogin ? Colors.white : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(13),
-                                  boxShadow: _isLogin
-                                      ? [
-                                          BoxShadow(
-                                            color: _ink.withValues(alpha: 0.06),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  s.tr('تسجيل الدخول', 'Connexion'),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: _isLogin ? _red : _muted,
-                                  ),
-                                ),
-                              ),
-                            ),
+                          _buildModeTab(
+                            label: s.login,
+                            selected: _isLogin,
+                            onTap: () => setState(() {
+                              _isLogin = true;
+                              _error = null;
+                            }),
                           ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() {
-                                _isLogin = false;
-                                _error = null;
-                              }),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 220),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 11),
-                                decoration: BoxDecoration(
-                                  color: !_isLogin
-                                      ? Colors.white
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(13),
-                                  boxShadow: !_isLogin
-                                      ? [
-                                          BoxShadow(
-                                            color: _ink.withValues(alpha: 0.06),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  s.tr('حساب جديد (4 خطوات)', 'Créer un compte'),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: !_isLogin ? _red : _muted,
-                                  ),
-                                ),
-                              ),
-                            ),
+                          _buildModeTab(
+                            label: s.register,
+                            selected: !_isLogin,
+                            onTap: () => setState(() {
+                              _isLogin = false;
+                              _error = null;
+                            }),
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 20),
-
-                    if (_error != null)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _redSoft,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: _red.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              CupertinoIcons.exclamationmark_circle_fill,
-                              color: _red,
-                              size: 19,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _error!,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: _red,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    if (_isLogin)
-                      _buildLoginView(s)
-                    else
-                      _buildRegisterWizard(s, cities),
+                    const SizedBox(width: 40),
                   ],
                 ),
               ),
-            ),
-          ],
+
+              // 2. Scrollable Main Stage with Floating 3D Hero Sculpture
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 350),
+                              child: Floating3DIllustration(
+                                key: ValueKey(_step3DAsset()),
+                                assetPath: _step3DAsset(),
+                                size: _isLogin ? 128 : 112,
+                                fallbackIcon: CupertinoIcons.shield_fill,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          if (_isLogin)
+                            _buildLoginStage(s, isAr)
+                          else
+                            _buildRegisterWizardStage(s, isAr),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildLoginView(AppStrings s) {
+  Widget _buildModeTab({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: _ink.withValues(alpha: 0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            color: selected ? _ink : _muted,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// High-Craft Login Stage
+  Widget _buildLoginStage(AppStrings s, bool isAr) {
+    return ScrollReveal(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            isAr ? 'الدخول إلى حسابك في Apolo' : 'Accédez à votre espace Apolo',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: _ink,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isAr
+                ? 'تتبع إعلاناتك، تواصل مع المشترين، وادخل إلى لوحة الإحصائيات.'
+                : 'Gérez vos annonces, répondez aux acheteurs et suivez vos statistiques.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              color: _muted,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 22),
+
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: _ink.withValues(alpha: 0.03),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildGoogleButton(isAr),
+                const SizedBox(height: 18),
+                _buildDivider(isAr ? 'أو بالبريد الإلكتروني' : 'ou avec votre e-mail'),
+                const SizedBox(height: 18),
+                if (_error != null) _buildErrorBanner(_error!),
+                _buildLabeledField(
+                  label: isAr ? 'البريد الإلكتروني' : 'Adresse e-mail',
+                  controller: _emailCtrl,
+                  hint: 'nom@exemple.ma',
+                  icon: CupertinoIcons.mail,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 14),
+                _buildLabeledField(
+                  label: isAr ? 'كلمة المرور' : 'Mot de passe',
+                  controller: _passwordCtrl,
+                  hint: '••••••••',
+                  icon: CupertinoIcons.lock,
+                  obscure: _obscurePassword,
+                  suffix: IconButton(
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
+                      size: 18,
+                      color: _muted,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildPrimaryButton(
+                  label: s.login,
+                  onTap: () => _nextStepOrSubmit(isAr),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// High-Craft 4-Step Registration Wizard
+  Widget _buildRegisterWizardStage(AppStrings s, bool isAr) {
+    final stepTitles = isAr
+        ? [
+            'اختر نوع حسابك',
+            'معلومات التواصل المباشر',
+            'حماية وتأمين الحساب',
+            'تخصيص اهتماماتك والـ Feed',
+          ]
+        : [
+            'Choisissez votre profil',
+            'Coordonnées de contact',
+            'Sécurisez votre compte',
+            'Personnalisez votre flux',
+          ];
+
+    final stepSubtitles = isAr
+        ? [
+            'حدد ما إذا كنت تبيع كفرد أو تملك متجراً احترافياً',
+            'الاسم ورقم الهاتف أو الواتساب لاستقبال رسائل المشترين',
+            'بريدك الإلكتروني وكلمة مرور قوية لحماية إعلاناتك',
+            'اختر مدينتك والتصنيفات التي تهمك لتدريب الخوارزمية',
+          ]
+        : [
+            'Vendez en tant que particulier ou créez votre Boutique Pro',
+            'Votre nom et numéro WhatsApp pour recevoir les offres',
+            'Votre adresse e-mail et un mot de passe sécurisé',
+            'Sélectionnez votre ville et vos catégories favorites',
+          ];
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          s.tr('مرحباً بعودتك إلى Apolo.ma 👋', 'Bon retour sur Apolo.ma 👋'),
+          stepTitles[_registerStep],
+          textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 24,
+            fontSize: 21,
             fontWeight: FontWeight.w900,
             color: _ink,
             letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
-          s.tr(
-            'دخل معلوماتك باش تتابع إعلاناتك، رسائلك ومتجرك.',
-            'Connectez-vous pour gérer vos annonces, messages et boutique.',
-          ),
+          stepSubtitles[_registerStep],
+          textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             color: _muted,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 22),
-        _buildFieldLabel(
-          s.tr('البريد الإلكتروني أو رقم الهاتف', 'E-mail ou téléphone'),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _loginCtrl,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            hintText: 'example@gmail.com / 06XXXXXXXX',
-            prefixIcon: const Icon(CupertinoIcons.person, size: 19),
-            filled: true,
-            fillColor: _fill,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 16),
-        _buildFieldLabel(s.tr('كلمة المرور', 'Mot de passe')),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _passCtrl,
-          obscureText: _obscure,
-          decoration: InputDecoration(
-            hintText: '••••••••',
-            prefixIcon: const Icon(CupertinoIcons.lock, size: 19),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscure ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
-                size: 19,
-                color: _muted,
-              ),
-              onPressed: () => setState(() => _obscure = !_obscure),
-            ),
-            filled: true,
-            fillColor: _fill,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 22),
-        SizedBox(
-          width: double.infinity,
-          height: 54,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-              elevation: 0,
-            ),
-            onPressed: _loading ? null : _submitLogin,
-            child: _loading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.4,
-                    ),
-                  )
-                : Text(
-                    s.tr('تسجيل الدخول', 'Se connecter'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        _buildGoogleButton(s),
-        const SizedBox(height: 20),
-        _buildPrivacyFooterLink(s),
-      ],
-    );
-  }
 
-  Widget _buildRegisterWizard(AppStrings s, List<dynamic> cities) {
-    final stepTitles = [
-      s.tr('1. اختر نوع حسابك', '1. Choisissez votre type de compte'),
-      s.tr('2. الاسم ورقم التواصل', '2. Nom & Numéro WhatsApp'),
-      s.tr('3. البريد وكلمة المرور', '3. E-mail & Sécurité'),
-      s.tr('4. مدينتك واهتماماتك ✨', '4. Ville & Préférences ✨'),
-    ];
-    final stepSubtitles = [
-      s.tr(
-        'واش باغي تبيع وتشري كفرد عادي أو تفتح متجر احترافي؟',
-        'Souhaitez-vous vendre en tant que particulier ou ouvrir une boutique Pro ?',
-      ),
-      s.tr(
-        'هاد المعلومات كتخلي المشترين يثيقو فـ إعلاناتك ويتواصلو معاك بسهولة.',
-        'Ces informations permettent aux acheteurs de vous contacter facilement.',
-      ),
-      s.tr(
-        'احمِ حسابك ببريد إلكتروني صحيح وكلمة مرور قوية.',
-        'Sécurisez votre compte avec votre e-mail et un mot de passe fort.',
-      ),
-      s.tr(
-        'اختر مدينتك والأقسام اللي كتهمك باش الخوارزمية تخصص ليك الـ Feed!',
-        'Choisissez votre ville et vos catégories favorites pour personnaliser votre fil !',
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 4-Step Progress Bar
         Row(
           children: List.generate(4, (idx) {
-            final done = idx < _regStep;
-            final active = idx == _regStep;
+            final active = idx <= _registerStep;
+            final current = idx == _registerStep;
             return Expanded(
-              child: Padding(
-                padding: EdgeInsetsDirectional.only(end: idx < 3 ? 6 : 0),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 260),
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: done
-                        ? _emerald
-                        : (active ? _red : const Color(0xFFE2E8F0)),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 280),
+                margin: EdgeInsetsDirectional.only(end: idx < 3 ? 6 : 0),
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? _primary : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(99),
+                  boxShadow: current
+                      ? [
+                          BoxShadow(
+                            color: _primary.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
               ),
             );
           }),
         ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: _redSoft,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            s.tr(
-              'الخطوة ${_regStep + 1} من 4',
-              'Étape ${_regStep + 1} sur 4',
-            ),
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-              color: _red,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          stepTitles[_regStep],
-          style: const TextStyle(
-            fontSize: 23,
-            fontWeight: FontWeight.w900,
-            color: _ink,
-            letterSpacing: -0.4,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          stepSubtitles[_regStep],
-          style: const TextStyle(
-            fontSize: 13.5,
-            color: _muted,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Animated Step Content
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
-          child: KeyedSubtree(
-            key: ValueKey<int>(_regStep),
-            child: _buildCurrentRegStepBody(s, cities),
-          ),
-        ),
-
-        const SizedBox(height: 22),
-
-        // Navigation Buttons (Back / Next or Finish)
-        Row(
-          children: [
-            if (_regStep > 0) ...[
-              Expanded(
-                flex: 1,
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _ink,
-                      side: const BorderSide(color: _border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    onPressed: () => setState(() {
-                      _regStep--;
-                      _error = null;
-                    }),
-                    child: Text(
-                      s.tr('السابق', 'Retour'),
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              flex: 2,
-              child: SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _regStep == 3 ? _emerald : _red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: _loading
-                      ? null
-                      : () {
-                          if (_regStep < 3) {
-                            if (_validateCurrentRegStep()) {
-                              HapticFeedback.selectionClick();
-                              setState(() => _regStep++);
-                            }
-                          } else {
-                            _submitRegister();
-                          }
-                        },
-                  child: _loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.4,
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _regStep < 3
-                                  ? s.tr('الخطوة التالية', 'Continuer')
-                                  : s.tr(
-                                      'إنشاء الحساب والبدء 🎉',
-                                      'Terminer l\'inscription 🎉',
-                                    ),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              _regStep < 3
-                                  ? (s.isAr
-                                      ? CupertinoIcons.arrow_left
-                                      : CupertinoIcons.arrow_right)
-                                  : CupertinoIcons.check_mark_circled_solid,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        if (_regStep == 0) ...[
-          const SizedBox(height: 18),
-          _buildGoogleButton(s),
-        ],
         const SizedBox(height: 18),
-        _buildPrivacyFooterLink(s),
+
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: _ink.withValues(alpha: 0.03),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) _buildErrorBanner(_error!),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                child: _buildRegisterStepBody(s, isAr),
+              ),
+              const SizedBox(height: 20),
+              _buildPrimaryButton(
+                label: _registerStep < 3
+                    ? (isAr ? 'الخطوة التالية' : 'Continuer')
+                    : (isAr ? 'إنهاء التسجيل وبدء الاستخدام' : 'Créer mon compte'),
+                onTap: () => _nextStepOrSubmit(isAr),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildCurrentRegStepBody(AppStrings s, List<dynamic> cities) {
-    switch (_regStep) {
+  Widget _buildRegisterStepBody(AppStrings s, bool isAr) {
+    switch (_registerStep) {
       case 0:
         return Column(
+          key: const ValueKey('reg_step_0'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildAccountTypeCard(
+            _buildAccountTypeOption(
               type: 'individual',
-              icon: CupertinoIcons.person_crop_circle_fill,
-              title: s.tr('حساب فردي (بائع ومشتري)', 'Compte Particulier'),
-              subtitle: s.tr(
-                'مثالي لنشر إعلاناتك الشخصية والتواصل المباشر مع المشترين مجاناً.',
-                'Idéal pour vendre et acheter des biens personnels gratuitement.',
-              ),
-              badge: s.tr('مجاني 100%', '100% Gratuit'),
+              title: isAr ? 'حساب بائع ومشتري فردي' : 'Compte Particulier',
+              subtitle: isAr
+                  ? 'نشر مجاني وسريع للسلع الشخصية، السيارات، والعقارات.'
+                  : 'Publiez gratuitement vos annonces personnelles en quelques secondes.',
+              badge: isAr ? 'مجاني' : 'Gratuit',
+              icon: CupertinoIcons.person_crop_circle,
             ),
             const SizedBox(height: 12),
-            _buildAccountTypeCard(
+            _buildAccountTypeOption(
               type: 'pro',
+              title: isAr ? 'حساب متجر احترافي (Boutique Pro)' : 'Boutique Pro Certifiée',
+              subtitle: isAr
+                  ? 'شارة توثيق رسمية، لوحة إحصائيات متقدمة، وصفحة متجر خاصة.'
+                  : 'Badge vérifié, statistiques avancées et vitrine dédiée.',
+              badge: 'PRO',
               icon: CupertinoIcons.bag_fill,
-              title: s.tr('حساب متجر احترافي (Boutique Pro)', 'Compte Boutique Pro'),
-              subtitle: s.tr(
-                'لتجار السيارات، العقارات، الإلكترونيات والماركات مع إحصائيات متقدمة وشارة توثيق.',
-                'Pour les professionnels avec vitrine dédiée, statistiques et badge vérifié.',
-              ),
-              badge: 'PRO ⭐',
             ),
+            const SizedBox(height: 18),
+            _buildDivider(isAr ? 'أو التسجيل الفوري' : 'ou inscription rapide'),
+            const SizedBox(height: 14),
+            _buildGoogleButton(isAr),
           ],
         );
 
       case 1:
+        final isStore = _accountType == 'pro';
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          key: const ValueKey('reg_step_1'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildFieldLabel(
-              _accountType == 'pro'
-                  ? s.tr('اسم المتجر أو الشركة', 'Nom de la boutique / société')
-                  : s.tr('الاسم الكامل', 'Nom complet'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
+            _buildLabeledField(
+              label: isStore
+                  ? (isAr ? 'اسم المتجر أو الشركة' : 'Nom de la boutique')
+                  : (isAr ? 'الاسم الكامل' : 'Nom complet'),
               controller: _nameCtrl,
-              decoration: InputDecoration(
-                hintText: _accountType == 'pro'
-                    ? s.tr('مثال: Auto Prestige Maroc', 'Ex: Auto Prestige Maroc')
-                    : s.tr('مثال: أمين العلوي', 'Ex: Amine Alaoui'),
-                prefixIcon: Icon(
-                  _accountType == 'pro'
-                      ? CupertinoIcons.bag
-                      : CupertinoIcons.person,
-                  size: 19,
-                ),
-                filled: true,
-                fillColor: _fill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+              hint: isStore
+                  ? (isAr ? 'مثال: Auto Luxury Maroc' : 'Ex: Auto Luxury Maroc')
+                  : (isAr ? 'مثال: أمين العلوي' : 'Ex: Amine Alaoui'),
+              icon: isStore ? CupertinoIcons.bag : CupertinoIcons.person,
             ),
-            const SizedBox(height: 16),
-            _buildFieldLabel(
-              s.tr('رقم الهاتف / الواتساب', 'Téléphone / WhatsApp'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
+            const SizedBox(height: 14),
+            _buildLabeledField(
+              label: isAr ? 'رقم الهاتف / الواتساب' : 'Téléphone / WhatsApp',
               controller: _phoneCtrl,
+              hint: '06 00 00 00 00',
+              icon: CupertinoIcons.phone,
               keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                hintText: '06XXXXXXXX',
-                prefixIcon: const Icon(CupertinoIcons.phone, size: 19),
-                filled: true,
-                fillColor: _fill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
             ),
           ],
         );
 
       case 2:
-        final strength = _passwordStrength(_passCtrl.text);
-        final strengthColors = [
-          const Color(0xFFE2E8F0),
-          const Color(0xFFF59E0B),
-          const Color(0xFF3B82F6),
-          _emerald,
-        ];
-        final strengthLabels = [
-          s.tr('أدخل 8 حروف على الأقل', '8 caractères minimum'),
-          s.tr('مقبولة', 'Acceptable'),
-          s.tr('جيدة', 'Bon'),
-          s.tr('قوية ومؤمنة ✓', 'Très sécurisé ✓'),
-        ];
-
+        final strength = _passwordStrength;
+        final strengthColor = strength < 0.5
+            ? _primary
+            : (strength < 0.75 ? const Color(0xFFD97706) : const Color(0xFF16A34A));
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          key: const ValueKey('reg_step_2'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildFieldLabel(s.tr('البريد الإلكتروني', 'Adresse e-mail')),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _loginCtrl,
+            _buildLabeledField(
+              label: isAr ? 'البريد الإلكتروني' : 'Adresse e-mail',
+              controller: _emailCtrl,
+              hint: 'contact@exemple.ma',
+              icon: CupertinoIcons.mail,
               keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'name@example.com',
-                prefixIcon: const Icon(CupertinoIcons.mail, size: 19),
-                filled: true,
-                fillColor: _fill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
             ),
-            const SizedBox(height: 16),
-            _buildFieldLabel(s.tr('كلمة المرور', 'Mot de passe')),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _passCtrl,
-              obscureText: _obscure,
-              decoration: InputDecoration(
-                hintText: s.tr('8 حروف أو أرقام على الأقل', '8 caractères minimum'),
-                prefixIcon: const Icon(CupertinoIcons.lock, size: 19),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscure ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
-                    size: 19,
-                    color: _muted,
-                  ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
-                filled: true,
-                fillColor: _fill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+            const SizedBox(height: 14),
+            _buildLabeledField(
+              label: isAr ? 'كلمة المرور' : 'Mot de passe',
+              controller: _passwordCtrl,
+              hint: isAr ? '6 أحرف أو أرقام على الأقل' : '6 caractères minimum',
+              icon: CupertinoIcons.lock,
+              obscure: _obscurePassword,
+              onChanged: (_) => setState(() {}),
+              suffix: IconButton(
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
+                  size: 18,
+                  color: _muted,
                 ),
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              children: List.generate(3, (i) {
-                final active = strength > i;
-                return Expanded(
-                  child: Container(
-                    margin: EdgeInsetsDirectional.only(end: i < 2 ? 6 : 0),
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: active
-                          ? strengthColors[strength]
-                          : const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              strengthLabels[strength],
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: strength == 0 ? _muted : strengthColors[strength],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: strength,
+                minHeight: 5,
+                backgroundColor: const Color(0xFFF1F5F9),
+                valueColor: AlwaysStoppedAnimation<Color>(strengthColor),
               ),
             ),
           ],
@@ -1025,165 +752,162 @@ class _AuthScreenState extends State<AuthScreen> {
       case 3:
       default:
         return Column(
+          key: const ValueKey('reg_step_3'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildFieldLabel(s.tr('مدينتك الرئيسية', 'Votre ville principale')),
+            Text(
+              isAr ? 'مدينتك الرئيسية' : 'Votre ville principale',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _ink,
+              ),
+            ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<int?>(
+            DropdownButtonFormField<int>(
               initialValue: _selectedCityId,
               decoration: InputDecoration(
-                prefixIcon: const Icon(CupertinoIcons.location_solid, size: 18, color: _red),
                 filled: true,
-                fillColor: _fill,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                 ),
               ),
-              items: cities.whereType<Map>().map((c) {
-                final id = int.tryParse(c['id'].toString());
-                final name = (s.isAr
-                        ? (c['name_ar'] ?? c['name'])
-                        : (c['name_fr'] ?? c['name']))
+              items: _cities.map((c) {
+                final cid = int.tryParse((c['id'] ?? 1).toString()) ?? 1;
+                final cname = (isAr
+                        ? (c['name_ar'] ?? c['name'] ?? '')
+                        : (c['name_fr'] ?? c['name'] ?? ''))
                     .toString();
-                return DropdownMenuItem<int?>(
-                  value: id,
-                  child: Text(name),
+                return DropdownMenuItem<int>(
+                  value: cid,
+                  child: Text(
+                    cname,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  ),
                 );
               }).toList(),
               onChanged: (v) => setState(() => _selectedCityId = v),
             ),
-            const SizedBox(height: 18),
-            _buildFieldLabel(
-              s.tr(
-                'شنو الأقسام اللي كتهتم بيها؟ (لتخصيص الـ Feed)',
-                'Quelles catégories vous intéressent ?',
+            const SizedBox(height: 16),
+            Text(
+              isAr
+                  ? 'اختر التصنيفات التي تهمك (لتخصيص الـ Feed)'
+                  : 'Vos catégories préférées (pour personnaliser le flux)',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _ink,
               ),
             ),
             const SizedBox(height: 10),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 2.4,
-              ),
-              itemCount: _interestShowcase.length,
-              itemBuilder: (context, idx) {
-                final item = _interestShowcase[idx];
-                final int id = item['id'] as int;
-                final bool selected = _selectedInterests.contains(id);
-                final String label =
-                    s.isAr ? item['name_ar'] as String : item['name_fr'] as String;
-                final String asset = item['asset'] as String;
-
-                return GestureDetector(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _categories.take(8).map((cat) {
+                final catId = int.tryParse((cat['id'] ?? 1).toString()) ?? 1;
+                final selected = _selectedCategoryIds.contains(catId);
+                final asset = _state.assetForCategory(cat);
+                final label = _state.formatCategoryLabel(cat);
+                return PressableScale(
                   onTap: () {
-                    HapticFeedback.selectionClick();
                     setState(() {
-                      if (selected && _selectedInterests.length > 1) {
-                        _selectedInterests.remove(id);
+                      if (selected && _selectedCategoryIds.length > 1) {
+                        _selectedCategoryIds.remove(catId);
                       } else {
-                        _selectedInterests.add(id);
+                        _selectedCategoryIds.add(catId);
                       }
                     });
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(
-                      color: selected ? _redSoft : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
+                      color: selected ? _ink : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: selected ? _red : _border,
-                        width: selected ? 1.6 : 1,
+                        color: selected ? _ink : const Color(0xFFE2E8F0),
                       ),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 36,
-                          height: 36,
-                          child: Image.asset(asset, fit: BoxFit.contain),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: selected ? _red : _ink,
+                          width: 22,
+                          height: 22,
+                          child: Image.asset(
+                            asset,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(
+                              CupertinoIcons.cube_box,
+                              size: 14,
+                              color: selected ? Colors.white : _ink,
                             ),
                           ),
                         ),
-                        if (selected)
-                          const Icon(
-                            CupertinoIcons.check_mark_circled_solid,
-                            size: 16,
-                            color: _red,
+                        const SizedBox(width: 6),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? Colors.white : _ink,
                           ),
+                        ),
                       ],
                     ),
                   ),
                 );
-              },
+              }).toList(),
             ),
           ],
         );
     }
   }
 
-  Widget _buildAccountTypeCard({
+  Widget _buildAccountTypeOption({
     required String type,
-    required IconData icon,
     required String title,
     required String subtitle,
     required String badge,
+    required IconData icon,
   }) {
-    final active = _accountType == type;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() => _accountType = type);
-      },
+    final selected = _accountType == type;
+    return PressableScale(
+      onTap: () => setState(() => _accountType = type),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: active ? _redSoft : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: selected ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: active ? _red : _border,
-            width: active ? 1.8 : 1.1,
+            color: selected ? _primary : const Color(0xFFE2E8F0),
+            width: selected ? 1.5 : 1.0,
           ),
-          boxShadow: [
-            if (active)
-              BoxShadow(
-                color: _red.withValues(alpha: 0.10),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-          ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color: active ? _red : _fill,
-                borderRadius: BorderRadius.circular(14),
+                color: selected ? _primary : Colors.white,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(
+                  color: selected ? _primary : const Color(0xFFE2E8F0),
+                ),
               ),
               child: Icon(
                 icon,
-                color: active ? Colors.white : _ink,
-                size: 22,
+                color: selected ? Colors.white : _ink,
+                size: 20,
               ),
             ),
             const SizedBox(width: 12),
@@ -1193,43 +917,41 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   Row(
                     children: [
-                      Expanded(
+                      Flexible(
                         child: Text(
                           title,
-                          style: TextStyle(
-                            fontSize: 15.5,
+                          style: const TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w800,
-                            color: active ? _red : _ink,
+                            color: _ink,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: active ? _red : _fill,
-                          borderRadius: BorderRadius.circular(999),
+                          color: selected ? _primary : _ink,
+                          borderRadius: BorderRadius.circular(5),
                         ),
                         child: Text(
                           badge,
-                          style: TextStyle(
-                            fontSize: 10.5,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
                             fontWeight: FontWeight.w800,
-                            color: active ? Colors.white : _ink,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 3),
                   Text(
                     subtitle,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 11.5,
                       color: _muted,
-                      height: 1.38,
+                      height: 1.35,
                     ),
                   ),
                 ],
@@ -1241,80 +963,61 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildFieldLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13.5,
-        fontWeight: FontWeight.w800,
-        color: _ink,
-      ),
-    );
-  }
-
-  Widget _buildGoogleButton(AppStrings s) {
+  Widget _buildLabeledField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    TextInputType? keyboardType,
+    Widget? suffix,
+    ValueChanged<String>? onChanged,
+  }) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Expanded(child: Divider(color: _border)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                s.tr('أو بضغطة واحدة عبر', 'Ou en un clic avec'),
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  color: _muted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const Expanded(child: Divider(color: _border)),
-          ],
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: _ink,
+          ),
         ),
-        const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _ink,
-              side: const BorderSide(color: _border, width: 1.2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          obscureText: obscure,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _ink,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
             ),
-            onPressed: _signInWithGoogle,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFEECEE),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'G',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: _red,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  s.tr('المتابعة باستخدام Google', 'Continuer avec Google'),
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                  ),
-                ),
-              ],
+            prefixIcon: Icon(icon, size: 18, color: _muted),
+            suffixIcon: suffix,
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _primary, width: 1.5),
             ),
           ),
         ),
@@ -1322,27 +1025,133 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildPrivacyFooterLink(AppStrings s) {
-    return Center(
-      child: GestureDetector(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const PrivacyComplianceScreen(initialTab: 0),
+  Widget _buildGoogleButton(bool isAr) {
+    return PressableScale(
+      onTap: _signInWithGoogle,
+      child: Container(
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'G',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  color: _primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              isAr ? 'المتابعة السريعة بحساب Google' : 'Continuer avec Google',
+              style: const TextStyle(
+                color: _ink,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrimaryButton({
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return PressableScale(
+      onTap: _loading ? null : onTap,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: _primary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.center,
+        child: _loading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.2,
+                ),
+              )
+            : Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildDivider(String text) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: _muted,
+            ),
           ),
         ),
-        child: Text(
-          s.tr(
-            'بالمتابعة، أنت توافق على سياسة الخصوصية وحماية البيانات الخاصة بـ Apolo.ma',
-            'En continuant, vous acceptez la Politique de confidentialité d\'Apolo.ma',
+        const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.exclamationmark_circle_fill,
+            color: _primary,
+            size: 16,
           ),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 12,
-            color: _muted,
-            decoration: TextDecoration.underline,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: _primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
