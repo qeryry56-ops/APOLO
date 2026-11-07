@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import 'widgets/ad_card.dart';
+import 'widgets/skeleton_loader.dart';
 
 class SearchScreen extends StatefulWidget {
   final int? initialCategoryId;
@@ -38,6 +39,9 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _categoryId = widget.initialCategoryId;
+    if (_categoryId != null) {
+      _state.recordCategoryInterest(_categoryId, weight: 3);
+    }
     _scrollCtrl.addListener(_onScroll);
     _searchAds();
   }
@@ -51,11 +55,31 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 240) {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 240) {
       if (!_loading && !_loadingMore && _currentPage < _lastPage) {
         _loadMoreAds();
       }
     }
+  }
+
+  List<Map<String, dynamic>> _filterAndRankAds(List<dynamic> rawList) {
+    final mapped = rawList
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+
+    // Strict client-side verification so entering a category ONLY shows ads belonging to that category
+    final filtered = _categoryId == null
+        ? mapped
+        : mapped
+            .where((ad) => _state.adMatchesCategory(ad, _categoryId))
+            .toList();
+
+    if (_categoryId == null && _queryCtrl.text.trim().isEmpty) {
+      return _state.rankAdsForUser(filtered);
+    }
+    return filtered;
   }
 
   Future<void> _searchAds() async {
@@ -76,9 +100,11 @@ class _SearchScreenState extends State<SearchScreen> {
       if (res.data is Map && res.data['status'] == 'success') {
         if (mounted) {
           final meta = res.data['meta'];
+          final rawData = res.data['data'] ?? [];
           setState(() {
-            _ads = res.data['data'] ?? [];
-            _currentPage = int.tryParse((meta?['current_page'] ?? 1).toString()) ?? 1;
+            _ads = _filterAndRankAds(rawData);
+            _currentPage =
+                int.tryParse((meta?['current_page'] ?? 1).toString()) ?? 1;
             _lastPage = int.tryParse((meta?['last_page'] ?? 1).toString()) ?? 1;
             _loading = false;
           });
@@ -104,19 +130,22 @@ class _SearchScreenState extends State<SearchScreen> {
       };
       final res = await _state.api.dio.get('/ads', queryParameters: params);
       if (res.data is Map && res.data['status'] == 'success') {
-        final List newItems = res.data['data'] ?? [];
+        final List newItems = _filterAndRankAds(res.data['data'] ?? []);
         final meta = res.data['meta'];
         if (mounted) {
           setState(() {
-            // Deduplicate incoming items by ID
             final existingIds = _ads.map((e) => e['id']?.toString()).toSet();
             for (final it in newItems) {
               if (!existingIds.contains(it['id']?.toString())) {
                 _ads.add(it);
               }
             }
-            _currentPage = int.tryParse((meta?['current_page'] ?? nextPage).toString()) ?? nextPage;
-            _lastPage = int.tryParse((meta?['last_page'] ?? _lastPage).toString()) ?? _lastPage;
+            _currentPage =
+                int.tryParse((meta?['current_page'] ?? nextPage).toString()) ??
+                    nextPage;
+            _lastPage =
+                int.tryParse((meta?['last_page'] ?? _lastPage).toString()) ??
+                    _lastPage;
             _loadingMore = false;
           });
         }
@@ -129,13 +158,22 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _saveCurrentSearch() async {
     if (!_state.isLoggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_state.s.tr('يرجى تسجيل الدخول لحفظ البحث', 'Connectez-vous pour sauvegarder la recherche'))),
+        SnackBar(
+          content: Text(
+            _state.s.tr(
+              'يرجى تسجيل الدخول لحفظ البحث',
+              'Connectez-vous pour sauvegarder la recherche',
+            ),
+          ),
+        ),
       );
       return;
     }
     try {
       final res = await _state.api.dio.post('/saved-searches', data: {
-        'title': _queryCtrl.text.trim().isNotEmpty ? _queryCtrl.text.trim() : _state.s.tr('بحث محفوظ', 'Recherche sauvegardée'),
+        'title': _queryCtrl.text.trim().isNotEmpty
+            ? _queryCtrl.text.trim()
+            : _state.s.tr('بحث محفوظ', 'Recherche sauvegardée'),
         'query': _queryCtrl.text.trim(),
         'category_id': _categoryId,
         'city_id': _cityId,
@@ -146,28 +184,53 @@ class _SearchScreenState extends State<SearchScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppConfig.success,
-            content: Text(_state.s.tr('تم حفظ البحث! ستصلك إشعارات عند توفر إعلانات جديدة', 'Recherche sauvegardée avec alertes !')),
+            content: Text(
+              _state.s.tr(
+                'تم حفظ البحث! ستصلك إشعارات عند توفر إعلانات جديدة',
+                'Recherche sauvegardée avec alertes !',
+              ),
+            ),
           ),
         );
       }
     } catch (_) {}
   }
 
+  Map<String, dynamic>? _activeCategoryObj() {
+    if (_categoryId == null) return null;
+    for (final c in _state.categories) {
+      if (c is Map &&
+          int.tryParse((c['id'] ?? '').toString()) == _categoryId) {
+        return Map<String, dynamic>.from(c);
+      }
+    }
+    return null;
+  }
+
   void _openFilterModal() {
     final s = _state.s;
-    final minCtrl = TextEditingController(text: _minPrice?.toInt().toString() ?? '');
-    final maxCtrl = TextEditingController(text: _maxPrice?.toInt().toString() ?? '');
+    final minCtrl =
+        TextEditingController(text: _minPrice?.toInt().toString() ?? '');
+    final maxCtrl =
+        TextEditingController(text: _maxPrice?.toInt().toString() ?? '');
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                MediaQuery.of(ctx).viewInsets.bottom + 28,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +239,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: _border, borderRadius: BorderRadius.circular(99)),
+                      decoration: BoxDecoration(
+                        color: _border,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -185,7 +251,12 @@ class _SearchScreenState extends State<SearchScreen> {
                     children: [
                       Text(
                         s.tr('تصفية النتائج', 'Filtrer les résultats'),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.4),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: _ink,
+                          letterSpacing: -0.4,
+                        ),
                       ),
                       TextButton(
                         onPressed: () {
@@ -198,34 +269,52 @@ class _SearchScreenState extends State<SearchScreen> {
                         },
                         child: Text(
                           s.tr('إعادة تعيين', 'Réinitialiser'),
-                          style: const TextStyle(color: _red, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            color: _red,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   DropdownButtonFormField<int?>(
-                    value: _categoryId,
-                    decoration: InputDecoration(labelText: s.categories),
+                    initialValue: _categoryId,
+                    decoration: InputDecoration(
+                      labelText: s.categories,
+                      prefixIcon: const Icon(CupertinoIcons.square_grid_2x2, size: 18),
+                    ),
                     items: [
-                      DropdownMenuItem<int?>(value: null, child: Text(s.allCategories)),
-                      ..._state.categories.map((c) => DropdownMenuItem<int?>(
-                            value: int.tryParse(c['id'].toString()),
-                            child: Text((s.isAr ? (c['name_ar'] ?? c['name']) : (c['name_fr'] ?? c['name'])).toString()),
-                          )),
+                      DropdownMenuItem(value: null, child: Text(s.allCategories)),
+                      ..._state.categories.whereType<Map>().map(
+                            (c) => DropdownMenuItem<int?>(
+                              value: int.tryParse(c['id'].toString()),
+                              child: Text(_state.formatCategoryLabel(c)),
+                            ),
+                          ),
                     ],
                     onChanged: (v) => setModalState(() => _categoryId = v),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int?>(
-                    value: _cityId,
-                    decoration: InputDecoration(labelText: s.tr('المدينة', 'Ville')),
+                    initialValue: _cityId,
+                    decoration: InputDecoration(
+                      labelText: s.allCities,
+                      prefixIcon: const Icon(CupertinoIcons.location, size: 18),
+                    ),
                     items: [
-                      DropdownMenuItem<int?>(value: null, child: Text(s.allCities)),
-                      ..._state.cities.map((c) => DropdownMenuItem<int?>(
-                            value: int.tryParse(c['id'].toString()),
-                            child: Text((s.isAr ? (c['name_ar'] ?? c['name']) : (c['name_fr'] ?? c['name'])).toString()),
-                          )),
+                      DropdownMenuItem(value: null, child: Text(s.allCities)),
+                      ..._state.cities.whereType<Map>().map(
+                            (c) => DropdownMenuItem<int?>(
+                              value: int.tryParse(c['id'].toString()),
+                              child: Text(
+                                (s.isAr
+                                        ? (c['name_ar'] ?? c['name'])
+                                        : (c['name_fr'] ?? c['name']))
+                                    .toString(),
+                              ),
+                            ),
+                          ),
                     ],
                     onChanged: (v) => setModalState(() => _cityId = v),
                   ),
@@ -236,7 +325,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: TextField(
                           controller: minCtrl,
                           keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: s.tr('أقل ثمن (DH)', 'Prix min (DH)')),
+                          decoration: InputDecoration(
+                            labelText: s.tr('أقل ثمن (درهم)', 'Prix min (MAD)'),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -244,7 +335,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: TextField(
                           controller: maxCtrl,
                           keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: s.tr('أقصى ثمن (DH)', 'Prix max (DH)')),
+                          decoration: InputDecoration(
+                            labelText: s.tr('أقصى ثمن (درهم)', 'Prix max (MAD)'),
+                          ),
                         ),
                       ),
                     ],
@@ -252,24 +345,32 @@ class _SearchScreenState extends State<SearchScreen> {
                   const SizedBox(height: 22),
                   SizedBox(
                     width: double.infinity,
-                    height: 54,
+                    height: 52,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _red,
                         foregroundColor: Colors.white,
-                        shape: const StadiumBorder(),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
                       onPressed: () {
                         setState(() {
                           _minPrice = double.tryParse(minCtrl.text.trim());
                           _maxPrice = double.tryParse(maxCtrl.text.trim());
                         });
+                        if (_categoryId != null) {
+                          _state.recordCategoryInterest(_categoryId, weight: 3);
+                        }
                         Navigator.pop(ctx);
                         _searchAds();
                       },
                       child: Text(
-                        s.tr('تطبيق الفلتر', 'Appliquer les filtres'),
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5),
+                        s.tr('تطبيق التصفية', 'Appliquer les filtres'),
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -285,316 +386,453 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
-    final canPop = Navigator.canPop(context);
+    final topPadding = MediaQuery.of(context).padding.top;
+    final activeCat = _activeCategoryObj();
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header row (Triply oversized title + action circles)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-              child: Row(
-                children: [
-                  if (canPop) ...[
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Header + View Mode Switcher
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, topPadding + 14, 20, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    activeCat != null
+                        ? _state.formatCategoryLabel(activeCat)
+                        : s.tr('استكشف الإعلانات', 'Explorer les annonces'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: _ink,
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: _saveCurrentSearch,
                       child: Container(
-                        width: 42,
-                        height: 42,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
                           color: _pillBg,
                           shape: BoxShape.circle,
                           border: Border.all(color: _border),
                         ),
-                        child: const Icon(CupertinoIcons.chevron_back, size: 18, color: _ink),
+                        child: const Icon(
+                          CupertinoIcons.bell_solid,
+                          size: 17,
+                          color: _red,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _gridView = !_gridView),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: _pillBg,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _border),
+                        ),
+                        child: Icon(
+                          _gridView
+                              ? CupertinoIcons.list_bullet
+                              : CupertinoIcons.square_grid_2x2,
+                          size: 18,
+                          color: _ink,
+                        ),
+                      ),
+                    ),
                   ],
-                  Expanded(
-                    child: Text(
-                      s.search,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: _ink,
-                        letterSpacing: -0.6,
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _saveCurrentSearch,
-                    child: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEECEE),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _red.withValues(alpha: 0.16)),
-                      ),
-                      child: const Icon(CupertinoIcons.bell, size: 19, color: _red),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => setState(() => _gridView = !_gridView),
-                    child: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: _pillBg,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _border),
-                      ),
-                      child: Icon(
-                        _gridView ? CupertinoIcons.list_bullet : CupertinoIcons.square_grid_2x2,
-                        size: 19,
-                        color: _ink,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
 
-            // Pill Search Input + Red Filter Circle
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          // Active Category Showcase Banner when a category is selected
+          if (activeCat != null)
+            Container(
+              margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFDF2F3), Color(0xFFF6F8FC)],
+                  begin: AlignmentDirectional.topStart,
+                  end: AlignmentDirectional.bottomEnd,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: _red.withValues(alpha: 0.22)),
+              ),
               child: Row(
                 children: [
+                  SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Image.asset(
+                      _state.assetForCategory(activeCat),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _state.formatCategoryLabel(activeCat),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: _ink,
+                          ),
+                        ),
+                        Text(
+                          s.tr(
+                            'كاع الإعلانات المعروضة هنا خاصة بهاد القسم فقط',
+                            'Toutes les annonces affichées appartiennent à cette catégorie',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: _muted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() => _categoryId = null);
+                      _searchAds();
+                    },
                     child: Container(
-                      height: 50,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: _pillBg,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: _border),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          const Icon(CupertinoIcons.search, color: _muted, size: 19),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: _queryCtrl,
-                              onSubmitted: (_) => _searchAds(),
-                              style: const TextStyle(color: _ink, fontSize: 14.5, fontWeight: FontWeight.w600),
-                              decoration: InputDecoration(
-                                hintText: s.tr('ابحث عن سيارة، عقار، هاتف...', 'Rechercher un véhicule, bien, téléphone...'),
-                                hintStyle: const TextStyle(color: _muted, fontSize: 14, fontWeight: FontWeight.w500),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                          if (_queryCtrl.text.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                _queryCtrl.clear();
-                                _searchAds();
-                              },
-                              child: const Icon(CupertinoIcons.xmark_circle_fill, size: 18, color: _muted),
-                            ),
-                        ],
+                      child: Text(
+                        s.tr('إلغاء ×', 'Tout ×'),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: _red,
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _openFilterModal,
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: _red,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: _red.withValues(alpha: 0.28),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(CupertinoIcons.slider_horizontal_3, color: Colors.white, size: 20),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Horizontal Category Filter Pills
-            if (_state.categories.isNotEmpty)
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _state.categories.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      final active = _categoryId == null;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() => _categoryId = null);
-                          _searchAds();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: active ? _red : _pillBg,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: active ? _red : _border),
-                          ),
-                          child: Text(
-                            s.tr('الكل', 'Tout'),
-                            style: TextStyle(
-                              color: active ? Colors.white : _ink,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
+          // Search Bar + Filter Button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: _pillBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: _border),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.search,
+                          size: 18,
+                          color: _muted,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _queryCtrl,
+                            onSubmitted: (_) => _searchAds(),
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              color: _ink,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: s.searchHint,
+                              hintStyle: const TextStyle(
+                                color: _muted,
+                                fontSize: 14,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
                             ),
                           ),
                         ),
-                      );
-                    }
-                    final cat = _state.categories[index - 1];
-                    final id = int.tryParse(cat['id'].toString());
-                    final active = _categoryId == id;
-                    final label = (s.isAr ? (cat['name_ar'] ?? cat['name']) : (cat['name_fr'] ?? cat['name'])).toString();
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() => _categoryId = id);
-                        _searchAds();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: active ? _red : _pillBg,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: active ? _red : _border),
-                        ),
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            color: active ? Colors.white : _ink,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                        if (_queryCtrl.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              _queryCtrl.clear();
+                              _searchAds();
+                            },
+                            child: const Icon(
+                              CupertinoIcons.clear_circled_solid,
+                              size: 17,
+                              color: _muted,
+                            ),
                           ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: _openFilterModal,
+                  child: Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: (_cityId != null ||
+                              _minPrice != null ||
+                              _maxPrice != null)
+                          ? _red
+                          : _ink,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.slider_horizontal_3,
+                      color: Colors.white,
+                      size: 19,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Horizontal Category Pills with Product Icons
+          SizedBox(
+            height: 42,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              scrollDirection: Axis.horizontal,
+              itemCount: _state.categories.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  final active = _categoryId == null;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _categoryId = null);
+                      _searchAds();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: active ? _red : _pillBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        s.tr('جميع الأقسام', 'Toutes'),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: active ? Colors.white : _ink,
                         ),
                       ),
-                    );
+                    ),
+                  );
+                }
+                final rawCat = _state.categories[index - 1];
+                final cat = rawCat is Map
+                    ? Map<String, dynamic>.from(rawCat)
+                    : <String, dynamic>{};
+                final int? id = int.tryParse(cat['id']?.toString() ?? '');
+                final active = _categoryId == id;
+                final label = _state.formatCategoryLabel(cat);
+                final asset = _state.assetForCategory(cat, label);
+
+                return GestureDetector(
+                  onTap: () {
+                    if (id != null) {
+                      _state.recordCategoryInterest(id, weight: 3);
+                    }
+                    setState(() => _categoryId = id);
+                    _searchAds();
                   },
-                ),
-              ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: active ? _red : _pillBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: active ? _red : _border,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: Image.asset(asset, fit: BoxFit.contain),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: active ? Colors.white : _ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
 
-            const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
-            // Results area
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: _red))
-                  : _ads.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 68,
-                                  height: 68,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFEECEE),
-                                    shape: BoxShape.circle,
+          // Results Area with 2026 Shimmer Skeleton
+          Expanded(
+            child: _loading
+                ? SearchGridSkeleton(isGrid: _gridView)
+                : _ads.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(28),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 68,
+                                height: 68,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFEECEE),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  CupertinoIcons.search,
+                                  size: 30,
+                                  color: _red,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                s.noAdsFound,
+                                style: const TextStyle(
+                                  color: _ink,
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                s.tr(
+                                  'جرب تبدل القسم أو تبحث بكلمات أخرى',
+                                  'Essayez une autre catégorie ou d\'autres mots-clés',
+                                ),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: _muted,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                              if (_categoryId != null) ...[
+                                const SizedBox(height: 14),
+                                OutlinedButton(
+                                  onPressed: () {
+                                    setState(() => _categoryId = null);
+                                    _searchAds();
+                                  },
+                                  child: Text(
+                                    s.tr('عرض جميع الأقسام', 'Voir toutes les catégories'),
+                                    style: const TextStyle(
+                                      color: _red,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                  child: const Icon(Icons.search_off_rounded, size: 32, color: _red),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  s.tr('لا توجد إعلانات مطابقة لبحثك', 'Aucune annonce trouvée'),
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  s.tr('جرّب تغيير الفلتر أو البحث بكلمات أخرى', 'Essayez de modifier vos filtres de recherche'),
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 13, color: _muted),
                                 ),
                               ],
-                            ),
-                          ),
-                        )
-                      : RefreshIndicator(
-                          color: _red,
-                          onRefresh: _searchAds,
-                          child: CustomScrollView(
-                            controller: _scrollCtrl,
-                            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                            slivers: [
-                              if (_gridView)
-                                SliverPadding(
-                                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
-                                  sliver: SliverGrid(
-                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: 14,
-                                      crossAxisSpacing: 14,
-                                      childAspectRatio: 0.75,
-                                    ),
-                                    delegate: SliverChildBuilderDelegate(
-                                      (_, idx) => AdCard(ad: Map<String, dynamic>.from(_ads[idx])),
-                                      childCount: _ads.length,
-                                    ),
-                                  ),
-                                )
-                              else
-                                SliverPadding(
-                                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
-                                  sliver: SliverList(
-                                    delegate: SliverChildBuilderDelegate(
-                                      (_, idx) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 12),
-                                        child: AdCard(
-                                          ad: Map<String, dynamic>.from(_ads[idx]),
-                                          horizontal: true,
-                                        ),
-                                      ),
-                                      childCount: _ads.length,
-                                    ),
-                                  ),
-                                ),
-                              if (_loadingMore)
-                                const SliverToBoxAdapter(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 24),
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(strokeWidth: 2.2, color: _red),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              const SliverToBoxAdapter(child: SizedBox(height: 100)),
                             ],
                           ),
                         ),
-            ),
-          ],
-        ),
+                      )
+                    : RefreshIndicator(
+                        color: _red,
+                        onRefresh: _searchAds,
+                        child: _gridView
+                            ? GridView.builder(
+                                controller: _scrollCtrl,
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 4, 20, 120),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 14,
+                                  crossAxisSpacing: 14,
+                                  childAspectRatio: 0.72,
+                                ),
+                                itemCount: _ads.length + (_loadingMore ? 2 : 0),
+                                itemBuilder: (context, idx) {
+                                  if (idx >= _ads.length) {
+                                    return const AdGridCardSkeleton();
+                                  }
+                                  return AdCard(
+                                    ad: Map<String, dynamic>.from(_ads[idx]),
+                                  );
+                                },
+                              )
+                            : ListView.separated(
+                                controller: _scrollCtrl,
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 4, 20, 120),
+                                itemCount: _ads.length + (_loadingMore ? 1 : 0),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (context, idx) {
+                                  if (idx >= _ads.length) {
+                                    return const Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 16),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          color: _red,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return AdCard(
+                                    ad: Map<String, dynamic>.from(_ads[idx]),
+                                    horizontal: true,
+                                  );
+                                },
+                              ),
+                      ),
+          ),
+        ],
       ),
     );
   }

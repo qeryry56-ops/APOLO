@@ -189,4 +189,6 @@ class AppStrings {
   String get deleteAccount => tr('حذف الحساب نهائياً', 'Supprimer le compte');
   String get reportAd => tr('التبليغ عن الإعلان', 'Signaler l\'annonce');
   String get blockUser => tr('حظر المستخدم', 'Bloquer l\'utilisateur');
+  String get searchHint => tr('ابحث عن سيارة، شقة، هاتف...', 'Rechercher une voiture, appartement, téléphone...');
+  String get noAdsFound => tr('لا توجد إعلانات مطابقة لبحثك', 'Aucune annonce trouvée');
 }

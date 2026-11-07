@@ -46,6 +46,9 @@ class _MainShellState extends State<MainShell> {
     final pages = [
       HomeScreen(
         onOpenSearch: (catId) {
+          if (catId != null) {
+            _state.recordCategoryInterest(catId, weight: 3);
+          }
           setState(() {
             _searchInitialCategory = catId;
             _currentIndex = 2;
@@ -70,7 +73,7 @@ class _MainShellState extends State<MainShell> {
       _TabSpec(
         icon: CupertinoIcons.house,
         activeIcon: CupertinoIcons.house_fill,
-        label: s.tr('الرئيسية', 'Home'),
+        label: s.tr('الرئيسية', 'Accueil'),
       ),
       _TabSpec(
         icon: CupertinoIcons.sparkles,
@@ -90,7 +93,7 @@ class _MainShellState extends State<MainShell> {
       _TabSpec(
         icon: CupertinoIcons.person,
         activeIcon: CupertinoIcons.person_fill,
-        label: s.tr('حسابي', 'Profile'),
+        label: s.tr('حسابي', 'Profil'),
       ),
     ];
 

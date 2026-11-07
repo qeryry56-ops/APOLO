@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -6,8 +7,10 @@ import '../core/state/app_state.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
 import 'widgets/boost_sheet.dart';
-import 'chat_room_screen.dart';
 import 'widgets/chat_utils.dart';
+import 'widgets/skeleton_loader.dart';
+import 'chat_room_screen.dart';
+import 'privacy_compliance_screen.dart';
 import 'store_detail_screen.dart';
 import 'auth_screen.dart';
 
@@ -29,23 +32,35 @@ class AdDetailScreen extends StatefulWidget {
 
 class _AdDetailScreenState extends State<AdDetailScreen> {
   final AppState _state = AppState();
+  final PageController _pageCtrl = PageController();
   Map<String, dynamic>? _ad;
   List<dynamic> _relatedAds = [];
   bool _loading = true;
   int _currentImgIndex = 0;
 
   static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFFE31B23);
+  static const Color _red = Color(0xFFE31B23);
+  static const Color _redSoft = Color(0xFFFEECEE);
   static const Color _muted = Color(0xFF8A94A6);
-  static const Color _badgeBg = Color(0xFFFEECEE);
-  static const Color _cardBlue = Color(0xFFFDF2F2);
   static const Color _border = Color(0xFFE7EAF0);
+  static const Color _surface = Color(0xFFF7F9FC);
+  static const Color _emerald = Color(0xFF10B981);
 
   @override
   void initState() {
     super.initState();
     _ad = widget.initialAd ?? widget.initialData;
+    if (_ad != null) {
+      final catId = _state.extractAdCategoryId(_ad!);
+      _state.recordCategoryInterest(catId, weight: 2);
+    }
     _fetchDetails();
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchDetails() async {
@@ -53,8 +68,13 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       final res = await _state.api.dio.get('/ads/${widget.adId}');
       if (res.data is Map && res.data['status'] == 'success') {
         if (mounted) {
+          final loadedAd = res.data['ad'];
+          if (loadedAd is Map) {
+            final catId = _state.extractAdCategoryId(loadedAd);
+            _state.recordCategoryInterest(catId, weight: 2);
+          }
           setState(() {
-            _ad = res.data['ad'];
+            _ad = loadedAd;
             _relatedAds = res.data['related_ads'] ?? [];
             _loading = false;
           });
@@ -74,7 +94,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
   Future<void> _openWhatsApp(String phone, String title) async {
     final clean = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    final intlPhone = clean.startsWith('0') ? '212${clean.substring(1)}' : clean;
+    final intlPhone =
+        clean.startsWith('0') ? '212${clean.substring(1)}' : clean;
     final text = Uri.encodeComponent(
       '${_state.s.tr('السلام عليكم، بخصوص إعلانك على Apolo.ma:', 'Bonjour, concernant votre annonce sur Apolo.ma :')} $title',
     );
@@ -86,11 +107,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
   Future<void> _openInAppChat() async {
     if (!_state.isLoggedIn) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+      );
       return;
     }
     try {
-      final res = await _state.api.dio.post('/chat/start', data: {'ad_id': widget.adId});
+      final res = await _state.api.dio
+          .post('/chat/start', data: {'ad_id': widget.adId});
       if (res.data is Map && res.data['status'] == 'success') {
         final conv = res.data['conversation'] ?? {};
         final int convId = int.tryParse(conv['id'].toString()) ?? 0;
@@ -116,7 +141,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           );
         }
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -132,81 +157,30 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
   }
 
-  void _showReportDialog() {
-    final s = _state.s;
-    final msgCtrl = TextEditingController();
-    String selectedType = 'scam';
-
+  void _openFullScreenImage(String imgUrl, String caption) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(s.reportAd),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              value: selectedType,
-              items: [
-                DropdownMenuItem(
-                  value: 'scam',
-                  child: Text(s.tr('إعلان احتيالي أو وهمي', 'Arnaque ou fraude')),
-                ),
-                DropdownMenuItem(
-                  value: 'inappropriate',
-                  child: Text(s.tr('محتوى غير لائق', 'Contenu inapproprié')),
-                ),
-                DropdownMenuItem(
-                  value: 'sold',
-                  child: Text(s.tr('المنتج مباع أو غير متوفر', 'Produit déjà vendu')),
-                ),
-                DropdownMenuItem(
-                  value: 'wrong_category',
-                  child: Text(s.tr('قسم خاطئ أو مكرر', 'Mauvaise catégorie')),
-                ),
-              ],
-              onChanged: (v) => selectedType = v ?? 'scam',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: msgCtrl,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: s.tr('أضف تفاصيل إضافية للإدارة...', 'Détails supplémentaires...'),
-              ),
-            ),
-          ],
+      barrierColor: Colors.black.withValues(alpha: 0.92),
+      builder: (ctx) => Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 15),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(s.tr('إلغاء', 'Annuler')),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 4.0,
+            child: AppImage(url: imgUrl, fit: BoxFit.contain),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppConfig.danger),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await _state.api.dio.post('/ads/${widget.adId}/report', data: {
-                  'type': selectedType,
-                  'message': msgCtrl.text.trim().isNotEmpty ? msgCtrl.text.trim() : selectedType,
-                });
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        s.tr(
-                          'تم إرسال التبليغ بنجاح، شكراً لمساهمتك',
-                          'Signalement envoyé. Merci !',
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              } catch (_) {}
-            },
-            child: Text(s.tr('إرسال التبليغ', 'Signaler')),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -214,10 +188,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   Future<void> _blockSeller(int sellerId) async {
     if (!_state.isLoggedIn) return;
     try {
-      await _state.api.dio.post('/users/block', data: {'blocked_user_id': sellerId});
+      await _state.api.dio
+          .post('/users/block', data: {'blocked_user_id': sellerId});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_state.s.tr('تم حظر هذا المستخدم بنجاح', 'Utilisateur bloqué'))),
+          SnackBar(
+            content: Text(
+              _state.s.tr('تم حظر هذا المستخدم بنجاح', 'Utilisateur bloqué'),
+            ),
+          ),
         );
         Navigator.pop(context);
       }
@@ -231,22 +210,32 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     if (ad == null && _loading) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator(color: _blue)),
+        body: AdDetailSkeleton(),
       );
     }
     if (ad == null) {
       return Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(backgroundColor: Colors.white),
-        body: Center(child: Text(s.tr('الإعلان غير موجود', 'Annonce introuvable'))),
+        appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
+        body: Center(
+          child: Text(
+            s.tr('الإعلان غير موجود', 'Annonce introuvable'),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+        ),
       );
     }
 
-    final List images = (ad['images'] is List && (ad['images'] as List).isNotEmpty)
-        ? ad['images']
-        : (ad['main_image'] != null
-            ? [ad['main_image']]
-            : (ad['primary_image'] != null ? [ad['primary_image']] : []));
+    final List images =
+        (ad['images'] is List && (ad['images'] as List).isNotEmpty)
+            ? ad['images']
+            : (ad['main_image'] != null
+                ? [ad['main_image']]
+                : (ad['primary_image'] != null ? [ad['primary_image']] : []));
     final bool isFav = _state.favoriteAdIds.contains(widget.adId);
     final Map<String, dynamic> metadata =
         ad['metadata'] is Map ? Map<String, dynamic>.from(ad['metadata']) : {};
@@ -254,7 +243,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         ad['seller'] is Map ? Map<String, dynamic>.from(ad['seller']) : null;
     final Map<String, dynamic>? store =
         ad['store'] is Map ? Map<String, dynamic>.from(ad['store']) : null;
-    final String? phone = (ad['phone_call'] ?? ad['phone_whatsapp'])?.toString();
+    final String? phone =
+        (ad['phone_call'] ?? ad['phone_whatsapp'])?.toString();
     final bool isOwner = _state.currentUser != null &&
         seller != null &&
         _state.currentUser!['id'].toString() == seller['id'].toString();
@@ -269,242 +259,420 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 : (ad['city_fr'] ?? ad['city_name'] ?? 'Maroc'))
             .toString();
 
-    final String categoryName = ad['category'] is Map
-        ? (s.isAr
-                ? (ad['category']['name_ar'] ?? ad['category']['name'])
-                : (ad['category']['name_fr'] ?? ad['category']['name']))
-            .toString()
-        : (s.isAr
-                ? (ad['category_ar'] ?? ad['category_name'] ?? 'إعلان')
-                : (ad['category_fr'] ?? ad['category_name'] ?? 'Annonce'))
-            .toString();
+    final Map<String, dynamic> catMap = ad['category'] is Map
+        ? Map<String, dynamic>.from(ad['category'])
+        : {'name': ad['category_name'] ?? ad['category_ar'] ?? ''};
+    final String categoryName = _state.formatCategoryLabel(catMap);
+    final String categoryAsset = _state.assetForCategory(catMap, categoryName);
 
     final String priceFormatted =
         (ad['price_formatted'] ?? '${ad['price'] ?? ''} MAD').toString();
+    final bool isNegotiable =
+        ad['negotiable'] == true || metadata['negotiable'] == true;
+    final int viewsCount =
+        int.tryParse((ad['views_count'] ?? ad['views'] ?? 1).toString()) ?? 1;
     final topInset = MediaQuery.of(context).padding.top;
-    final coverHeight = topInset + 265;
+
+    final specEntries = metadata.entries
+        .where(
+          (e) =>
+              e.value != null &&
+              e.value.toString().isNotEmpty &&
+              ![
+                'additional_images',
+                'negotiable',
+                'free',
+                'hide_phone',
+                'internal_chat',
+              ].contains(e.key),
+        )
+        .toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 110),
+        padding: const EdgeInsets.only(bottom: 120),
         children: [
-          // Full-bleed Cover with Curved White Arch (Exact Triply-AI trip/[id].tsx)
+          // 1. 2026 Immersive Gallery with Fullscreen Zoom & Thumbnail Strip
           SizedBox(
-            height: coverHeight,
+            height: topInset + 310,
             width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 images.isNotEmpty
                     ? PageView.builder(
+                        controller: _pageCtrl,
                         itemCount: images.length,
-                        onPageChanged: (i) => setState(() => _currentImgIndex = i),
-                        itemBuilder: (_, idx) => AppImage(
-                          url: images[idx].toString(),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                        ),
+                        onPageChanged: (i) =>
+                            setState(() => _currentImgIndex = i),
+                        itemBuilder: (_, idx) {
+                          final imgUrl = images[idx].toString();
+                          return GestureDetector(
+                            onTap: () => _openFullScreenImage(
+                              imgUrl,
+                              (ad['title'] ?? '').toString(),
+                            ),
+                            child: AppImage(
+                              url: imgUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            ),
+                          );
+                        },
                       )
                     : Container(
                         color: const Color(0xFF1E293B),
-                        child: const Center(
-                          child: Icon(Icons.image_outlined, size: 64, color: Colors.white54),
+                        child: Center(
+                          child: Image.asset(
+                            categoryAsset,
+                            width: 110,
+                            height: 110,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
 
-                // Top & Bottom Gradient Overlay
+                // Top & Bottom Subtle Gradients
                 IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        stops: const [0.0, 0.42, 1.0],
+                        stops: const [0.0, 0.35, 0.72, 1.0],
                         colors: [
-                          Colors.black.withValues(alpha: 0.28),
-                          Colors.black.withValues(alpha: 0.08),
-                          Colors.black.withValues(alpha: 0.72),
+                          Colors.black.withValues(alpha: 0.38),
+                          Colors.transparent,
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.65),
                         ],
                       ),
                     ),
                   ),
                 ),
 
-                // Top Floating Circular White Buttons
+                // Floating Top Action Bar
                 Positioned(
                   top: topInset + 10,
-                  left: 20,
-                  right: 20,
+                  left: 18,
+                  right: 18,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _CircleIconButton(
-                        icon: Icons.chevron_left_rounded,
-                        iconSize: 26,
+                      _CircleGlassButton(
+                        icon: s.isAr
+                            ? CupertinoIcons.chevron_right
+                            : CupertinoIcons.chevron_left,
                         onTap: () => Navigator.pop(context),
                       ),
                       Row(
                         children: [
-                          _CircleIconButton(
-                            icon: isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                            iconColor: isFav ? const Color(0xFFE5484D) : _ink,
+                          _CircleGlassButton(
+                            icon: isFav
+                                ? CupertinoIcons.heart_fill
+                                : CupertinoIcons.heart,
+                            iconColor: isFav ? _red : _ink,
                             onTap: () async {
-                              await _state.toggleFavorite(widget.adId);
-                              setState(() {});
+                              final catId = _state.extractAdCategoryId(ad);
+                              await _state.toggleFavorite(
+                                widget.adId,
+                                categoryId: catId,
+                              );
+                              if (mounted) setState(() {});
                             },
                           ),
-                          const SizedBox(width: 10),
-                          _CircleIconButton(
-                            icon: Icons.more_horiz_rounded,
+                          const SizedBox(width: 8),
+                          _CircleGlassButton(
+                            icon: CupertinoIcons.share,
                             onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                backgroundColor: Colors.white,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                                ),
-                                builder: (ctx) => SafeArea(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ListTile(
-                                        leading: const Icon(Icons.share_outlined, color: _ink),
-                                        title: Text(s.tr('مشاركة الإعلان', 'Partager l\'annonce')),
-                                        onTap: () {
-                                          Navigator.pop(ctx);
-                                          final shareUrl = ad['share_url'] ?? 'https://apolo.ma';
-                                          Share.share('${ad['title']} - $priceFormatted\n$shareUrl');
-                                        },
-                                      ),
-                                      ListTile(
-                                        leading: const Icon(
-                                          Icons.flag_outlined,
-                                          color: Color(0xFFE5484D),
-                                        ),
-                                        title: Text(s.reportAd),
-                                        onTap: () {
-                                          Navigator.pop(ctx);
-                                          _showReportDialog();
-                                        },
-                                      ),
-                                      if (seller != null && !isOwner)
-                                        ListTile(
-                                          leading: const Icon(
-                                            Icons.block_rounded,
-                                            color: Color(0xFFE5484D),
-                                          ),
-                                          title: Text(s.blockUser),
-                                          onTap: () {
-                                            Navigator.pop(ctx);
-                                            _blockSeller(
-                                              int.tryParse(seller['id'].toString()) ?? 0,
-                                            );
-                                          },
-                                        ),
-                                    ],
-                                  ),
-                                ),
+                              final shareUrl =
+                                  ad['share_url'] ?? 'https://apolo.ma';
+                              Share.share(
+                                '${ad['title']} - $priceFormatted\n$shareUrl',
                               );
                             },
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Title & Location Overlay above Curved Arch
-                Positioned(
-                  left: 22,
-                  right: 22,
-                  bottom: 44,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on_rounded, size: 16, color: Colors.white),
-                          const SizedBox(width: 5),
-                          Text(
-                            cityName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                          const SizedBox(width: 8),
+                          _CircleGlassButton(
+                            icon: CupertinoIcons.flag,
+                            iconColor: _red,
+                            onTap: () => showAiContentReportSheet(
+                              context,
+                              featureContext:
+                                  '${s.tr('بلاغ عن إعلان', 'Signalement annonce')}: ${(ad['title'] ?? '').toString()}',
                             ),
                           ),
-                          if (images.length > 1) ...[
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.45),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '${_currentImgIndex + 1} / ${images.length}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        (ad['title'] ?? '').toString(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.6,
-                          color: Colors.white,
-                          height: 1.15,
-                        ),
                       ),
                     ],
                   ),
                 ),
 
-                // Curved White Arch at Bottom of Cover (Exact Triply-AI COVER_ARCH = 30)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: -1,
-                  height: 31,
-                  child: CustomPaint(
-                    painter: _CoverArchPainter(),
+                // Image Counter & Fullscreen Hint Badge
+                if (images.isNotEmpty)
+                  PositionedDirectional(
+                    bottom: 16,
+                    end: 18,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            CupertinoIcons.photo_on_rectangle,
+                            size: 13,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${_currentImgIndex + 1} / ${images.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Category Pill on Bottom-Start of Cover
+                PositionedDirectional(
+                  bottom: 16,
+                  start: 18,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Image.asset(
+                            categoryAsset,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          categoryName,
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
-          // 3-Column Circular Stat Row (Exact Triply-AI StatCol)
+          // Interactive Thumbnail Strip if multiple photos exist
+          if (images.length > 1)
+            SizedBox(
+              height: 68,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                scrollDirection: Axis.horizontal,
+                itemCount: images.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, idx) {
+                  final active = idx == _currentImgIndex;
+                  return GestureDetector(
+                    onTap: () {
+                      _pageCtrl.animateToPage(
+                        idx,
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOutCubic,
+                      );
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: active ? _red : _border,
+                          width: active ? 2.2 : 1,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: AppImage(
+                          url: images[idx].toString(),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+          // 2. Price, Title & Location Header (2026 Editorial Style)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _StatCol(
-                  icon: Icons.account_balance_wallet_outlined,
-                  value: priceFormatted,
-                  label: s.tr('الثمن', 'Prix'),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        priceFormatted,
+                        style: const TextStyle(
+                          fontSize: 27,
+                          fontWeight: FontWeight.w900,
+                          color: _red,
+                          letterSpacing: -0.6,
+                        ),
+                      ),
+                    ),
+                    if (isNegotiable)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: _emerald.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.checkmark_seal_fill,
+                              size: 13,
+                              color: _emerald,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              s.tr('قابل للتفاوض', 'Négociable'),
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: _emerald,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
-                _StatCol(
-                  icon: Icons.category_outlined,
-                  value: categoryName,
-                  label: s.tr('القسم', 'Catégorie'),
+                const SizedBox(height: 8),
+                Text(
+                  (ad['title'] ?? '').toString(),
+                  style: const TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                    height: 1.25,
+                    letterSpacing: -0.3,
+                  ),
                 ),
-                _StatCol(
-                  icon: Icons.visibility_outlined,
-                  value: '${ad['views_count'] ?? 1}',
-                  label: s.tr('المشاهدات', 'Vues'),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(
+                      CupertinoIcons.location_solid,
+                      size: 15,
+                      color: _red,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      cityName,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Icon(
+                      CupertinoIcons.eye,
+                      size: 15,
+                      color: _muted,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      '$viewsCount ${s.tr('مشاهدة', 'vues')}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // 3. 2026 Bento Overview Cards (Category + City + Views)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _BentoInfoTile(
+                    iconWidget: Image.asset(
+                      categoryAsset,
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.contain,
+                    ),
+                    label: s.tr('القسم', 'Catégorie'),
+                    value: categoryName,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _BentoInfoTile(
+                    iconWidget: const Icon(
+                      CupertinoIcons.placemark_fill,
+                      color: _red,
+                      size: 20,
+                    ),
+                    label: s.tr('المدينة', 'Ville'),
+                    value: cityName,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _BentoInfoTile(
+                    iconWidget: const Icon(
+                      CupertinoIcons.chart_bar_alt_fill,
+                      color: Color(0xFF3B82F6),
+                      size: 20,
+                    ),
+                    label: s.tr('المشاهدات', 'Vues'),
+                    value: '$viewsCount',
+                  ),
                 ),
               ],
             ),
@@ -512,12 +680,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
           if (isOwner)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppConfig.vipGold,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                  foregroundColor: _ink,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 onPressed: () {
                   showModalBottomSheet(
@@ -532,261 +703,266 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     if (boosted == true) _fetchDetails();
                   });
                 },
-                icon: const Icon(Icons.bolt_rounded),
-                label: Text(s.boostAd),
+                icon: const Icon(CupertinoIcons.bolt_fill, size: 18),
+                label: Text(
+                  s.tr('ترقية الإعلان ومضاعفة المشاهدات (Boost ⚡)', 'Booster cette annonce ⚡'),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
             ),
 
-          // Description Section (Triply-AI tinted card style)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  s.tr('تفاصيل الإعلان', 'Détails & Description'),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
-                    color: _ink,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  s.tr('معلومات كاملة من صاحب الإعلان', 'Informations fournies par le vendeur'),
-                  style: const TextStyle(fontSize: 15, color: _muted),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: _cardBlue,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(
-                              color: _blue,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.notes_rounded,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              (ad['title'] ?? '').toString(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: _ink,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          (ad['description'] ?? '').toString(),
-                          style: const TextStyle(
-                            fontSize: 15,
-                            height: 1.55,
-                            color: _ink,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Dynamic Metadata Specifications (Bordered Breakdown Card)
-          if (metadata.isNotEmpty)
+          // 4. Technical Specs Grid (if metadata exists)
+          if (specEntries.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    s.tr('المواصفات التقنية', 'Caractéristiques'),
+                    s.tr('المواصفات والخصائص', 'Caractéristiques techniques'),
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.4,
                       color: _ink,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: _surface,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: _border),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
                     child: Column(
-                      children: metadata.entries
-                          .where(
-                            (e) =>
-                                e.value != null &&
-                                e.value.toString().isNotEmpty &&
-                                e.key != 'additional_images',
-                          )
-                          .map(
-                            (e) => Container(
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                              decoration: const BoxDecoration(
-                                border: Border(bottom: BorderSide(color: Color(0xFFF0F2F5))),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    e.key.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: _muted,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Flexible(
-                                    child: Text(
-                                      e.value.toString(),
-                                      textAlign: TextAlign.end,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: _ink,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      children: specEntries.map((e) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Color(0xFFEAECEF)),
                             ),
-                          )
-                          .toList(),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                e.key.toString(),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: _muted,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  e.value.toString(),
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: _ink,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ],
               ),
             ),
 
-          // Seller / Store Card (Triply-AI Profile User Card style)
+          // 5. Description Card
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.tr('تفاصيل ووصف الإعلان', 'Description détaillée'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _border),
+                  ),
+                  child: Text(
+                    (ad['description'] ?? '').toString().trim().isEmpty
+                        ? s.tr(
+                            'تواصل مع البائع مباشرة لمعرفة المزيد من التفاصيل.',
+                            'Contactez directement le vendeur pour plus d\'informations.',
+                          )
+                        : (ad['description'] ?? '').toString(),
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      height: 1.6,
+                      color: _ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 6. Seller & Store Trust Card
           if (seller != null || store != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
               child: Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(color: _border),
-                ),
-                child: Row(
-                  children: [
-                    AppAvatar(
-                      url: (store?['logo_url'] ?? seller?['avatar_url'])?.toString(),
-                      radius: 28,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _ink.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            (store?['name'] ?? seller?['name'] ?? 'Apolo Seller').toString(),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: _ink,
-                            ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        AppAvatar(
+                          url: (store?['logo_url'] ?? seller?['avatar_url'])
+                              ?.toString(),
+                          radius: 26,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      (store?['name'] ??
+                                              seller?['name'] ??
+                                              'Apolo Seller')
+                                          .toString(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 16.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: _ink,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  const Icon(
+                                    CupertinoIcons.checkmark_seal_fill,
+                                    size: 16,
+                                    color: _red,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                store != null
+                                    ? s.tr(
+                                        'متجر احترافي موثق • سريع التجاوب',
+                                        'Boutique Pro Vérifiée • Réponse rapide',
+                                      )
+                                    : s.tr(
+                                        'عضو موثق على Apolo.ma',
+                                        'Membre vérifié sur Apolo.ma',
+                                      ),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: _muted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            store != null
-                                ? s.tr('متجر احترافي موثق ✓', 'Boutique Pro Vérifiée ✓')
-                                : s.tr('معلن موثق على Apolo.ma', 'Annonceur sur Apolo.ma'),
-                            style: const TextStyle(
-                              fontSize: 14,
+                        ),
+                        if (store != null)
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => StoreDetailScreen(
+                                    subdomain: store['subdomain'].toString(),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _redSoft,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                s.tr('زيارة المتجر', 'Boutique'),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: _red,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (seller != null && !isOwner)
+                          IconButton(
+                            tooltip: s.blockUser,
+                            onPressed: () => _blockSeller(
+                              int.tryParse(seller['id'].toString()) ?? 0,
+                            ),
+                            icon: const Icon(
+                              CupertinoIcons.nosign,
+                              size: 18,
                               color: _muted,
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
-                    if (store != null)
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => StoreDetailScreen(
-                                subdomain: store['subdomain'].toString(),
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: _badgeBg,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            s.tr('المتجر', 'Boutique'),
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                              color: _blue,
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
             ),
 
-          // Related Ads
+          // 7. Related Ads Section
           if (_relatedAds.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
               child: Text(
-                s.tr('إعلانات مشابهة', 'Annonces similaires'),
+                s.tr('إعلانات مشابهة فـ نفس القسم', 'Annonces similaires'),
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 18.5,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
+                  letterSpacing: -0.3,
                   color: _ink,
                 ),
               ),
             ),
             SizedBox(
-              height: 240,
+              height: 242,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 scrollDirection: Axis.horizontal,
@@ -794,7 +970,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 separatorBuilder: (_, __) => const SizedBox(width: 14),
                 itemBuilder: (_, idx) => SizedBox(
                   width: 185,
-                  child: AdCard(ad: Map<String, dynamic>.from(_relatedAds[idx])),
+                  child: AdCard(
+                    ad: Map<String, dynamic>.from(_relatedAds[idx]),
+                  ),
                 ),
               ),
             ),
@@ -803,20 +981,27 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          decoration: const BoxDecoration(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+          decoration: BoxDecoration(
             color: Colors.white,
-            border: Border(top: BorderSide(color: _border)),
+            border: const Border(top: BorderSide(color: _border)),
+            boxShadow: [
+              BoxShadow(
+                color: _ink.withValues(alpha: 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
           child: Row(
             children: [
               if (phone != null && phone.isNotEmpty) ...[
                 Expanded(
                   child: SizedBox(
-                    height: 52,
+                    height: 50,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _blue,
+                        backgroundColor: _red,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -824,18 +1009,21 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         ),
                       ),
                       onPressed: () => _callPhone(phone),
-                      icon: const Icon(Icons.call_rounded, size: 18),
+                      icon: const Icon(CupertinoIcons.phone_fill, size: 17),
                       label: Text(
                         s.callSeller,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 SizedBox(
-                  height: 52,
-                  width: 52,
+                  height: 50,
+                  width: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.zero,
@@ -844,15 +1032,19 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       elevation: 0,
                       shape: const CircleBorder(),
                     ),
-                    onPressed: () => _openWhatsApp(phone, (ad['title'] ?? '').toString()),
-                    child: const Icon(Icons.chat_rounded, size: 22),
+                    onPressed: () =>
+                        _openWhatsApp(phone, (ad['title'] ?? '').toString()),
+                    child: const Icon(
+                      CupertinoIcons.chat_bubble_text_fill,
+                      size: 20,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
               ],
               Expanded(
                 child: SizedBox(
-                  height: 52,
+                  height: 50,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _ink,
@@ -862,10 +1054,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       ),
                     ),
                     onPressed: _openInAppChat,
-                    icon: const Icon(Icons.forum_outlined, size: 18, color: _blue),
+                    icon: const Icon(
+                      CupertinoIcons.chat_bubble_2_fill,
+                      size: 17,
+                      color: _red,
+                    ),
                     label: Text(
                       s.chatInApp,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -878,16 +1077,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
+class _CircleGlassButton extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final double iconSize;
   final VoidCallback onTap;
 
-  const _CircleIconButton({
+  const _CircleGlassButton({
     required this.icon,
     this.iconColor = const Color(0xFF0F1B2D),
-    this.iconSize = 20,
     required this.onTap,
   });
 
@@ -896,73 +1093,68 @@ class _CircleIconButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white.withValues(alpha: 0.92),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 10,
+              blurRadius: 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: iconSize, color: iconColor),
+        child: Icon(icon, size: 19, color: iconColor),
       ),
     );
   }
 }
 
-class _StatCol extends StatelessWidget {
-  final IconData icon;
-  final String value;
+class _BentoInfoTile extends StatelessWidget {
+  final Widget iconWidget;
   final String label;
+  final String value;
 
-  const _StatCol({
-    required this.icon,
-    required this.value,
+  const _BentoInfoTile({
+    required this.iconWidget,
     required this.label,
+    required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE7EAF0)),
+      ),
       child: Column(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE7F0FE),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, size: 24, color: Color(0xFF2F6BE4)),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0F1B2D),
-              ),
+          SizedBox(height: 28, child: Center(child: iconWidget)),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F1B2D),
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               color: Color(0xFF8A94A6),
             ),
           ),
@@ -970,25 +1162,4 @@ class _StatCol extends StatelessWidget {
       ),
     );
   }
-}
-
-class _CoverArchPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(0, 0)
-      ..quadraticBezierTo(size.width / 2, size.height * 2, size.width, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

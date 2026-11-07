@@ -4,7 +4,9 @@ import '../core/state/app_state.dart';
 import 'ad_detail_screen.dart';
 import 'privacy_compliance_screen.dart';
 import 'stores_screen.dart';
+import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
+import 'widgets/skeleton_loader.dart';
 
 class HomeScreen extends StatefulWidget {
   final void Function(int? categoryId) onOpenSearch;
@@ -26,11 +28,11 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _categories = [];
   List<dynamic> _featuredAds = [];
   List<dynamic> _latestAds = [];
+  int? _selectedFeedCategoryId;
 
-  // Exact Triply-AI + Apolo Official Brand Red (#E31B23) color tokens
+  // Official Apolo 2026 Design Tokens
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _blue = Color(0xFFE31B23);
-  static const Color _gold = Color(0xFFF5B942);
   static const Color _muted = Color(0xFF8A94A6);
   static const Color _border = Color(0xFFEDEFF3);
   static const Color _pillBg = Color(0xFFF1F3F7);
@@ -39,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     {
       'id': 3,
       'name_ar': 'وسائل النقل',
-      'name_fr': 'Véhicules & Auto',
+      'name_fr': 'Véhicules',
       'asset': 'assets/images/hero_car.png',
     },
     {
@@ -50,20 +52,20 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'id': 1,
-      'name_ar': 'المعلوماتية والوسائط',
-      'name_fr': 'Informatique & Tech',
+      'name_ar': 'إعلاميات وتقنية',
+      'name_fr': 'Informatique',
       'asset': 'assets/images/cat_computers.png',
     },
     {
       'id': 4,
-      'name_ar': 'ملابس ـ صحة وجمال',
-      'name_fr': 'Habillement & Mode',
+      'name_ar': 'أزياء وجمال',
+      'name_fr': 'Mode & Beauté',
       'asset': 'assets/images/cat_fashion.png',
     },
     {
       'id': 5,
       'name_ar': 'أدوات السفر',
-      'name_fr': 'Outils de voyage',
+      'name_fr': 'Voyage',
       'asset': 'assets/images/cat_travel.png',
     },
     {
@@ -87,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
     {
       'id': 9,
       'name_ar': 'آلات صناعية',
-      'name_fr': 'Machines industrielles',
+      'name_fr': 'Industrie & Pro',
       'asset': 'assets/images/cat_industrial.png',
     },
     {
@@ -98,48 +100,15 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'id': 11,
-      'name_ar': 'منتجات عتيقة',
-      'name_fr': 'Antique',
+      'name_ar': 'تحف وأنتيك',
+      'name_fr': 'Antiquités',
       'asset': 'assets/images/cat_antique.png',
     },
     {
       'id': 12,
-      'name_ar': 'آخر...',
-      'name_fr': 'Autre...',
+      'name_ar': 'أقسام أخرى',
+      'name_fr': 'Autres',
       'asset': 'assets/images/cat_other.png',
-    },
-  ];
-
-  static const List<Map<String, String>> _fallbackPopular = [
-    {
-      'id': '3',
-      'name_fr': 'Voitures & Auto',
-      'name_ar': 'سيارات ومركبات',
-      'sub_fr': 'Casablanca • Rabat',
-      'sub_ar': 'الدار البيضاء • الرباط',
-      'rating': '4.9',
-      'image':
-          'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80&auto=format&fit=crop',
-    },
-    {
-      'id': '2',
-      'name_fr': 'Immobilier Prestige',
-      'name_ar': 'عقارات وشقق',
-      'sub_fr': 'Marrakech • Tanger',
-      'sub_ar': 'مراكش • طنجة',
-      'rating': '4.8',
-      'image':
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80&auto=format&fit=crop',
-    },
-    {
-      'id': '1',
-      'name_fr': 'High-Tech & Pro',
-      'name_ar': 'إلكترونيات وهواتف',
-      'sub_fr': 'Partout au Maroc',
-      'sub_ar': 'جميع المدن',
-      'rating': '4.8',
-      'image':
-          'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&q=80&auto=format&fit=crop',
     },
   ];
 
@@ -170,94 +139,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _userFirstName() {
-    final raw = (_state.currentUser?['name'] ?? _state.currentUser?['username'] ?? '').toString().trim();
+    final raw = (_state.currentUser?['name'] ??
+            _state.currentUser?['username'] ??
+            '')
+        .toString()
+        .trim();
     if (raw.isEmpty) return 'Amine';
     return raw.split(' ').first;
-  }
-
-  String _assetForCategory(String name, int idx, [Map<dynamic, dynamic>? cat]) {
-    final combined = '${name.toLowerCase()} ${(cat?['name_ar'] ?? '').toString().toLowerCase()} ${(cat?['name_fr'] ?? '').toString().toLowerCase()} ${(cat?['slug'] ?? '').toString().toLowerCase()}';
-    if (combined.contains('voiture') ||
-        combined.contains('auto') ||
-        combined.contains('moto') ||
-        combined.contains('vehicule') ||
-        combined.contains('véhicule') ||
-        combined.contains('نقل') ||
-        combined.contains('سيار') ||
-        combined.contains('مركبات')) {
-      return 'assets/images/hero_car.png';
-    }
-    if (combined.contains('immo') ||
-        combined.contains('appart') ||
-        combined.contains('villa') ||
-        combined.contains('عقار') ||
-        combined.contains('شقق')) {
-      return 'assets/images/cat_realestate.png';
-    }
-    if (combined.contains('voyage') || combined.contains('سفر')) {
-      return 'assets/images/cat_travel.png';
-    }
-    if (combined.contains('parapharmacie') || combined.contains('بارافارماسي')) {
-      return 'assets/images/cat_parapharmacy.png';
-    }
-    if (combined.contains('enfant') ||
-        combined.contains('اطفال') ||
-        combined.contains('أطفال')) {
-      return 'assets/images/cat_kids.png';
-    }
-    if (combined.contains('bricolage') || combined.contains('بريكولاج')) {
-      return 'assets/images/cat_bricolage.png';
-    }
-    if (combined.contains('industriel') ||
-        combined.contains('machine') ||
-        combined.contains('صناعية') ||
-        combined.contains('ألات') ||
-        combined.contains('آلات')) {
-      return 'assets/images/cat_industrial.png';
-    }
-    if (combined.contains('bijou') || combined.contains('مجوهرات')) {
-      return 'assets/images/cat_jewelry.png';
-    }
-    if (combined.contains('antique') || combined.contains('عتيقة')) {
-      return 'assets/images/cat_antique.png';
-    }
-    if (combined.contains('autre') || combined.contains('آخر')) {
-      return 'assets/images/cat_other.png';
-    }
-    if (combined.contains('télé') ||
-        combined.contains('phone') ||
-        combined.contains('هواتف')) {
-      return 'assets/images/cat_phones.png';
-    }
-    if (combined.contains('info') ||
-        combined.contains('multimedia') ||
-        combined.contains('pc') ||
-        combined.contains('معلوماتية') ||
-        combined.contains('وسائط') ||
-        combined.contains('حواسيب') ||
-        combined.contains('إلكترون')) {
-      return 'assets/images/cat_computers.png';
-    }
-    if (combined.contains('maison') ||
-        combined.contains('meuble') ||
-        combined.contains('أثاث') ||
-        combined.contains('منزل')) {
-      return 'assets/images/cat_home.png';
-    }
-    if (combined.contains('mode') ||
-        combined.contains('habillement') ||
-        combined.contains('vêt') ||
-        combined.contains('أزياء') ||
-        combined.contains('ملابس')) {
-      return 'assets/images/cat_fashion.png';
-    }
-    if (combined.contains('emploi') ||
-        combined.contains('service') ||
-        combined.contains('وظائف') ||
-        combined.contains('خدمات')) {
-      return 'assets/images/cat_jobs.png';
-    }
-    return 'assets/images/cat_other.png';
   }
 
   void _openNotificationsSheet() {
@@ -294,7 +182,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Color(0xFFFEECEE),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(CupertinoIcons.bell_fill, color: _blue, size: 19),
+                  child: const Icon(
+                    CupertinoIcons.bell_fill,
+                    color: _blue,
+                    size: 19,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -328,7 +220,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: Image.asset('assets/images/hero_car.png', fit: BoxFit.contain),
+                    child: Image.asset(
+                      'assets/images/hero_car.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -336,16 +231,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          s.tr('مرحباً بك فـ النسخة الجديدة ديال Apolo.ma 🎉', 'Bienvenue sur le nouveau Apolo.ma 🎉'),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _ink),
+                          s.tr(
+                            'مرحباً بك فـ النسخة الجديدة ديال Apolo.ma 🎉',
+                            'Bienvenue sur le nouveau Apolo.ma 🎉',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                          ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           s.tr(
-                            'اكتشف أحدث عروض السيارات والعقارات أو ضيف إعلانك مجاناً فـ 30 ثانية.',
-                            'Découvrez les dernières offres ou publiez votre annonce en 30 secondes.',
+                            'الخوارزمية الذكية دابا كتقترح عليك العروض حسب الأقسام اللي كتفضلها.',
+                            'Notre algorithme intelligent adapte désormais votre fil selon vos catégories préférées.',
                           ),
-                          style: const TextStyle(fontSize: 12.5, color: _muted, height: 1.35),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: _muted,
+                            height: 1.35,
+                          ),
                         ),
                       ],
                     ),
@@ -363,14 +269,44 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final s = _state.s;
     final topPadding = MediaQuery.of(context).padding.top;
-    final allAds = <Map<String, dynamic>>[
-      ..._featuredAds.map((e) => Map<String, dynamic>.from(e as Map)),
-      ..._latestAds.map((e) => Map<String, dynamic>.from(e as Map)),
-    ];
-    final heroAd = allAds.isNotEmpty ? allAds.first : null;
-    final moreAds = allAds.length > 1 ? allAds.sublist(1) : <Map<String, dynamic>>[];
+    final displayCategories =
+        _categories.isNotEmpty ? _categories : _defaultCategories;
 
-    final displayCategories = _categories.isNotEmpty ? _categories : _defaultCategories;
+    // Combine all ads & separate Trending vs Personalized Feed
+    final allAds = <Map<String, dynamic>>[];
+    final seenIds = <String>{};
+    for (final item in [..._featuredAds, ..._latestAds]) {
+      if (item is Map) {
+        final map = Map<String, dynamic>.from(item);
+        final idStr = (map['id'] ?? '').toString();
+        if (idStr.isNotEmpty && !seenIds.contains(idStr)) {
+          seenIds.add(idStr);
+          allAds.add(map);
+        }
+      }
+    }
+
+    // 1. Trending ads (Featured / VIP / Top viewed first)
+    final trendingAds = List<Map<String, dynamic>>.from(allAds);
+    trendingAds.sort((a, b) {
+      final aVip = (a['is_vip'] == true || a['is_featured'] == true) ? 1 : 0;
+      final bVip = (b['is_vip'] == true || b['is_featured'] == true) ? 1 : 0;
+      if (aVip != bVip) return bVip.compareTo(aVip);
+      final aViews =
+          int.tryParse((a['views'] ?? a['views_count'] ?? 0).toString()) ?? 0;
+      final bViews =
+          int.tryParse((b['views'] ?? b['views_count'] ?? 0).toString()) ?? 0;
+      return bViews.compareTo(aViews);
+    });
+    final topTrending = trendingAds.take(5).toList();
+
+    // 2. Smart Personalized Feed (Ranked by user interest weights & filtered if chip selected)
+    final personalizedPool = _selectedFeedCategoryId == null
+        ? allAds
+        : allAds
+            .where((ad) => _state.adMatchesCategory(ad, _selectedFeedCategoryId))
+            .toList();
+    final personalizedAds = _state.rankAdsForUser(personalizedPool);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -378,37 +314,71 @@ class _HomeScreenState extends State<HomeScreen> {
         color: _blue,
         onRefresh: _loadHome,
         child: ListView(
-          padding: EdgeInsets.only(top: topPadding + 12, bottom: 115),
+          padding: EdgeInsets.only(top: topPadding + 12, bottom: 118),
           children: [
-            // Top Greeting Row + Notifications Bell Button (Balanced 28px Title, 20px Padding)
+            // Top Greeting Row + Language Toggle + Notifications Bell
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
                       s.isAr
                           ? 'مرحباً، ${_userFirstName()} 👋'
-                          : 'Hi, ${_userFirstName()} 👋',
+                          : 'Bonjour, ${_userFirstName()} 👋',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 25,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.6,
+                        letterSpacing: -0.5,
                         color: _ink,
                         height: 1.15,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Notifications Bell Button (Replaced language icon as requested!)
+                  const SizedBox(width: 8),
+                  // Quick Language Switcher Pill (100% consistent AR / FR)
+                  GestureDetector(
+                    onTap: () async {
+                      await _state.toggleLanguage();
+                      if (mounted) setState(() {});
+                    },
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      decoration: BoxDecoration(
+                        color: _pillBg,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: _border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            CupertinoIcons.globe,
+                            size: 15,
+                            color: _ink,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            s.isAr ? 'FR' : 'عربي',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: _ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _openNotificationsSheet,
                     child: Container(
-                      width: 42,
-                      height: 42,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
                         color: _pillBg,
                         shape: BoxShape.circle,
@@ -419,19 +389,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const Icon(
                             CupertinoIcons.bell,
-                            size: 20,
+                            size: 18,
                             color: _ink,
                           ),
                           Positioned(
-                            top: 10,
-                            right: 10,
+                            top: 9,
+                            right: 9,
                             child: Container(
-                              width: 8,
-                              height: 8,
+                              width: 7,
+                              height: 7,
                               decoration: BoxDecoration(
                                 color: _blue,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
+                                border:
+                                    Border.all(color: Colors.white, width: 1.4),
                               ),
                             ),
                           ),
@@ -443,13 +414,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Hero Card with Live Red + White Color Distribution & Giant 3D Pop-Out Car!
+            // Balanced Hero Card: Text on start side, 3D Car on end side WITHOUT overlapping text or button!
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Vibrant Red + Luminous White Mesh Hero Container
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -465,180 +435,168 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       borderRadius: BorderRadius.circular(26),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.28),
-                        width: 1.1,
+                        color: Colors.white.withValues(alpha: 0.25),
+                        width: 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _blue.withValues(alpha: 0.28),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
+                          color: _blue.withValues(alpha: 0.24),
+                          blurRadius: 22,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Stack(
                       children: [
-                        // Top-End Soft Ambient Glow (above the car, NOT under the wheels!)
+                        // Soft ambient top glow
                         PositionedDirectional(
-                          end: -10,
-                          top: -55,
+                          end: -15,
+                          top: -50,
                           child: Container(
-                            width: 190,
-                            height: 190,
+                            width: 170,
+                            height: 170,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  Colors.white.withValues(alpha: 0.34),
-                                  Colors.white.withValues(alpha: 0.12),
-                                  Colors.white.withValues(alpha: 0.0),
-                                ],
-                                stops: const [0.0, 0.5, 1.0],
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Subtle White Shimmer Ribbon at Top-Start
-                        PositionedDirectional(
-                          start: -30,
-                          top: -35,
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: RadialGradient(
-                                colors: [
-                                  Colors.white.withValues(alpha: 0.18),
+                                  Colors.white.withValues(alpha: 0.30),
                                   Colors.white.withValues(alpha: 0.0),
                                 ],
                               ),
                             ),
                           ),
                         ),
+                        // Compact AI Report Flag Icon in the top-end corner of the Hero Card
+                        PositionedDirectional(
+                          top: 12,
+                          end: 12,
+                          child: GestureDetector(
+                            onTap: () => showAiContentReportSheet(
+                              context,
+                              featureContext: s.tr(
+                                'مساعد أبولو الذكي',
+                                'Assistant IA Apolo',
+                              ),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.28),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    CupertinoIcons.flag_fill,
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    s.tr('إبلاغ AI', 'Signaler IA'),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Reserved 156px on end side so the 3D car NEVER covers text or CTA button
                         Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 152, 20),
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                            18,
+                            18,
+                            156,
+                            18,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.34),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.18),
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: Colors.white.withValues(alpha: 0.38),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        s.tr(
+                                          'مساعد أبولو الذكي • LIVE',
+                                          'Assistant Apolo IA • LIVE',
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
                                         ),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 7,
-                                            height: 7,
-                                            decoration: const BoxDecoration(
-                                              color: Colors.white,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Flexible(
-                                            child: Text(
-                                              s.tr('مساعد أبولو الذكي • LIVE', 'AI Deal Planner • LIVE'),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  GestureDetector(
-                                    onTap: () => showAiContentReportSheet(
-                                      context,
-                                      featureContext: s.tr(
-                                        'مساعد أبولو الذكي (AI Deal Planner)',
-                                        'AI Deal Planner',
-                                      ),
-                                    ),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.18),
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: Colors.white.withValues(alpha: 0.32),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            CupertinoIcons.flag_fill,
-                                            size: 11,
-                                            color: Colors.white,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            s.tr('إبلاغ AI', 'Report AI'),
-                                            style: const TextStyle(
-                                              fontSize: 10.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 10),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: AlignmentDirectional.centerStart,
-                                child: Text(
-                                  s.tr('بيع ولا شري فـ 30 ثانية', 'Plan your next deal'),
-                                  maxLines: 1,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -0.5,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
                               Text(
                                 s.tr(
-                                  'قول لينا شنو باغي تبيع ولا تشري — غادي نقادو ليك كلشي.',
-                                  'Tell us what you want to buy or sell — we\'ll build the listing.',
+                                  'بيع ولا شري فـ 30 ثانية',
+                                  'Vendez ou achetez en 30s',
                                 ),
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  height: 1.38,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.95),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 19.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.4,
+                                  color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 5),
+                              Text(
+                                s.tr(
+                                  'حط إعلانك خطوة بخطوة وخلي الذكاء الاصطناعي يقاد ليك كلشي.',
+                                  'Publiez étape par étape, notre assistant s\'occupe du reste.',
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.94),
+                                ),
+                              ),
+                              const SizedBox(height: 13),
                               GestureDetector(
                                 onTap: () {
                                   if (widget.onOpenPostAd != null) {
@@ -649,17 +607,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 10,
+                                    horizontal: 16,
+                                    vertical: 9,
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(999),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.16),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
+                                        color:
+                                            Colors.black.withValues(alpha: 0.14),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
                                       ),
                                     ],
                                   ),
@@ -667,17 +626,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        s.tr('ابدا دابا', 'Get started'),
+                                        s.tr('ابدا دابا', 'Commencer'),
                                         style: const TextStyle(
-                                          fontSize: 13.5,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w800,
                                           color: _blue,
                                         ),
                                       ),
-                                      const SizedBox(width: 6),
-                                      const Icon(
-                                        CupertinoIcons.arrow_right,
-                                        size: 14,
+                                      const SizedBox(width: 5),
+                                      Icon(
+                                        s.isAr
+                                            ? CupertinoIcons.arrow_left
+                                            : CupertinoIcons.arrow_right,
+                                        size: 13,
                                         color: _blue,
                                       ),
                                     ],
@@ -691,20 +652,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // 3D Ground Contact Shadow under the Car (extending outside the card!)
+                  // 3D Ground Shadow under the Car
                   PositionedDirectional(
-                    end: -10,
-                    bottom: -16,
-                    width: 205,
-                    height: 30,
+                    end: -4,
+                    bottom: -10,
+                    width: 158,
+                    height: 22,
                     child: IgnorePointer(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
                           boxShadow: [
                             BoxShadow(
-                              color: _ink.withValues(alpha: 0.28),
-                              blurRadius: 18,
+                              color: _ink.withValues(alpha: 0.24),
+                              blurRadius: 14,
                               spreadRadius: 1,
                             ),
                           ],
@@ -713,12 +674,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // Giant Photorealistic 3D SUV Coupé bursting OUTSIDE the Hero Card!
+                  // 3D SUV Coupé positioned cleanly in the 156px stage (no overlap with button or text!)
                   PositionedDirectional(
-                    end: -22,
-                    bottom: -24,
-                    width: 232,
-                    height: 168,
+                    end: -12,
+                    bottom: -14,
+                    width: 172,
+                    height: 124,
                     child: IgnorePointer(
                       child: Transform.flip(
                         flipX: s.isAr,
@@ -734,16 +695,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Categories Section with 3D Clay / Memoji Icons!
+            // Categories Section (2026 Bento Cards — Clean Short Labels, Zero Overlap!)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     s.categories,
                     style: const TextStyle(
-                      fontSize: 18.5,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
                       color: _ink,
@@ -756,15 +717,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           s.tr('عرض الكل', 'Tout voir'),
                           style: const TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: _blue,
                           ),
                         ),
-                        const SizedBox(width: 2),
-                        const Icon(
-                          CupertinoIcons.chevron_forward,
-                          size: 15,
+                        const SizedBox(width: 3),
+                        Icon(
+                          s.isAr
+                              ? CupertinoIcons.chevron_back
+                              : CupertinoIcons.chevron_forward,
+                          size: 14,
                           color: _blue,
                         ),
                       ],
@@ -775,77 +738,69 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             SizedBox(
-              height: 118,
+              height: 122,
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
                 scrollDirection: Axis.horizontal,
                 clipBehavior: Clip.none,
                 itemCount: displayCategories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, idx) {
-                  final cat = displayCategories[idx];
+                  final cat = displayCategories[idx] is Map
+                      ? Map<String, dynamic>.from(displayCategories[idx] as Map)
+                      : <String, dynamic>{};
                   final int? catId = int.tryParse(cat['id']?.toString() ?? '');
-                  final String name = (s.isAr
-                          ? (cat['name_ar'] ?? cat['name'] ?? '')
-                          : (cat['name_fr'] ?? cat['name'] ?? ''))
-                      .toString();
-                  final String assetPath = cat['asset'] is String
-                      ? cat['asset'] as String
-                      : _assetForCategory(name, idx, cat is Map ? cat : null);
+                  final String cleanName = _state.formatCategoryLabel(cat);
+                  final String assetPath =
+                      _state.assetForCategory(cat, cleanName);
 
                   return GestureDetector(
                     onTap: () => widget.onOpenSearch(catId),
                     child: Container(
-                      width: 132,
+                      width: 118,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Color(0xFFF6F7FA),
-                            Color(0xFFEDF0F5),
+                            Color(0xFFF7F8FB),
+                            Color(0xFFEEF1F6),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: idx == 0
                               ? _blue.withValues(alpha: 0.22)
-                              : const Color(0xFFE6E9F0),
+                              : const Color(0xFFE5E8F0),
                           width: 1,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _ink.withValues(alpha: 0.035),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
+                          // Full-width top label so words NEVER split mid-letter or collide with the product!
                           PositionedDirectional(
-                            top: 12,
-                            start: 13,
-                            end: 42,
+                            top: 10,
+                            start: 11,
+                            end: 10,
                             child: Text(
-                              name,
-                              maxLines: 2,
+                              cleanName,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w800,
                                 color: _ink,
-                                height: 1.18,
-                                letterSpacing: -0.25,
+                                letterSpacing: -0.2,
                               ),
                             ),
                           ),
+                          // Floating Global-Brand Product Cutout in bottom-end corner
                           PositionedDirectional(
-                            bottom: 4,
+                            bottom: 5,
                             end: 6,
-                            width: 68,
-                            height: 68,
+                            width: 62,
+                            height: 62,
                             child: Image.asset(
                               assetPath,
                               fit: BoxFit.contain,
@@ -860,215 +815,150 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Section 1: "Featured listings"
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    s.tr('إعلانات مميزة', 'Featured listings'),
-                    style: const TextStyle(
-                      fontSize: 18.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                      color: _ink,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => widget.onOpenSearch(null),
-                    child: Row(
-                      children: [
-                        Text(
-                          s.tr('عرض الكل', 'See all'),
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: _blue,
+            if (_loading) ...[
+              const SizedBox(height: 18),
+              const HomeFeedSkeleton(),
+            ] else ...[
+              // STAGE 1: Trending / الرائج الآن 🔥
+              if (topTrending.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFEECEE),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.flame_fill,
+                              size: 15,
+                              color: _blue,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(
-                          CupertinoIcons.chevron_forward,
-                          size: 15,
-                          color: _blue,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator(color: _blue)),
-              )
-            else if (heroAd != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: _TriplyShowcaseCard(ad: heroAd),
-              ),
-
-            // Section 2: "Popular categories"
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    s.tr('الأكثر طلباً في المغرب', 'Popular categories'),
-                    style: const TextStyle(
-                      fontSize: 18.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                      color: _ink,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const StoresScreen()),
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        Text(
-                          s.tr('المتاجر', 'Boutiques'),
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: _blue,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(
-                          CupertinoIcons.chevron_forward,
-                          size: 15,
-                          color: _blue,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(
-              height: 214,
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                scrollDirection: Axis.horizontal,
-                itemCount: _fallbackPopular.length + (_categories.length > 3 ? 2 : 0),
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, idx) {
-                  final item = _fallbackPopular[idx % _fallbackPopular.length];
-                  final int? catId = int.tryParse(item['id'] ?? '');
-                  final title = s.isAr ? item['name_ar']! : item['name_fr']!;
-                  final subtitle = s.isAr ? item['sub_ar']! : item['sub_fr']!;
-                  return GestureDetector(
-                    onTap: () => widget.onOpenSearch(catId),
-                    child: Container(
-                      width: 156,
-                      height: 202,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _ink.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
+                          const SizedBox(width: 8),
+                          Text(
+                            s.tr('الرائج الآن في المغرب', 'Tendances au Maroc'),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              color: _ink,
+                            ),
                           ),
                         ],
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
-                        fit: StackFit.expand,
+                      GestureDetector(
+                        onTap: () => widget.onOpenSearch(null),
+                        child: Row(
+                          children: [
+                            Text(
+                              s.tr('عرض الكل', 'Tout voir'),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _blue,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Icon(
+                              s.isAr
+                                  ? CupertinoIcons.chevron_back
+                                  : CupertinoIcons.chevron_forward,
+                              size: 14,
+                              color: _blue,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 252,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: topTrending.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 14),
+                    itemBuilder: (context, idx) {
+                      final ad = topTrending[idx];
+                      return SizedBox(
+                        width: 285,
+                        child: _TriplyShowcaseCard(
+                          ad: ad,
+                          isTrendingBadge: true,
+                          onVisited: () {
+                            final catId = _state.extractAdCategoryId(ad);
+                            _state.recordCategoryInterest(catId, weight: 2);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // STAGE 2: Smart Personalized Feed (مقترح لك حسب اهتماماتك ✨)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
                         children: [
-                          AppImage(
-                            url: item['image'],
-                            fit: BoxFit.cover,
-                          ),
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            height: 105,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.68),
-                                  ],
-                                ),
-                              ),
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFEECEE),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.sparkles,
+                              size: 15,
+                              color: _blue,
                             ),
                           ),
-                          Positioned(
-                            top: 10,
-                            right: 10,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.45),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    CupertinoIcons.star_fill,
-                                    size: 12,
-                                    color: _gold,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    item['rating'] ?? '4.9',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            left: 12,
-                            right: 12,
-                            bottom: 12,
+                          const SizedBox(width: 8),
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  title,
+                                  s.tr(
+                                    'مقترح لك حسب اهتماماتك',
+                                    'Recommandé pour vous',
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 15.5,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: -0.3,
-                                    color: Colors.white,
+                                    color: _ink,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
                                 Text(
-                                  subtitle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
+                                  _state.hasPersonalizedInterests
+                                      ? s.tr(
+                                          'مرتب ذكياً حسب الأقسام اللي كتفضلها',
+                                          'Trié selon vos catégories préférées',
+                                        )
+                                      : s.tr(
+                                          'تصفح الأقسام باش يتخصص ليك الـ Feed تلقائياً',
+                                          'Explorez les catégories pour personnaliser votre fil',
+                                        ),
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    color: _muted,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.white.withValues(alpha: 0.85),
                                   ),
                                 ),
                               ],
@@ -1077,57 +967,186 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-
-            // Section 3: More Recent Listings in balanced Showcase Card format
-            if (moreAds.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 2),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      s.tr('أحدث الإعلانات', 'Recent listings'),
-                      style: const TextStyle(
-                        fontSize: 18.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                        color: _ink,
-                      ),
-                    ),
                     GestureDetector(
-                      onTap: () => widget.onOpenSearch(null),
-                      child: Row(
-                        children: [
-                          Text(
-                            s.tr('الكل', 'See all'),
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StoresScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _pillBg,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.bag_fill,
+                              size: 13,
                               color: _blue,
                             ),
-                          ),
-                          const SizedBox(width: 2),
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            size: 17,
-                            color: _blue,
-                          ),
-                        ],
+                            const SizedBox(width: 5),
+                            Text(
+                              s.tr('المتاجر', 'Boutiques'),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: _ink,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              ...moreAds.take(8).map(
-                    (ad) => Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                      child: _TriplyShowcaseCard(ad: ad),
+
+              // Quick Category Filter Chips for the Smart Feed
+              SizedBox(
+                height: 48,
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: displayCategories.length + 1,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, idx) {
+                    if (idx == 0) {
+                      final active = _selectedFeedCategoryId == null;
+                      return GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedFeedCategoryId = null),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: active ? _ink : _pillBg,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            s.tr('الكل ✨', 'Tout ✨'),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: active ? Colors.white : _ink,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    final cat = displayCategories[idx - 1] is Map
+                        ? Map<String, dynamic>.from(
+                            displayCategories[idx - 1] as Map,
+                          )
+                        : <String, dynamic>{};
+                    final int? catId =
+                        int.tryParse(cat['id']?.toString() ?? '');
+                    final bool active =
+                        catId != null && _selectedFeedCategoryId == catId;
+                    final String label = _state.formatCategoryLabel(cat);
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (catId != null) {
+                          _state.recordCategoryInterest(catId, weight: 2);
+                        }
+                        setState(() {
+                          _selectedFeedCategoryId = active ? null : catId;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 13),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: active ? _blue : _pillBg,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: active ? _blue : _border,
+                          ),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: active ? Colors.white : _ink,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              if (personalizedAds.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: _border),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.sparkles,
+                          size: 32,
+                          color: _muted,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          s.tr(
+                            'لا توجد إعلانات فـ هاد القسم حالياً',
+                            'Aucune annonce dans cette catégorie pour le moment',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _selectedFeedCategoryId = null),
+                          child: Text(
+                            s.tr('عرض جميع الإعلانات', 'Afficher tout'),
+                            style: const TextStyle(
+                              color: _blue,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                )
+              else
+                GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: 0.72,
+                  ),
+                  itemCount: personalizedAds.length,
+                  itemBuilder: (context, index) {
+                    return AdCard(ad: personalizedAds[index]);
+                  },
+                ),
             ],
           ],
         ),
@@ -1138,16 +1157,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _TriplyShowcaseCard extends StatelessWidget {
   final Map<String, dynamic> ad;
+  final bool isTrendingBadge;
+  final VoidCallback? onVisited;
 
-  const _TriplyShowcaseCard({required this.ad});
+  const _TriplyShowcaseCard({
+    required this.ad,
+    this.isTrendingBadge = false,
+    this.onVisited,
+  });
 
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _blue = Color(0xFFE31B23);
-  static const Color _muted = Color(0xFF8A94A6);
 
   @override
   Widget build(BuildContext context) {
-    final s = AppState().s;
+    final state = AppState();
+    final s = state.s;
     final int id = int.tryParse(ad['id'].toString()) ?? 0;
     final String title = (ad['title'] ?? '').toString();
     final String priceFormatted =
@@ -1157,8 +1182,8 @@ class _TriplyShowcaseCard extends StatelessWidget {
             : (ad['city_fr'] ?? ad['city_name'] ?? 'Maroc'))
         .toString();
     final String category = (s.isAr
-            ? (ad['category_ar'] ?? ad['category_name'] ?? 'إعلان مميز')
-            : (ad['category_fr'] ?? ad['category_name'] ?? 'Featured'))
+            ? (ad['category_ar'] ?? ad['category_name'] ?? 'مميز')
+            : (ad['category_fr'] ?? ad['category_name'] ?? 'À la une'))
         .toString();
     final String imageUrl = (ad['primary_image'] ??
             (ad['images'] is List && (ad['images'] as List).isNotEmpty
@@ -1168,6 +1193,7 @@ class _TriplyShowcaseCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        onVisited?.call();
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1182,159 +1208,132 @@ class _TriplyShowcaseCard extends StatelessWidget {
           border: Border.all(color: const Color(0xFFEDEFF3)),
           boxShadow: [
             BoxShadow(
-              color: _ink.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: _ink.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            SizedBox(
-              height: 186,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
+            AppImage(url: imageUrl, fit: BoxFit.cover),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 118,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.76),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            PositionedDirectional(
+              top: 10,
+              start: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: isTrendingBadge
+                      ? _blue
+                      : Colors.black.withValues(alpha: 0.50),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isTrendingBadge
+                          ? CupertinoIcons.flame_fill
+                          : CupertinoIcons.tag_fill,
+                      size: 11,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isTrendingBadge
+                          ? s.tr('رائج 🔥', 'Tendance 🔥')
+                          : category,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            PositionedDirectional(
+              bottom: 12,
+              start: 14,
+              end: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppImage(url: imageUrl, fit: BoxFit.cover),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 105,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.64),
-                          ],
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      priceFormatted,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        color: _blue,
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            CupertinoIcons.tag,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            category,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                      color: Colors.white,
                     ),
                   ),
-                  Positioned(
-                    left: 14,
-                    right: 14,
-                    bottom: 12,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(
+                        CupertinoIcons.location_solid,
+                        size: 12,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          '$city • $category',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.4,
-                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white70,
                           ),
                         ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            const Icon(
-                              CupertinoIcons.location_solid,
-                              size: 13,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                city,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white.withValues(alpha: 0.95),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        CupertinoIcons.tag,
-                        size: 16,
-                        color: _muted,
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        priceFormatted,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: _blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        s.tr('عرض', 'Voir'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: _blue,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 17,
-                        color: _blue,
                       ),
                     ],
                   ),
