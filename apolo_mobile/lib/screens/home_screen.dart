@@ -456,17 +456,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         colors: [
                           Color(0xFFC80E16),
                           Color(0xFFE31B23),
-                          Color(0xFFFF3B44),
-                          Color(0xFFFF7A80),
+                          Color(0xFFF42B34),
                         ],
-                        stops: [0.0, 0.45, 0.78, 1.0],
+                        stops: [0.0, 0.58, 1.0],
                         begin: AlignmentDirectional.topStart,
                         end: AlignmentDirectional.bottomEnd,
                       ),
                       borderRadius: BorderRadius.circular(26),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        width: 1.2,
+                        color: Colors.white.withValues(alpha: 0.28),
+                        width: 1.1,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -479,41 +478,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     clipBehavior: Clip.antiAlias,
                     child: Stack(
                       children: [
-                        // Large Luminous White Studio Spotlight Halo behind the 3D Car
+                        // Top-End Soft Ambient Glow (above the car, NOT under the wheels!)
                         PositionedDirectional(
-                          end: -45,
-                          bottom: -55,
+                          end: -10,
+                          top: -55,
                           child: Container(
-                            width: 255,
-                            height: 255,
+                            width: 190,
+                            height: 190,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  Colors.white.withValues(alpha: 0.92),
-                                  Colors.white.withValues(alpha: 0.52),
-                                  Colors.white.withValues(alpha: 0.16),
+                                  Colors.white.withValues(alpha: 0.34),
+                                  Colors.white.withValues(alpha: 0.12),
                                   Colors.white.withValues(alpha: 0.0),
                                 ],
-                                stops: const [0.0, 0.36, 0.68, 1.0],
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Top-End Soft White Ambient Glow
-                        PositionedDirectional(
-                          end: 20,
-                          top: -45,
-                          child: Container(
-                            width: 150,
-                            height: 150,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: RadialGradient(
-                                colors: [
-                                  Colors.white.withValues(alpha: 0.38),
-                                  Colors.white.withValues(alpha: 0.0),
-                                ],
+                                stops: const [0.0, 0.5, 1.0],
                               ),
                             ),
                           ),
@@ -523,8 +503,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           start: -30,
                           top: -35,
                           child: Container(
-                            width: 130,
-                            height: 130,
+                            width: 140,
+                            height: 140,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(

@@ -4,7 +4,16 @@
   "outputDirectory": "apolo_mobile/build/web",
   "headers": [
     {
-      "source": "/(assets|canvaskit|icons)/(.*)",
+      "source": "/assets/assets/images/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(canvaskit|icons)/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -17,7 +26,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },

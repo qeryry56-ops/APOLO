@@ -30,6 +30,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/
     - assets/images/hero_car.png
     - assets/images/cat_realestate.png
     - assets/images/cat_phones.png
@@ -37,6 +38,14 @@ flutter:
     - assets/images/cat_home.png
     - assets/images/cat_fashion.png
     - assets/images/cat_jobs.png
+    - assets/images/cat_travel.png
+    - assets/images/cat_parapharmacy.png
+    - assets/images/cat_kids.png
+    - assets/images/cat_bricolage.png
+    - assets/images/cat_industrial.png
+    - assets/images/cat_jewelry.png
+    - assets/images/cat_antique.png
+    - assets/images/cat_other.png
     - assets/images/apolo_icon_white.png
     - assets/images/apolo_logo_white.png
   fonts:
