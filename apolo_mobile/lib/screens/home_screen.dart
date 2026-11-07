@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
@@ -45,7 +44,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   double _scrollOffset = 0.0;
   Timer? _autoSlideTimer;
 
-  static const Color _bg = Color(0xFFF8FAFC);
   static const Color _primary = Color(0xFFE31B23);
   static const Color _ink = Color(0xFF0F172A);
   static const Color _muted = Color(0xFF64748B);
@@ -285,12 +283,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final trending = _trendingAds;
     final feedAds = _personalizedFeedAds;
 
-    final collapseProgress = (_scrollOffset / 110.0).clamp(0.0, 1.0);
-    final heroParallaxY = _scrollOffset * 0.16;
-    final heroScale = (1.0 - (_scrollOffset / 1400.0)).clamp(0.94, 1.0);
-
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
         child: _loading
@@ -321,33 +315,77 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         parent: AlwaysScrollableScrollPhysics(),
                       ),
                       slivers: [
-                        // 1. Pinned Glass Header that morphs on scroll
-                        SliverPersistentHeader(
-                          pinned: true,
-                          delegate: _KineticHomeHeaderDelegate(
-                            userName: _userName,
-                            isAr: isAr,
-                            collapseProgress: collapseProgress,
-                            onSearchTap: () => _openSearchScreen(),
-                            onNotificationsTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const NotificationsScreen(),
-                              ),
+                        // 1. Original Top Header Row (Greeting + Notification Bell)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    isAr
+                                        ? 'مرحباً، $_userName 👋'
+                                        : 'Hi, $_userName 👋',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.6,
+                                      color: _ink,
+                                      height: 1.15,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Clean Notification Bell Button (opens NotificationsScreen, no halo circle)
+                                PressableScale(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const NotificationsScreen(),
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        const Icon(
+                                          CupertinoIcons.bell,
+                                          size: 23,
+                                          color: _ink,
+                                        ),
+                                        Positioned(
+                                          top: 1,
+                                          right: 1,
+                                          child: Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: _primary,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
 
-                        // 2. Scroll-Reactive 3D Hero Stage
+                        // 2. Original Hero Card with Live Red + White Distribution & Giant 3D Pop-Out Car
                         SliverToBoxAdapter(
-                          child: Transform.translate(
-                            offset: Offset(0, -heroParallaxY * 0.25),
-                            child: Transform.scale(
-                              scale: heroScale,
-                              alignment: Alignment.topCenter,
-                              child: _buildHeroStage(isAr),
-                            ),
-                          ),
+                          child: _buildHeroStage(isAr),
                         ),
 
                         // 3. Categories Bento Section with Staggered Scroll Reveal
@@ -421,168 +459,217 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  /// Balanced 2026 Hero Card with continuous suspension float + scroll-reactive parallax
+  /// Original Hero Card with Live Red + White Color Distribution & Giant 3D Pop-Out Car
   Widget _buildHeroStage(bool isAr) {
-    return ScrollReveal(
-      delay: const Duration(milliseconds: 40),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 22),
-        child: PressableScale(
-          onTap: _openPostAdScreen,
-          pressedScale: 0.98,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 196),
+    final s = _state.s;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Vibrant Red + Luminous White Mesh Hero Container
+          Container(
+            width: double.infinity,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
               gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                stops: [0.0, 0.62, 1.0],
                 colors: [
-                  Color(0xFFEF232C),
-                  Color(0xFFD9141D),
-                  Color(0xFFB30D15),
+                  Color(0xFFC80E16),
+                  Color(0xFFE31B23),
+                  Color(0xFFF42B34),
                 ],
+                stops: [0.0, 0.58, 1.0],
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd,
+              ),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.28),
+                width: 1.1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _primary.withValues(alpha: 0.24),
+                  color: _primary.withValues(alpha: 0.28),
                   blurRadius: 24,
-                  offset: const Offset(0, 12),
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  PositionedDirectional(
-                    end: -28,
-                    top: -28,
-                    child: Container(
-                      width: 210,
-                      height: 210,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white.withValues(alpha: 0.28),
-                            Colors.white.withValues(alpha: 0.08),
-                            Colors.transparent,
-                          ],
-                          stops: const [0.0, 0.55, 1.0],
-                        ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                // Top-End Soft Ambient Glow (above the car, NOT under the wheels!)
+                PositionedDirectional(
+                  end: -10,
+                  top: -55,
+                  child: Container(
+                    width: 190,
+                    height: 190,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.34),
+                          Colors.white.withValues(alpha: 0.12),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
                       ),
                     ),
                   ),
-
-                  PositionedDirectional(
-                    top: 14,
-                    end: 14,
-                    child: GestureDetector(
-                      onTap: () => showAiContentReportSheet(
-                        context,
-                        featureContext: 'Apolo Smart Studio',
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              CupertinoIcons.flag,
-                              size: 10,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isAr ? 'إبلاغ AI' : 'Signaler IA',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.92),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                ),
+                // Subtle White Shimmer Ribbon at Top-Start
+                PositionedDirectional(
+                  start: -30,
+                  top: -35,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.18),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
                       ),
                     ),
                   ),
-
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(20, 18, 156, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 152, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.38),
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                isAr ? 'مساعد البيع الذكي' : 'Studio Vente Rapide',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      s.tr('مساعد أبولو الذكي • LIVE', 'AI Deal Planner • LIVE'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => showAiContentReportSheet(
+                              context,
+                              featureContext: s.tr(
+                                'مساعد أبولو الذكي (AI Deal Planner)',
+                                'AI Deal Planner',
+                              ),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.32),
                                 ),
                               ),
-                            ],
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    CupertinoIcons.flag_fill,
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    s.tr('إبلاغ AI', 'Report AI'),
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          isAr ? 'بيع وشري بلا تعقيد' : 'Vendez en 4 étapes simples',
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          s.tr('بيع ولا شري فـ 30 ثانية', 'Plan your next deal'),
+                          maxLines: 1,
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 21,
+                            fontSize: 22,
                             fontWeight: FontWeight.w900,
-                            height: 1.15,
                             letterSpacing: -0.5,
+                            color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          isAr
-                              ? 'صور سلعتك، حدد الثمن، ونشر إعلانك فقل من دقيقة.'
-                              : 'Publiez votre annonce guidée étape par étape et touchez des milliers d’acheteurs.',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.90),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            height: 1.38,
-                          ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        s.tr(
+                          'قول لينا شنو باغي تبيع ولا تشري — غادي نقادو ليك كلشي.',
+                          'Tell us what you want to buy or sell — we\'ll build the listing.',
                         ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.38,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.95),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      GestureDetector(
+                        onTap: _openPostAdScreen,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(999),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.12),
+                                color: Colors.black.withValues(alpha: 0.16),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -592,59 +679,70 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                isAr ? 'انشر إعلانك الآن' : 'Commencer',
+                                s.tr('ابدا دابا', 'Get started'),
                                 style: const TextStyle(
-                                  color: _primary,
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 13,
+                                  color: _primary,
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Icon(
-                                isAr ? CupertinoIcons.arrow_left : CupertinoIcons.arrow_right,
-                                color: _primary,
+                              const Icon(
+                                CupertinoIcons.arrow_right,
                                 size: 14,
+                                color: _primary,
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-
-                  PositionedDirectional(
-                    end: -10,
-                    bottom: -12,
-                    child: IgnorePointer(
-                      child: AnimatedBuilder(
-                        animation: _carFloatController,
-                        builder: (context, child) {
-                          final floatY =
-                              -4.0 * Curves.easeInOutSine.transform(_carFloatController.value);
-                          final scrollShiftX = (_scrollOffset * 0.06).clamp(0.0, 14.0);
-                          return Transform.translate(
-                            offset: Offset(isAr ? -scrollShiftX : scrollShiftX, floatY),
-                            child: child,
-                          );
-                        },
-                        child: SizedBox(
-                          width: 170,
-                          height: 122,
-                          child: Image.asset(
-                            'assets/images/hero_car.png',
-                            fit: BoxFit.contain,
-                            filterQuality: FilterQuality.high,
-                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                          ),
-                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+
+          // 3D Ground Contact Shadow under the Car (extending outside the card!)
+          PositionedDirectional(
+            end: -10,
+            bottom: -16,
+            width: 205,
+            height: 30,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _ink.withValues(alpha: 0.28),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+
+          // Giant Photorealistic 3D SUV Coupé bursting OUTSIDE the Hero Card!
+          PositionedDirectional(
+            end: -22,
+            bottom: -24,
+            width: 232,
+            height: 168,
+            child: IgnorePointer(
+              child: Transform.flip(
+                flipX: s.isAr,
+                child: Image.asset(
+                  'assets/images/hero_car.png',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1239,217 +1337,5 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
       ),
     );
-  }
-}
-
-/// Pinned Sliver Header that smoothly collapses on scroll:
-/// - Translation icon removed from Home (kept in Profile settings).
-/// - Circular halo/border around the Notification bell removed — clean icon with unread dot.
-class _KineticHomeHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final String userName;
-  final bool isAr;
-  final double collapseProgress;
-  final VoidCallback onSearchTap;
-  final VoidCallback onNotificationsTap;
-
-  const _KineticHomeHeaderDelegate({
-    required this.userName,
-    required this.isAr,
-    required this.collapseProgress,
-    required this.onSearchTap,
-    required this.onNotificationsTap,
-  });
-
-  @override
-  double get minExtent => 64;
-
-  @override
-  double get maxExtent => 122;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final t = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
-    final greetingOpacity = (1.0 - (t * 1.6)).clamp(0.0, 1.0);
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14 * t, sigmaY: 14 * t),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Color.lerp(
-              const Color(0xFFF8FAFC),
-              Colors.white.withValues(alpha: 0.92),
-              t,
-            ),
-            border: Border(
-              bottom: BorderSide(
-                color: const Color(0xFFE2E8F0).withValues(alpha: t),
-                width: 1,
-              ),
-            ),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Top row: Greeting + Clean borderless Notification Icon
-              Positioned(
-                top: 10 - (t * 24),
-                left: 0,
-                right: 0,
-                child: Opacity(
-                  opacity: greetingOpacity,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isAr ? 'مرحباً، $userName' : 'Bonjour, $userName',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      // Clean Notification Bell WITHOUT circular border/halo
-                      PressableScale(
-                        onTap: onNotificationsTap,
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              const Icon(
-                                CupertinoIcons.bell,
-                                color: Color(0xFF0F172A),
-                                size: 23,
-                              ),
-                              PositionedDirectional(
-                                top: 1,
-                                end: 1,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE31B23),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: const Color(0xFFF8FAFC),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Search bar: smoothly rises to fill the pinned bar when scrolling
-              Positioned(
-                bottom: 10,
-                left: 0,
-                right: t > 0.55 ? 40 : 0,
-                child: PressableScale(
-                  onTap: onSearchTap,
-                  pressedScale: 0.985,
-                  child: Container(
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          CupertinoIcons.search,
-                          color: Color(0xFF64748B),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            isAr
-                                ? 'ابحث عن سيارات، هواتف، شقق...'
-                                : 'Rechercher véhicules, téléphones, immo...',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          CupertinoIcons.slider_horizontal_3,
-                          color: Color(0xFF0F172A),
-                          size: 16,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Compact Notification Bell when collapsed
-              if (t > 0.55)
-                PositionedDirectional(
-                  end: 2,
-                  bottom: 18,
-                  child: Opacity(
-                    opacity: ((t - 0.55) / 0.45).clamp(0.0, 1.0),
-                    child: PressableScale(
-                      onTap: onNotificationsTap,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          const Icon(
-                            CupertinoIcons.bell,
-                            color: Color(0xFF0F172A),
-                            size: 22,
-                          ),
-                          PositionedDirectional(
-                            top: 0,
-                            end: 0,
-                            child: Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE31B23),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _KineticHomeHeaderDelegate oldDelegate) {
-    return oldDelegate.userName != userName ||
-        oldDelegate.isAr != isAr ||
-        oldDelegate.collapseProgress != collapseProgress;
   }
 }
