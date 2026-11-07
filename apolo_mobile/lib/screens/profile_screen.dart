@@ -6,6 +6,7 @@ import 'widgets/ad_card.dart';
 import 'widgets/boost_sheet.dart';
 import 'auth_screen.dart';
 import 'post_ad_screen.dart';
+import 'privacy_compliance_screen.dart';
 import 'stores_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -937,6 +938,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
                   setState(() {});
                 },
+              ),
+            ],
+          ),
+
+          // Group 3: Privacy Policy, Account Deletion & AI Safety (Google Play 2026 Compliance)
+          _SectionGroup(
+            title: s.tr(
+              'الخصوصية، الأمان والذكاء الاصطناعي',
+              'Confidentialité, Sécurité & IA',
+            ),
+            rows: [
+              _SettingsRowSpec(
+                icon: CupertinoIcons.shield_lefthalf_fill,
+                label: s.tr(
+                  'سياسة الخصوصية وحماية البيانات',
+                  'Politique de confidentialité',
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyComplianceScreen(initialTab: 0),
+                  ),
+                ),
+              ),
+              _SettingsRowSpec(
+                icon: CupertinoIcons.flag_fill,
+                label: s.tr(
+                  'الإبلاغ عن محتوى الذكاء الاصطناعي (AI)',
+                  'Signaler un contenu IA',
+                ),
+                onTap: () => showAiContentReportSheet(
+                  context,
+                  featureContext: s.tr(
+                    'مركز الأمان والإبلاغ (Apolo AI)',
+                    'Centre de sécurité IA',
+                  ),
+                ),
+              ),
+              _SettingsRowSpec(
+                icon: CupertinoIcons.trash,
+                label: s.tr(
+                  'طلب حذف الحساب والبيانات الشخصية',
+                  'Supprimer mon compte et mes données',
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyComplianceScreen(initialTab: 1),
+                  ),
+                ),
               ),
             ],
           ),

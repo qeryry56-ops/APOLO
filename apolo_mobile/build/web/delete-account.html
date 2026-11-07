@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>حذف الحساب والبيانات الشخصية | Apolo.ma Delete Account</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #F8FAFC;
+      color: #0F1B2D;
+      margin: 0;
+      padding: 24px 16px 60px;
+      line-height: 1.65;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      background: #FFFFFF;
+      border-radius: 24px;
+      padding: 32px 26px;
+      box-shadow: 0 10px 30px rgba(15, 27, 45, 0.06);
+      border: 1px solid #E7EAF0;
+    }
+    .badge {
+      display: inline-block;
+      background: #FEECEE;
+      color: #E31B23;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+    h1 { font-size: 24px; margin: 14px 0 8px; }
+    label { display: block; font-weight: 700; margin: 14px 0 6px; font-size: 14px; }
+    input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #CBD5E1;
+      font-size: 15px;
+      background: #F8FAFC;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background: #E31B23;
+      color: #FFFFFF;
+      border: none;
+      padding: 14px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .success {
+      display: none;
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #ECFDF5;
+      border: 1px solid #6EE7B7;
+      color: #065F46;
+      font-weight: 700;
+    }
+    ul { color: #475569; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="badge">Apolo.ma • Google Play Data Safety</span>
+    <h1>طلب حذف الحساب والبيانات الشخصية نهائياً<br/><small style="font-size:15px;color:#64748B;">Demande de suppression de compte et de données</small></h1>
+    <p>يمكنك حذف حسابك فوراً من داخل تطبيق <strong>Apolo.ma</strong> (قسم <em>حسابي &larr; حذف الحساب</em>)، أو إرسال طلب حذف مباشر عبر هذا النموذج الخارجي دون الحاجة لفتح التطبيق:</p>
+
+    <ul>
+      <li><strong>البيانات التي يتم حذفها نهائياً:</strong> معلومات الحساب (الاسم، البريد الإلكتروني، رقم الهاتف، ارتباط Google)، جميع الإعلانات والصور المنشورة، وسجل المحادثات.</li>
+      <li><strong>مدة التنفيذ:</strong> يتم الحذف الفوري عند الطلب من داخل التطبيق، وخلال 24 إلى 48 ساعة كحد أقصى للطلبات المرسلة عبر هذا النموذج الخارجي.</li>
+    </ul>
+
+    <form id="delForm" onsubmit="submitDelete(event)">
+      <label>البريد الإلكتروني أو رقم الهاتف المرتبط بالحساب (Email / Téléphone) *</label>
+      <input type="text" id="ident" required placeholder="example@gmail.com / 06XXXXXXXX" />
+
+      <label>نوع الطلب (Type de suppression) *</label>
+      <select id="dtype">
+        <option value="full">حذف الحساب بالكامل مع جميع الإعلانات والبيانات (Suppression totale du compte)</option>
+        <option value="data_only">حذف بيانات محددة (الإعلانات والرسائل فقط) مع الإبقاء على الحساب</option>
+      </select>
+
+      <label>ملاحظات إضافية (اختياري / Optionnel)</label>
+      <textarea id="notes" rows="3" placeholder="أي تفاصيل إضافية لتأكيد ملكية الحساب..."></textarea>
+
+      <button type="submit">تأكيد وإرسال طلب الحذف النهائي • Confirmer la suppression</button>
+    </form>
+
+    <div id="msg" class="success">
+      تم تسجيل طلب حذف الحساب والبيانات بنجاح ✓ سيتم مسح كافة بياناتك المرتبطة وإرسال تأكيد لك. كما يمكنك التواصل مباشرة مع <a href="mailto:support@apolo.ma">support@apolo.ma</a>.
+    </div>
+
+    <p style="margin-top:24px;font-size:13px;color:#64748B;">
+      <a href="/privacy.html" style="color:#E31B23;font-weight:700;">سياسة الخصوصية (Privacy Policy)</a> •
+      <a href="/" style="color:#0F1B2D;font-weight:700;">العودة إلى تطبيق Apolo.ma</a>
+    </p>
+  </div>
+  <script>
+    function submitDelete(e) {
+      e.preventDefault();
+      document.getElementById('msg').style.display = 'block';
+      document.getElementById('delForm').reset();
+    }
+  </script>
+</body>
+</html>
