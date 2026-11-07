@@ -1023,15 +1023,14 @@ class _PostAdScreenState extends State<PostAdScreen>
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: active ? Colors.white : _fill,
-                        borderRadius: BorderRadius.circular(12),
+                    SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: Image.asset(
+                        asset,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
                       ),
-                      child: Image.asset(asset, fit: BoxFit.contain),
                     ),
                     const SizedBox(width: 10),
                     Expanded(

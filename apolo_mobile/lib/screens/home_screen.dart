@@ -580,12 +580,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             SizedBox(
-              height: 114,
+              height: 118,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
                 scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
                 itemCount: displayCategories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, idx) {
                   final cat = displayCategories[idx];
                   final int? catId = int.tryParse(cat['id']?.toString() ?? '');
@@ -596,58 +597,64 @@ class _HomeScreenState extends State<HomeScreen> {
                   final String assetPath = cat['asset'] is String
                       ? cat['asset'] as String
                       : _assetForCategory(name, idx);
-                  final Color badgeBg = cat['bg'] is int
-                      ? Color(cat['bg'] as int)
-                      : _defaultCategories[idx % _defaultCategories.length]['bg'] is int
-                          ? Color(_defaultCategories[idx % _defaultCategories.length]['bg'] as int)
-                          : const Color(0xFFF4F6F9);
 
                   return GestureDetector(
                     onTap: () => widget.onOpenSearch(catId),
                     child: Container(
-                      width: 96,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      width: 132,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFF6F7FA),
+                            Color(0xFFEDF0F5),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: idx == 0 ? _blue.withValues(alpha: 0.25) : _border,
+                          color: idx == 0
+                              ? _blue.withValues(alpha: 0.22)
+                              : const Color(0xFFE6E9F0),
+                          width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: _ink.withValues(alpha: 0.04),
-                            blurRadius: 10,
+                            color: _ink.withValues(alpha: 0.035),
+                            blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: badgeBg,
-                              shape: BoxShape.circle,
+                          PositionedDirectional(
+                            top: 12,
+                            start: 13,
+                            end: 42,
+                            child: Text(
+                              name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: _ink,
+                                height: 1.18,
+                                letterSpacing: -0.25,
+                              ),
                             ),
+                          ),
+                          PositionedDirectional(
+                            bottom: 4,
+                            end: 6,
+                            width: 68,
+                            height: 68,
                             child: Image.asset(
                               assetPath,
                               fit: BoxFit.contain,
-                            ),
-                          ),
-                          const SizedBox(height: 7),
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: _ink,
-                              letterSpacing: -0.2,
+                              filterQuality: FilterQuality.high,
                             ),
                           ),
                         ],
