@@ -23,6 +23,11 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loading = true;
   bool _gridView = true;
 
+  final ScrollController _scrollCtrl = ScrollController();
+  int _currentPage = 1;
+  int _lastPage = 1;
+  bool _loadingMore = false;
+
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _muted = Color(0xFF8A94A6);
   static const Color _red = Color(0xFFE31B23);
@@ -33,11 +38,31 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _categoryId = widget.initialCategoryId;
+    _scrollCtrl.addListener(_onScroll);
     _searchAds();
   }
 
+  @override
+  void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
+    _queryCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 240) {
+      if (!_loading && !_loadingMore && _currentPage < _lastPage) {
+        _loadMoreAds();
+      }
+    }
+  }
+
   Future<void> _searchAds() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _currentPage = 1;
+    });
     try {
       final params = <String, dynamic>{
         if (_queryCtrl.text.trim().isNotEmpty) 'query': _queryCtrl.text.trim(),
@@ -45,12 +70,16 @@ class _SearchScreenState extends State<SearchScreen> {
         if (_cityId != null) 'city_id': _cityId,
         if (_minPrice != null) 'price_min': _minPrice,
         if (_maxPrice != null) 'price_max': _maxPrice,
+        'page': 1,
       };
       final res = await _state.api.dio.get('/ads', queryParameters: params);
       if (res.data is Map && res.data['status'] == 'success') {
         if (mounted) {
+          final meta = res.data['meta'];
           setState(() {
             _ads = res.data['data'] ?? [];
+            _currentPage = int.tryParse((meta?['current_page'] ?? 1).toString()) ?? 1;
+            _lastPage = int.tryParse((meta?['last_page'] ?? 1).toString()) ?? 1;
             _loading = false;
           });
         }
@@ -58,6 +87,43 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _loadMoreAds() async {
+    if (_loadingMore || _currentPage >= _lastPage) return;
+    setState(() => _loadingMore = true);
+    final nextPage = _currentPage + 1;
+    try {
+      final params = <String, dynamic>{
+        if (_queryCtrl.text.trim().isNotEmpty) 'query': _queryCtrl.text.trim(),
+        if (_categoryId != null) 'category_id': _categoryId,
+        if (_cityId != null) 'city_id': _cityId,
+        if (_minPrice != null) 'price_min': _minPrice,
+        if (_maxPrice != null) 'price_max': _maxPrice,
+        'page': nextPage,
+      };
+      final res = await _state.api.dio.get('/ads', queryParameters: params);
+      if (res.data is Map && res.data['status'] == 'success') {
+        final List newItems = res.data['data'] ?? [];
+        final meta = res.data['meta'];
+        if (mounted) {
+          setState(() {
+            // Deduplicate incoming items by ID
+            final existingIds = _ads.map((e) => e['id']?.toString()).toSet();
+            for (final it in newItems) {
+              if (!existingIds.contains(it['id']?.toString())) {
+                _ads.add(it);
+              }
+            }
+            _currentPage = int.tryParse((meta?['current_page'] ?? nextPage).toString()) ?? nextPage;
+            _lastPage = int.tryParse((meta?['last_page'] ?? _lastPage).toString()) ?? _lastPage;
+            _loadingMore = false;
+          });
+        }
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loadingMore = false);
   }
 
   Future<void> _saveCurrentSearch() async {
@@ -473,27 +539,58 @@ class _SearchScreenState extends State<SearchScreen> {
                       : RefreshIndicator(
                           color: _red,
                           onRefresh: _searchAds,
-                          child: _gridView
-                              ? GridView.builder(
-                                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 120),
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    mainAxisSpacing: 14,
-                                    crossAxisSpacing: 14,
-                                    childAspectRatio: 0.75,
+                          child: CustomScrollView(
+                            controller: _scrollCtrl,
+                            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                            slivers: [
+                              if (_gridView)
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+                                  sliver: SliverGrid(
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      mainAxisSpacing: 14,
+                                      crossAxisSpacing: 14,
+                                      childAspectRatio: 0.75,
+                                    ),
+                                    delegate: SliverChildBuilderDelegate(
+                                      (_, idx) => AdCard(ad: Map<String, dynamic>.from(_ads[idx])),
+                                      childCount: _ads.length,
+                                    ),
                                   ),
-                                  itemCount: _ads.length,
-                                  itemBuilder: (_, idx) => AdCard(ad: Map<String, dynamic>.from(_ads[idx])),
                                 )
-                              : ListView.separated(
-                                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 120),
-                                  itemCount: _ads.length,
-                                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                                  itemBuilder: (_, idx) => AdCard(
-                                    ad: Map<String, dynamic>.from(_ads[idx]),
-                                    horizontal: true,
+                              else
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+                                  sliver: SliverList(
+                                    delegate: SliverChildBuilderDelegate(
+                                      (_, idx) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: AdCard(
+                                          ad: Map<String, dynamic>.from(_ads[idx]),
+                                          horizontal: true,
+                                        ),
+                                      ),
+                                      childCount: _ads.length,
+                                    ),
                                   ),
                                 ),
+                              if (_loadingMore)
+                                const SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 24),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(strokeWidth: 2.2, color: _red),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                            ],
+                          ),
                         ),
             ),
           ],

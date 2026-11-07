@@ -73,7 +73,12 @@ class AdCard extends StatelessWidget {
           height: height ?? double.infinity,
           width: width ?? double.infinity,
           color: _pillBg,
-          child: AppImage(url: url, fit: BoxFit.cover),
+          child: AppImage(
+            url: url,
+            fit: BoxFit.cover,
+            memCacheWidth: width != null && width.isFinite ? (width * 2).round() : 400,
+            memCacheHeight: height != null && height.isFinite ? (height * 2).round() : 360,
+          ),
         ),
         Positioned(
           left: 0,
@@ -144,24 +149,30 @@ class AdCard extends StatelessWidget {
         Positioned(
           top: 8,
           left: 8,
-          child: GestureDetector(
-            onTap: () => state.toggleFavorite(id),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.94),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6),
-                ],
-              ),
-              child: Icon(
-                isFav ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
-                size: 16,
-                color: isFav ? _red : _ink,
-              ),
-            ),
+          child: AnimatedBuilder(
+            animation: state,
+            builder: (_, __) {
+              final bool currentFav = state.favoriteAdIds.contains(id);
+              return GestureDetector(
+                onTap: () => state.toggleFavorite(id),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6),
+                    ],
+                  ),
+                  child: Icon(
+                    currentFav ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
+                    size: 16,
+                    color: currentFav ? _red : _ink,
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],

@@ -59,12 +59,21 @@ class AppState extends ChangeNotifier {
 
   Future<void> fetchMe() async {
     try {
-      final res = await api.dio.get('/auth/profile');
-      if (res.data is Map && res.data['status'] == 'success') {
-        currentUser = res.data['user'];
-        await fetchFavoritesIds();
-        notifyListeners();
+      final results = await Future.wait([
+        api.dio.get('/auth/profile'),
+        api.dio.get('/favorites'),
+      ]);
+      final profileRes = results[0];
+      final favRes = results[1];
+
+      if (profileRes.data is Map && profileRes.data['status'] == 'success') {
+        currentUser = profileRes.data['user'];
       }
+      if (favRes.data is Map && favRes.data['status'] == 'success') {
+        final List items = favRes.data['data'] ?? [];
+        favoriteAdIds = items.map<int>((e) => int.tryParse(e['id'].toString()) ?? 0).toSet();
+      }
+      notifyListeners();
     } catch (_) {
       currentUser = null;
       await api.setToken(null);
@@ -86,6 +95,15 @@ class AppState extends ChangeNotifier {
 
   Future<bool> toggleFavorite(int adId) async {
     if (!isLoggedIn) return false;
+    // Optimistic UI update with automatic rollback
+    final bool previouslyFav = favoriteAdIds.contains(adId);
+    if (previouslyFav) {
+      favoriteAdIds.remove(adId);
+    } else {
+      favoriteAdIds.add(adId);
+    }
+    notifyListeners();
+
     try {
       final res = await api.dio.post('/favorites/$adId/toggle');
       if (res.data is Map && res.data['status'] == 'success') {
@@ -97,8 +115,24 @@ class AppState extends ChangeNotifier {
         }
         notifyListeners();
         return fav;
+      } else {
+        // Rollback on non-success status
+        if (previouslyFav) {
+          favoriteAdIds.add(adId);
+        } else {
+          favoriteAdIds.remove(adId);
+        }
+        notifyListeners();
       }
-    } catch (_) {}
+    } catch (_) {
+      // Rollback on network / server failure
+      if (previouslyFav) {
+        favoriteAdIds.add(adId);
+      } else {
+        favoriteAdIds.remove(adId);
+      }
+      notifyListeners();
+    }
     return favoriteAdIds.contains(adId);
   }
 

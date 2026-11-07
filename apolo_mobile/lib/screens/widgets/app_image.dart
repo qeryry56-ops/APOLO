@@ -8,6 +8,9 @@ class AppImage extends StatelessWidget {
   final double? height;
   final BoxFit fit;
   final Widget? fallback;
+  final bool isPriority;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
 
   const AppImage({
     super.key,
@@ -16,6 +19,9 @@ class AppImage extends StatelessWidget {
     this.height,
     this.fit = BoxFit.cover,
     this.fallback,
+    this.isPriority = false,
+    this.memCacheWidth,
+    this.memCacheHeight,
   });
 
   @override
@@ -26,12 +32,18 @@ class AppImage extends StatelessWidget {
           height: height,
           color: const Color(0xFFF1F5F9),
           alignment: Alignment.center,
-          child: const Icon(Icons.image_outlined, size: 32, color: Color(0xFF94A3B8)),
+          child: const Icon(Icons.image_outlined, size: 28, color: Color(0xFF94A3B8)),
         );
 
     if (url == null || url!.trim().isEmpty) {
       return defaultFallback;
     }
+
+    // Auto-calculate memory cache dimensions to cap raster footprint
+    final int? targetMemWidth = memCacheWidth ??
+        (width != null && width!.isFinite && width! > 0 ? (width! * 2).round() : null);
+    final int? targetMemHeight = memCacheHeight ??
+        (height != null && height!.isFinite && height! > 0 ? (height! * 2).round() : null);
 
     if (kIsWeb) {
       return Image.network(
@@ -39,7 +51,24 @@ class AppImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        cacheWidth: targetMemWidth,
+        cacheHeight: targetMemHeight,
         errorBuilder: (_, __, ___) => defaultFallback,
+        loadingBuilder: (ctx, child, progress) {
+          if (progress == null) return child;
+          if (isPriority) return child;
+          return Container(
+            width: width,
+            height: height,
+            color: const Color(0xFFF8FAFC),
+            alignment: Alignment.center,
+            child: const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE31B23)),
+            ),
+          );
+        },
       );
     }
 
@@ -48,12 +77,18 @@ class AppImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      memCacheWidth: targetMemWidth,
+      memCacheHeight: targetMemHeight,
       placeholder: (_, __) => Container(
         width: width,
         height: height,
         color: const Color(0xFFF8FAFC),
         alignment: Alignment.center,
-        child: const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+        child: const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE31B23)),
+        ),
       ),
       errorWidget: (_, __, ___) => defaultFallback,
     );
@@ -71,7 +106,7 @@ class AppAvatar extends StatelessWidget {
     required this.url,
     this.radius = 26,
     this.fallbackIcon = Icons.person_rounded,
-    this.iconColor = const Color(0xFF2563EB),
+    this.iconColor = const Color(0xFFE31B23),
   });
 
   @override
@@ -92,6 +127,8 @@ class AppAvatar extends StatelessWidget {
               width: size,
               height: size,
               fit: BoxFit.cover,
+              memCacheWidth: (size * 2).round(),
+              memCacheHeight: (size * 2).round(),
               fallback: Icon(fallbackIcon, color: iconColor, size: radius * 0.95),
             )
           : Icon(fallbackIcon, color: iconColor, size: radius * 0.95),

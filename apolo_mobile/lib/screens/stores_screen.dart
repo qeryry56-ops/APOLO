@@ -17,6 +17,11 @@ class _StoresScreenState extends State<StoresScreen> {
   bool _loading = true;
   final TextEditingController _searchCtrl = TextEditingController();
 
+  final ScrollController _scrollCtrl = ScrollController();
+  int _currentPage = 1;
+  int _lastPage = 1;
+  bool _loadingMore = false;
+
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _muted = Color(0xFF8A94A6);
   static const Color _red = Color(0xFFE31B23);
@@ -27,19 +32,43 @@ class _StoresScreenState extends State<StoresScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollCtrl.addListener(_onScroll);
     _fetchStores();
   }
 
+  @override
+  void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 240) {
+      if (!_loading && !_loadingMore && _currentPage < _lastPage) {
+        _loadMoreStores();
+      }
+    }
+  }
+
   Future<void> _fetchStores() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _currentPage = 1;
+    });
     try {
       final res = await _state.api.dio.get('/stores', queryParameters: {
         if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
+        'page': 1,
       });
       if (res.data is Map && res.data['status'] == 'success') {
         if (mounted) {
+          final meta = res.data['meta'];
           setState(() {
             _stores = res.data['data'] ?? [];
+            _currentPage = int.tryParse((meta?['current_page'] ?? 1).toString()) ?? 1;
+            _lastPage = int.tryParse((meta?['last_page'] ?? 1).toString()) ?? 1;
             _loading = false;
           });
         }
@@ -47,6 +76,37 @@ class _StoresScreenState extends State<StoresScreen> {
       }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _loadMoreStores() async {
+    if (_loadingMore || _currentPage >= _lastPage) return;
+    setState(() => _loadingMore = true);
+    final nextPage = _currentPage + 1;
+    try {
+      final res = await _state.api.dio.get('/stores', queryParameters: {
+        if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
+        'page': nextPage,
+      });
+      if (res.data is Map && res.data['status'] == 'success') {
+        final List newItems = res.data['data'] ?? [];
+        final meta = res.data['meta'];
+        if (mounted) {
+          setState(() {
+            final existingIds = _stores.map((e) => e['id']?.toString()).toSet();
+            for (final it in newItems) {
+              if (!existingIds.contains(it['id']?.toString())) {
+                _stores.add(it);
+              }
+            }
+            _currentPage = int.tryParse((meta?['current_page'] ?? nextPage).toString()) ?? nextPage;
+            _lastPage = int.tryParse((meta?['last_page'] ?? _lastPage).toString()) ?? _lastPage;
+            _loadingMore = false;
+          });
+        }
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loadingMore = false);
   }
 
   @override
@@ -194,10 +254,24 @@ class _StoresScreenState extends State<StoresScreen> {
                           color: _red,
                           onRefresh: _fetchStores,
                           child: ListView.separated(
+                            controller: _scrollCtrl,
+                            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                             padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
-                            itemCount: _stores.length,
+                            itemCount: _stores.length + (_loadingMore ? 1 : 0),
                             separatorBuilder: (_, __) => const SizedBox(height: 14),
                             itemBuilder: (context, idx) {
+                              if (idx >= _stores.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 20),
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: _red),
+                                    ),
+                                  ),
+                                );
+                              }
                               final store = _stores[idx];
                               final logo = store['logo_url'] ?? store['logo'];
                               final int count = int.tryParse((store['active_products_count'] ?? store['ads_count'] ?? 0).toString()) ?? 0;
