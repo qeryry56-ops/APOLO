@@ -81,12 +81,14 @@ class _ScrollRevealState extends State<ScrollReveal>
 class PressableScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final double pressedScale;
 
   const PressableScale({
     super.key,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.pressedScale = 0.965,
   });
 
@@ -101,6 +103,7 @@ class _PressableScaleState extends State<PressableScale> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onLongPress: widget.onLongPress,
       onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
       onTapUp: widget.onTap != null
           ? (_) {
