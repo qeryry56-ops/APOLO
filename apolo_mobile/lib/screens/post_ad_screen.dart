@@ -63,13 +63,18 @@ class _PostAdScreenState extends State<PostAdScreen>
   static const Color _emerald = Color(0xFF10B981);
 
   static const List<Map<String, dynamic>> _fallbackCategories = [
-    {'id': 1, 'name_ar': 'سيارات ومركبات', 'name_fr': 'Auto & Véhicules'},
-    {'id': 2, 'name_ar': 'عقارات وشقق', 'name_fr': 'Immobilier'},
-    {'id': 3, 'name_ar': 'هواتف وإلكترونيات', 'name_fr': 'Téléphones & Tech'},
-    {'id': 4, 'name_ar': 'حواسيب ومعدات', 'name_fr': 'Informatique'},
-    {'id': 5, 'name_ar': 'أثاث ومنزل', 'name_fr': 'Maison & Déco'},
-    {'id': 6, 'name_ar': 'أزياء وملابس', 'name_fr': 'Mode & Beauté'},
-    {'id': 7, 'name_ar': 'وظائف وخدمات', 'name_fr': 'Emploi & Services'},
+    {'id': 1, 'name_ar': 'المعلوماتية والوسائط المتعددة', 'name_fr': 'Informatique & Multimédia'},
+    {'id': 2, 'name_ar': 'عقارات', 'name_fr': 'Immobilier'},
+    {'id': 3, 'name_ar': 'وسائل النقل', 'name_fr': 'Véhicules'},
+    {'id': 4, 'name_ar': 'ملابس ـ صحة وجمال', 'name_fr': 'Habillement & Bien-être'},
+    {'id': 5, 'name_ar': 'أدوات السفر', 'name_fr': 'Outils de voyage'},
+    {'id': 6, 'name_ar': 'بارافارماسي', 'name_fr': 'Parapharmacie'},
+    {'id': 7, 'name_ar': 'الاطفال', 'name_fr': 'Enfants'},
+    {'id': 8, 'name_ar': 'بريكولاج', 'name_fr': 'Bricolage'},
+    {'id': 9, 'name_ar': 'ألات صناعية', 'name_fr': 'Machines industrielles'},
+    {'id': 10, 'name_ar': 'المجوهرات', 'name_fr': 'Bijoux'},
+    {'id': 11, 'name_ar': 'منتجات العتيقة', 'name_fr': 'Antique'},
+    {'id': 12, 'name_ar': 'آخر...', 'name_fr': 'Autre...'},
   ];
 
   static const List<Map<String, dynamic>> _fallbackCities = [
@@ -171,48 +176,90 @@ class _PostAdScreenState extends State<PostAdScreen>
     super.dispose();
   }
 
-  String _assetForCategory(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('voiture') ||
-        lower.contains('auto') ||
-        lower.contains('moto') ||
-        lower.contains('véhicule') ||
-        lower.contains('سيار') ||
-        lower.contains('مركبات')) {
+  String _assetForCategory(String name, [Map<dynamic, dynamic>? cat]) {
+    final combined =
+        '${name.toLowerCase()} ${(cat?['name_ar'] ?? '').toString().toLowerCase()} ${(cat?['name_fr'] ?? '').toString().toLowerCase()} ${(cat?['slug'] ?? '').toString().toLowerCase()}';
+    if (combined.contains('voiture') ||
+        combined.contains('auto') ||
+        combined.contains('moto') ||
+        combined.contains('vehicule') ||
+        combined.contains('véhicule') ||
+        combined.contains('نقل') ||
+        combined.contains('سيار') ||
+        combined.contains('مركبات')) {
       return 'assets/images/hero_car.png';
     }
-    if (lower.contains('immo') ||
-        lower.contains('appart') ||
-        lower.contains('villa') ||
-        lower.contains('عقار') ||
-        lower.contains('شقق')) {
+    if (combined.contains('immo') ||
+        combined.contains('appart') ||
+        combined.contains('villa') ||
+        combined.contains('عقار') ||
+        combined.contains('شقق')) {
       return 'assets/images/cat_realestate.png';
     }
-    if (lower.contains('télé') ||
-        lower.contains('phone') ||
-        lower.contains('tech') ||
-        lower.contains('هواتف') ||
-        lower.contains('إلكترون')) {
+    if (combined.contains('voyage') || combined.contains('سفر')) {
+      return 'assets/images/cat_travel.png';
+    }
+    if (combined.contains('parapharmacie') || combined.contains('بارافارماسي')) {
+      return 'assets/images/cat_parapharmacy.png';
+    }
+    if (combined.contains('enfant') ||
+        combined.contains('اطفال') ||
+        combined.contains('أطفال')) {
+      return 'assets/images/cat_kids.png';
+    }
+    if (combined.contains('bricolage') || combined.contains('بريكولاج')) {
+      return 'assets/images/cat_bricolage.png';
+    }
+    if (combined.contains('industriel') ||
+        combined.contains('machine') ||
+        combined.contains('صناعية') ||
+        combined.contains('ألات') ||
+        combined.contains('آلات')) {
+      return 'assets/images/cat_industrial.png';
+    }
+    if (combined.contains('bijou') || combined.contains('مجوهرات')) {
+      return 'assets/images/cat_jewelry.png';
+    }
+    if (combined.contains('antique') || combined.contains('عتيقة')) {
+      return 'assets/images/cat_antique.png';
+    }
+    if (combined.contains('autre') || combined.contains('آخر')) {
+      return 'assets/images/cat_other.png';
+    }
+    if (combined.contains('télé') ||
+        combined.contains('phone') ||
+        combined.contains('هواتف')) {
       return 'assets/images/cat_phones.png';
     }
-    if (lower.contains('info') ||
-        lower.contains('pc') ||
-        lower.contains('حواسيب')) {
+    if (combined.contains('info') ||
+        combined.contains('multimedia') ||
+        combined.contains('pc') ||
+        combined.contains('معلوماتية') ||
+        combined.contains('وسائط') ||
+        combined.contains('حواسيب') ||
+        combined.contains('إلكترون')) {
       return 'assets/images/cat_computers.png';
     }
-    if (lower.contains('maison') ||
-        lower.contains('meuble') ||
-        lower.contains('أثاث') ||
-        lower.contains('منزل')) {
+    if (combined.contains('maison') ||
+        combined.contains('meuble') ||
+        combined.contains('أثاث') ||
+        combined.contains('منزل')) {
       return 'assets/images/cat_home.png';
     }
-    if (lower.contains('mode') ||
-        lower.contains('vêt') ||
-        lower.contains('أزياء') ||
-        lower.contains('ملابس')) {
+    if (combined.contains('mode') ||
+        combined.contains('habillement') ||
+        combined.contains('vêt') ||
+        combined.contains('أزياء') ||
+        combined.contains('ملابس')) {
       return 'assets/images/cat_fashion.png';
     }
-    return 'assets/images/cat_jobs.png';
+    if (combined.contains('emploi') ||
+        combined.contains('service') ||
+        combined.contains('وظائف') ||
+        combined.contains('خدمات')) {
+      return 'assets/images/cat_jobs.png';
+    }
+    return 'assets/images/cat_other.png';
   }
 
   String _selectedCategoryName() {
@@ -992,7 +1039,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                     ? (c['name_ar'] ?? c['name'])
                     : (c['name_fr'] ?? c['name']))
                 .toString();
-            final String asset = _assetForCategory(label);
+            final String asset = _assetForCategory(label, c is Map ? c : null);
 
             return GestureDetector(
               onTap: () {

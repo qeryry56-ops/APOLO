@@ -29,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // Exact Triply-AI + Apolo Official Brand Red (#E31B23) color tokens
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _blue = Color(0xFFE31B23);
-  static const Color _heroBlue = Color(0xFFC81018);
   static const Color _gold = Color(0xFFF5B942);
   static const Color _muted = Color(0xFF8A94A6);
   static const Color _border = Color(0xFFEDEFF3);
@@ -38,52 +37,75 @@ class _HomeScreenState extends State<HomeScreen> {
   static const List<Map<String, dynamic>> _defaultCategories = [
     {
       'id': 3,
-      'name_ar': 'سيارات ومركبات',
-      'name_fr': 'Voitures & Auto',
+      'name_ar': 'وسائل النقل',
+      'name_fr': 'Véhicules & Auto',
       'asset': 'assets/images/hero_car.png',
-      'bg': 0xFFFEECEE,
     },
     {
       'id': 2,
-      'name_ar': 'عقارات وشقق',
+      'name_ar': 'عقارات',
       'name_fr': 'Immobilier',
       'asset': 'assets/images/cat_realestate.png',
-      'bg': 0xFFEFF6FF,
     },
     {
       'id': 1,
-      'name_ar': 'هواتف وتقنية',
-      'name_fr': 'Téléphones',
-      'asset': 'assets/images/cat_phones.png',
-      'bg': 0xFFF5F3FF,
+      'name_ar': 'المعلوماتية والوسائط',
+      'name_fr': 'Informatique & Tech',
+      'asset': 'assets/images/cat_computers.png',
     },
     {
       'id': 4,
-      'name_ar': 'حواسيب ومعدات',
-      'name_fr': 'Informatique',
-      'asset': 'assets/images/cat_computers.png',
-      'bg': 0xFFECFDF5,
+      'name_ar': 'ملابس ـ صحة وجمال',
+      'name_fr': 'Habillement & Mode',
+      'asset': 'assets/images/cat_fashion.png',
     },
     {
       'id': 5,
-      'name_ar': 'أثاث وديكور',
-      'name_fr': 'Maison & Déco',
-      'asset': 'assets/images/cat_home.png',
-      'bg': 0xFFFFFBEB,
+      'name_ar': 'أدوات السفر',
+      'name_fr': 'Outils de voyage',
+      'asset': 'assets/images/cat_travel.png',
     },
     {
       'id': 6,
-      'name_ar': 'أزياء وموضة',
-      'name_fr': 'Mode & Beauté',
-      'asset': 'assets/images/cat_fashion.png',
-      'bg': 0xFFFDF2F8,
+      'name_ar': 'بارافارماسي',
+      'name_fr': 'Parapharmacie',
+      'asset': 'assets/images/cat_parapharmacy.png',
     },
     {
       'id': 7,
-      'name_ar': 'وظائف وخدمات',
-      'name_fr': 'Emploi & Pro',
-      'asset': 'assets/images/cat_jobs.png',
-      'bg': 0xFFF0FDF4,
+      'name_ar': 'الأطفال',
+      'name_fr': 'Enfants',
+      'asset': 'assets/images/cat_kids.png',
+    },
+    {
+      'id': 8,
+      'name_ar': 'بريكولاج',
+      'name_fr': 'Bricolage',
+      'asset': 'assets/images/cat_bricolage.png',
+    },
+    {
+      'id': 9,
+      'name_ar': 'آلات صناعية',
+      'name_fr': 'Machines industrielles',
+      'asset': 'assets/images/cat_industrial.png',
+    },
+    {
+      'id': 10,
+      'name_ar': 'المجوهرات',
+      'name_fr': 'Bijoux',
+      'asset': 'assets/images/cat_jewelry.png',
+    },
+    {
+      'id': 11,
+      'name_ar': 'منتجات عتيقة',
+      'name_fr': 'Antique',
+      'asset': 'assets/images/cat_antique.png',
+    },
+    {
+      'id': 12,
+      'name_ar': 'آخر...',
+      'name_fr': 'Autre...',
+      'asset': 'assets/images/cat_other.png',
     },
   ];
 
@@ -152,39 +174,89 @@ class _HomeScreenState extends State<HomeScreen> {
     return raw.split(' ').first;
   }
 
-  String _assetForCategory(String name, int idx) {
-    final lower = name.toLowerCase();
-    if (lower.contains('voiture') || lower.contains('auto') || lower.contains('moto') || lower.contains('سيار') || lower.contains('مركبات')) {
+  String _assetForCategory(String name, int idx, [Map<dynamic, dynamic>? cat]) {
+    final combined = '${name.toLowerCase()} ${(cat?['name_ar'] ?? '').toString().toLowerCase()} ${(cat?['name_fr'] ?? '').toString().toLowerCase()} ${(cat?['slug'] ?? '').toString().toLowerCase()}';
+    if (combined.contains('voiture') ||
+        combined.contains('auto') ||
+        combined.contains('moto') ||
+        combined.contains('vehicule') ||
+        combined.contains('véhicule') ||
+        combined.contains('نقل') ||
+        combined.contains('سيار') ||
+        combined.contains('مركبات')) {
       return 'assets/images/hero_car.png';
     }
-    if (lower.contains('immo') || lower.contains('appart') || lower.contains('villa') || lower.contains('عقار') || lower.contains('شقق')) {
+    if (combined.contains('immo') ||
+        combined.contains('appart') ||
+        combined.contains('villa') ||
+        combined.contains('عقار') ||
+        combined.contains('شقق')) {
       return 'assets/images/cat_realestate.png';
     }
-    if (lower.contains('télé') || lower.contains('phone') || lower.contains('tech') || lower.contains('هواتف') || lower.contains('إلكترون')) {
+    if (combined.contains('voyage') || combined.contains('سفر')) {
+      return 'assets/images/cat_travel.png';
+    }
+    if (combined.contains('parapharmacie') || combined.contains('بارافارماسي')) {
+      return 'assets/images/cat_parapharmacy.png';
+    }
+    if (combined.contains('enfant') ||
+        combined.contains('اطفال') ||
+        combined.contains('أطفال')) {
+      return 'assets/images/cat_kids.png';
+    }
+    if (combined.contains('bricolage') || combined.contains('بريكولاج')) {
+      return 'assets/images/cat_bricolage.png';
+    }
+    if (combined.contains('industriel') ||
+        combined.contains('machine') ||
+        combined.contains('صناعية') ||
+        combined.contains('ألات') ||
+        combined.contains('آلات')) {
+      return 'assets/images/cat_industrial.png';
+    }
+    if (combined.contains('bijou') || combined.contains('مجوهرات')) {
+      return 'assets/images/cat_jewelry.png';
+    }
+    if (combined.contains('antique') || combined.contains('عتيقة')) {
+      return 'assets/images/cat_antique.png';
+    }
+    if (combined.contains('autre') || combined.contains('آخر')) {
+      return 'assets/images/cat_other.png';
+    }
+    if (combined.contains('télé') ||
+        combined.contains('phone') ||
+        combined.contains('هواتف')) {
       return 'assets/images/cat_phones.png';
     }
-    if (lower.contains('info') || lower.contains('pc') || lower.contains('حواسيب')) {
+    if (combined.contains('info') ||
+        combined.contains('multimedia') ||
+        combined.contains('pc') ||
+        combined.contains('معلوماتية') ||
+        combined.contains('وسائط') ||
+        combined.contains('حواسيب') ||
+        combined.contains('إلكترون')) {
       return 'assets/images/cat_computers.png';
     }
-    if (lower.contains('maison') || lower.contains('meuble') || lower.contains('أثاث') || lower.contains('منزل')) {
+    if (combined.contains('maison') ||
+        combined.contains('meuble') ||
+        combined.contains('أثاث') ||
+        combined.contains('منزل')) {
       return 'assets/images/cat_home.png';
     }
-    if (lower.contains('mode') || lower.contains('vêt') || lower.contains('أزياء') || lower.contains('ملابس')) {
+    if (combined.contains('mode') ||
+        combined.contains('habillement') ||
+        combined.contains('vêt') ||
+        combined.contains('أزياء') ||
+        combined.contains('ملابس')) {
       return 'assets/images/cat_fashion.png';
     }
-    if (lower.contains('emploi') || lower.contains('service') || lower.contains('وظائف') || lower.contains('خدمات')) {
+    if (combined.contains('emploi') ||
+        combined.contains('service') ||
+        combined.contains('وظائف') ||
+        combined.contains('خدمات')) {
       return 'assets/images/cat_jobs.png';
     }
-    const assets = [
-      'assets/images/hero_car.png',
-      'assets/images/cat_realestate.png',
-      'assets/images/cat_phones.png',
-      'assets/images/cat_computers.png',
-      'assets/images/cat_home.png',
-      'assets/images/cat_fashion.png',
-      'assets/images/cat_jobs.png',
-    ];
-    return assets[idx % assets.length];
+    return 'assets/images/cat_other.png';
   }
 
   void _openNotificationsSheet() {
@@ -370,44 +442,94 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Hero Card with 3D Memoji Car popping slightly OUTSIDE the red card!
+            // Hero Card with Live Red + White Color Distribution & Giant 3D Pop-Out Car!
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Red Gradient Hero Container
+                  // Vibrant Red + Luminous White Mesh Hero Container
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFE31B23), _heroBlue],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFFC80E16),
+                          Color(0xFFE31B23),
+                          Color(0xFFFF3B44),
+                          Color(0xFFFF7A80),
+                        ],
+                        stops: [0.0, 0.45, 0.78, 1.0],
+                        begin: AlignmentDirectional.topStart,
+                        end: AlignmentDirectional.bottomEnd,
                       ),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: _blue.withValues(alpha: 0.24),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
+                          color: _blue.withValues(alpha: 0.28),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Stack(
                       children: [
+                        // Large Luminous White Studio Spotlight Halo behind the 3D Car
                         PositionedDirectional(
-                          end: -20,
-                          top: -20,
+                          end: -45,
+                          bottom: -55,
                           child: Container(
-                            width: 170,
-                            height: 170,
+                            width: 255,
+                            height: 255,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  Colors.white.withValues(alpha: 0.22),
+                                  Colors.white.withValues(alpha: 0.92),
+                                  Colors.white.withValues(alpha: 0.52),
+                                  Colors.white.withValues(alpha: 0.16),
+                                  Colors.white.withValues(alpha: 0.0),
+                                ],
+                                stops: const [0.0, 0.36, 0.68, 1.0],
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Top-End Soft White Ambient Glow
+                        PositionedDirectional(
+                          end: 20,
+                          top: -45,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.38),
+                                  Colors.white.withValues(alpha: 0.0),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Subtle White Shimmer Ribbon at Top-Start
+                        PositionedDirectional(
+                          start: -30,
+                          top: -35,
+                          child: Container(
+                            width: 130,
+                            height: 130,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.18),
                                   Colors.white.withValues(alpha: 0.0),
                                 ],
                               ),
@@ -415,30 +537,46 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 134, 20),
+                          padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 152, 20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    CupertinoIcons.sparkles,
-                                    size: 15,
-                                    color: Colors.white,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.38),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    s.tr('مساعد أبولو الذكي', 'AI Deal Planner'),
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      s.tr('مساعد أبولو الذكي • LIVE', 'AI Deal Planner • LIVE'),
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               FittedBox(
                                 fit: BoxFit.scaleDown,
                                 alignment: AlignmentDirectional.centerStart,
@@ -446,8 +584,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   s.tr('بيع ولا شري فـ 30 ثانية', 'Plan your next deal'),
                                   maxLines: 1,
                                   style: const TextStyle(
-                                    fontSize: 21,
-                                    fontWeight: FontWeight.w800,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
                                     letterSpacing: -0.5,
                                     color: Colors.white,
                                   ),
@@ -462,8 +600,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   height: 1.38,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white.withValues(alpha: 0.92),
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.95),
                                 ),
                               ),
                               const SizedBox(height: 14),
@@ -485,9 +623,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     borderRadius: BorderRadius.circular(999),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.12),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
+                                        color: Colors.black.withValues(alpha: 0.16),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
                                       ),
                                     ],
                                   ),
@@ -519,18 +657,41 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // 3D Memoji Car popping slightly OUTSIDE the red Hero Card (end: -12, bottom: -14)!
+                  // 3D Ground Contact Shadow under the Car (extending outside the card!)
                   PositionedDirectional(
-                    end: -12,
-                    bottom: -14,
-                    width: 178,
-                    height: 146,
+                    end: -10,
+                    bottom: -16,
+                    width: 205,
+                    height: 30,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _ink.withValues(alpha: 0.28),
+                              blurRadius: 18,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Giant Photorealistic 3D SUV Coupé bursting OUTSIDE the Hero Card!
+                  PositionedDirectional(
+                    end: -22,
+                    bottom: -24,
+                    width: 232,
+                    height: 168,
                     child: IgnorePointer(
                       child: Transform.flip(
                         flipX: s.isAr,
                         child: Image.asset(
                           'assets/images/hero_car.png',
                           fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
                         ),
                       ),
                     ),
@@ -596,7 +757,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       .toString();
                   final String assetPath = cat['asset'] is String
                       ? cat['asset'] as String
-                      : _assetForCategory(name, idx);
+                      : _assetForCategory(name, idx, cat is Map ? cat : null);
 
                   return GestureDetector(
                     onTap: () => widget.onOpenSearch(catId),
