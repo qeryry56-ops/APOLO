@@ -933,7 +933,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                   _SoftIconBtn(
-                    icon: CupertinoIcons.bell_fill,
+                    icon: CupertinoIcons.bookmark,
                     iconColor: _red,
                     onTap: _saveCurrentSearch,
                   ),

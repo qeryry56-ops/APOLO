@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,14 +7,20 @@ import '../core/state/app_state.dart';
 import 'ad_detail_screen.dart';
 import 'notifications_screen.dart';
 import 'post_ad_screen.dart';
-import 'privacy_compliance_screen.dart';
 import 'search_screen.dart';
 import 'stores_screen.dart';
-import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
+/// 2026 Apple Whitespace Home Screen:
+/// - Concise Gateway & Overview of Apolo ("نبذة عن التطبيق")
+/// - Search Bar removed from Home (users are guided directly to the dedicated Search screen)
+/// - Static & elegantly-scaled 3D Hero Car (no float/wobble motion)
+/// - Categories Bento: 1-tap deep link to the dedicated Search/Annonces screen
+/// - Featured & Trending Deals Carousel with "عرض جميع الإعلانات" CTA
+/// - "علاش تختار Apolo؟" Trust & Overview highlights (0% عمولة، شات مباشر، حسابات موثقة)
+/// - 1-tap Seller CTA Banner to Post Ads
 class HomeScreen extends StatefulWidget {
   final void Function(int? categoryId)? onOpenSearch;
   final VoidCallback? onOpenPostAd;
@@ -30,22 +35,17 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   final AppState _state = AppState();
   final PageController _trendingController =
       PageController(viewportFraction: 0.89);
   final ScrollController _scrollController = ScrollController();
-
-  late final AnimationController _carFloatController;
 
   List<Map<String, dynamic>> _ads = [];
   List<Map<String, dynamic>> _categories = [];
   bool _loading = true;
   bool _networkError = false;
   int _activeTrendingPage = 0;
-  int? _selectedFeedCategoryId;
-  int? _selectedCityId;
   Timer? _autoSlideTimer;
 
   static const Color _primary = Color(0xFFE31B23);
@@ -138,62 +138,11 @@ class _HomeScreenState extends State<HomeScreen>
     },
     {
       'id': 9004,
-      'title': 'MacBook Pro M4 Max 16" 64Go / 2To SSD',
-      'description': 'Clavier AZERTY, 4 cycles de batterie, avec facture.',
-      'price': 36500,
-      'price_formatted': '36 500 DH',
-      'negotiable': true,
-      'city': {
-        'id': 3,
-        'name': 'Marrakech',
-        'name_ar': 'مراكش',
-        'name_fr': 'Marrakech',
-      },
-      'category': {
-        'id': 3,
-        'name': 'Informatique',
-        'name_ar': 'إعلاميات وتقنية',
-        'name_fr': 'Informatique',
-      },
-      'main_image':
-          'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=900&q=80',
-      'is_featured': false,
-      'is_vip': false,
-      'views_count': 640,
-      'created_at': '2026-03-29T09:20:00Z',
-    },
-    {
-      'id': 9005,
-      'title': 'Salon Marocain Moderne en Velours Royal — 3 Pièces',
-      'description': 'Bois de hêtre massif, mousse HR haute densité, état neuf.',
-      'price': 18500,
-      'price_formatted': '18 500 DH',
-      'negotiable': true,
-      'city': {
-        'id': 1,
-        'name': 'Casablanca',
-        'name_ar': 'الدار البيضاء',
-        'name_fr': 'Casablanca',
-      },
-      'category': {
-        'id': 5,
-        'name': 'Maison & Déco',
-        'name_ar': 'أثاث وديكور',
-        'name_fr': 'Maison & Déco',
-      },
-      'main_image':
-          'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=900&q=80',
-      'is_featured': false,
-      'is_vip': false,
-      'views_count': 510,
-      'created_at': '2026-03-29T08:00:00Z',
-    },
-    {
-      'id': 9006,
-      'title': 'Montre Automatique Chronographe Acier — Édition Limitée',
-      'description': 'Boîte et certificats d\'origine inclus, jamais portée.',
-      'price': 9400,
-      'price_formatted': '9 400 DH',
+      'title': 'Montre Rolex Submariner Date — Full Set 2024',
+      'description':
+          'Acier Oystersteel, lunette Cerachrom noire, boîte et papiers d\'origine.',
+      'price': 138000,
+      'price_formatted': '138 000 DH',
       'negotiable': true,
       'city': {
         'id': 4,
@@ -219,11 +168,6 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _carFloatController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2800),
-    )..repeat(reverse: true);
-
     _loadData();
     _startAutoSlide();
   }
@@ -232,7 +176,6 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _autoSlideTimer?.cancel();
     _scrollController.dispose();
-    _carFloatController.dispose();
     _trendingController.dispose();
     super.dispose();
   }
@@ -287,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen>
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
-      // Merge showcase fallback ads if backend has fewer than 6 items so every category is rich
+
       if (parsedAds.length < 6) {
         final existingIds =
             parsedAds.map((a) => a['id']?.toString()).toSet();
@@ -387,38 +330,6 @@ class _HomeScreenState extends State<HomeScreen>
     ];
   }
 
-  List<Map<String, dynamic>> get _effectiveCities {
-    if (_state.cities.isNotEmpty) {
-      return _state.cities
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-    }
-    return const [
-      {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-      {'id': 2, 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
-      {'id': 3, 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
-      {'id': 4, 'name_ar': 'طنجة', 'name_fr': 'Tanger'},
-      {'id': 5, 'name_ar': 'أكادير', 'name_fr': 'Agadir'},
-      {'id': 6, 'name_ar': 'فاس', 'name_fr': 'Fès'},
-    ];
-  }
-
-  String _selectedCityLabel(bool isAr) {
-    if (_selectedCityId == null) {
-      return isAr ? 'كل المغرب' : 'Tout le Maroc';
-    }
-    final match = _effectiveCities.firstWhere(
-      (c) => int.tryParse(c['id'].toString()) == _selectedCityId,
-      orElse: () => const {},
-    );
-    if (match.isEmpty) return isAr ? 'كل المغرب' : 'Tout le Maroc';
-    return (isAr
-            ? (match['name_ar'] ?? match['name'])
-            : (match['name_fr'] ?? match['name']))
-        .toString();
-  }
-
   List<Map<String, dynamic>> get _trendingAds {
     final sorted = List<Map<String, dynamic>>.from(_ads);
     sorted.sort((a, b) {
@@ -435,25 +346,6 @@ class _HomeScreenState extends State<HomeScreen>
       return scoreB.compareTo(scoreA);
     });
     return sorted.take(6).toList();
-  }
-
-  List<Map<String, dynamic>> get _personalizedFeedAds {
-    var pool = _state.rankAdsForUser(_ads);
-    if (_selectedFeedCategoryId != null) {
-      pool = pool
-          .where((ad) => _state.adMatchesCategory(ad, _selectedFeedCategoryId))
-          .toList();
-    }
-    if (_selectedCityId != null) {
-      pool = pool.where((ad) {
-        final adCityId = int.tryParse(
-          (ad['city_id'] ?? (ad['city'] is Map ? ad['city']['id'] : ''))
-              .toString(),
-        );
-        return adCityId == _selectedCityId;
-      }).toList();
-    }
-    return pool;
   }
 
   String get _userName {
@@ -490,86 +382,11 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  void _showCityFilterSheet(bool isAr) {
-    HapticFeedback.selectionClick();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) {
-        final cities = _effectiveCities;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 38,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  isAr ? 'اختر المدينة لعرض الإعلانات' : 'Filtrer par ville',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _CityChoiceChip(
-                      label: isAr ? 'كل المغرب 🌍' : 'Tout le Maroc 🌍',
-                      active: _selectedCityId == null,
-                      onTap: () {
-                        setState(() => _selectedCityId = null);
-                        Navigator.pop(ctx);
-                      },
-                    ),
-                    ...cities.map((c) {
-                      final id = int.tryParse(c['id'].toString());
-                      final lbl = (isAr
-                              ? (c['name_ar'] ?? c['name'])
-                              : (c['name_fr'] ?? c['name']))
-                          .toString();
-                      return _CityChoiceChip(
-                        label: lbl,
-                        active: _selectedCityId == id,
-                        onTap: () {
-                          setState(() => _selectedCityId = id);
-                          Navigator.pop(ctx);
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
     final isAr = s.isAr;
     final trending = _trendingAds;
-    final feedAds = _personalizedFeedAds;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -586,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen>
                         : 'Connexion Internet interrompue',
                     subtitle: isAr
                         ? 'تحقق من الشبكة وحاول مرة أخرى لعرض أحدث العروض والإعلانات في المغرب.'
-                        : 'Vérifiez votre connexion réseau et réessayez pour charger les dernières annonces.',
+                        : 'Vérifiez votre connexion réseau et réessayez pour charger les annonces.',
                     actionLabel: isAr ? 'إعادة المحاولة' : 'Réessayer',
                     onAction: () {
                       setState(() => _loading = true);
@@ -603,10 +420,10 @@ class _HomeScreenState extends State<HomeScreen>
                         parent: AlwaysScrollableScrollPhysics(),
                       ),
                       slivers: [
-                        // 1. Original Top Header Row (Greeting + Notification Bell)
+                        // 1. Top Header Row (Greeting + Notification Bell)
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -618,8 +435,8 @@ class _HomeScreenState extends State<HomeScreen>
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
+                                      fontSize: 27,
+                                      fontWeight: FontWeight.w900,
                                       letterSpacing: -0.6,
                                       color: _ink,
                                       height: 1.15,
@@ -635,33 +452,44 @@ class _HomeScreenState extends State<HomeScreen>
                                           const NotificationsScreen(),
                                     ),
                                   ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(6),
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: _surface,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
                                     child: Stack(
                                       alignment: Alignment.center,
                                       clipBehavior: Clip.none,
                                       children: [
                                         const Icon(
                                           CupertinoIcons.bell,
-                                          size: 23,
+                                          size: 21,
                                           color: _ink,
                                         ),
-                                        Positioned(
-                                          top: 1,
-                                          right: 1,
-                                          child: Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: _primary,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: Colors.white,
-                                                width: 1.5,
+                                        if (_state.unreadNotificationsCount > 0)
+                                          Positioned(
+                                            top: 1,
+                                            right: 1,
+                                            child: Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color: _primary,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 1.5,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
                                       ],
                                     ),
                                   ),
@@ -671,194 +499,93 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         ),
 
-                        // 2. Quick Search & City Selector Bar (Apple Soft Surface)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: PressableScale(
-                                    onTap: () => _openSearchScreen(
-                                      _selectedFeedCategoryId,
-                                    ),
-                                    child: Container(
-                                      height: 46,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 15,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _surface,
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            CupertinoIcons.search,
-                                            size: 17,
-                                            color: _muted,
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Text(
-                                              isAr
-                                                  ? 'ابحث عن سيارة، شقة، آيفون...'
-                                                  : 'Rechercher voiture, immo, iPhone...',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 13.5,
-                                                fontWeight: FontWeight.w600,
-                                                color: _muted,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                PressableScale(
-                                  onTap: () => _showCityFilterSheet(isAr),
-                                  child: Container(
-                                    height: 46,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 13,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _selectedCityId != null
-                                          ? _primarySoft
-                                          : _surface,
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons.location_solid,
-                                          size: 14,
-                                          color: _selectedCityId != null
-                                              ? _primary
-                                              : _ink,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            maxWidth: 85,
-                                          ),
-                                          child: Text(
-                                            _selectedCityLabel(isAr),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w800,
-                                              color: _selectedCityId != null
-                                                  ? _primary
-                                                  : _ink,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Icon(
-                                          CupertinoIcons.chevron_down,
-                                          size: 11,
-                                          color: _selectedCityId != null
-                                              ? _primary
-                                              : _muted,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // 3. Original Hero Card with Live Red + White Distribution & Giant 3D Pop-Out Car
+                        // 2. Hero Card with Static 3D Car & Clear Gateway CTA
                         SliverToBoxAdapter(
                           child: _buildHeroStage(isAr),
                         ),
 
-                        // 4. Clean Non-Overlapping Categories Bento Strip
+                        // 3. Clean Categories Bento Strip (Direct Deep Link to Search Screen)
                         SliverToBoxAdapter(
                           child: _buildCategoriesBento(s, isAr),
                         ),
 
-                        // 5. Stage 1: Trending Now Carousel
+                        // 4. Featured / Exclusive Deals Showcase Carousel
                         if (trending.isNotEmpty)
                           SliverToBoxAdapter(
                             child: _buildTrendingSection(trending, isAr),
                           ),
 
-                        // 6. Verified Pro Boutiques Strip
+                        // 5. Explore All Ads Button Bar (Gateway to Search/Annonces Screen)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                            child: PressableScale(
+                              onTap: () => _openSearchScreen(null),
+                              child: Container(
+                                height: 54,
+                                decoration: BoxDecoration(
+                                  color: _ink,
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _ink.withValues(alpha: 0.16),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      CupertinoIcons.search,
+                                      color: Colors.white,
+                                      size: 19,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isAr
+                                          ? 'تصفح جميع الإعلانات في المغرب (3,400+)'
+                                          : 'Explorer toutes les annonces au Maroc',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(
+                                      isAr
+                                          ? CupertinoIcons.arrow_left
+                                          : CupertinoIcons.arrow_right,
+                                      color: Colors.white70,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // 6. Nobda / Overview Section: "علاش تختار Apolo؟"
+                        SliverToBoxAdapter(
+                          child: _buildAppOverview(isAr),
+                        ),
+
+                        // 7. Seller Call-To-Action Banner: "عندك ما تبيع؟"
+                        SliverToBoxAdapter(
+                          child: _buildSellerBanner(isAr),
+                        ),
+
+                        // 8. Verified Pro Boutiques Strip
                         SliverToBoxAdapter(
                           child: _buildStoresBanner(isAr),
                         ),
 
-                        // 7. Stage 2: Smart Personalized Feed Header + Category Chips
-                        SliverToBoxAdapter(
-                          child: _buildSmartFeedHeader(isAr),
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: 110),
                         ),
-
-                        // 8. Smart Feed Grid with ScrollReveal Physics
-                        if (feedAds.isEmpty)
-                          SliverToBoxAdapter(
-                            child: IllustratedStateView(
-                              assetPath: 'assets/images/state_empty_ads.png',
-                              fallbackIcon: CupertinoIcons.square_grid_2x2,
-                              imageSize: 156,
-                              title: isAr
-                                  ? 'لا توجد إعلانات في هذا الفلتر حالياً'
-                                  : 'Aucune annonce pour ce filtre',
-                              subtitle: isAr
-                                  ? 'جرب اختيار تصنيف آخر أو عرض جميع المدن.'
-                                  : 'Essayez une autre catégorie ou affichez toutes les villes.',
-                              actionLabel: isAr
-                                  ? 'عرض جميع الإعلانات'
-                                  : 'Voir toutes les annonces',
-                              onAction: () => setState(() {
-                                _selectedFeedCategoryId = null;
-                                _selectedCityId = null;
-                              }),
-                            ),
-                          )
-                        else
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                            sliver: SliverGrid(
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 14,
-                                crossAxisSpacing: 14,
-                                childAspectRatio: 0.69,
-                              ),
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final ad = feedAds[index];
-                                  final id = int.tryParse(
-                                        (ad['id'] ?? index).toString(),
-                                      ) ??
-                                      index;
-                                  return ScrollReveal(
-                                    key: ValueKey(
-                                      'feed_ad_${id}_${_selectedFeedCategoryId ?? 0}_${_selectedCityId ?? 0}',
-                                    ),
-                                    delay: Duration(
-                                      milliseconds: (index % 6) * 50,
-                                    ),
-                                    beginOffset: const Offset(0, 22),
-                                    beginScale: 0.96,
-                                    child: AdCard(ad: ad),
-                                  );
-                                },
-                                childCount: feedAds.length,
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -866,15 +593,18 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// Original Hero Card with Live Red + White Color Distribution & Giant 3D Pop-Out Car
+  /// Clean Hero Showcase Card:
+  /// - Scaled, non-overlapping static 3D car (`hero_car.png`)
+  /// - Zero movement/float animation (`MATKOCH KATHARK`)
+  /// - Clear CTA directing to the dedicated Search screen
   Widget _buildHeroStage(bool isAr) {
     final s = _state.s;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Vibrant Red + Luminous White Mesh Hero Container
+          // Vibrant Red Gradient Container
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -882,22 +612,22 @@ class _HomeScreenState extends State<HomeScreen>
                 colors: [
                   Color(0xFFC80E16),
                   Color(0xFFE31B23),
-                  Color(0xFFF42B34),
+                  Color(0xFFEA2E37),
                 ],
                 stops: [0.0, 0.58, 1.0],
                 begin: AlignmentDirectional.topStart,
                 end: AlignmentDirectional.bottomEnd,
               ),
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.28),
-                width: 1.1,
+                width: 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _primary.withValues(alpha: 0.28),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
+                  color: _primary.withValues(alpha: 0.30),
+                  blurRadius: 22,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -908,14 +638,14 @@ class _HomeScreenState extends State<HomeScreen>
                   end: -10,
                   top: -55,
                   child: Container(
-                    width: 190,
-                    height: 190,
+                    width: 180,
+                    height: 180,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          Colors.white.withValues(alpha: 0.34),
-                          Colors.white.withValues(alpha: 0.12),
+                          Colors.white.withValues(alpha: 0.30),
+                          Colors.white.withValues(alpha: 0.08),
                           Colors.white.withValues(alpha: 0.0),
                         ],
                         stops: const [0.0, 0.5, 1.0],
@@ -923,155 +653,83 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                 ),
-                PositionedDirectional(
-                  start: -30,
-                  top: -35,
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.18),
-                          Colors.white.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
                 Padding(
                   padding:
-                      const EdgeInsetsDirectional.fromSTEB(20, 20, 152, 20),
+                      const EdgeInsetsDirectional.fromSTEB(20, 18, 140, 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.38),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      s.tr(
-                                        'مساعد أبولو الذكي • LIVE',
-                                        'AI Deal Planner • LIVE',
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                      // Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.20),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
                           ),
-                          const SizedBox(width: 6),
-                          GestureDetector(
-                            onTap: () => showAiContentReportSheet(
-                              context,
-                              featureContext: s.tr(
-                                'مساعد أبولو الذكي (AI Deal Planner)',
-                                'AI Deal Planner',
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
                               ),
                             ),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.32),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    CupertinoIcons.flag_fill,
-                                    size: 11,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    s.tr('إبلاغ AI', 'Report AI'),
-                                    style: const TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(width: 6),
+                            Text(
+                              isAr
+                                  ? 'سوقك الأول فالمغرب 🇲🇦'
+                                  : 'Marketplace #1 au Maroc 🇲🇦',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 10),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Text(
-                          s.tr('بيع ولا شري فـ 30 ثانية', 'Plan your next deal'),
-                          maxLines: 1,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                            color: Colors.white,
-                          ),
+                      Text(
+                        isAr
+                            ? 'بيع واشري بأمان وبلا وسيط'
+                            : 'Achetez et vendez en toute sécurité',
+                        maxLines: 2,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.4,
+                          color: Colors.white,
+                          height: 1.25,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        s.tr(
-                          'قول لينا شنو باغي تبيع ولا تشري — غادي نقادو ليك كلشي.',
-                          'Tell us what you want to buy or sell — we\'ll build the listing.',
-                        ),
+                        isAr
+                            ? 'طوموبيلات، هواتف، عقارات وأكثر من 3,000 إعلان بين يديك.'
+                            : 'Voitures, smartphones, immobilier et plus de 3 000 annonces.',
                         style: TextStyle(
-                          fontSize: 12.5,
-                          height: 1.38,
+                          fontSize: 12,
+                          height: 1.35,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.95),
+                          color: Colors.white.withValues(alpha: 0.92),
                         ),
                       ),
                       const SizedBox(height: 14),
-                      GestureDetector(
-                        onTap: _openPostAdScreen,
+                      PressableScale(
+                        onTap: () => _openSearchScreen(null),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 10,
+                            horizontal: 16,
+                            vertical: 9,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -1088,17 +746,19 @@ class _HomeScreenState extends State<HomeScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                s.tr('ابدا دابا', 'Get started'),
+                                isAr ? 'استكشف الإعلانات' : 'Explorer les annonces',
                                 style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
                                   color: _primary,
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              const Icon(
-                                CupertinoIcons.arrow_right,
-                                size: 14,
+                              const SizedBox(width: 5),
+                              Icon(
+                                isAr
+                                    ? CupertinoIcons.arrow_left
+                                    : CupertinoIcons.arrow_right,
+                                size: 13,
                                 color: _primary,
                               ),
                             ],
@@ -1112,20 +772,20 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
 
-          // 3D Ground Contact Shadow under the Car
+          // Ground Contact Shadow under the 3D Car
           PositionedDirectional(
-            end: -10,
-            bottom: -16,
-            width: 205,
-            height: 30,
+            end: 4,
+            bottom: -6,
+            width: 156,
+            height: 20,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(999),
                   boxShadow: [
                     BoxShadow(
-                      color: _ink.withValues(alpha: 0.28),
-                      blurRadius: 18,
+                      color: _ink.withValues(alpha: 0.24),
+                      blurRadius: 14,
                       spreadRadius: 1,
                     ),
                   ],
@@ -1134,30 +794,19 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
 
-          // Giant Photorealistic 3D SUV Coupé bursting OUTSIDE the Hero Card with subtle float
+          // Scaled Static 3D Car (Crisp, Stable, No Continuous Motion)
           PositionedDirectional(
-            end: -22,
-            bottom: -24,
-            width: 232,
-            height: 168,
+            end: -6,
+            bottom: -8,
+            width: 178,
+            height: 126,
             child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _carFloatController,
-                builder: (context, child) {
-                  final dy =
-                      math.sin(_carFloatController.value * math.pi) * 3.5;
-                  return Transform.translate(
-                    offset: Offset(0, -dy),
-                    child: child,
-                  );
-                },
-                child: Transform.flip(
-                  flipX: s.isAr,
-                  child: Image.asset(
-                    'assets/images/hero_car.png',
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                  ),
+              child: Transform.flip(
+                flipX: s.isAr,
+                child: Image.asset(
+                  'assets/images/hero_car.png',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
                 ),
               ),
             ),
@@ -1167,14 +816,14 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// Harmonious Non-Overlapping Categories Strip (Icon on top, clean 1-line title below)
+  /// Categories Bento Strip: 1-Tap Deep Link to Dedicated Search/Annonces Screen
   Widget _buildCategoriesBento(AppStrings s, bool isAr) {
     if (_categories.isEmpty) return const SizedBox.shrink();
 
     return ScrollReveal(
       delay: const Duration(milliseconds: 90),
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(bottom: 22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1184,16 +833,16 @@ class _HomeScreenState extends State<HomeScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isAr ? 'التصنيفات' : 'Catégories',
+                    isAr ? 'تصفح حسب الفئات' : 'Catégories',
                     style: const TextStyle(
                       fontSize: 18.5,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       color: _ink,
                       letterSpacing: -0.4,
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => _openSearchScreen(_selectedFeedCategoryId),
+                    onTap: () => _openSearchScreen(null),
                     child: Row(
                       children: [
                         Text(
@@ -1220,7 +869,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 112,
+              height: 110,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 scrollDirection: Axis.horizontal,
@@ -1233,63 +882,55 @@ class _HomeScreenState extends State<HomeScreen>
                       int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
                   final assetPath = _state.assetForCategory(cat);
                   final label = _state.formatCategoryLabel(cat);
-                  final isSelected = _selectedFeedCategoryId == catId;
 
                   return ScrollReveal(
-                    delay: Duration(milliseconds: 40 * (idx % 6)),
+                    delay: Duration(milliseconds: 35 * (idx % 6)),
                     beginOffset: const Offset(16, 0),
                     child: PressableScale(
                       onTap: () {
                         HapticFeedback.selectionClick();
                         _state.recordCategoryInterest(catId, weight: 3);
-                        setState(() {
-                          _selectedFeedCategoryId =
-                              isSelected ? null : catId;
-                        });
+                        _openSearchScreen(catId);
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        width: 108,
-                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                      child: Container(
+                        width: 86,
+                        padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
                         decoration: BoxDecoration(
-                          color: isSelected ? _primarySoft : _surface,
-                          borderRadius: BorderRadius.circular(20),
+                          color: _surface,
+                          borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: isSelected ? _primary : Colors.transparent,
-                            width: 1.6,
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.0,
                           ),
                         ),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Dedicated 3D Icon Stage (Never overlaps text!)
-                            Expanded(
-                              child: Center(
-                                child: Image.asset(
-                                  assetPath,
-                                  height: 54,
-                                  fit: BoxFit.contain,
-                                  filterQuality: FilterQuality.high,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    CupertinoIcons.cube_box_fill,
-                                    size: 28,
-                                    color: _primary,
-                                  ),
+                            SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Image.asset(
+                                assetPath,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  CupertinoIcons.cube_box,
+                                  size: 26,
+                                  color: _muted,
                                 ),
                               ),
                             ),
                             const SizedBox(height: 6),
-                            // Single-Line Clean Balanced Label (Never breaks mid-word!)
                             Text(
                               label,
+                              textAlign: TextAlign.center,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
+                              style: const TextStyle(
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
-                                color: isSelected ? _primary : _ink,
-                                letterSpacing: -0.2,
+                                color: _ink,
+                                height: 1.15,
                               ),
                             ),
                           ],
@@ -1306,15 +947,15 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// Stage 1: Trending Now in Morocco (with interactive pagination dots)
+  /// Featured & Trending Deals Carousel
   Widget _buildTrendingSection(
     List<Map<String, dynamic>> trending,
     bool isAr,
   ) {
     return ScrollReveal(
-      delay: const Duration(milliseconds: 140),
+      delay: const Duration(milliseconds: 110),
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(bottom: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1325,32 +966,23 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: _primarySoft,
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: const Icon(
-                          CupertinoIcons.flame_fill,
-                          size: 15,
-                          color: _primary,
-                        ),
+                      const Icon(
+                        CupertinoIcons.flame_fill,
+                        color: _primary,
+                        size: 19,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Text(
-                        isAr ? 'الرائج الآن في المغرب' : 'Tendances au Maroc',
+                        isAr ? 'عروض حصرية مميزة' : 'Offres exclusives',
                         style: const TextStyle(
                           fontSize: 18.5,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                           color: _ink,
                           letterSpacing: -0.4,
                         ),
                       ),
                     ],
                   ),
-                  // Interactive Page Indicator Dots
                   Row(
                     children: List.generate(trending.length, (i) {
                       final active = i == _activeTrendingPage;
@@ -1464,13 +1096,13 @@ class _HomeScreenState extends State<HomeScreen>
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Icon(
-                                        CupertinoIcons.flame_fill,
+                                        CupertinoIcons.checkmark_seal_fill,
                                         color: Colors.white,
                                         size: 11,
                                       ),
                                       const SizedBox(width: 5),
                                       Text(
-                                        isAr ? 'الأكثر طلباً' : 'Populaire',
+                                        isAr ? 'مميز VIP' : 'VIP',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10.5,
@@ -1539,9 +1171,6 @@ class _HomeScreenState extends State<HomeScreen>
                                                 color: _primary,
                                                 fontWeight: FontWeight.w900,
                                                 fontSize: 12.5,
-                                                fontFeatures: [
-                                                  FontFeature.tabularFigures(),
-                                                ],
                                               ),
                                             ),
                                           ),
@@ -1565,196 +1194,68 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildStoresBanner(bool isAr) {
-    return ScrollReveal(
-      delay: const Duration(milliseconds: 180),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        child: PressableScale(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const StoresScreen()),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _surface,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    CupertinoIcons.bag_fill,
-                    color: _primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              isAr
-                                  ? 'المتاجر الرسمية الموثقة'
-                                  : 'Boutiques Pro Vérifiées',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: _ink,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14.5,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Icon(
-                            CupertinoIcons.checkmark_seal_fill,
-                            color: _primary,
-                            size: 15,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isAr
-                            ? 'تصفح عروض الوكالات والمتاجر المضمونة في المغرب'
-                            : 'Découvrez les offres des professionnels certifiés',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _muted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  isAr
-                      ? CupertinoIcons.chevron_left
-                      : CupertinoIcons.chevron_right,
-                  color: _muted,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Stage 2: Smart Personalized Feed Header + Quick Category Filter Pills
-  Widget _buildSmartFeedHeader(bool isAr) {
-    final hasInterests = _state.categoryInterestWeights.isNotEmpty;
+  /// Overview Section: "علاش تختار Apolo؟"
+  Widget _buildAppOverview(bool isAr) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hasInterests
-                            ? (isAr
-                                ? 'مقترح لك حسب اهتماماتك ✨'
-                                : 'Recommandé pour vous ✨')
-                            : (isAr
-                                ? 'أحدث الإعلانات المختارة'
-                                : 'Sélection pour vous'),
-                        style: const TextStyle(
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.w800,
-                          color: _ink,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isAr
-                            ? 'مرتبة بالخوارزمية الذكية حسب الأقسام والمدن المفضلة لديك'
-                            : 'Triées intelligemment selon vos préférences et votre ville',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: _muted,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_selectedFeedCategoryId != null || _selectedCityId != null)
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _selectedFeedCategoryId = null;
-                      _selectedCityId = null;
-                    }),
-                    child: Text(
-                      isAr ? 'إعادة ضبط' : 'Réinitialiser',
-                      style: const TextStyle(
-                        color: _primary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ),
-              ],
+          Text(
+            isAr ? 'علاش تختار Apolo؟' : 'Pourquoi choisir Apolo ?',
+            style: const TextStyle(
+              fontSize: 18.5,
+              fontWeight: FontWeight.w900,
+              color: _ink,
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 38,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: _categories.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, idx) {
-                if (idx == 0) {
-                  final selected = _selectedFeedCategoryId == null;
-                  return _buildFeedChip(
-                    label: isAr ? 'الكل ✨' : 'Pour vous ✨',
-                    selected: selected,
-                    onTap: () => setState(() => _selectedFeedCategoryId = null),
-                  );
-                }
-                final cat = _categories[idx - 1];
-                final catId =
-                    int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
-                final selected = _selectedFeedCategoryId == catId;
-                return _buildFeedChip(
-                  label: _state.formatCategoryLabel(cat),
-                  selected: selected,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    _state.recordCategoryInterest(catId, weight: 2);
-                    setState(() {
-                      _selectedFeedCategoryId = selected ? null : catId;
-                    });
-                  },
-                );
-              },
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _surface,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: const Color(0xFFE2E8F0),
+                width: 1.0,
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildOverviewRow(
+                  icon: CupertinoIcons.tag_fill,
+                  iconColor: _primary,
+                  title: isAr ? '0% عمولة وبالمجان' : '0% Commission',
+                  subtitle: isAr
+                      ? 'بيع وشري فابور بدون أي اقتطاعات أو وسطاء.'
+                      : 'Vendez et achetez gratuitement sans aucun intermédiaire.',
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                ),
+                _buildOverviewRow(
+                  icon: CupertinoIcons.chat_bubble_2_fill,
+                  iconColor: const Color(0xFF2563EB),
+                  title: isAr ? 'شات واتصال مباشر' : 'Discussion directe',
+                  subtitle: isAr
+                      ? 'تواصل فالحين مع البائع وقدم عرض سعر بضغطة وحدة.'
+                      : 'Discutez en direct avec le vendeur et négociez le prix.',
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                ),
+                _buildOverviewRow(
+                  icon: CupertinoIcons.checkmark_shield_fill,
+                  iconColor: const Color(0xFF10B981),
+                  title: isAr ? 'إعلانات مفحوصة وموثقة' : 'Annonces vérifiées',
+                  subtitle: isAr
+                      ? 'فحص مستمر للإعلانات لحماية جميع المعاملات.'
+                      : 'Contrôle continu pour des transactions en toute sécurité.',
+                ),
+              ],
             ),
           ),
         ],
@@ -1762,61 +1263,232 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildFeedChip({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
+  Widget _buildOverviewRow({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
   }) {
-    return PressableScale(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? _ink : _surface,
-          borderRadius: BorderRadius.circular(999),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor, size: 19),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : _ink,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: _ink,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  color: _muted,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Seller Banner: "عندك ما تبيع؟"
+  Widget _buildSellerBanner(bool isAr) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: PressableScale(
+        onTap: _openPostAdScreen,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: _ink.withValues(alpha: 0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _primary,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  CupertinoIcons.plus_circle_fill,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAr
+                          ? 'عندك ما تبيع؟ انشر إعلانك دابا'
+                          : 'Un article à vendre ? Publiez maintenant',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isAr
+                          ? 'انشر فـ 30 ثانية بالمجان وتوصل باتصالات المشترين'
+                          : 'Publiez gratuitement et recevez des offres rapidement',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  isAr ? 'نشر +' : 'Publier +',
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-class _CityChoiceChip extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _CityChoiceChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFFE31B23) : const Color(0xFFF5F6F8),
-          borderRadius: BorderRadius.circular(999),
+  /// Official Boutiques / Stores Banner
+  Widget _buildStoresBanner(bool isAr) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: PressableScale(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const StoresScreen()),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: active ? Colors.white : const Color(0xFF0F172A),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: _primarySoft,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  CupertinoIcons.bag_fill,
+                  color: _primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            isAr
+                                ? 'المتاجر الرسمية الموثقة'
+                                : 'Boutiques Pro Vérifiées',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: _ink,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        const Icon(
+                          CupertinoIcons.checkmark_seal_fill,
+                          color: _primary,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isAr
+                          ? 'تصفح عروض الوكالات والمتاجر المعتمدة في المغرب'
+                          : 'Découvrez les offres des professionnels certifiés',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _muted,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                isAr
+                    ? CupertinoIcons.chevron_left
+                    : CupertinoIcons.chevron_right,
+                color: _muted,
+                size: 15,
+              ),
+            ],
           ),
         ),
       ),

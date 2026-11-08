@@ -76,13 +76,13 @@ class _MainShellState extends State<MainShell> {
         label: s.tr('الرئيسية', 'Accueil'),
       ),
       _TabSpec(
-        icon: CupertinoIcons.sparkles,
-        activeIcon: CupertinoIcons.sparkles,
-        label: s.tr('نشر ذكي', 'Publier'),
+        icon: CupertinoIcons.plus_circle,
+        activeIcon: CupertinoIcons.plus_circle_fill,
+        label: s.tr('نشر إعلان', 'Publier'),
       ),
       _TabSpec(
-        icon: CupertinoIcons.compass,
-        activeIcon: CupertinoIcons.compass_fill,
+        icon: CupertinoIcons.search,
+        activeIcon: CupertinoIcons.search,
         label: s.tr('إعلانات', 'Annonces'),
       ),
       _TabSpec(

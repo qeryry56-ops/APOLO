@@ -1288,7 +1288,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   if (_relatedAds.isNotEmpty) ...[
                     const SizedBox(height: 28),
                     _SectionHeader(
-                      icon: CupertinoIcons.sparkles,
+                      icon: CupertinoIcons.square_grid_2x2_fill,
                       title: s.tr('إعلانات مشابهة فـ نفس القسم', 'Annonces similaires'),
                     ),
                     const SizedBox(height: 14),

@@ -1586,7 +1586,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                         children: [
                           Icon(
                             isLast
-                                ? CupertinoIcons.sparkles
+                                ? CupertinoIcons.checkmark_circle_fill
                                 : (s.isAr
                                     ? CupertinoIcons.arrow_left
                                     : CupertinoIcons.arrow_right),
