@@ -69,7 +69,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (_focus.hasFocus) Future.delayed(const Duration(milliseconds: 300), _scrollToEnd);
     });
     _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted && !_isDemo) _loadMessages(silent: true);
+      if (mounted) _loadMessages(silent: true);
     });
   }
 
@@ -94,93 +94,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
-  /// Demo conversations (id >= 9000) run fully offline with a simulated seller.
-  bool get _isDemo => widget.conversationId >= 9000;
-
-  List<Map<String, dynamic>> _seedDemoMessages() {
-    final now = DateTime.now();
-    String ago(int min) => now.subtract(Duration(minutes: min)).toIso8601String();
-    return [
-      {
-        'id': 1,
-        'body': _state.s.tr('السلام عليكم، الإعلان باقي متوفر؟', 'Bonjour, l\'annonce est toujours disponible ?'),
-        'is_mine': true,
-        'is_read': true,
-        'created_at': ago(42),
-      },
-      {
-        'id': 2,
-        'body': _state.s.tr(
-          'وعليكم السلام، أه باقي متوفر وفحالة ممتازة 👌',
-          'Bonjour, oui toujours disponible et en excellent état 👌',
-        ),
-        'is_mine': false,
-        'created_at': ago(40),
-      },
-      {
-        'id': 3,
-        'body': _state.s.tr(
-          'مرحبا بيك فأي وقت تجي تشوفو. الثمن فيه شوية ديال التفاوض.',
-          'Vous pouvez passer le voir. Le prix est légèrement négociable.',
-        ),
-        'is_mine': false,
-        'created_at': ago(39),
-      },
-    ];
-  }
-
-  Future<void> _simulateDemoReply(String userText) async {
-    await Future.delayed(const Duration(milliseconds: 1400));
-    if (!mounted) return;
-    final s = _state.s;
-    String reply;
-    if (userText.contains('💰') || userText.contains('عرض') || userText.contains('Offre')) {
-      reply = s.tr(
-        'شكراً على العرض 🙏 نقدر نقبلو إلا زدتي شوية، نتلاقاو ونتفاهمو مزيان.',
-        'Merci pour l\'offre 🙏 Si vous montez un peu, on peut conclure.',
-      );
-    } else if (userText.contains('فين') || userText.contains('Où')) {
-      reply = s.tr(
-        'أنا فكازا، المعاريف. نقدر نتلاقاو اليوم مع 6 العشية 📍',
-        'Je suis à Casablanca, Maârif. On peut se voir à 18h 📍',
-      );
-    } else if (userText.contains('ثمن') || userText.contains('prix')) {
-      reply = s.tr(
-        'الثمن قابل للتفاوض شوية، قدم ليا عرضك 💬',
-        'Le prix est un peu négociable, faites-moi une offre 💬',
-      );
-    } else {
-      reply = s.tr('أه مرحبا، باقي متوفر ✅', 'Oui, toujours disponible ✅');
-    }
-    setState(() {
-      for (final m in _messages) {
-        if (m is Map && m['is_mine'] == true) m['is_read'] = true;
-      }
-      _messages = [
-        ..._messages,
-        {
-          'id': DateTime.now().millisecondsSinceEpoch,
-          'body': reply,
-          'is_mine': false,
-          'created_at': DateTime.now().toIso8601String(),
-        },
-      ];
-    });
-    HapticFeedback.selectionClick();
-    _scrollToEnd();
-  }
-
   Future<void> _loadMessages({bool silent = false, bool scrollToBottom = false}) async {
-    if (_isDemo) {
-      if (_messages.isEmpty && mounted) {
-        setState(() {
-          _messages = _seedDemoMessages();
-          _loading = false;
-        });
-        if (scrollToBottom) _scrollToEnd();
-      }
-      return;
-    }
     try {
       final res = await _state.api.dio.get(
         '/chat/conversations/${widget.conversationId}/messages',
@@ -218,26 +132,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _sending = true;
     });
     _scrollToEnd();
-    if (_isDemo) {
-      await Future.delayed(const Duration(milliseconds: 350));
-      if (!mounted) return;
-      setState(() {
-        _pending.remove(pending);
-        _messages = [
-          ..._messages,
-          {
-            'id': DateTime.now().millisecondsSinceEpoch,
-            'body': text,
-            'is_mine': true,
-            'created_at': DateTime.now().toIso8601String(),
-          },
-        ];
-        _sending = false;
-      });
-      _scrollToEnd();
-      _simulateDemoReply(text);
-      return;
-    }
     bool ok = false;
     try {
       final res = await _state.api.dio.post(
