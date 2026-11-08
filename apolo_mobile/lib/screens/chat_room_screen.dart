@@ -16,6 +16,7 @@ class ChatRoomScreen extends StatefulWidget {
   final String? peerAvatar;
   final String? adImage;
   final String? adPrice;
+  final String? initialDraft;
 
   const ChatRoomScreen({
     super.key,
@@ -25,6 +26,7 @@ class ChatRoomScreen extends StatefulWidget {
     this.peerAvatar,
     this.adImage,
     this.adPrice,
+    this.initialDraft,
   });
 
   @override
@@ -55,6 +57,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void initState() {
     super.initState();
     _loadMessages(scrollToBottom: true);
+    if (widget.initialDraft != null && widget.initialDraft!.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _sendText(widget.initialDraft!.trim());
+      });
+    }
     _msgCtrl.addListener(() {
       if (mounted) setState(() {});
     });
