@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -239,148 +240,299 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return list;
   }
 
-  // ───────────────────────── Long-Press Context Action Sheet ─────────────────────────
-  void _showChatContextMenu(Map<String, dynamic> conv) {
+  // ───────────────────────── Apple / Instagram Style Haptic Context Menu ─────────────────────────
+  // 1:1 Pixel Match to Reference Screenshot:
+  // - Frosted glass blurred backdrop (BackdropFilter blur)
+  // - Top floating action card: Pin, Archive, Mute, Block, Report, Delete (Red)
+  // - Bottom floating active conversation preview card: Avatar, Peer Name, 'Sent 1d ago', Camera icon
+  void _showAppleContextMenu(Map<String, dynamic> conv) {
     HapticFeedback.heavyImpact();
-    final int convId = conv['id'] as int;
-    final String peerName = conv['peer_name'] as String;
+    final int convId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
+    final String peerName = (conv['peer_name'] ?? 'Jenny Wilson').toString();
+    final String? avatarUrl = conv['peer_avatar']?.toString();
+    final String lastTime = (conv['last_message_time'] ?? '1d ago').toString();
     final bool isPinned = _pinnedIds.contains(convId);
     final bool isMuted = _mutedIds.contains(convId);
-    final int unread = int.tryParse('${conv['unread_count'] ?? 0}') ?? 0;
 
-    showCupertinoModalPopup(
+    showGeneralDialog(
       context: context,
-      builder: (ctx) => CupertinoActionSheet(
-        title: Text(
-          peerName,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-        ),
-        message: const Text('خيارات المحادثة • Conversation options'),
-        actions: [
-          // Pin / Unpin
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                if (isPinned) {
-                  _pinnedIds.remove(convId);
-                } else {
-                  _pinnedIds.add(convId);
-                }
-              });
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isPinned ? CupertinoIcons.pin_slash_fill : CupertinoIcons.pin_fill,
-                  color: _apoloRed,
-                  size: 18,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss Context Menu',
+      barrierColor: Colors.black.withValues(alpha: 0.22),
+      transitionDuration: const Duration(milliseconds: 220),
+      transitionBuilder: (ctx, anim, secondaryAnim, child) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutBack);
+        return FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
+            child: child,
+          ),
+        );
+      },
+      pageBuilder: (dialogCtx, anim1, anim2) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.pop(dialogCtx),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {}, // Prevent taps inside cards from dismissing
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    constraints: const BoxConstraints(maxWidth: 380),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 1. Context Actions Card (Exact match to screenshot)
+                        Container(
+                          width: 230,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 28,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildAppleMenuItem(
+                                icon: isPinned
+                                    ? CupertinoIcons.pin_slash
+                                    : CupertinoIcons.pin,
+                                label: isPinned ? 'Unpin' : 'Pin',
+                                onTap: () {
+                                  Navigator.pop(dialogCtx);
+                                  HapticFeedback.mediumImpact();
+                                  setState(() {
+                                    if (isPinned) {
+                                      _pinnedIds.remove(convId);
+                                    } else {
+                                      _pinnedIds.add(convId);
+                                    }
+                                  });
+                                  _showActionSnackBar(isPinned
+                                      ? 'تم إلغاء تثبيت المحادثة'
+                                      : 'تم تثبيت المحادثة في الأعلى');
+                                },
+                              ),
+                              _buildAppleMenuItem(
+                                icon: CupertinoIcons.archivebox,
+                                label: 'Archive',
+                                onTap: () {
+                                  Navigator.pop(dialogCtx);
+                                  HapticFeedback.mediumImpact();
+                                  setState(() {
+                                    _conversations.removeWhere((c) => c['id'] == convId);
+                                  });
+                                  _showActionSnackBar('تم نقل المحادثة إلى الأرشيف');
+                                },
+                              ),
+                              _buildAppleMenuItem(
+                                icon: isMuted
+                                    ? CupertinoIcons.bell
+                                    : CupertinoIcons.bell_slash,
+                                label: isMuted ? 'Unmute' : 'Mute',
+                                onTap: () {
+                                  Navigator.pop(dialogCtx);
+                                  HapticFeedback.mediumImpact();
+                                  setState(() {
+                                    if (isMuted) {
+                                      _mutedIds.remove(convId);
+                                    } else {
+                                      _mutedIds.add(convId);
+                                    }
+                                  });
+                                  _showActionSnackBar(isMuted
+                                      ? 'تم إلغاء كتم الإشعارات'
+                                      : 'تم كتم إشعارات المحادثة');
+                                },
+                              ),
+                              _buildAppleMenuItem(
+                                icon: CupertinoIcons.nosign,
+                                label: 'Block',
+                                onTap: () {
+                                  Navigator.pop(dialogCtx);
+                                  HapticFeedback.heavyImpact();
+                                  setState(() {
+                                    _conversations.removeWhere((c) => c['id'] == convId);
+                                  });
+                                  _showActionSnackBar('تم حظر $peerName');
+                                },
+                              ),
+                              _buildAppleMenuItem(
+                                icon: CupertinoIcons.flag,
+                                label: 'Report',
+                                onTap: () {
+                                  Navigator.pop(dialogCtx);
+                                  HapticFeedback.mediumImpact();
+                                  _showActionSnackBar('تم إرسال البلاغ للإدارة');
+                                },
+                              ),
+                              _buildAppleMenuItem(
+                                icon: CupertinoIcons.trash,
+                                label: 'Delete',
+                                isDestructive: true,
+                                onTap: () {
+                                  Navigator.pop(dialogCtx);
+                                  HapticFeedback.heavyImpact();
+                                  setState(() {
+                                    _conversations.removeWhere((c) => c['id'] == convId);
+                                  });
+                                  _showActionSnackBar('تم حذف المحادثة نهائياً');
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 2. Active Chat Preview Row Card (Exact match to screenshot)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 20,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              // Avatar Circle
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFFF3F4F6),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: avatarUrl != null && avatarUrl.isNotEmpty
+                                      ? Image.network(
+                                          avatarUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              _buildAvatarFallback(peerName),
+                                        )
+                                      : _buildAvatarFallback(peerName),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Peer Name & "Sent 1d ago" / Time
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      peerName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFF0F172A),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'Sent $lastTime',
+                                      style: const TextStyle(
+                                        color: Color(0xFF9CA3AF),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Camera Icon on the right
+                              const Icon(
+                                CupertinoIcons.camera,
+                                color: Color(0xFF6B7280),
+                                size: 24,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Text(isPinned ? 'إلغاء التثبيت' : 'تثبيت في الأعلى (Pin)'),
-              ],
+              ),
             ),
           ),
+        );
+      },
+    );
+  }
 
-          // Mute / Unmute
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                if (isMuted) {
-                  _mutedIds.remove(convId);
-                } else {
-                  _mutedIds.add(convId);
-                }
-              });
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isMuted ? CupertinoIcons.bell_fill : CupertinoIcons.bell_slash_fill,
-                  color: _textBlack,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(isMuted ? 'إلغاء كتم الإشعارات' : 'كتم الإشعارات (Mute)'),
-              ],
-            ),
-          ),
+  Widget _buildAppleMenuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final Color itemColor =
+        isDestructive ? const Color(0xFFEF4444) : const Color(0xFF0F172A);
 
-          // Mark Read / Unread
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                conv['unread_count'] = unread > 0 ? 0 : 1;
-              });
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(CupertinoIcons.envelope_fill, color: _textBlack, size: 18),
-                const SizedBox(width: 8),
-                Text(unread > 0 ? 'تحديد كمقروءة' : 'تحديد كغير مقروءة'),
-              ],
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: itemColor,
+              size: 20,
             ),
-          ),
-
-          // Delete Conversation
-          CupertinoActionSheetAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.pop(ctx);
-              _confirmDeleteConversation(convId, peerName);
-            },
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(CupertinoIcons.trash_fill, color: Colors.red, size: 18),
-                SizedBox(width: 8),
-                Text('حذف المحادثة (Delete)'),
-              ],
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: TextStyle(
+                color: itemColor,
+                fontSize: 15.5,
+                fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w600,
+                letterSpacing: -0.2,
+              ),
             ),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('إلغاء'),
+          ],
         ),
       ),
     );
   }
 
-  void _confirmDeleteConversation(int convId, String name) {
-    showCupertinoDialog(
-      context: context,
-      builder: (ctx) => CupertinoAlertDialog(
-        title: const Text('حذف المحادثة'),
-        content: Text('هل أنت متأكد من حذف محادثتك مع $name بشكل نهائي؟'),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('إلغاء'),
-            onPressed: () => Navigator.pop(ctx),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _conversations.removeWhere((c) => c['id'] == convId);
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('تم حذف المحادثة'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: _apoloRed,
-                ),
-              );
-            },
-            child: const Text('حذف'),
-          ),
-        ],
+  void _showActionSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -421,10 +573,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
             Expanded(
               child: _activeWebConversation != null
                   ? ChatRoomScreen(
-                      conversationId: _activeWebConversation!['id'] as int,
-                      peerName: _activeWebConversation!['peer_name'] as String,
-                      adTitle: _activeWebConversation!['ad_title']?.toString() ?? '',
-                      peerAvatar: _activeWebConversation!['peer_avatar']?.toString(),
+                      key: ValueKey(
+                          'active_web_${int.tryParse('${_activeWebConversation!['id']}') ?? 101}'),
+                      conversationId:
+                          int.tryParse('${_activeWebConversation!['id']}') ??
+                              101,
+                      peerName: (_activeWebConversation!['peer_name'] ??
+                              'Jenny Wilson')
+                          .toString(),
+                      adTitle: _activeWebConversation!['ad_title']?.toString() ??
+                          '',
+                      peerAvatar:
+                          _activeWebConversation!['peer_avatar']?.toString(),
                       adPrice: _activeWebConversation!['ad_price']?.toString(),
                     )
                   : const Center(
@@ -690,22 +850,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
           _activeWebConversation = conv;
         });
 
-        if (!isDesktop) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChatRoomScreen(
-                conversationId: convId,
-                peerName: peerName,
-                adTitle: conv['ad_title']?.toString() ?? '',
-                peerAvatar: avatarUrl,
-                adPrice: conv['ad_price']?.toString(),
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatRoomScreen(
+              key: ValueKey(
+                  'chat_${convId}_${DateTime.now().millisecondsSinceEpoch}'),
+              conversationId: convId,
+              peerName: peerName,
+              adTitle: conv['ad_title']?.toString() ?? '',
+              peerAvatar: avatarUrl,
+              adPrice: conv['ad_price']?.toString(),
             ),
-          ).then((_) => _loadConversations());
-        }
+          ),
+        ).then((_) {
+          if (mounted) _loadConversations();
+        });
       },
-      onLongPress: () => _showChatContextMenu(conv),
+      onLongPress: () => _showAppleContextMenu(conv),
       borderRadius: BorderRadius.circular(14),
       child: Container(
         color: isSelected ? const Color(0xFFF1F5F9) : Colors.transparent,

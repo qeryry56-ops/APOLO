@@ -162,6 +162,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant ChatRoomScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.conversationId != widget.conversationId) {
+      setState(() {
+        _messages = [];
+        _pending.clear();
+        _loading = true;
+      });
+      _loadMessages(scrollToBottom: true);
+    }
+  }
+
   void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
@@ -177,12 +190,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Future<void> _loadMessages(
       {bool silent = false, bool scrollToBottom = false}) async {
     try {
-      if (_state.isLoggedIn) {
+      if (_state.isLoggedIn && widget.conversationId > 0) {
         final res = await _state.api.dio.get(
           '/chat/conversations/${widget.conversationId}/messages',
         );
         if (res.data is Map && res.data['status'] == 'success') {
-          final List<dynamic> incoming = res.data['messages'] ?? [];
+          final dynamic raw = res.data['messages'] ?? res.data['data'];
+          List<dynamic> incoming = [];
+          if (raw is List) {
+            incoming = raw;
+          } else if (raw is Map && raw['data'] is List) {
+            incoming = raw['data'] as List<dynamic>;
+          }
           if (mounted) {
             setState(() {
               _messages = incoming
@@ -448,7 +467,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            },
             icon: const Icon(
               CupertinoIcons.arrow_left,
               color: _textBlack,
