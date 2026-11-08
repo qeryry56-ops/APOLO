@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../core/config/app_config.dart';
+import 'package:flutter/services.dart';
 import '../../core/state/app_state.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
@@ -11,48 +11,73 @@ class AdCard extends StatelessWidget {
 
   const AdCard({super.key, required this.ad, this.horizontal = false});
 
-  static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _muted = Color(0xFF8A94A6);
+  static const Color _ink = Color(0xFF0F172A);
+  static const Color _muted = Color(0xFF64748B);
   static const Color _red = Color(0xFFE31B23);
-  static const Color _pillBg = Color(0xFFF1F3F7);
-  static const Color _border = Color(0xFFEDEFF3);
+  static const Color _surface = Color(0xFFF5F6F8);
+  static const Color _emerald = Color(0xFF10B981);
 
   @override
   Widget build(BuildContext context) {
     final state = AppState();
     final int id = int.tryParse(ad['id'].toString()) ?? 0;
     final String title = (ad['title'] ?? '').toString();
-    final String priceFormatted = (ad['price_formatted'] ?? '').toString();
-    final String? primaryImage = (ad['main_image'] ?? ad['primary_image'])?.toString();
-    final bool isFeatured = ad['is_vip'] == true || ad['is_highlighted'] == true || ad['is_featured'] == true;
-    final bool isNegotiable = ad['is_negotiable'] == true;
-    final String? condition = ad['condition']?.toString();
-    final String cityName = ad['city'] != null
-        ? (state.s.isAr ? (ad['city']['name_ar'] ?? ad['city']['name']) : (ad['city']['name_fr'] ?? ad['city']['name'])).toString()
-        : '';
-    final String categoryName = ad['category'] != null
-        ? (state.s.isAr ? (ad['category']['name_ar'] ?? ad['category']['name']) : (ad['category']['name_fr'] ?? ad['category']['name'])).toString()
-        : '';
+    final String priceFormatted =
+        (ad['price_formatted'] ??
+                (ad['price'] != null ? '${ad['price']} DH' : ''))
+            .toString();
+    final String? primaryImage =
+        (ad['main_image'] ?? ad['primary_image'])?.toString();
+    final bool isFeatured = ad['is_vip'] == true ||
+        ad['is_highlighted'] == true ||
+        ad['is_featured'] == true;
+    final bool isNegotiable =
+        ad['is_negotiable'] == true || ad['negotiable'] == true;
+
+    final String cityName = ad['city'] is Map
+        ? (state.s.isAr
+                ? (ad['city']['name_ar'] ?? ad['city']['name'])
+                : (ad['city']['name_fr'] ?? ad['city']['name']))
+            .toString()
+        : (state.s.isAr
+                ? (ad['city_ar'] ?? ad['city_name'] ?? '')
+                : (ad['city_fr'] ?? ad['city_name'] ?? ''))
+            .toString();
+
+    final Map<String, dynamic> catMap = ad['category'] is Map
+        ? Map<String, dynamic>.from(ad['category'])
+        : {'name': ad['category_name'] ?? ad['category_ar'] ?? ''};
+    final String categoryName = state.formatCategoryLabel(catMap);
+    final String categoryAsset = state.assetForCategory(catMap, categoryName);
     final bool isFav = state.favoriteAdIds.contains(id);
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
+        final catId = state.extractAdCategoryId(ad);
+        if (catId != null) {
+          state.recordCategoryInterest(catId, weight: 2);
+        }
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => AdDetailScreen(adId: id, initialAd: ad)),
+          MaterialPageRoute(
+            builder: (_) => AdDetailScreen(adId: id, initialAd: ad),
+          ),
         );
       },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: isFeatured ? AppConfig.vipGold.withValues(alpha: 0.65) : _border,
-            width: isFeatured ? 1.5 : 1,
+            color: isFeatured
+                ? _red.withValues(alpha: 0.28)
+                : const Color(0xFFEEF1F6),
+            width: 1.1,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0F1B2D).withValues(alpha: 0.045),
+              color: _ink.withValues(alpha: 0.04),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -60,31 +85,83 @@ class AdCard extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: horizontal
-            ? _buildHorizontal(context, state, id, title, priceFormatted, primaryImage, isFeatured, isNegotiable, condition, cityName, categoryName, isFav)
-            : _buildVertical(context, state, id, title, priceFormatted, primaryImage, isFeatured, isNegotiable, condition, cityName, categoryName, isFav),
+            ? _buildHorizontal(
+                context,
+                state,
+                id,
+                title,
+                priceFormatted,
+                primaryImage,
+                isFeatured,
+                isNegotiable,
+                cityName,
+                categoryName,
+                categoryAsset,
+                isFav,
+              )
+            : _buildVertical(
+                context,
+                state,
+                id,
+                title,
+                priceFormatted,
+                primaryImage,
+                isFeatured,
+                isNegotiable,
+                cityName,
+                categoryName,
+                categoryAsset,
+                isFav,
+              ),
       ),
     );
   }
 
-  Widget _buildImage(String? url, bool isFeatured, bool isFav, int id, String cityName, AppState state, {double? height, double? width}) {
+  Widget _buildImage(
+    String? url,
+    bool isFeatured,
+    bool isFav,
+    int id,
+    String cityName,
+    String categoryAsset,
+    AppState state, {
+    double? height,
+    double? width,
+  }) {
     return Stack(
+      fit: StackFit.expand,
       children: [
         Container(
           height: height ?? double.infinity,
           width: width ?? double.infinity,
-          color: _pillBg,
-          child: AppImage(
-            url: url,
-            fit: BoxFit.cover,
-            memCacheWidth: width != null && width.isFinite ? (width * 2).round() : 400,
-            memCacheHeight: height != null && height.isFinite ? (height * 2).round() : 360,
-          ),
+          color: _surface,
+          child: url != null && url.isNotEmpty
+              ? AppImage(
+                  url: url,
+                  fit: BoxFit.cover,
+                  memCacheWidth: width != null && width.isFinite
+                      ? (width * 2).round()
+                      : 400,
+                  memCacheHeight: height != null && height.isFinite
+                      ? (height * 2).round()
+                      : 360,
+                )
+              : Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Image.asset(
+                      categoryAsset,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
         ),
+        // Subtle bottom gradient for city pill legibility
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          height: 52,
+          height: 46,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -93,81 +170,110 @@ class AdCard extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.48),
+                    Colors.black.withValues(alpha: 0.42),
                   ],
                 ),
               ),
             ),
           ),
         ),
+        // City Pill at bottom-start (never overlaps image center)
         if (cityName.isNotEmpty)
-          Positioned(
+          PositionedDirectional(
             bottom: 8,
-            right: 8,
+            start: 8,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.52),
+                color: Colors.black.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(CupertinoIcons.location_solid, size: 10.5, color: Colors.white),
+                  const Icon(
+                    CupertinoIcons.location_solid,
+                    size: 10,
+                    color: Colors.white,
+                  ),
                   const SizedBox(width: 3),
-                  Text(
-                    cityName,
-                    style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 92),
+                    child: Text(
+                      cityName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
+        // Featured / VIP badge at top-start
         if (isFeatured)
-          Positioned(
+          PositionedDirectional(
             top: 8,
-            right: 8,
+            start: 8,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: _red,
                 borderRadius: BorderRadius.circular(999),
-                boxShadow: [
-                  BoxShadow(color: _red.withValues(alpha: 0.32), blurRadius: 8, offset: const Offset(0, 2)),
-                ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(CupertinoIcons.bolt_fill, size: 11, color: Colors.white),
-                  SizedBox(width: 2),
-                  Text('VIP', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
+                  const Icon(
+                    CupertinoIcons.bolt_fill,
+                    size: 10,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    state.s.tr('مميز', 'VIP'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-        Positioned(
+        // Favorite Heart at top-end
+        PositionedDirectional(
           top: 8,
-          left: 8,
+          end: 8,
           child: AnimatedBuilder(
             animation: state,
             builder: (_, __) {
               final bool currentFav = state.favoriteAdIds.contains(id);
               return GestureDetector(
-                onTap: () => state.toggleFavorite(id),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  state.toggleFavorite(
+                    id,
+                    categoryId: state.extractAdCategoryId(ad),
+                  );
+                },
                 child: Container(
-                  width: 32,
-                  height: 32,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.94),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6),
-                    ],
                   ),
                   child: Icon(
-                    currentFav ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
-                    size: 16,
+                    currentFav
+                        ? CupertinoIcons.heart_fill
+                        : CupertinoIcons.heart,
+                    size: 15,
                     color: currentFav ? _red : _ink,
                   ),
                 ),
@@ -188,12 +294,11 @@ class AdCard extends StatelessWidget {
     String? image,
     bool isFeatured,
     bool isNegotiable,
-    String? condition,
     String city,
     String category,
+    String categoryAsset,
     bool isFav,
   ) {
-    final String tagLabel = (condition != null && condition.isNotEmpty) ? condition : category;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -201,30 +306,26 @@ class AdCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: _buildImage(image, isFeatured, isFav, id, city, state),
+              borderRadius: BorderRadius.circular(17),
+              child: _buildImage(
+                image,
+                isFeatured,
+                isFav,
+                id,
+                city,
+                categoryAsset,
+                state,
+              ),
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+          padding: const EdgeInsets.fromLTRB(11, 9, 11, 11),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _ink,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 4),
+              // 1. Price + Negotiable dot (Easy instant scan)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
@@ -233,49 +334,86 @@ class AdCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _red,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15.5,
                         letterSpacing: -0.3,
+                        fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  if (tagLabel.isNotEmpty)
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                        decoration: BoxDecoration(
-                          color: _pillBg,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          tagLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: _muted, fontSize: 10.5, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  if (isNegotiable) ...[
-                    const SizedBox(width: 4),
+                  if (isNegotiable)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEECEE),
+                        color: const Color(0xFFDCFCE7),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         state.s.tr('تفاوض', 'Négo'),
-                        style: const TextStyle(color: _red, fontSize: 10, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          color: _emerald,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ],
                 ],
               ),
+              const SizedBox(height: 4),
+              // 2. Clean Title
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _ink,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(height: 6),
+              // 3. Harmonious Mini Category Pill (Icon + Name, never overlaps)
+              if (category.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: Image.asset(
+                          categoryAsset,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          category,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _muted,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -292,20 +430,34 @@ class AdCard extends StatelessWidget {
     String? image,
     bool isFeatured,
     bool isNegotiable,
-    String? condition,
     String city,
     String category,
+    String categoryAsset,
     bool isFav,
   ) {
     return SizedBox(
-      height: 128,
+      height: 126,
       child: Row(
         children: [
           Padding(
             padding: const EdgeInsets.all(6),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: _buildImage(image, isFeatured, isFav, id, city, state, width: 132, height: 116),
+              borderRadius: BorderRadius.circular(17),
+              child: SizedBox(
+                width: 128,
+                height: 114,
+                child: _buildImage(
+                  image,
+                  isFeatured,
+                  isFav,
+                  id,
+                  city,
+                  categoryAsset,
+                  state,
+                  width: 128,
+                  height: 114,
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -316,41 +468,70 @@ class AdCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: _ink, letterSpacing: -0.2),
+                    price,
+                    style: const TextStyle(
+                      color: _red,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16.5,
+                      letterSpacing: -0.3,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
                   ),
                   Text(
-                    price,
-                    style: const TextStyle(color: _red, fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: -0.3),
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: _ink,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                   Row(
                     children: [
                       if (category.isNotEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: _pillBg,
+                            color: _surface,
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: Text(
-                            category,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: _muted, fontSize: 11, fontWeight: FontWeight.w600),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: Image.asset(
+                                  categoryAsset,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                category,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: _muted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       const Spacer(),
-                      Row(
-                        children: [
-                          Text(
-                            state.s.tr('عرض', 'Voir'),
-                            style: const TextStyle(color: _red, fontSize: 12, fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(width: 2),
-                          const Icon(Icons.chevron_right_rounded, size: 16, color: _red),
-                        ],
+                      Icon(
+                        state.s.isAr
+                            ? CupertinoIcons.chevron_left
+                            : CupertinoIcons.chevron_right,
+                        size: 15,
+                        color: _muted,
                       ),
                     ],
                   ),

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import 'ad_detail_screen.dart';
@@ -28,9 +30,11 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   final AppState _state = AppState();
-  final PageController _trendingController = PageController(viewportFraction: 0.88);
+  final PageController _trendingController =
+      PageController(viewportFraction: 0.89);
   final ScrollController _scrollController = ScrollController();
 
   late final AnimationController _carFloatController;
@@ -41,23 +45,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _networkError = false;
   int _activeTrendingPage = 0;
   int? _selectedFeedCategoryId;
-  double _scrollOffset = 0.0;
+  int? _selectedCityId;
   Timer? _autoSlideTimer;
 
   static const Color _primary = Color(0xFFE31B23);
+  static const Color _primarySoft = Color(0xFFFEECEE);
   static const Color _ink = Color(0xFF0F172A);
   static const Color _muted = Color(0xFF64748B);
+  static const Color _surface = Color(0xFFF5F6F8);
 
   static const List<Map<String, dynamic>> _fallbackAdsData = [
     {
       'id': 9001,
       'title': 'Porsche Macan GTS 2025 — Pack Sport Chrono',
-      'description': 'État neuf, entretien maison Porsche Casablanca, garantie constructeur.',
+      'description':
+          'État neuf, entretien maison Porsche Casablanca, garantie constructeur.',
       'price': 980000,
       'price_formatted': '980 000 DH',
-      'city': {'id': 1, 'name': 'Casablanca', 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-      'category': {'id': 1, 'name': 'Véhicules', 'name_ar': 'سيارات ومركبات', 'name_fr': 'Véhicules'},
-      'main_image': 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80',
+      'negotiable': true,
+      'city': {
+        'id': 1,
+        'name': 'Casablanca',
+        'name_ar': 'الدار البيضاء',
+        'name_fr': 'Casablanca',
+      },
+      'category': {
+        'id': 1,
+        'name': 'Véhicules',
+        'name_ar': 'وسائل النقل',
+        'name_fr': 'Véhicules',
+      },
+      'main_image':
+          'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80',
       'is_featured': true,
       'is_vip': true,
       'views_count': 1420,
@@ -66,12 +85,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     {
       'id': 9002,
       'title': 'iPhone 16 Pro Max 256Go Titane Naturel — Scellé',
-      'description': 'Neuf sous emballage Apple officiel avec garantie 12 mois.',
+      'description':
+          'Neuf sous emballage Apple officiel avec garantie 12 mois.',
       'price': 14200,
       'price_formatted': '14 200 DH',
-      'city': {'id': 2, 'name': 'Rabat', 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
-      'category': {'id': 4, 'name': 'Téléphones', 'name_ar': 'هواتف ذكية', 'name_fr': 'Téléphones'},
-      'main_image': 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=900&q=80',
+      'negotiable': true,
+      'city': {
+        'id': 2,
+        'name': 'Rabat',
+        'name_ar': 'الرباط',
+        'name_fr': 'Rabat',
+      },
+      'category': {
+        'id': 4,
+        'name': 'Téléphones',
+        'name_ar': 'هواتف وتقنية',
+        'name_fr': 'Téléphones',
+      },
+      'main_image':
+          'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=900&q=80',
       'is_featured': true,
       'is_vip': false,
       'views_count': 980,
@@ -80,12 +112,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     {
       'id': 9003,
       'title': 'Villa Contemporaine avec Piscine — Californie',
-      'description': '4 suites, jardin arboré, domotique complète, finition marbre.',
+      'description':
+          '4 suites, jardin arboré, domotique complète, finition marbre.',
       'price': 6500000,
       'price_formatted': '6 500 000 DH',
-      'city': {'id': 1, 'name': 'Casablanca', 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-      'category': {'id': 2, 'name': 'Immobilier', 'name_ar': 'عقارات', 'name_fr': 'Immobilier'},
-      'main_image': 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80',
+      'negotiable': false,
+      'city': {
+        'id': 1,
+        'name': 'Casablanca',
+        'name_ar': 'الدار البيضاء',
+        'name_fr': 'Casablanca',
+      },
+      'category': {
+        'id': 2,
+        'name': 'Immobilier',
+        'name_ar': 'عقارات',
+        'name_fr': 'Immobilier',
+      },
+      'main_image':
+          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80',
       'is_featured': true,
       'is_vip': true,
       'views_count': 2150,
@@ -97,13 +142,77 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'description': 'Clavier AZERTY, 4 cycles de batterie, avec facture.',
       'price': 36500,
       'price_formatted': '36 500 DH',
-      'city': {'id': 3, 'name': 'Marrakech', 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
-      'category': {'id': 3, 'name': 'Informatique', 'name_ar': 'معلوميات', 'name_fr': 'Informatique'},
-      'main_image': 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=900&q=80',
+      'negotiable': true,
+      'city': {
+        'id': 3,
+        'name': 'Marrakech',
+        'name_ar': 'مراكش',
+        'name_fr': 'Marrakech',
+      },
+      'category': {
+        'id': 3,
+        'name': 'Informatique',
+        'name_ar': 'إعلاميات وتقنية',
+        'name_fr': 'Informatique',
+      },
+      'main_image':
+          'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=900&q=80',
       'is_featured': false,
       'is_vip': false,
       'views_count': 640,
       'created_at': '2026-03-29T09:20:00Z',
+    },
+    {
+      'id': 9005,
+      'title': 'Salon Marocain Moderne en Velours Royal — 3 Pièces',
+      'description': 'Bois de hêtre massif, mousse HR haute densité, état neuf.',
+      'price': 18500,
+      'price_formatted': '18 500 DH',
+      'negotiable': true,
+      'city': {
+        'id': 1,
+        'name': 'Casablanca',
+        'name_ar': 'الدار البيضاء',
+        'name_fr': 'Casablanca',
+      },
+      'category': {
+        'id': 5,
+        'name': 'Maison & Déco',
+        'name_ar': 'أثاث وديكور',
+        'name_fr': 'Maison & Déco',
+      },
+      'main_image':
+          'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=900&q=80',
+      'is_featured': false,
+      'is_vip': false,
+      'views_count': 510,
+      'created_at': '2026-03-29T08:00:00Z',
+    },
+    {
+      'id': 9006,
+      'title': 'Montre Automatique Chronographe Acier — Édition Limitée',
+      'description': 'Boîte et certificats d\'origine inclus, jamais portée.',
+      'price': 9400,
+      'price_formatted': '9 400 DH',
+      'negotiable': true,
+      'city': {
+        'id': 4,
+        'name': 'Tanger',
+        'name_ar': 'طنجة',
+        'name_fr': 'Tanger',
+      },
+      'category': {
+        'id': 6,
+        'name': 'Mode & Beauté',
+        'name_ar': 'أزياء وجمال',
+        'name_fr': 'Mode & Beauté',
+      },
+      'main_image':
+          'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
+      'is_featured': false,
+      'is_vip': true,
+      'views_count': 790,
+      'created_at': '2026-03-29T07:30:00Z',
     },
   ];
 
@@ -115,23 +224,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 2800),
     )..repeat(reverse: true);
 
-    _scrollController.addListener(_onScroll);
     _loadData();
     _startAutoSlide();
-  }
-
-  void _onScroll() {
-    if (!mounted) return;
-    final nextOffset = _scrollController.offset.clamp(0.0, 500.0);
-    if ((nextOffset - _scrollOffset).abs() > 1.5) {
-      setState(() => _scrollOffset = nextOffset);
-    }
   }
 
   @override
   void dispose() {
     _autoSlideTimer?.cancel();
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _carFloatController.dispose();
     _trendingController.dispose();
@@ -142,7 +241,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _autoSlideTimer?.cancel();
     _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final trending = _trendingAds;
-      if (!mounted || trending.length <= 1 || !_trendingController.hasClients) return;
+      if (!mounted ||
+          trending.length <= 1 ||
+          !_trendingController.hasClients) {
+        return;
+      }
       final next = (_activeTrendingPage + 1) % trending.length;
       _trendingController.animateToPage(
         next,
@@ -169,13 +272,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
       }
       if (rawAds.isEmpty) {
-        final adsRes = await _state.api.dio.get('/ads', queryParameters: {'per_page': 32});
+        final adsRes = await _state.api.dio
+            .get('/ads', queryParameters: {'per_page': 32});
         if (adsRes.data is Map) {
           rawAds = (adsRes.data['data'] as List?) ?? [];
         }
       }
 
-      if (_state.categories.isEmpty) {
+      if (_state.categories.isEmpty || _state.cities.isEmpty) {
         await _state.fetchTaxonomy();
       }
 
@@ -183,6 +287,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
+      // Merge showcase fallback ads if backend has fewer than 6 items so every category is rich
+      if (parsedAds.length < 6) {
+        final existingIds =
+            parsedAds.map((a) => a['id']?.toString()).toSet();
+        for (final fb in _fallbackAdsData) {
+          if (!existingIds.contains(fb['id'].toString())) {
+            parsedAds.add(Map<String, dynamic>.from(fb));
+          }
+        }
+      }
+
       final parsedCats = _state.categories
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
@@ -192,8 +307,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         setState(() {
           _ads = parsedAds.isNotEmpty
               ? parsedAds
-              : _fallbackAdsData.map((e) => Map<String, dynamic>.from(e)).toList();
-          _categories = parsedCats.isNotEmpty ? parsedCats : _buildFallbackCategories();
+              : _fallbackAdsData
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList();
+          _categories =
+              parsedCats.isNotEmpty ? parsedCats : _buildFallbackCategories();
           _networkError = false;
           _loading = false;
         });
@@ -201,9 +319,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     } catch (_) {
       if (mounted) {
         setState(() {
-          _ads = _fallbackAdsData.map((e) => Map<String, dynamic>.from(e)).toList();
+          _ads = _fallbackAdsData
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
           _categories = _state.categories.isNotEmpty
-              ? _state.categories.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+              ? _state.categories
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList()
               : _buildFallbackCategories();
           _loading = false;
         });
@@ -213,24 +336,102 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   List<Map<String, dynamic>> _buildFallbackCategories() {
     return [
-      {'id': 1, 'name': 'Véhicules', 'name_fr': 'Véhicules', 'name_ar': 'سيارات ومركبات'},
-      {'id': 2, 'name': 'Immobilier', 'name_fr': 'Immobilier', 'name_ar': 'عقارات'},
-      {'id': 3, 'name': 'Informatique', 'name_fr': 'Informatique', 'name_ar': 'معلوميات'},
-      {'id': 4, 'name': 'Téléphones', 'name_fr': 'Téléphones', 'name_ar': 'هواتف ذكية'},
-      {'id': 5, 'name': 'Maison & Déco', 'name_fr': 'Maison & Déco', 'name_ar': 'منزل وديكور'},
-      {'id': 6, 'name': 'Mode & Beauté', 'name_fr': 'Mode & Beauté', 'name_ar': 'موضة وأزياء'},
-      {'id': 7, 'name': 'Emploi & Pro', 'name_fr': 'Emploi & Pro', 'name_ar': 'وظائف وخدمات'},
-      {'id': 8, 'name': 'Voyage', 'name_fr': 'Voyage', 'name_ar': 'أدوات السفر'},
+      {
+        'id': 1,
+        'name': 'Véhicules',
+        'name_fr': 'Véhicules',
+        'name_ar': 'وسائل النقل',
+      },
+      {
+        'id': 2,
+        'name': 'Immobilier',
+        'name_fr': 'Immobilier',
+        'name_ar': 'عقارات',
+      },
+      {
+        'id': 3,
+        'name': 'Informatique',
+        'name_fr': 'Informatique',
+        'name_ar': 'إعلاميات وتقنية',
+      },
+      {
+        'id': 4,
+        'name': 'Téléphones',
+        'name_fr': 'Téléphones',
+        'name_ar': 'هواتف وتقنية',
+      },
+      {
+        'id': 5,
+        'name': 'Maison & Déco',
+        'name_fr': 'Maison & Déco',
+        'name_ar': 'أثاث وديكور',
+      },
+      {
+        'id': 6,
+        'name': 'Mode & Beauté',
+        'name_fr': 'Mode & Beauté',
+        'name_ar': 'أزياء وجمال',
+      },
+      {
+        'id': 7,
+        'name': 'Emploi & Pro',
+        'name_fr': 'Emploi & Pro',
+        'name_ar': 'وظائف وخدمات',
+      },
+      {
+        'id': 8,
+        'name': 'Voyage',
+        'name_fr': 'Voyage',
+        'name_ar': 'أدوات السفر',
+      },
     ];
+  }
+
+  List<Map<String, dynamic>> get _effectiveCities {
+    if (_state.cities.isNotEmpty) {
+      return _state.cities
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    return const [
+      {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
+      {'id': 2, 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
+      {'id': 3, 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
+      {'id': 4, 'name_ar': 'طنجة', 'name_fr': 'Tanger'},
+      {'id': 5, 'name_ar': 'أكادير', 'name_fr': 'Agadir'},
+      {'id': 6, 'name_ar': 'فاس', 'name_fr': 'Fès'},
+    ];
+  }
+
+  String _selectedCityLabel(bool isAr) {
+    if (_selectedCityId == null) {
+      return isAr ? 'كل المغرب' : 'Tout le Maroc';
+    }
+    final match = _effectiveCities.firstWhere(
+      (c) => int.tryParse(c['id'].toString()) == _selectedCityId,
+      orElse: () => const {},
+    );
+    if (match.isEmpty) return isAr ? 'كل المغرب' : 'Tout le Maroc';
+    return (isAr
+            ? (match['name_ar'] ?? match['name'])
+            : (match['name_fr'] ?? match['name']))
+        .toString();
   }
 
   List<Map<String, dynamic>> get _trendingAds {
     final sorted = List<Map<String, dynamic>>.from(_ads);
     sorted.sort((a, b) {
-      final viewsA = int.tryParse((a['views_count'] ?? a['views'] ?? 0).toString()) ?? 0;
-      final viewsB = int.tryParse((b['views_count'] ?? b['views'] ?? 0).toString()) ?? 0;
-      final scoreA = (a['is_vip'] == true ? 500 : 0) + (a['is_featured'] == true ? 300 : 0) + viewsA;
-      final scoreB = (b['is_vip'] == true ? 500 : 0) + (b['is_featured'] == true ? 300 : 0) + viewsB;
+      final viewsA =
+          int.tryParse((a['views_count'] ?? a['views'] ?? 0).toString()) ?? 0;
+      final viewsB =
+          int.tryParse((b['views_count'] ?? b['views'] ?? 0).toString()) ?? 0;
+      final scoreA = (a['is_vip'] == true ? 500 : 0) +
+          (a['is_featured'] == true ? 300 : 0) +
+          viewsA;
+      final scoreB = (b['is_vip'] == true ? 500 : 0) +
+          (b['is_featured'] == true ? 300 : 0) +
+          viewsB;
       return scoreB.compareTo(scoreA);
     });
     return sorted.take(6).toList();
@@ -242,6 +443,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       pool = pool
           .where((ad) => _state.adMatchesCategory(ad, _selectedFeedCategoryId))
           .toList();
+    }
+    if (_selectedCityId != null) {
+      pool = pool.where((ad) {
+        final adCityId = int.tryParse(
+          (ad['city_id'] ?? (ad['city'] is Map ? ad['city']['id'] : ''))
+              .toString(),
+        );
+        return adCityId == _selectedCityId;
+      }).toList();
     }
     return pool;
   }
@@ -255,17 +465,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _openSearchScreen([int? categoryId]) {
+    HapticFeedback.selectionClick();
     if (widget.onOpenSearch != null) {
       widget.onOpenSearch!(categoryId);
     } else {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => SearchScreen(initialCategoryId: categoryId)),
+        MaterialPageRoute(
+          builder: (_) => SearchScreen(initialCategoryId: categoryId),
+        ),
       );
     }
   }
 
   void _openPostAdScreen() {
+    HapticFeedback.lightImpact();
     if (widget.onOpenPostAd != null) {
       widget.onOpenPostAd!();
     } else {
@@ -274,6 +488,80 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         MaterialPageRoute(builder: (_) => const PostAdScreen()),
       );
     }
+  }
+
+  void _showCityFilterSheet(bool isAr) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        final cities = _effectiveCities;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  isAr ? 'اختر المدينة لعرض الإعلانات' : 'Filtrer par ville',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _CityChoiceChip(
+                      label: isAr ? 'كل المغرب 🌍' : 'Tout le Maroc 🌍',
+                      active: _selectedCityId == null,
+                      onTap: () {
+                        setState(() => _selectedCityId = null);
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                    ...cities.map((c) {
+                      final id = int.tryParse(c['id'].toString());
+                      final lbl = (isAr
+                              ? (c['name_ar'] ?? c['name'])
+                              : (c['name_fr'] ?? c['name']))
+                          .toString();
+                      return _CityChoiceChip(
+                        label: lbl,
+                        active: _selectedCityId == id,
+                        onTap: () {
+                          setState(() => _selectedCityId = id);
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -339,12 +627,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                // Clean Notification Bell Button (opens NotificationsScreen, no halo circle)
                                 PressableScale(
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const NotificationsScreen(),
+                                      builder: (_) =>
+                                          const NotificationsScreen(),
                                     ),
                                   ),
                                   child: Padding(
@@ -383,33 +671,139 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
 
-                        // 2. Original Hero Card with Live Red + White Distribution & Giant 3D Pop-Out Car
+                        // 2. Quick Search & City Selector Bar (Apple Soft Surface)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: PressableScale(
+                                    onTap: () => _openSearchScreen(
+                                      _selectedFeedCategoryId,
+                                    ),
+                                    child: Container(
+                                      height: 46,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 15,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _surface,
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            CupertinoIcons.search,
+                                            size: 17,
+                                            color: _muted,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              isAr
+                                                  ? 'ابحث عن سيارة، شقة، آيفون...'
+                                                  : 'Rechercher voiture, immo, iPhone...',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: _muted,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                PressableScale(
+                                  onTap: () => _showCityFilterSheet(isAr),
+                                  child: Container(
+                                    height: 46,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 13,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _selectedCityId != null
+                                          ? _primarySoft
+                                          : _surface,
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.location_solid,
+                                          size: 14,
+                                          color: _selectedCityId != null
+                                              ? _primary
+                                              : _ink,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 85,
+                                          ),
+                                          child: Text(
+                                            _selectedCityLabel(isAr),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: _selectedCityId != null
+                                                  ? _primary
+                                                  : _ink,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Icon(
+                                          CupertinoIcons.chevron_down,
+                                          size: 11,
+                                          color: _selectedCityId != null
+                                              ? _primary
+                                              : _muted,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // 3. Original Hero Card with Live Red + White Distribution & Giant 3D Pop-Out Car
                         SliverToBoxAdapter(
                           child: _buildHeroStage(isAr),
                         ),
 
-                        // 3. Categories Bento Section with Staggered Scroll Reveal
+                        // 4. Clean Non-Overlapping Categories Bento Strip
                         SliverToBoxAdapter(
                           child: _buildCategoriesBento(s, isAr),
                         ),
 
-                        // 4. Stage 1: Trending Now Carousel
+                        // 5. Stage 1: Trending Now Carousel
                         if (trending.isNotEmpty)
                           SliverToBoxAdapter(
                             child: _buildTrendingSection(trending, isAr),
                           ),
 
-                        // 5. Verified Pro Boutiques Strip
+                        // 6. Verified Pro Boutiques Strip
                         SliverToBoxAdapter(
                           child: _buildStoresBanner(isAr),
                         ),
 
-                        // 6. Stage 2: Smart Personalized Feed Header + Category Chips
+                        // 7. Stage 2: Smart Personalized Feed Header + Category Chips
                         SliverToBoxAdapter(
                           child: _buildSmartFeedHeader(isAr),
                         ),
 
-                        // 7. Smart Feed Grid with ScrollReveal Physics
+                        // 8. Smart Feed Grid with ScrollReveal Physics
                         if (feedAds.isEmpty)
                           SliverToBoxAdapter(
                             child: IllustratedStateView(
@@ -417,34 +811,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               fallbackIcon: CupertinoIcons.square_grid_2x2,
                               imageSize: 156,
                               title: isAr
-                                  ? 'لا توجد إعلانات في هذا التصنيف حالياً'
-                                  : 'Aucune annonce dans cette catégorie',
+                                  ? 'لا توجد إعلانات في هذا الفلتر حالياً'
+                                  : 'Aucune annonce pour ce filtre',
                               subtitle: isAr
-                                  ? 'جرب اختيار تصنيف آخر أو اعرض جميع الإعلانات المقترحة لك.'
-                                  : 'Essayez une autre catégorie ou affichez toutes les annonces recommandées.',
-                              actionLabel: isAr ? 'عرض جميع الإعلانات' : 'Voir toutes les annonces',
-                              onAction: () => setState(() => _selectedFeedCategoryId = null),
+                                  ? 'جرب اختيار تصنيف آخر أو عرض جميع المدن.'
+                                  : 'Essayez une autre catégorie ou affichez toutes les villes.',
+                              actionLabel: isAr
+                                  ? 'عرض جميع الإعلانات'
+                                  : 'Voir toutes les annonces',
+                              onAction: () => setState(() {
+                                _selectedFeedCategoryId = null;
+                                _selectedCityId = null;
+                              }),
                             ),
                           )
                         else
                           SliverPadding(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                             sliver: SliverGrid(
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
                                 mainAxisSpacing: 14,
                                 crossAxisSpacing: 14,
-                                childAspectRatio: 0.67,
+                                childAspectRatio: 0.69,
                               ),
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                                   final ad = feedAds[index];
-                                  final id = int.tryParse((ad['id'] ?? index).toString()) ?? index;
+                                  final id = int.tryParse(
+                                        (ad['id'] ?? index).toString(),
+                                      ) ??
+                                      index;
                                   return ScrollReveal(
-                                    key: ValueKey('feed_ad_${id}_${_selectedFeedCategoryId ?? 0}'),
-                                    delay: Duration(milliseconds: (index % 6) * 55),
-                                    beginOffset: const Offset(0, 26),
-                                    beginScale: 0.95,
+                                    key: ValueKey(
+                                      'feed_ad_${id}_${_selectedFeedCategoryId ?? 0}_${_selectedCityId ?? 0}',
+                                    ),
+                                    delay: Duration(
+                                      milliseconds: (index % 6) * 50,
+                                    ),
+                                    beginOffset: const Offset(0, 22),
+                                    beginScale: 0.96,
                                     child: AdCard(ad: ad),
                                   );
                                 },
@@ -463,7 +870,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildHeroStage(bool isAr) {
     final s = _state.s;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -497,7 +904,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             clipBehavior: Clip.antiAlias,
             child: Stack(
               children: [
-                // Top-End Soft Ambient Glow (above the car, NOT under the wheels!)
                 PositionedDirectional(
                   end: -10,
                   top: -55,
@@ -517,7 +923,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
-                // Subtle White Shimmer Ribbon at Top-Start
                 PositionedDirectional(
                   start: -30,
                   top: -35,
@@ -536,7 +941,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 152, 20),
+                  padding:
+                      const EdgeInsetsDirectional.fromSTEB(20, 20, 152, 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -570,7 +976,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   const SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
-                                      s.tr('مساعد أبولو الذكي • LIVE', 'AI Deal Planner • LIVE'),
+                                      s.tr(
+                                        'مساعد أبولو الذكي • LIVE',
+                                        'AI Deal Planner • LIVE',
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
@@ -703,7 +1112,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // 3D Ground Contact Shadow under the Car (extending outside the card!)
+          // 3D Ground Contact Shadow under the Car
           PositionedDirectional(
             end: -10,
             bottom: -16,
@@ -725,19 +1134,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // Giant Photorealistic 3D SUV Coupé bursting OUTSIDE the Hero Card!
+          // Giant Photorealistic 3D SUV Coupé bursting OUTSIDE the Hero Card with subtle float
           PositionedDirectional(
             end: -22,
             bottom: -24,
             width: 232,
             height: 168,
             child: IgnorePointer(
-              child: Transform.flip(
-                flipX: s.isAr,
-                child: Image.asset(
-                  'assets/images/hero_car.png',
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
+              child: AnimatedBuilder(
+                animation: _carFloatController,
+                builder: (context, child) {
+                  final dy =
+                      math.sin(_carFloatController.value * math.pi) * 3.5;
+                  return Transform.translate(
+                    offset: Offset(0, -dy),
+                    child: child,
+                  );
+                },
+                child: Transform.flip(
+                  flipX: s.isAr,
+                  child: Image.asset(
+                    'assets/images/hero_car.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
                 ),
               ),
             ),
@@ -747,7 +1167,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  /// Categories Bento Strip with Staggered Reveal & Tactile Press
+  /// Harmonious Non-Overlapping Categories Strip (Icon on top, clean 1-line title below)
   Widget _buildCategoriesBento(AppStrings s, bool isAr) {
     if (_categories.isEmpty) return const SizedBox.shrink();
 
@@ -759,34 +1179,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     isAr ? 'التصنيفات' : 'Catégories',
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 18.5,
                       fontWeight: FontWeight.w800,
                       color: _ink,
                       letterSpacing: -0.4,
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => _openSearchScreen(),
+                    onTap: () => _openSearchScreen(_selectedFeedCategoryId),
                     child: Row(
                       children: [
                         Text(
                           isAr ? 'عرض الكل' : 'Tout voir',
                           style: const TextStyle(
                             color: _primary,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             fontSize: 13,
                           ),
                         ),
                         const SizedBox(width: 2),
                         Icon(
-                          isAr ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
+                          isAr
+                              ? CupertinoIcons.chevron_left
+                              : CupertinoIcons.chevron_right,
                           size: 13,
                           color: _primary,
                         ),
@@ -798,89 +1220,79 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 108,
+              height: 112,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 itemCount: _categories.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, idx) {
                   final cat = _categories[idx];
-                  final catId = int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
+                  final catId =
+                      int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
                   final assetPath = _state.assetForCategory(cat);
                   final label = _state.formatCategoryLabel(cat);
                   final isSelected = _selectedFeedCategoryId == catId;
 
                   return ScrollReveal(
-                    delay: Duration(milliseconds: 45 * (idx % 6)),
-                    beginOffset: const Offset(18, 0),
+                    delay: Duration(milliseconds: 40 * (idx % 6)),
+                    beginOffset: const Offset(16, 0),
                     child: PressableScale(
                       onTap: () {
+                        HapticFeedback.selectionClick();
                         _state.recordCategoryInterest(catId, weight: 3);
-                        _openSearchScreen(catId);
+                        setState(() {
+                          _selectedFeedCategoryId =
+                              isSelected ? null : catId;
+                        });
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 220),
-                        width: 126,
+                        width: 108,
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
+                          color: isSelected ? _primarySoft : _surface,
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isSelected
-                                ? _primary.withValues(alpha: 0.45)
-                                : const Color(0xFFE2E8F0),
-                            width: isSelected ? 1.5 : 1.0,
+                            color: isSelected ? _primary : Colors.transparent,
+                            width: 1.6,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _ink.withValues(alpha: 0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Dedicated 3D Icon Stage (Never overlaps text!)
+                            Expanded(
+                              child: Center(
+                                child: Image.asset(
+                                  assetPath,
+                                  height: 54,
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.high,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    CupertinoIcons.cube_box_fill,
+                                    size: 28,
+                                    color: _primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            // Single-Line Clean Balanced Label (Never breaks mid-word!)
+                            Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: isSelected ? _primary : _ink,
+                                letterSpacing: -0.2,
+                              ),
                             ),
                           ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Stack(
-                            children: [
-                              PositionedDirectional(
-                                top: 10,
-                                start: 12,
-                                end: 10,
-                                child: Text(
-                                  label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: _ink,
-                                    height: 1.2,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                              ),
-                              PositionedDirectional(
-                                end: 6,
-                                bottom: 4,
-                                child: SizedBox(
-                                  width: 68,
-                                  height: 62,
-                                  child: Image.asset(
-                                    assetPath,
-                                    fit: BoxFit.contain,
-                                    filterQuality: FilterQuality.high,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                      CupertinoIcons.cube_box_fill,
-                                      size: 30,
-                                      color: _primary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ),
@@ -894,8 +1306,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  /// Stage 1: Trending Now in Morocco
-  Widget _buildTrendingSection(List<Map<String, dynamic>> trending, bool isAr) {
+  /// Stage 1: Trending Now in Morocco (with interactive pagination dots)
+  Widget _buildTrendingSection(
+    List<Map<String, dynamic>> trending,
+    bool isAr,
+  ) {
     return ScrollReveal(
       delay: const Duration(milliseconds: 140),
       child: Padding(
@@ -904,22 +1319,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
                       Container(
-                        width: 26,
-                        height: 26,
+                        width: 28,
+                        height: 28,
                         decoration: BoxDecoration(
-                          color: _primary.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(8),
+                          color: _primarySoft,
+                          borderRadius: BorderRadius.circular(9),
                         ),
                         child: const Icon(
                           CupertinoIcons.flame_fill,
-                          size: 14,
+                          size: 15,
                           color: _primary,
                         ),
                       ),
@@ -927,7 +1342,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Text(
                         isAr ? 'الرائج الآن في المغرب' : 'Tendances au Maroc',
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 18.5,
                           fontWeight: FontWeight.w800,
                           color: _ink,
                           letterSpacing: -0.4,
@@ -935,36 +1350,49 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: () => _openSearchScreen(),
-                    child: Text(
-                      isAr ? 'عرض الكل' : 'Tout voir',
-                      style: const TextStyle(
-                        color: _primary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
+                  // Interactive Page Indicator Dots
+                  Row(
+                    children: List.generate(trending.length, (i) {
+                      final active = i == _activeTrendingPage;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 240),
+                        margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                        width: active ? 16 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: active ? _primary : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 220,
+              height: 216,
               child: PageView.builder(
                 controller: _trendingController,
                 itemCount: trending.length,
-                onPageChanged: (idx) => setState(() => _activeTrendingPage = idx),
+                onPageChanged: (idx) =>
+                    setState(() => _activeTrendingPage = idx),
                 itemBuilder: (context, idx) {
                   final ad = trending[idx];
-                  final adId = int.tryParse((ad['id'] ?? idx).toString()) ?? idx;
+                  final adId =
+                      int.tryParse((ad['id'] ?? idx).toString()) ?? idx;
                   final title = (ad['title'] ?? '').toString();
-                  final imgUrl = (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
-                  final cityMap = ad['city'] is Map ? ad['city'] as Map : const {};
+                  final imgUrl =
+                      (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
+                  final cityMap =
+                      ad['city'] is Map ? ad['city'] as Map : const {};
                   final cityName = (isAr
-                          ? (cityMap['name_ar'] ?? cityMap['name'] ?? 'المغرب')
-                          : (cityMap['name_fr'] ?? cityMap['name'] ?? 'Maroc'))
+                          ? (cityMap['name_ar'] ??
+                              cityMap['name'] ??
+                              'المغرب')
+                          : (cityMap['name_fr'] ??
+                              cityMap['name'] ??
+                              'Maroc'))
                       .toString();
                   final priceStr = (ad['price_formatted'] ??
                           (ad['price'] != null
@@ -983,13 +1411,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => AdDetailScreen(adId: adId, initialAd: ad),
+                            builder: (_) =>
+                                AdDetailScreen(adId: adId, initialAd: ad),
                           ),
                         );
                       },
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                           color: _ink,
                           boxShadow: [
                             BoxShadow(
@@ -1000,7 +1429,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
@@ -1011,7 +1440,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                     colors: [
-                                      Colors.black.withValues(alpha: 0.10),
+                                      Colors.black.withValues(alpha: 0.12),
                                       Colors.transparent,
                                       Colors.black.withValues(alpha: 0.84),
                                     ],
@@ -1029,13 +1458,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   ),
                                   decoration: BoxDecoration(
                                     color: _primary,
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Icon(
-                                        CupertinoIcons.graph_square_fill,
+                                        CupertinoIcons.flame_fill,
                                         color: Colors.white,
                                         size: 11,
                                       ),
@@ -1045,7 +1474,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10.5,
-                                          fontWeight: FontWeight.w700,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ],
@@ -1072,7 +1501,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     ),
                                     const SizedBox(height: 6),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Row(
                                           children: [
@@ -1086,7 +1516,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                               cityName,
                                               style: const TextStyle(
                                                 color: Colors.white70,
-                                                fontSize: 12,
+                                                fontSize: 12.5,
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
@@ -1100,15 +1530,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                             ),
                                             decoration: BoxDecoration(
                                               color: Colors.white,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
                                             ),
                                             child: Text(
                                               priceStr,
                                               style: const TextStyle(
-                                                color: _ink,
+                                                color: _primary,
                                                 fontWeight: FontWeight.w900,
                                                 fontSize: 12.5,
-                                                fontFeatures: [FontFeature.tabularFigures()],
+                                                fontFeatures: [
+                                                  FontFeature.tabularFigures(),
+                                                ],
                                               ),
                                             ),
                                           ),
@@ -1136,7 +1569,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return ScrollReveal(
       delay: const Duration(milliseconds: 180),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
         child: PressableScale(
           onTap: () => Navigator.push(
             context,
@@ -1145,23 +1578,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: _surface,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               children: [
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     CupertinoIcons.bag_fill,
-                    color: _ink,
+                    color: _primary,
                     size: 20,
                   ),
                 ),
@@ -1172,13 +1603,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     children: [
                       Row(
                         children: [
-                          Text(
-                            isAr ? 'المتاجر الرسمية الموثقة' : 'Boutiques Pro Vérifiées',
-                            style: const TextStyle(
-                              color: _ink,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14.5,
-                              letterSpacing: -0.2,
+                          Flexible(
+                            child: Text(
+                              isAr
+                                  ? 'المتاجر الرسمية الموثقة'
+                                  : 'Boutiques Pro Vérifiées',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _ink,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14.5,
+                                letterSpacing: -0.2,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -1193,18 +1630,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Text(
                         isAr
                             ? 'تصفح عروض الوكالات والمتاجر المضمونة في المغرب'
-                            : 'Découvrez les offres des professionnels certifiés au Maroc',
+                            : 'Découvrez les offres des professionnels certifiés',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: _muted,
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
                 Icon(
-                  isAr ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
+                  isAr
+                      ? CupertinoIcons.chevron_left
+                      : CupertinoIcons.chevron_right,
                   color: _muted,
                   size: 16,
                 ),
@@ -1225,45 +1666,54 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasInterests
-                          ? (isAr ? 'مقترح لك حسب اهتماماتك' : 'Recommandé pour vous')
-                          : (isAr ? 'أحدث الإعلانات المختارة' : 'Sélection pour vous'),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: _ink,
-                        letterSpacing: -0.4,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasInterests
+                            ? (isAr
+                                ? 'مقترح لك حسب اهتماماتك ✨'
+                                : 'Recommandé pour vous ✨')
+                            : (isAr
+                                ? 'أحدث الإعلانات المختارة'
+                                : 'Sélection pour vous'),
+                        style: const TextStyle(
+                          fontSize: 18.5,
+                          fontWeight: FontWeight.w800,
+                          color: _ink,
+                          letterSpacing: -0.4,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isAr
-                          ? 'مرتبة ذكياً حسب التصنيفات والمدن التي تهمك'
-                          : 'Triées selon vos catégories et recherches récentes',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: _muted,
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 2),
+                      Text(
+                        isAr
+                            ? 'مرتبة بالخوارزمية الذكية حسب الأقسام والمدن المفضلة لديك'
+                            : 'Triées intelligemment selon vos préférences et votre ville',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _muted,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                if (_selectedFeedCategoryId != null)
+                if (_selectedFeedCategoryId != null || _selectedCityId != null)
                   TextButton(
-                    onPressed: () => setState(() => _selectedFeedCategoryId = null),
+                    onPressed: () => setState(() {
+                      _selectedFeedCategoryId = null;
+                      _selectedCityId = null;
+                    }),
                     child: Text(
-                      isAr ? 'الكل' : 'Tout',
+                      isAr ? 'إعادة ضبط' : 'Réinitialiser',
                       style: const TextStyle(
                         color: _primary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         fontSize: 12.5,
                       ),
                     ),
@@ -1273,9 +1723,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 36,
+            height: 38,
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               itemCount: _categories.length + 1,
@@ -1284,18 +1734,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 if (idx == 0) {
                   final selected = _selectedFeedCategoryId == null;
                   return _buildFeedChip(
-                    label: isAr ? 'الكل' : 'Pour vous',
+                    label: isAr ? 'الكل ✨' : 'Pour vous ✨',
                     selected: selected,
                     onTap: () => setState(() => _selectedFeedCategoryId = null),
                   );
                 }
                 final cat = _categories[idx - 1];
-                final catId = int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
+                final catId =
+                    int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
                 final selected = _selectedFeedCategoryId == catId;
                 return _buildFeedChip(
                   label: _state.formatCategoryLabel(cat),
                   selected: selected,
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     _state.recordCategoryInterest(catId, weight: 2);
                     setState(() {
                       _selectedFeedCategoryId = selected ? null : catId;
@@ -1319,20 +1771,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? _ink : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? _ink : const Color(0xFFE2E8F0),
-          ),
+          color: selected ? _ink : _surface,
+          borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: selected ? Colors.white : _ink,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CityChoiceChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _CityChoiceChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFFE31B23) : const Color(0xFFF5F6F8),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: active ? Colors.white : const Color(0xFF0F172A),
           ),
         ),
       ),
