@@ -48,8 +48,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _red = Color(0xFFE31B23);
   static const Color _muted = Color(0xFF8A94A6);
-  static const Color _bg = Color(0xFFF6F7F9);
-  static const Color _incoming = Colors.white;
+  static const Color _bg = Color(0xFFFFFFFF);
+  static const Color _incoming = Color(0xFFF5F6F8);
   static const Color _incomingText = Color(0xFF1A2436);
   static const Color _fill = Color(0xFFF2F3F5);
 
@@ -69,7 +69,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (_focus.hasFocus) Future.delayed(const Duration(milliseconds: 300), _scrollToEnd);
     });
     _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) _loadMessages(silent: true);
+      if (mounted && !_isDemo) _loadMessages(silent: true);
     });
   }
 
@@ -94,7 +94,93 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
+  /// Demo conversations (id >= 9000) run fully offline with a simulated seller.
+  bool get _isDemo => widget.conversationId >= 9000;
+
+  List<Map<String, dynamic>> _seedDemoMessages() {
+    final now = DateTime.now();
+    String ago(int min) => now.subtract(Duration(minutes: min)).toIso8601String();
+    return [
+      {
+        'id': 1,
+        'body': _state.s.tr('السلام عليكم، الإعلان باقي متوفر؟', 'Bonjour, l\'annonce est toujours disponible ?'),
+        'is_mine': true,
+        'is_read': true,
+        'created_at': ago(42),
+      },
+      {
+        'id': 2,
+        'body': _state.s.tr(
+          'وعليكم السلام، أه باقي متوفر وفحالة ممتازة 👌',
+          'Bonjour, oui toujours disponible et en excellent état 👌',
+        ),
+        'is_mine': false,
+        'created_at': ago(40),
+      },
+      {
+        'id': 3,
+        'body': _state.s.tr(
+          'مرحبا بيك فأي وقت تجي تشوفو. الثمن فيه شوية ديال التفاوض.',
+          'Vous pouvez passer le voir. Le prix est légèrement négociable.',
+        ),
+        'is_mine': false,
+        'created_at': ago(39),
+      },
+    ];
+  }
+
+  Future<void> _simulateDemoReply(String userText) async {
+    await Future.delayed(const Duration(milliseconds: 1400));
+    if (!mounted) return;
+    final s = _state.s;
+    String reply;
+    if (userText.contains('💰') || userText.contains('عرض') || userText.contains('Offre')) {
+      reply = s.tr(
+        'شكراً على العرض 🙏 نقدر نقبلو إلا زدتي شوية، نتلاقاو ونتفاهمو مزيان.',
+        'Merci pour l\'offre 🙏 Si vous montez un peu, on peut conclure.',
+      );
+    } else if (userText.contains('فين') || userText.contains('Où')) {
+      reply = s.tr(
+        'أنا فكازا، المعاريف. نقدر نتلاقاو اليوم مع 6 العشية 📍',
+        'Je suis à Casablanca, Maârif. On peut se voir à 18h 📍',
+      );
+    } else if (userText.contains('ثمن') || userText.contains('prix')) {
+      reply = s.tr(
+        'الثمن قابل للتفاوض شوية، قدم ليا عرضك 💬',
+        'Le prix est un peu négociable, faites-moi une offre 💬',
+      );
+    } else {
+      reply = s.tr('أه مرحبا، باقي متوفر ✅', 'Oui, toujours disponible ✅');
+    }
+    setState(() {
+      for (final m in _messages) {
+        if (m is Map && m['is_mine'] == true) m['is_read'] = true;
+      }
+      _messages = [
+        ..._messages,
+        {
+          'id': DateTime.now().millisecondsSinceEpoch,
+          'body': reply,
+          'is_mine': false,
+          'created_at': DateTime.now().toIso8601String(),
+        },
+      ];
+    });
+    HapticFeedback.selectionClick();
+    _scrollToEnd();
+  }
+
   Future<void> _loadMessages({bool silent = false, bool scrollToBottom = false}) async {
+    if (_isDemo) {
+      if (_messages.isEmpty && mounted) {
+        setState(() {
+          _messages = _seedDemoMessages();
+          _loading = false;
+        });
+        if (scrollToBottom) _scrollToEnd();
+      }
+      return;
+    }
     try {
       final res = await _state.api.dio.get(
         '/chat/conversations/${widget.conversationId}/messages',
@@ -132,6 +218,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _sending = true;
     });
     _scrollToEnd();
+    if (_isDemo) {
+      await Future.delayed(const Duration(milliseconds: 350));
+      if (!mounted) return;
+      setState(() {
+        _pending.remove(pending);
+        _messages = [
+          ..._messages,
+          {
+            'id': DateTime.now().millisecondsSinceEpoch,
+            'body': text,
+            'is_mine': true,
+            'created_at': DateTime.now().toIso8601String(),
+          },
+        ];
+        _sending = false;
+      });
+      _scrollToEnd();
+      _simulateDemoReply(text);
+      return;
+    }
     bool ok = false;
     try {
       final res = await _state.api.dio.post(
@@ -392,7 +498,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: _bg,
+        color: _fill,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -754,9 +860,238 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
+  // ───────────────────────── Quick actions bar (Offer + quick replies) ─────────────────────────
+  int? _parsePrice(String? raw) {
+    if (raw == null) return null;
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return null;
+    return int.tryParse(digits);
+  }
+
+  String _fmtDh(int v) {
+    final str = v.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) buf.write(',');
+      buf.write(str[i]);
+    }
+    return '$buf DH';
+  }
+
+  void _showOfferSheet(dynamic s) {
+    HapticFeedback.mediumImpact();
+    final base = _parsePrice(widget.adPrice);
+    final customCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        Widget option(String label, int value) {
+          return GestureDetector(
+            onTap: () {
+              Navigator.pop(ctx);
+              _sendText(s.tr('💰 عرض سعر: ${_fmtDh(value)} ($label)', '💰 Offre de prix : ${_fmtDh(value)} ($label)'));
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F6F8),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _red)),
+                  const SizedBox(height: 4),
+                  Text(
+                    _fmtDh(value),
+                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: _ink),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDADDE2),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    s.tr('قدم عرض سعر 💰', 'Faire une offre 💰'),
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _ink),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    base != null
+                        ? s.tr('الثمن المعلن: ${_fmtDh(base)}', 'Prix affiché : ${_fmtDh(base)}')
+                        : s.tr('كتب الثمن لي بغيتي تقترح', 'Indiquez le prix proposé'),
+                    style: const TextStyle(fontSize: 13, color: _muted, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 16),
+                  if (base != null) ...[
+                    Row(
+                      children: [
+                        Expanded(child: option('-5%', (base * 0.95).round())),
+                        const SizedBox(width: 8),
+                        Expanded(child: option('-10%', (base * 0.90).round())),
+                        const SizedBox(width: 8),
+                        Expanded(child: option('-15%', (base * 0.85).round())),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F6F8),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: customCtrl,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: s.tr('ثمن آخر...', 'Autre montant...'),
+                              hintStyle: const TextStyle(color: _muted),
+                            ),
+                          ),
+                        ),
+                        const Text('DH', style: TextStyle(fontWeight: FontWeight.w900, color: _muted)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    onTap: () {
+                      final v = _parsePrice(customCtrl.text);
+                      if (v == null || v <= 0) return;
+                      Navigator.pop(ctx);
+                      _sendText(s.tr('💰 عرض سعر: ${_fmtDh(v)}', '💰 Offre de prix : ${_fmtDh(v)}'));
+                    },
+                    child: Container(
+                      height: 52,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _red,
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: [
+                          BoxShadow(color: _red.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6)),
+                        ],
+                      ),
+                      child: Text(
+                        s.tr('إرسال العرض', 'Envoyer l\'offre'),
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickBar(dynamic s) {
+    final chips = <String>[
+      s.tr('واش باقي متوفر؟', 'Toujours disponible ?'),
+      s.tr('واش الثمن قابل للتفاوض؟', 'Prix négociable ?'),
+      s.tr('فين نقدر نشوف السلعة؟', 'Où peut-on la voir ?'),
+      s.tr('نقدر نجي اليوم 👍', 'Je peux passer aujourd\'hui 👍'),
+    ];
+    return Container(
+      height: 46,
+      color: Colors.white,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+        children: [
+          GestureDetector(
+            onTap: () => _showOfferSheet(s),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFEE2A32), Color(0xFFD9141C)]),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(CupertinoIcons.tag_fill, color: Colors.white, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    s.tr('قدم عرض 💰', 'Faire une offre 💰'),
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ...chips.map(
+            (c) => Padding(
+              padding: const EdgeInsetsDirectional.only(start: 8),
+              child: GestureDetector(
+                onTap: () => _sendText(c),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F6F8),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    c,
+                    style: const TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ───────────────────────── Composer ─────────────────────────
   Widget _buildComposer(dynamic s) {
     final bool canSend = _msgCtrl.text.trim().isNotEmpty;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!canSend) _buildQuickBar(s),
+        _buildComposerRow(s, canSend),
+      ],
+    );
+  }
+
+  Widget _buildComposerRow(dynamic s, bool canSend) {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,

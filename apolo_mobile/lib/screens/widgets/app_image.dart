@@ -39,6 +39,17 @@ class AppImage extends StatelessWidget {
       return defaultFallback;
     }
 
+    // Local bundled assets (e.g. 3D category cutouts used in demo content)
+    if (url!.startsWith('assets/')) {
+      return Image.asset(
+        url!,
+        width: width,
+        height: height,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => defaultFallback,
+      );
+    }
+
     // Auto-calculate memory cache dimensions to cap raster footprint
     final int? targetMemWidth = memCacheWidth ??
         (width != null && width!.isFinite && width! > 0 ? (width! * 2).round() : null);

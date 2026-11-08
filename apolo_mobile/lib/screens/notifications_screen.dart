@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
+import 'chat_room_screen.dart';
 import 'widgets/kinetic_widgets.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -40,6 +41,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         'time': isAr ? 'منذ 4 دقائق' : 'Il y a 4 min',
         'asset': 'assets/images/cat_phones.png',
         'accent': const Color(0xFFE31B23),
+        'action': 'chat_offer',
+        'cta': isAr ? 'رد على العرض' : 'Répondre',
+      },
+      {
+        'id': 'n1b',
+        'category': 1,
+        'unread': true,
+        'title': isAr ? 'رسالة جديدة من سلمى' : 'Nouveau message de Salma',
+        'body': isAr
+            ? 'سلام، التليفون باقي متوفر؟ أنا فكازا نقدر نجي نشوفو اليوم.'
+            : 'Bonjour, le téléphone est toujours disponible ? Je peux passer aujourd’hui.',
+        'time': isAr ? 'منذ 15 دقيقة' : 'Il y a 15 min',
+        'asset': 'assets/images/cat_phones.png',
+        'accent': const Color(0xFF2563EB),
+        'action': 'chat_message',
+        'cta': isAr ? 'فتح المحادثة' : 'Ouvrir',
       },
       {
         'id': 'n2',
@@ -64,8 +81,59 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         'time': isAr ? 'أمس' : 'Hier',
         'asset': 'assets/images/hero_car.png',
         'accent': const Color(0xFF16A34A),
+        'action': 'chat_price',
+        'cta': isAr ? 'تواصل مع البائع' : 'Contacter',
+      },
+      {
+        'id': 'n4',
+        'category': 2,
+        'unread': false,
+        'title': isAr ? 'تم نشر إعلانك بنجاح 🎉' : 'Votre annonce est en ligne 🎉',
+        'body': isAr
+            ? 'إعلانك "شقة فاخرة - تامسنا" ولا ظاهر لآلاف المشترين فالمغرب.'
+            : 'Votre annonce « Appartement - Tamesna » est visible par des milliers d’acheteurs.',
+        'time': isAr ? 'منذ يومين' : 'Il y a 2 j',
+        'asset': 'assets/images/cat_realestate.png',
+        'accent': const Color(0xFFF59E0B),
       },
     ];
+  }
+
+  void _openNotification(Map<String, dynamic> item) {
+    setState(() => item['unread'] = false);
+    final action = item['action'] as String?;
+    if (action == null) return;
+    final isAr = _state.s.isAr;
+    late final Widget target;
+    switch (action) {
+      case 'chat_offer':
+        target = const ChatRoomScreen(
+          conversationId: 9001,
+          peerName: 'ياسين العلمي',
+          adTitle: 'Range Rover Sport SVR 2024 - حالة الوكالة',
+          adImage: 'assets/images/hero_car.png',
+          adPrice: '890,000 DH',
+        );
+        break;
+      case 'chat_message':
+        target = const ChatRoomScreen(
+          conversationId: 9002,
+          peerName: 'سلمى بنجلون',
+          adTitle: 'iPhone 16 Pro Max 256GB Desert Titanium',
+          adImage: 'assets/images/cat_phones.png',
+          adPrice: '13,200 DH',
+        );
+        break;
+      default:
+        target = ChatRoomScreen(
+          conversationId: 9005,
+          peerName: isAr ? 'معرض أوطو كازا' : 'Auto Casa',
+          adTitle: 'Range Rover Sport SVR 2024',
+          adImage: 'assets/images/hero_car.png',
+          adPrice: '818,800 DH',
+        );
+    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => target));
   }
 
   List<Map<String, dynamic>> get _filteredItems {
@@ -91,7 +159,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: Colors.white,
         body: CustomScrollView(
           physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           slivers: [
@@ -328,9 +396,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                             ),
                             child: PressableScale(
-                              onTap: () {
-                                setState(() => item['unread'] = false);
-                              },
+                              onTap: () => _openNotification(item),
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -415,13 +481,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                             ),
                                           ),
                                           const SizedBox(height: 8),
-                                          Text(
-                                            item['time'] as String,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF94A3B8),
-                                            ),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                item['time'] as String,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF94A3B8),
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              if (item['cta'] != null)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: (item['accent'] as Color)
+                                                        .withValues(alpha: 0.10),
+                                                    borderRadius: BorderRadius.circular(999),
+                                                  ),
+                                                  child: Text(
+                                                    item['cta'] as String,
+                                                    style: TextStyle(
+                                                      fontSize: 11.5,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: item['accent'] as Color,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ],
                                       ),
