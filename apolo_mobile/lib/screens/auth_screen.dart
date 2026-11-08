@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import 'post_ad_screen.dart';
 import 'widgets/kinetic_widgets.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -61,7 +63,7 @@ class _AuthScreenState extends State<AuthScreen>
     super.initState();
     _celebrationCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 3600),
     );
     _isLogin = widget.initialRegisterMode ? false : widget.initialIsLogin;
     _loadMetadata();
@@ -307,17 +309,28 @@ class _AuthScreenState extends State<AuthScreen>
 
   Future<void> _triggerCelebrationAndFinish() async {
     if (!mounted) return;
+    HapticFeedback.heavyImpact();
     setState(() {
       _loading = false;
       _showCelebration = true;
     });
-    _celebrationCtrl.forward(from: 0);
-    await Future.delayed(const Duration(milliseconds: 1650));
-    if (!mounted) return;
+    _celebrationCtrl.repeat();
+  }
+
+  void _finishAndExit() {
+    _celebrationCtrl.stop();
     widget.onSuccess?.call();
     if (Navigator.canPop(context)) {
       Navigator.pop(context, true);
     }
+  }
+
+  void _finishAndGoToPostAd() {
+    _celebrationCtrl.stop();
+    widget.onSuccess?.call();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const PostAdScreen()),
+    );
   }
 
   Future<void> _signInWithGoogle() async {
@@ -1189,80 +1202,344 @@ class _AuthScreenState extends State<AuthScreen>
         ? _nameCtrl.text.trim()
         : (_state.currentUser?['name']?.toString() ?? (isAr ? 'أمين' : 'Amine'));
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: AnimatedBuilder(
-          animation: _celebrationCtrl,
-          builder: (context, _) {
-            final t = Curves.easeOutBack.transform(
-              _celebrationCtrl.value.clamp(0.0, 1.0),
-            );
-            return Transform.scale(
-              scale: 0.85 + (0.15 * t),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Floating3DIllustration(
-                    assetPath: 'assets/images/auth_hero_3d.png',
-                    size: 164,
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
-                      borderRadius: BorderRadius.circular(999),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 1. Continuous Animated Confetti, Fireworks & Sparkles Canvas
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _celebrationCtrl,
+            builder: (context, _) {
+              return CustomPaint(
+                painter: _AuthCelebrationConfettiPainter(
+                  progress: _celebrationCtrl.value,
+                ),
+                size: Size.infinite,
+              );
+            },
+          ),
+        ),
+
+        // 2. Centered Apple-Whitespace Celebration Stage
+        Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.elasticOut,
+                builder: (context, scaleVal, child) {
+                  return Transform.scale(
+                    scale: 0.82 + (0.18 * scaleVal),
+                    child: child,
+                  );
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Animated Party GIF / 3D Celebration Badge Showcase
+                    SizedBox(
+                      width: 210,
+                      height: 210,
+                      child: AnimatedBuilder(
+                        animation: _celebrationCtrl,
+                        builder: (context, _) {
+                          final pulse = math.sin(_celebrationCtrl.value * math.pi * 2);
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Outer expanding celebration glow ring
+                              Transform.scale(
+                                scale: 1.0 + (pulse.abs() * 0.14),
+                                child: Container(
+                                  width: 176,
+                                  height: 176,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        _primary.withValues(alpha: 0.16),
+                                        const Color(0xFF10B981).withValues(alpha: 0.08),
+                                        Colors.white.withValues(alpha: 0.0),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Rotating Orbiting Celebration Badges (GIF-like motion loop)
+                              ...List.generate(4, (i) {
+                                final angle = (_celebrationCtrl.value * math.pi * 2) +
+                                    (i * math.pi / 2);
+                                final dx = math.cos(angle) * 78;
+                                final dy = math.sin(angle) * 68;
+                                const emojis = ['🎉', '✨', '🎊', '🚀'];
+                                return Transform.translate(
+                                  offset: Offset(dx, dy),
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _ink.withValues(alpha: 0.08),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      emojis[i],
+                                      style: const TextStyle(fontSize: 17),
+                                    ),
+                                  ),
+                                );
+                              }),
+                              // Center Floating 3D Sculpture + Animated Party Popper GIF Badge
+                              const Floating3DIllustration(
+                                assetPath: 'assets/images/auth_hero_3d.png',
+                                size: 146,
+                              ),
+                              Positioned(
+                                bottom: 14,
+                                right: 24,
+                                child: Transform.rotate(
+                                  angle: pulse * 0.18,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981),
+                                      borderRadius: BorderRadius.circular(999),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF10B981)
+                                              .withValues(alpha: 0.35),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.checkmark_seal_fill,
+                                          size: 14,
+                                          color: Colors.white,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          '100%',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          CupertinoIcons.checkmark_alt_circle_fill,
-                          color: Color(0xFF16A34A),
-                          size: 16,
+
+                    const SizedBox(height: 12),
+
+                    // Verified Pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            CupertinoIcons.checkmark_alt_circle_fill,
+                            color: Color(0xFF16A34A),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isLogin
+                                ? (isAr ? 'تم تسجيل الدخول بنجاح 🎉' : 'Connexion réussie 🎉')
+                                : (isAr ? 'مبروك! حسابك واجد 100% 🎉' : 'Félicitations ! Compte activé 🎉'),
+                            style: const TextStyle(
+                              color: Color(0xFF15803D),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Text(
+                      isAr ? 'مرحباً بك، $displayName 👋' : 'Bienvenue, $displayName 👋',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 27,
+                        fontWeight: FontWeight.w900,
+                        color: _ink,
+                        letterSpacing: -0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isAr
+                          ? 'تجهز الـ Feed الذكي ديالك على حساب اهتماماتك ومدينتك. تقدر دابا تحط أول إعلان مجاناً أو تصفح همزات اليوم!'
+                          : 'Votre flux intelligent est configuré. Publiez votre première annonce gratuitement ou explorez les offres !',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: _muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Primary CTA: Go Directly to Post Ad Screen
+                    PressableScale(
+                      onTap: _finishAndGoToPostAd,
+                      child: Container(
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: _primary,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _primary.withValues(alpha: 0.25),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isAr ? 'تم تفعيل حسابك بنجاح' : 'Compte activé avec succès',
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.plus_circle_fill,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              isAr ? 'إضافة إعلان جديد الآن +' : 'Publier une annonce +',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Secondary CTA: Continue to Home / Profile
+                    PressableScale(
+                      onTap: _finishAndExit,
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: _surface,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          isAr ? 'تصفح الإعلانات فالـ Home' : 'Explorer l\'accueil',
                           style: const TextStyle(
-                            color: Color(0xFF15803D),
-                            fontSize: 12.5,
+                            color: _ink,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    isAr ? 'مرحباً بك، $displayName' : 'Bienvenue, $displayName',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: _ink,
-                      letterSpacing: -0.6,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    isAr
-                        ? 'تم تجهيز الـ Feed الذكي حسب اهتماماتك ومدينتك.'
-                        : 'Votre flux intelligent est prêt selon vos préférences.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: _muted,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            );
-          },
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
+}
+
+class _AuthCelebrationConfettiPainter extends CustomPainter {
+  final double progress;
+
+  _AuthCelebrationConfettiPainter({required this.progress});
+
+  static const List<Color> _palette = [
+    Color(0xFFE31B23),
+    Color(0xFF10B981),
+    Color(0xFFF59E0B),
+    Color(0xFF3B82F6),
+    Color(0xFFEC4899),
+    Color(0xFF8B5CF6),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    const int count = 58;
+
+    for (int i = 0; i < count; i++) {
+      final double seed = (i * 73.19) % 1.0;
+      final double xBase = ((i * 37.0) % 100) / 100.0;
+      final double speed = 0.65 + (seed * 0.75);
+      final double t = ((progress * speed) + (seed * 0.45)) % 1.0;
+
+      final double sway = math.sin((t * 6.0) + i) * 24.0;
+      final double x = (xBase * size.width) + sway;
+      final double y = (t * (size.height + 80)) - 40;
+
+      final Color color = _palette[i % _palette.length];
+      final double alpha = (1.0 - (t * 0.55)).clamp(0.0, 1.0);
+      paint.color = color.withValues(alpha: alpha);
+
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(t * math.pi * 4 * (i.isEven ? 1 : -1));
+
+      if (i % 3 == 0) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(-6, -3, 12, 6),
+            const Radius.circular(2),
+          ),
+          paint,
+        );
+      } else if (i % 3 == 1) {
+        canvas.drawCircle(Offset.zero, 4.2, paint);
+      } else {
+        canvas.drawRect(const Rect.fromLTWH(-4, -4, 8, 8), paint);
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AuthCelebrationConfettiPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
