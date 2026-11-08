@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/state/app_state.dart';
 import 'ad_detail_screen.dart';
 import 'chat_room_screen.dart';
+import 'seller_profile_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
@@ -439,6 +440,24 @@ class _AdReelsScreenState extends State<AdReelsScreen>
                       ),
                     );
                   },
+                  onOpenSellerProfile: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SellerProfileScreen(
+                          sellerId: reel['seller_id'] ?? adId,
+                          sellerName: reel['seller_name'] as String,
+                          sellerAvatar: reel['seller_avatar'] as String?,
+                          sellerPhone: reel['seller_phone'] as String?,
+                          sellerCity: reel['city_name'] as String?,
+                          isVerified: reel['seller_verified'] == true,
+                          isOnline: reel['seller_online'] == true,
+                          initialAd: reel['raw_ad'],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -651,6 +670,7 @@ class _ReelAdItemView extends StatefulWidget {
   final VoidCallback onCallSeller;
   final VoidCallback onShare;
   final VoidCallback onOpenFullAd;
+  final VoidCallback onOpenSellerProfile;
 
   const _ReelAdItemView({
     required this.reel,
@@ -662,6 +682,7 @@ class _ReelAdItemView extends StatefulWidget {
     required this.onCallSeller,
     required this.onShare,
     required this.onOpenFullAd,
+    required this.onOpenSellerProfile,
   });
 
   @override
@@ -909,50 +930,53 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Seller Avatar with Online Indicator & Verified Badge
-                Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.45),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: sellerAvatar != null && sellerAvatar.isNotEmpty
-                            ? Image.network(
-                                sellerAvatar,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    _buildAvatarFallback(sellerName),
-                              )
-                            : _buildAvatarFallback(sellerName),
-                      ),
-                    ),
-                    if (isOnline)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black, width: 2),
-                          ),
+                PressableScale(
+                  onTap: widget.onOpenSellerProfile,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.45),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: sellerAvatar != null && sellerAvatar.isNotEmpty
+                              ? Image.network(
+                                  sellerAvatar,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildAvatarFallback(sellerName),
+                                )
+                              : _buildAvatarFallback(sellerName),
                         ),
                       ),
-                  ],
+                      if (isOnline)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.black, width: 2),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 18),
 
@@ -1090,30 +1114,39 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
                 ),
                 const SizedBox(height: 7),
 
-                // Seller Name with Verified Blue Shield
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '@$sellerName',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w900,
-                        shadows: [
-                          BoxShadow(color: Colors.black, blurRadius: 6),
-                        ],
+                // Seller Name with Verified Blue Shield (Tappable to view Profile)
+                PressableScale(
+                  onTap: widget.onOpenSellerProfile,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '@$sellerName',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            BoxShadow(color: Colors.black, blurRadius: 6),
+                          ],
+                        ),
                       ),
-                    ),
-                    if (isVerified) ...[
-                      const SizedBox(width: 5),
-                      const Icon(
-                        CupertinoIcons.checkmark_seal_fill,
-                        color: Color(0xFF38BDF8),
-                        size: 15,
+                      if (isVerified) ...[
+                        const SizedBox(width: 5),
+                        const Icon(
+                          CupertinoIcons.checkmark_seal_fill,
+                          color: Color(0xFF38BDF8),
+                          size: 15,
+                        ),
+                      ],
+                      const SizedBox(width: 6),
+                      Icon(
+                        isAr ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
+                        color: Colors.white70,
+                        size: 12,
                       ),
                     ],
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 5),
 

@@ -13,6 +13,7 @@ import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 import 'chat_room_screen.dart';
 import 'privacy_compliance_screen.dart';
+import 'seller_profile_screen.dart';
 import 'store_detail_screen.dart';
 import 'auth_screen.dart';
 
@@ -1098,92 +1099,147 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            AppAvatar(
-                              url: (store?['logo_url'] ?? seller?['avatar_url'])
-                                  ?.toString(),
-                              radius: 26,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          sellerDisplayName,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 16.5,
-                                            fontWeight: FontWeight.w800,
-                                            color: _ink,
+                        PressableScale(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SellerProfileScreen(
+                                  sellerId: int.tryParse(seller?['id']?.toString() ?? '0') ?? widget.adId,
+                                  sellerName: sellerDisplayName,
+                                  sellerAvatar: (store?['logo_url'] ?? seller?['avatar_url'])?.toString(),
+                                  sellerPhone: phone,
+                                  sellerCity: cityName,
+                                  isVerified: seller?['is_verified'] == true || store != null,
+                                  isOnline: true,
+                                  initialAd: ad,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              AppAvatar(
+                                url: (store?['logo_url'] ?? seller?['avatar_url'])
+                                    ?.toString(),
+                                radius: 26,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            sellerDisplayName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 16.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: _ink,
+                                            ),
                                           ),
                                         ),
+                                        const SizedBox(width: 5),
+                                        const Icon(
+                                          CupertinoIcons.checkmark_seal_fill,
+                                          size: 16,
+                                          color: _red,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      store != null
+                                          ? s.tr(
+                                              'متجر احترافي موثق • كيجاوب بسرعة فـ الشات',
+                                              'Boutique Pro Vérifiée • Réponse rapide',
+                                            )
+                                          : s.tr(
+                                              'عضو موثق • اضغط لعرض البروفايل الكامل',
+                                              'Membre vérifié • Toucher pour voir le profil',
+                                            ),
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        color: _muted,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      const SizedBox(width: 5),
-                                      const Icon(
-                                        CupertinoIcons.checkmark_seal_fill,
-                                        size: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (store != null)
+                                PressableScale(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => StoreDetailScreen(
+                                          subdomain: store['subdomain'].toString(),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 9,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      s.tr('المتجر', 'Boutique'),
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
                                         color: _red,
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    store != null
-                                        ? s.tr(
-                                            'متجر احترافي موثق • كيجاوب بسرعة فـ الشات',
-                                            'Boutique Pro Vérifiée • Réponse rapide',
-                                          )
-                                        : s.tr(
-                                            'عضو موثق • متواجد فـ شات التطبيق',
-                                            'Membre vérifié • Actif sur le chat',
-                                          ),
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      color: _muted,
-                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            if (store != null)
-                              PressableScale(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => StoreDetailScreen(
-                                        subdomain: store['subdomain'].toString(),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Container(
+                                )
+                              else
+                                Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 9,
+                                    horizontal: 12,
+                                    vertical: 7,
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    s.tr('المتجر', 'Boutique'),
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: _red,
+                                    border: Border.all(
+                                      color: const Color(0xFFE2E8F0),
                                     ),
                                   ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        s.tr('البروفايل', 'Profil'),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: _ink,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        s.isAr
+                                            ? CupertinoIcons.chevron_left
+                                            : CupertinoIcons.chevron_right,
+                                        size: 11,
+                                        color: _muted,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
 
                         if (!isOwner) ...[

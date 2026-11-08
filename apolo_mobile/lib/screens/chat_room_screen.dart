@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../core/state/app_state.dart';
+import 'seller_profile_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
 
@@ -330,35 +331,76 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         size: 24,
                       ),
                     ),
-                    widget.peerAvatar != null && widget.peerAvatar!.trim().isNotEmpty
-                        ? AppAvatar(url: widget.peerAvatar, radius: 21, iconColor: _red)
-                        : ChatInitialAvatar(name: widget.peerName, size: 42),
-                    const SizedBox(width: 11),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.peerName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
-                              color: _ink,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SellerProfileScreen(
+                                sellerId: widget.conversationId,
+                                sellerName: widget.peerName,
+                                sellerAvatar: widget.peerAvatar,
+                                initialAd: widget.adTitle.isNotEmpty
+                                    ? {
+                                        'title': widget.adTitle,
+                                        'price_formatted': widget.adPrice ?? '',
+                                        'main_image': widget.adImage ?? '',
+                                      }
+                                    : null,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            _sending
-                                ? s.tr('جاري الإرسال...', 'Envoi en cours...')
-                                : s.tr('محادثة آمنة على أبولو', 'Discussion sécurisée Apolo'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12.5, color: _muted),
-                          ),
-                        ],
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            widget.peerAvatar != null && widget.peerAvatar!.trim().isNotEmpty
+                                ? AppAvatar(url: widget.peerAvatar, radius: 21, iconColor: _red)
+                                : ChatInitialAvatar(name: widget.peerName, size: 42),
+                            const SizedBox(width: 11),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          widget.peerName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 16.5,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -0.3,
+                                            color: _ink,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        CupertinoIcons.checkmark_seal_fill,
+                                        size: 14,
+                                        color: Color(0xFF0284C7),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    _sending
+                                        ? s.tr('جاري الإرسال...', 'Envoi en cours...')
+                                        : s.tr('اضغط لعرض البروفايل الكامل', 'Toucher pour voir le profil'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11.5, color: _muted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     _headerBtn(CupertinoIcons.ellipsis, () => _showMoreSheet(s)),
