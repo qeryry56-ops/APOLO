@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -464,7 +464,19 @@ class _PostAdScreenState extends State<PostAdScreen>
       return;
     }
     if (!_state.isLoggedIn) {
-      _triggerCelebration();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_state.s.isAr
+              ? 'يجب تسجيل الدخول أولاً لتتمكن من نشر إعلانك على المنصة'
+              : 'Veuillez vous connecter pour publier votre annonce'),
+          backgroundColor: const Color(0xFFE31B23),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthScreen(initialIsLogin: true)),
+      );
       return;
     }
 
@@ -514,20 +526,39 @@ class _PostAdScreenState extends State<PostAdScreen>
 
       if (mounted) {
         setState(() => _submitting = false);
-        if (res.data is Map && res.data['status'] == 'success') {
+        if (res.data is Map && (res.data['status'] == 'success' || res.statusCode == 200 || res.statusCode == 201)) {
           _triggerCelebration();
           return;
+        } else {
+          final errMsg = res.data is Map ? (res.data['message'] ?? 'فشل نشر الإعلان') : 'فشل نشر الإعلان';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errMsg.toString()),
+              backgroundColor: const Color(0xFFE31B23),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         }
       }
-      // Fallback celebration in demo/staging mode
+    } catch (e) {
       if (mounted) {
         setState(() => _submitting = false);
-        _triggerCelebration();
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _submitting = false);
-        _triggerCelebration();
+        String errMsg = _state.s.isAr
+            ? 'تعذر نشر الإعلان، يرجى التأكد من البيانات والمحاولة مجدداً'
+            : 'Échec de la publication de votre annonce';
+        try {
+          final dynamic dynErr = e;
+          if (dynErr.response?.data is Map) {
+            errMsg = (dynErr.response.data['message'] ?? errMsg).toString();
+          }
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errMsg),
+            backgroundColor: const Color(0xFFE31B23),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }

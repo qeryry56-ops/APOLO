@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -86,93 +86,52 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
 
+      final List<Map<String, dynamic>> combined = [];
+      if (widget.initialAd != null) {
+        combined.add(widget.initialAd!);
+      }
+      for (final p in parsed) {
+        if (!combined.any((a) => a['id'] == p['id'])) {
+          combined.add(p);
+        }
+      }
+
       if (mounted) {
         setState(() {
-          _sellerAds = parsed.isNotEmpty ? parsed : _generateFallbackSellerAds();
+          _sellerAds = combined;
           _isLoading = false;
         });
       }
     } catch (_) {
+      final List<Map<String, dynamic>> combined = [];
+      if (widget.initialAd != null) {
+        combined.add(widget.initialAd!);
+      }
       if (mounted) {
         setState(() {
-          _sellerAds = _generateFallbackSellerAds();
+          _sellerAds = combined;
           _isLoading = false;
         });
       }
     }
   }
 
-  List<Map<String, dynamic>> _generateFallbackSellerAds() {
-    // If an initial ad was passed, ensure it is at the top
-    final List<Map<String, dynamic>> list = [];
-    if (widget.initialAd != null) {
-      list.add(widget.initialAd!);
-    }
-
-    // Curated showcase ads for this seller
-    final mockTemplates = [
-      {
-        'id': 9101,
-        'title': 'Porsche Macan GTS 2025 — Pack Sport Chrono',
-        'price_formatted': '980 000 DH',
-        'price': 980000,
-        'city_name': widget.sellerCity ?? 'الدار البيضاء • المعاريف',
-        'main_image':
-            'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80',
-        'negotiable': true,
-        'views_count': 1420,
-        'likes_count': 238,
-      },
-      {
-        'id': 9102,
-        'title': 'iPhone 16 Pro Max 256Go Titane Naturel — Scellé',
-        'price_formatted': '14 200 DH',
-        'price': 14200,
-        'city_name': widget.sellerCity ?? 'الدار البيضاء • المعاريف',
-        'main_image':
-            'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&q=80',
-        'negotiable': true,
-        'views_count': 980,
-        'likes_count': 174,
-      },
-      {
-        'id': 9103,
-        'title': 'MacBook Pro 16" M3 Max 36GB / 1TB SSD Noir Sidéral',
-        'price_formatted': '31 500 DH',
-        'price': 31500,
-        'city_name': widget.sellerCity ?? 'الدار البيضاء • المعاريف',
-        'main_image':
-            'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80',
-        'negotiable': false,
-        'views_count': 640,
-        'likes_count': 142,
-      },
-      {
-        'id': 9104,
-        'title': 'Montre Rolex Submariner Date 41mm Full Set 2024',
-        'price_formatted': '138 000 DH',
-        'price': 138000,
-        'city_name': widget.sellerCity ?? 'الدار البيضاء • المعاريف',
-        'main_image':
-            'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80',
-        'negotiable': true,
-        'views_count': 790,
-        'likes_count': 195,
-      },
-    ];
-
-    for (final t in mockTemplates) {
-      if (!list.any((a) => a['id'] == t['id'])) {
-        list.add(t);
-      }
-    }
-    return list;
-  }
-
   void _callSeller() async {
     HapticFeedback.mediumImpact();
-    final phone = widget.sellerPhone ?? '0661123456';
+    final phone = widget.sellerPhone ?? '';
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleanPhone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_state.s.isAr ? 'رقم هاتف البائع غير متوفر حالياً' : 'Numéro non disponible'),
+            backgroundColor: _red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
     final uri = Uri.parse('tel:$cleanPhone');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);

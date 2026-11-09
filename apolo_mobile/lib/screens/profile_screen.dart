@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -45,12 +45,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _surface = Color(0xFFF5F6F8);
   static const Color _hairline = Color(0xFFECEEF2);
 
-  static const List<String> _studioAvatars = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=80',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&q=80',
-  ];
 
   @override
   void initState() {
@@ -93,12 +87,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           rawList = (res.data['data'] as List?) ?? [];
         }
       }
-      if (rawList.isEmpty) {
-        final fallback = await _state.api.dio.get('/ads', queryParameters: {'per_page': 6});
-        if (fallback.data is Map) {
-          rawList = ((fallback.data['data'] as List?) ?? []).take(6).toList();
-        }
-      }
       final parsed = rawList
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
@@ -106,68 +94,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (mounted) {
         setState(() {
-          _myAds = parsed.isNotEmpty ? parsed : _buildSampleSellerAds();
+          _myAds = parsed;
           _loadingAds = false;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _myAds = _buildSampleSellerAds();
+          _myAds = [];
           _loadingAds = false;
         });
       }
     }
   }
 
-  List<Map<String, dynamic>> _buildSampleSellerAds() {
-    return [
-      {
-        'id': 9101,
-        'title': 'iPhone 16 Pro Max 256Go',
-        'price': 14200,
-        'price_formatted': '14 200 DH',
-        'views_count': 640,
-        'is_featured': true,
-        'city': {'id': 1, 'name': 'Casablanca', 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-        'category': {'id': 4, 'name': 'Téléphones', 'name_ar': 'هواتف ذكية', 'name_fr': 'Téléphones'},
-        'main_image': 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=900&q=80',
-      },
-      {
-        'id': 9102,
-        'title': 'MacBook Pro M4 14"',
-        'price': 21900,
-        'price_formatted': '21 900 DH',
-        'views_count': 415,
-        'is_featured': false,
-        'city': {'id': 1, 'name': 'Casablanca', 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-        'category': {'id': 3, 'name': 'Informatique', 'name_ar': 'معلوميات', 'name_fr': 'Informatique'},
-        'main_image': 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=900&q=80',
-      },
-      {
-        'id': 9103,
-        'title': 'Porsche Macan S',
-        'price': 760000,
-        'price_formatted': '760 000 DH',
-        'views_count': 1290,
-        'is_vip': true,
-        'city': {'id': 2, 'name': 'Rabat', 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
-        'category': {'id': 1, 'name': 'Véhicules', 'name_ar': 'سيارات ومركبات', 'name_fr': 'Véhicules'},
-        'main_image': 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80',
-      },
-      {
-        'id': 9104,
-        'title': 'Chronographe Acier 41mm',
-        'price': 8900,
-        'price_formatted': '8 900 DH',
-        'views_count': 310,
-        'is_featured': false,
-        'city': {'id': 3, 'name': 'Marrakech', 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
-        'category': {'id': 6, 'name': 'Bijoux', 'name_ar': 'مجوهرات', 'name_fr': 'Bijoux'},
-        'main_image': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
-      },
-    ];
-  }
 
   int get _baseViews {
     if (_myAds.isEmpty) return 0;
@@ -1474,39 +1414,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 14),
 
-                        // Quick Studio Avatar Presets
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: _studioAvatars.map((url) {
-                            final selected = tempAvatarUrl == url && tempBytes == null;
-                            return GestureDetector(
-                              onTap: () {
-                                setSheetState(() {
-                                  tempAvatarUrl = url;
-                                  tempBytes = null;
-                                });
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 5),
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: selected ? _primary : Colors.transparent,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: ClipOval(
-                                  child: SizedBox(
-                                    width: 36,
-                                    height: 36,
-                                    child: AppImage(url: url, fit: BoxFit.cover),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
 
                         const SizedBox(height: 20),
 

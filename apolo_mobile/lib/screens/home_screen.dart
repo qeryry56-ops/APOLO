@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -54,117 +54,6 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Color _muted = Color(0xFF64748B);
   static const Color _surface = Color(0xFFF5F6F8);
 
-  static const List<Map<String, dynamic>> _fallbackAdsData = [
-    {
-      'id': 9001,
-      'title': 'Porsche Macan GTS 2025 — Pack Sport Chrono',
-      'description':
-          'État neuf, entretien maison Porsche Casablanca, garantie constructeur.',
-      'price': 980000,
-      'price_formatted': '980 000 DH',
-      'negotiable': true,
-      'city': {
-        'id': 1,
-        'name': 'Casablanca',
-        'name_ar': 'الدار البيضاء',
-        'name_fr': 'Casablanca',
-      },
-      'category': {
-        'id': 1,
-        'name': 'Véhicules',
-        'name_ar': 'وسائل النقل',
-        'name_fr': 'Véhicules',
-      },
-      'main_image':
-          'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80',
-      'is_featured': true,
-      'is_vip': true,
-      'views_count': 1420,
-      'created_at': '2026-03-29T10:00:00Z',
-    },
-    {
-      'id': 9002,
-      'title': 'iPhone 16 Pro Max 256Go Titane Naturel — Scellé',
-      'description':
-          'Neuf sous emballage Apple officiel avec garantie 12 mois.',
-      'price': 14200,
-      'price_formatted': '14 200 DH',
-      'negotiable': true,
-      'city': {
-        'id': 2,
-        'name': 'Rabat',
-        'name_ar': 'الرباط',
-        'name_fr': 'Rabat',
-      },
-      'category': {
-        'id': 4,
-        'name': 'Téléphones',
-        'name_ar': 'هواتف وتقنية',
-        'name_fr': 'Téléphones',
-      },
-      'main_image':
-          'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=900&q=80',
-      'is_featured': true,
-      'is_vip': false,
-      'views_count': 980,
-      'created_at': '2026-03-29T11:30:00Z',
-    },
-    {
-      'id': 9003,
-      'title': 'Villa Contemporaine avec Piscine — Californie',
-      'description':
-          '4 suites, jardin arboré, domotique complète, finition marbre.',
-      'price': 6500000,
-      'price_formatted': '6 500 000 DH',
-      'negotiable': false,
-      'city': {
-        'id': 1,
-        'name': 'Casablanca',
-        'name_ar': 'الدار البيضاء',
-        'name_fr': 'Casablanca',
-      },
-      'category': {
-        'id': 2,
-        'name': 'Immobilier',
-        'name_ar': 'عقارات',
-        'name_fr': 'Immobilier',
-      },
-      'main_image':
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80',
-      'is_featured': true,
-      'is_vip': true,
-      'views_count': 2150,
-      'created_at': '2026-03-28T16:15:00Z',
-    },
-    {
-      'id': 9004,
-      'title': 'Montre Rolex Submariner Date — Full Set 2024',
-      'description':
-          'Acier Oystersteel, lunette Cerachrom noire, boîte et papiers d\'origine.',
-      'price': 138000,
-      'price_formatted': '138 000 DH',
-      'negotiable': true,
-      'city': {
-        'id': 4,
-        'name': 'Tanger',
-        'name_ar': 'طنجة',
-        'name_fr': 'Tanger',
-      },
-      'category': {
-        'id': 6,
-        'name': 'Mode & Beauté',
-        'name_ar': 'أزياء وجمال',
-        'name_fr': 'Mode & Beauté',
-      },
-      'main_image':
-          'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
-      'is_featured': false,
-      'is_vip': true,
-      'views_count': 790,
-      'created_at': '2026-03-29T07:30:00Z',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -203,23 +92,32 @@ class _HomeScreenState extends State<HomeScreen> {
       final res = await _state.api.dio.get('/home');
       List<dynamic> rawAds = [];
       if (res.data is Map) {
-        final data = res.data['data'] ?? res.data;
-        if (data is Map) {
-          rawAds = [
-            ...(data['vip_ads'] as List? ?? []),
-            ...(data['featured_ads'] as List? ?? []),
-            ...(data['latest_ads'] as List? ?? []),
-          ];
-        } else if (data is List) {
-          rawAds = data;
-        }
+        final data = res.data;
+        rawAds = [
+          ...(data['vip_ads'] as List? ?? []),
+          ...(data['featured_ads'] as List? ?? []),
+          ...(data['latest_ads'] as List? ?? []),
+        ];
       }
-      if (rawAds.isEmpty) {
-        final adsRes = await _state.api.dio
-            .get('/ads', queryParameters: {'per_page': 32});
-        if (adsRes.data is Map) {
-          rawAds = (adsRes.data['data'] as List?) ?? [];
-        }
+
+      // If home ads are few, paginate directly from /ads to show rich feed
+      if (rawAds.length < 24) {
+        try {
+          final adsRes = await _state.api.dio
+              .get('/ads', queryParameters: {'per_page': 36});
+          if (adsRes.data is Map) {
+            final more = (adsRes.data['data'] as List?) ?? [];
+            final existingIds = rawAds
+                .whereType<Map>()
+                .map((a) => a['id']?.toString())
+                .toSet();
+            for (final item in more) {
+              if (item is Map && !existingIds.contains(item['id']?.toString())) {
+                rawAds.add(item);
+              }
+            }
+          }
+        } catch (_) {}
       }
 
       if (_state.categories.isEmpty || _state.cities.isEmpty) {
@@ -231,16 +129,6 @@ class _HomeScreenState extends State<HomeScreen> {
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
 
-      if (parsedAds.length < 6) {
-        final existingIds =
-            parsedAds.map((a) => a['id']?.toString()).toSet();
-        for (final fb in _fallbackAdsData) {
-          if (!existingIds.contains(fb['id'].toString())) {
-            parsedAds.add(Map<String, dynamic>.from(fb));
-          }
-        }
-      }
-
       final parsedCats = _state.categories
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
@@ -248,86 +136,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _ads = parsedAds.isNotEmpty
-              ? parsedAds
-              : _fallbackAdsData
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList();
-          _categories =
-              parsedCats.isNotEmpty ? parsedCats : _buildFallbackCategories();
-          _networkError = false;
+          _ads = parsedAds;
+          _categories = parsedCats;
+          _networkError = parsedAds.isEmpty;
           _loading = false;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _ads = _fallbackAdsData
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList();
-          _categories = _state.categories.isNotEmpty
-              ? _state.categories
-                  .whereType<Map>()
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList()
-              : _buildFallbackCategories();
+          _networkError = _ads.isEmpty;
           _loading = false;
         });
       }
     }
-  }
-
-  List<Map<String, dynamic>> _buildFallbackCategories() {
-    return [
-      {
-        'id': 1,
-        'name': 'Véhicules',
-        'name_fr': 'Véhicules',
-        'name_ar': 'وسائل النقل',
-      },
-      {
-        'id': 2,
-        'name': 'Immobilier',
-        'name_fr': 'Immobilier',
-        'name_ar': 'عقارات',
-      },
-      {
-        'id': 3,
-        'name': 'Informatique',
-        'name_fr': 'Informatique',
-        'name_ar': 'إعلاميات وتقنية',
-      },
-      {
-        'id': 4,
-        'name': 'Téléphones',
-        'name_fr': 'Téléphones',
-        'name_ar': 'هواتف وتقنية',
-      },
-      {
-        'id': 5,
-        'name': 'Maison & Déco',
-        'name_fr': 'Maison & Déco',
-        'name_ar': 'أثاث وديكور',
-      },
-      {
-        'id': 6,
-        'name': 'Mode & Beauté',
-        'name_fr': 'Mode & Beauté',
-        'name_ar': 'أزياء وجمال',
-      },
-      {
-        'id': 7,
-        'name': 'Emploi & Pro',
-        'name_fr': 'Emploi & Pro',
-        'name_ar': 'وظائف وخدمات',
-      },
-      {
-        'id': 8,
-        'name': 'Voyage',
-        'name_fr': 'Voyage',
-        'name_ar': 'أدوات السفر',
-      },
-    ];
   }
 
   List<Map<String, dynamic>> get _trendingAds {

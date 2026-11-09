@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -48,121 +48,6 @@ class _AdReelsScreenState extends State<AdReelsScreen>
   static const Color _red = Color(0xFFE31B23);
   static const Color _ink = Color(0xFF0F172A);
 
-  // Multi-photo rich fallback ads with high-res galleries for each item
-  static const List<Map<String, dynamic>> _fallbackReelsData = [
-    {
-      'id': 9001,
-      'title': 'Porsche Macan GTS 2025 — Pack Sport Chrono V6 Bi-Turbo',
-      'price_formatted': '980 000 DH',
-      'price': 980000,
-      'negotiable': true,
-      'category_name': 'وسائل النقل',
-      'category_id': 1,
-      'city_name': 'الدار البيضاء • المعاريف',
-      'views_count': 1420,
-      'likes_count': 238,
-      'seller_name': 'ياسين العلمي',
-      'seller_phone': '0661123456',
-      'seller_verified': true,
-      'seller_online': true,
-      'is_vip': true,
-      'images': [
-        'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=85',
-        'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&q=85',
-        'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=1200&q=85',
-        'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1200&q=85',
-      ],
-    },
-    {
-      'id': 9002,
-      'title': 'iPhone 16 Pro Max 256Go Titane Naturel — Scellé avec Facture',
-      'price_formatted': '14 200 DH',
-      'price': 14200,
-      'negotiable': true,
-      'category_name': 'هواتف وتقنية',
-      'category_id': 4,
-      'city_name': 'الرباط • أكدال',
-      'views_count': 980,
-      'likes_count': 174,
-      'seller_name': 'سلمى بنجلون',
-      'seller_phone': '0662234567',
-      'seller_verified': true,
-      'seller_online': true,
-      'is_vip': false,
-      'images': [
-        'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=1200&q=85',
-        'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=1200&q=85',
-        'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=1200&q=85',
-      ],
-    },
-    {
-      'id': 9003,
-      'title': 'Villa Contemporaine Neuve avec Piscine Débordante — Californie',
-      'price_formatted': '6 500 000 DH',
-      'price': 6500000,
-      'negotiable': false,
-      'category_name': 'عقارات',
-      'category_id': 2,
-      'city_name': 'الدار البيضاء • كاليفورنيا',
-      'views_count': 2150,
-      'likes_count': 412,
-      'seller_name': 'عمر المراكشي',
-      'seller_phone': '0663345678',
-      'seller_verified': true,
-      'seller_online': false,
-      'is_vip': true,
-      'images': [
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=85',
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=85',
-        'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?w=1200&q=85',
-        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&q=85',
-      ],
-    },
-    {
-      'id': 9004,
-      'title': 'Montre Rolex Submariner Date 41mm — Full Set Jamais Portée 2024',
-      'price_formatted': '138 000 DH',
-      'price': 138000,
-      'negotiable': true,
-      'category_name': 'أزياء وجمال',
-      'category_id': 6,
-      'city_name': 'طنجة • مالاباطا',
-      'views_count': 790,
-      'likes_count': 195,
-      'seller_name': 'كريم التازي',
-      'seller_phone': '0664456789',
-      'seller_verified': false,
-      'seller_online': true,
-      'is_vip': false,
-      'images': [
-        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&q=85',
-        'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=1200&q=85',
-        'https://images.unsplash.com/photo-1547996160-71dfabb1755a?w=1200&q=85',
-      ],
-    },
-    {
-      'id': 9005,
-      'title': 'MacBook Pro 16" M3 Max 36GB / 1TB SSD — Noir Sidéral Comme Neuf',
-      'price_formatted': '31 500 DH',
-      'price': 31500,
-      'negotiable': true,
-      'category_name': 'إلكترونيات وأجهزة',
-      'category_id': 5,
-      'city_name': 'فاس • الأطلس',
-      'views_count': 640,
-      'likes_count': 142,
-      'seller_name': 'أمين الفاسي',
-      'seller_phone': '0665567890',
-      'seller_verified': true,
-      'seller_online': true,
-      'is_vip': false,
-      'images': [
-        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=1200&q=85',
-        'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=1200&q=85',
-        'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=1200&q=85',
-      ],
-    },
-  ];
 
   @override
   void initState() {
@@ -195,32 +80,19 @@ class _AdReelsScreenState extends State<AdReelsScreen>
       final parsed = raw
           .whereType<Map>()
           .map((e) => _normalizeReel(Map<String, dynamic>.from(e)))
+          .where((r) => (r['images'] as List).isNotEmpty)
           .toList();
-
-      if (parsed.length < 5) {
-        for (final fb in _fallbackReelsData) {
-          if (!parsed.any((a) => a['id'] == fb['id'])) {
-            parsed.add(Map<String, dynamic>.from(fb));
-          }
-        }
-      }
 
       if (mounted) {
         setState(() {
-          _reelsAds = parsed.isNotEmpty
-              ? parsed
-              : _fallbackReelsData
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList();
+          _reelsAds = parsed;
           _isLoading = false;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _reelsAds = _fallbackReelsData
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList();
+          _reelsAds = [];
           _isLoading = false;
         });
       }
@@ -264,11 +136,7 @@ class _AdReelsScreenState extends State<AdReelsScreen>
       if (mainImg.isNotEmpty) images = [mainImg];
     }
 
-    if (images.isEmpty) {
-      images = [
-        'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=85'
-      ];
-    }
+    // Pure production: only valid images
 
     return {
       'id': adId,

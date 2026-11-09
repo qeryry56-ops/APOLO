@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -244,18 +244,31 @@ class _AuthScreenState extends State<AuthScreen>
 
       if (_isLogin) {
         final res = await _state.api.dio.post('/auth/login', data: {
+          'login': _emailCtrl.text.trim(),
           'email': _emailCtrl.text.trim(),
           'password': _passwordCtrl.text,
         });
         final data = res.data is Map ? res.data as Map : const {};
-        final token = (data['token'] ?? data['access_token'] ?? '').toString();
+        final subData = data['data'] is Map ? data['data'] as Map : data;
+        final token = (subData['token'] ?? subData['access_token'] ?? data['token'] ?? data['access_token'] ?? '').toString();
         if (token.isNotEmpty) {
-          final userMap = data['user'] is Map
-              ? Map<String, dynamic>.from(data['user'] as Map)
-              : {'name': enteredName, 'email': _emailCtrl.text.trim()};
+          final userMap = subData['user'] is Map
+              ? Map<String, dynamic>.from(subData['user'] as Map)
+              : (data['user'] is Map ? Map<String, dynamic>.from(data['user'] as Map) : {'name': enteredName, 'email': _emailCtrl.text.trim()});
           await _state.setAuthSession(token, userMap);
           await _triggerCelebrationAndFinish();
           return;
+        } else {
+          final errMsg = (data['message'] ?? (isAr ? 'بيانات الدخول غير صحيحة' : 'Identifiants incorrects')).toString();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errMsg),
+                backgroundColor: const Color(0xFFE31B23),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       } else {
         final res = await _state.api.dio.post('/auth/register', data: {
@@ -267,10 +280,11 @@ class _AuthScreenState extends State<AuthScreen>
           'city_id': _selectedCityId,
         });
         final data = res.data is Map ? res.data as Map : const {};
-        final token = (data['token'] ?? data['access_token'] ?? '').toString();
+        final subData = data['data'] is Map ? data['data'] as Map : data;
+        final token = (subData['token'] ?? subData['access_token'] ?? data['token'] ?? data['access_token'] ?? '').toString();
         if (token.isNotEmpty) {
-          final userMap = data['user'] is Map
-              ? Map<String, dynamic>.from(data['user'] as Map)
+          final userMap = subData['user'] is Map
+              ? Map<String, dynamic>.from(subData['user'] as Map)
               : {
                   'name': enteredName,
                   'email': _emailCtrl.text.trim(),
@@ -280,28 +294,36 @@ class _AuthScreenState extends State<AuthScreen>
           await _state.setAuthSession(token, userMap);
           await _triggerCelebrationAndFinish();
           return;
+        } else {
+          final errMsg = (data['message'] ?? (isAr ? 'فشل إنشاء الحساب' : 'Échec de l’inscription')).toString();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errMsg),
+                backgroundColor: const Color(0xFFE31B23),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       }
-
-      // Fallback local session so user can test full onboarding flow smoothly
-      await _state.setAuthSession('apolo_session_2026', {
-        'name': enteredName,
-        'username': enteredHandle,
-        'email': _emailCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
-        'account_type': _accountType,
-      });
-      await _triggerCelebrationAndFinish();
-    } catch (_) {
-      // Seamless local session fallback when staging API is unreachable
-      await _state.setAuthSession('apolo_session_2026', {
-        'name': enteredName,
-        'username': enteredHandle,
-        'email': _emailCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
-        'account_type': _accountType,
-      });
-      await _triggerCelebrationAndFinish();
+    } catch (e) {
+      if (mounted) {
+        String errMsg = isAr ? 'تعذر إتمام العملية، يرجى المحاولة ثانية' : 'Une erreur s’est produite';
+        try {
+          final dynamic dynErr = e;
+          if (dynErr.response?.data is Map) {
+            errMsg = (dynErr.response.data['message'] ?? errMsg).toString();
+          }
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errMsg),
+            backgroundColor: const Color(0xFFE31B23),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

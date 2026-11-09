@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../core/state/app_state.dart';
 import 'chat_room_screen.dart';
 import 'post_ad_screen.dart';
+import 'auth_screen.dart';
 import 'widgets/kinetic_widgets.dart';
 
 /// 2026 Production Chats Screen with Apolo Brand Styling & Desktop/Web Split-View:
@@ -47,81 +48,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
   // Active conversation for desktop 2-column web view
   Map<String, dynamic>? _activeWebConversation;
 
-  static const List<Map<String, dynamic>> _referenceMockChats = [
-    {
-      'id': 101,
-      'peer_name': 'Jenny Wilson',
-      'last_message': 'Can\'t wait to try it out! 😍🔥',
-      'last_message_time': '10:41 AM',
-      'unread_count': 2,
-      'peer_avatar':
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80',
-      'peer_online': true,
-      'ad_title': 'Porsche Macan GTS 2025',
-      'ad_price': '980 000 DH',
-    },
-    {
-      'id': 102,
-      'peer_name': 'Aileen Fullbright',
-      'last_message': 'Wow, this is really epic 👍',
-      'last_message_time': '12:30 PM',
-      'unread_count': 5,
-      'peer_avatar':
-          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80',
-      'peer_online': false,
-      'ad_title': 'iPhone 16 Pro Max Titane',
-      'ad_price': '14 200 DH',
-    },
-    {
-      'id': 103,
-      'peer_name': 'Ronald Richards',
-      'last_message': 'Great job man!',
-      'last_message_time': '12:30 PM',
-      'unread_count': 0,
-      'peer_avatar':
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80',
-      'peer_online': true,
-      'ad_title': 'MacBook Pro 16" M3 Max',
-      'ad_price': '31 500 DH',
-    },
-    {
-      'id': 104,
-      'peer_name': 'Esther Howard',
-      'last_message': 'Thank you so much Abraham 🔥',
-      'last_message_time': '12:30 PM',
-      'unread_count': 3,
-      'peer_avatar':
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&q=80',
-      'peer_online': true,
-      'ad_title': 'Montre Rolex Submariner',
-      'ad_price': '138 000 DH',
-    },
-    {
-      'id': 105,
-      'peer_name': 'Jerome Bell',
-      'last_message': 'Have a nice day',
-      'last_message_time': 'Yesterday',
-      'unread_count': 0,
-      'peer_avatar':
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80',
-      'peer_online': false,
-      'ad_title': 'Villa Contemporaine Californie',
-      'ad_price': '6 500 000 DH',
-    },
-    {
-      'id': 106,
-      'peer_name': 'Jane Cooper',
-      'last_message': 'Sky blue. Trying it now 😂',
-      'last_message_time': 'Jun 10, 2026',
-      'unread_count': 0,
-      'peer_avatar':
-          'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&q=80',
-      'peer_online': false,
-      'ad_title': 'Appartement vue sur mer',
-      'ad_price': '1 850 000 DH',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -130,7 +56,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   void _onStateChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      _loadConversations();
+    }
   }
 
   @override
@@ -141,35 +69,44 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Future<void> _loadConversations() async {
+    if (!_state.isLoggedIn) {
+      if (mounted) {
+        setState(() {
+          _conversations = [];
+          _activeWebConversation = null;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      if (_state.isLoggedIn) {
-        final res = await _state.api.dio.get('/chat/conversations');
-        if (res.data is Map && res.data['status'] == 'success') {
-          final rawList = (res.data['conversations'] ?? res.data['data'] ?? [])
-              as List<dynamic>;
-          final parsed = rawList
-              .whereType<Map>()
-              .map((e) => _normalizeBackendConversation(Map<String, dynamic>.from(e)))
-              .toList();
+      final res = await _state.api.dio.get('/chat/conversations');
+      if (res.data is Map && res.data['status'] == 'success') {
+        final rawList = (res.data['conversations'] ?? res.data['data'] ?? [])
+            as List<dynamic>;
+        final parsed = rawList
+            .whereType<Map>()
+            .map((e) => _normalizeBackendConversation(Map<String, dynamic>.from(e)))
+            .toList();
 
-          if (mounted) {
-            setState(() {
-              _conversations = parsed.isNotEmpty ? parsed : _referenceMockChats;
-              _activeWebConversation ??=
-                  _conversations.isNotEmpty ? _conversations.first : null;
-              _isLoading = false;
-            });
-            return;
-          }
+        if (mounted) {
+          setState(() {
+            _conversations = parsed;
+            _activeWebConversation ??=
+                _conversations.isNotEmpty ? _conversations.first : null;
+            _isLoading = false;
+          });
+          return;
         }
       }
     } catch (_) {}
 
     if (mounted) {
       setState(() {
-        _conversations = List.from(_referenceMockChats);
-        _activeWebConversation ??= _conversations.first;
+        _conversations = [];
+        _activeWebConversation = null;
         _isLoading = false;
       });
     }
@@ -782,14 +719,147 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ? const Center(
                   child: CupertinoActivityIndicator(radius: 12),
                 )
-              : filtered.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No conversations found',
-                        style: TextStyle(color: _textMuted, fontSize: 15),
+              : !_state.isLoggedIn
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: const BoxDecoration(
+                                color: _redPillBg,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                CupertinoIcons.chat_bubble_2_fill,
+                                color: _apoloRed,
+                                size: 34,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'تسجيل الدخول للمحادثات',
+                              style: TextStyle(
+                                color: _textBlack,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'سجل الدخول للتواصل الفوري مع البائعين والمشترين ومتابعة رسائلك بأمان.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: _textMuted,
+                                fontSize: 13.5,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            PressableScale(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AuthScreen(),
+                                  ),
+                                ).then((_) => _loadConversations());
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _apoloRed,
+                                  borderRadius: BorderRadius.circular(999),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _apoloRed.withValues(alpha: 0.35),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Text(
+                                  'تسجيل الدخول / إنشاء حساب',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     )
-                  : ListView.builder(
+                  : filtered.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: const BoxDecoration(
+                                    color: _surfaceGrey,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    CupertinoIcons.bubble_left_bubble_right,
+                                    color: _textSubtle,
+                                    size: 28,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'لا توجد محادثات بعد',
+                                  style: TextStyle(
+                                    color: _textBlack,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'تصفح الإعلانات وتواصل مع البائعين مباشرة بدون وسيط وبأمان تام.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: _textMuted,
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                if (widget.onExploreAds != null) ...[
+                                  const SizedBox(height: 18),
+                                  TextButton.icon(
+                                    onPressed: widget.onExploreAds,
+                                    icon: const Icon(
+                                      CupertinoIcons.compass,
+                                      size: 16,
+                                      color: _apoloRed,
+                                    ),
+                                    label: const Text(
+                                      'تصفح الإعلانات',
+                                      style: TextStyle(
+                                        color: _apoloRed,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                       itemCount: filtered.length,

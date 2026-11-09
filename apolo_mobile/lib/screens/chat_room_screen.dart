@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -75,39 +75,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   static const Color _textSubtle = Color(0xFF9CA3AF);
   static const Color _onlineGreen = Color(0xFF10B981);
 
-  List<Map<String, dynamic>> get _referenceMockMessages => [
-        {
-          'id': 1,
-          'body': 'Haven\'t seen you in a long time since we were in college 😂',
-          'is_mine': true,
-          'created_at_time': '08:21 AM',
-          'type': 'text',
-          'read': true,
-        },
-        {
-          'id': 2,
-          'body': 'Hello, morning to ${widget.peerName}',
-          'is_mine': false,
-          'created_at_time': '08:24 AM',
-          'type': 'text',
-        },
-        {
-          'id': 3,
-          'body':
-              'Haha, yes it\'s been about 5 years we haven\'t seen each other 🤣🤣',
-          'is_mine': false,
-          'created_at_time': '08:24 AM',
-          'type': 'text',
-        },
-        {
-          'id': 4,
-          'body': 'Voice Message (0:14)',
-          'is_mine': false,
-          'created_at_time': '08:26 AM',
-          'type': 'audio',
-          'audio_duration': '0:14',
-        },
-      ];
+
 
   @override
   void initState() {
@@ -208,9 +176,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                   .whereType<Map>()
                   .map((e) => Map<String, dynamic>.from(e))
                   .toList();
-              if (_messages.isEmpty) {
-                _messages = List.from(_referenceMockMessages);
-              }
+              
               _loading = false;
             });
             if (scrollToBottom) _scrollToEnd();
@@ -222,9 +188,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     if (mounted) {
       setState(() {
-        if (_messages.isEmpty) {
-          _messages = List.from(_referenceMockMessages);
-        }
+        
         _loading = false;
       });
       if (scrollToBottom) _scrollToEnd();
@@ -424,7 +388,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           if (_showCallMenu) setState(() => _showCallMenu = false);
                           FocusScope.of(context).unfocus();
                         },
-                        child: ListView.builder(
+                        child: all.isEmpty
+                            ? _buildEmptyChatState()
+                            : ListView.builder(
                           controller: _scrollCtrl,
                           physics: const BouncingScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -455,6 +421,96 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   // ───────────────────────── 1. Header Bar ─────────────────────────
+
+  Widget _buildEmptyChatState() {
+    return Center(
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFEECEE),
+                border: Border.all(color: _apoloRed.withValues(alpha: 0.15), width: 2),
+              ),
+              child: const Center(
+                child: Icon(CupertinoIcons.chat_bubble_2_fill, color: _apoloRed, size: 32),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              widget.peerName,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: _textBlack,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              widget.adTitle.isNotEmpty
+                  ? 'محادثة بخصوص: "${widget.adTitle}"'
+                  : 'ابدأ المحادثة الآن واطرح استفساراتك مباشرة',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: _textMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'رسائل سريعة مقترحة:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _textSubtle,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                _buildQuickPill('السلام عليكم، واش الإعلان باقي متوفر؟'),
+                _buildQuickPill('شحال آخر ثمن من فضلك؟'),
+                _buildQuickPill('فين كاين بالضبط باش نشوف السلعة؟'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickPill(String text) {
+    return InkWell(
+      onTap: () => _sendText(text),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: _textBlack,
+          ),
+        ),
+      ),
+    );
+  }
   Widget _buildHeader() {
     final topInset = MediaQuery.of(context).padding.top;
     return Container(

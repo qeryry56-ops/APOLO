@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -279,9 +279,11 @@ class _CallScreenState extends State<CallScreen>
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
-                        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80',
-                        fit: BoxFit.cover,
+                      Container(
+                        color: const Color(0xFF1E293B),
+                        child: const Center(
+                          child: Icon(CupertinoIcons.person_fill, color: Colors.white70, size: 28),
+                        ),
                       ),
                       Positioned(
                         bottom: 4,
@@ -432,11 +434,22 @@ class _CallScreenState extends State<CallScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.network(
-          widget.peerAvatar ??
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=85',
-          fit: BoxFit.cover,
-        ),
+        if (widget.peerAvatar != null && widget.peerAvatar!.isNotEmpty)
+          Image.network(
+            widget.peerAvatar!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(color: const Color(0xFF0F172A)),
+          )
+        else
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
