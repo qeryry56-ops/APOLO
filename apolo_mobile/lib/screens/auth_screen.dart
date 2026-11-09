@@ -1,4 +1,5 @@
-﻿import 'dart:math' as math;
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,7 +33,13 @@ class _AuthScreenState extends State<AuthScreen>
   final AppState _state = AppState();
 
   late bool _isLogin;
-  int _registerStep = 0; // 0..3 (4 focused Apple-whitespace steps)
+  // Flow steps:
+  // Step 0: Credentials (Name, Phone, Email, Password)
+  // Step 1: OTP Email Verification (6-digit code)
+  // Step 2: Account Type (Individual vs Pro)
+  // Step 3: Preferred City
+  // Step 4: Category Interests
+  int _registerStep = 0;
   bool _showCelebration = false;
 
   String _accountType = 'individual'; // 'individual' | 'pro'
@@ -43,10 +50,18 @@ class _AuthScreenState extends State<AuthScreen>
   bool _obscurePassword = true;
   String? _error;
 
+  String _tempToken = '';
+  Map<String, dynamic> _tempUserMap = {};
+
+  int _resendCountdown = 0;
+  Timer? _countdownTimer;
+
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  final _otpCtrl = TextEditingController();
 
   late final AnimationController _celebrationCtrl;
 
@@ -76,12 +91,32 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _celebrationCtrl.dispose();
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
+    _otpCtrl.dispose();
     super.dispose();
+  }
+
+  void _startResendTimer() {
+    _countdownTimer?.cancel();
+    setState(() => _resendCountdown = 60);
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_resendCountdown <= 1) {
+        timer.cancel();
+        setState(() => _resendCountdown = 0);
+      } else {
+        setState(() => _resendCountdown--);
+      }
+    });
   }
 
   Future<void> _loadMetadata() async {
@@ -143,50 +178,58 @@ class _AuthScreenState extends State<AuthScreen>
       case 1:
         return 'assets/images/cat_phones.png';
       case 2:
-        return 'assets/images/cat_jewelry.png';
+        return 'assets/images/cat_jobs.png';
       case 3:
-        return 'assets/images/hero_car.png';
+        return 'assets/images/cat_realestate.png';
+      case 4:
+        return 'assets/images/cat_vehicles.png';
       default:
         return 'assets/images/auth_hero_3d.png';
     }
   }
 
-  bool _validateCurrentRegisterStep(bool isAr) {
+  bool _validateCredentials(bool isAr) {
     setState(() => _error = null);
-    if (_registerStep == 1) {
-      if (_nameCtrl.text.trim().length < 2) {
-        setState(() {
-          _error = isAr
-              ? 'يرجى إدخال الاسم الكامل أو اسم المتجر'
-              : 'Veuillez saisir votre nom complet';
-        });
-        return false;
-      }
-      if (_phoneCtrl.text.trim().length < 8) {
-        setState(() {
-          _error = isAr
-              ? 'يرجى إدخال رقم هاتف أو واتساب صحيح'
-              : 'Veuillez saisir un numéro de téléphone valide';
-        });
-        return false;
-      }
-    } else if (_registerStep == 2) {
-      if (!_emailCtrl.text.contains('@')) {
-        setState(() {
-          _error = isAr
-              ? 'يرجى إدخال بريد إلكتروني صحيح'
-              : 'Veuillez saisir une adresse e-mail valide';
-        });
-        return false;
-      }
-      if (_passwordCtrl.text.length < 6) {
-        setState(() {
-          _error = isAr
-              ? 'كلمة المرور يجب أن تتكون من 6 أحرف على الأقل'
-              : '6 caractères minimum requis pour le mot de passe';
-        });
-        return false;
-      }
+    if (_nameCtrl.text.trim().length < 2) {
+      setState(() {
+        _error = isAr
+            ? 'يرجى إدخال الاسم الكامل'
+            : 'Veuillez saisir votre nom complet';
+      });
+      return false;
+    }
+    if (_phoneCtrl.text.trim().length < 8) {
+      setState(() {
+        _error = isAr
+            ? 'يرجى إدخال رقم هاتف صحيح'
+            : 'Veuillez saisir un numéro de téléphone valide';
+      });
+      return false;
+    }
+    if (!_emailCtrl.text.contains('@') || !_emailCtrl.text.contains('.')) {
+      setState(() {
+        _error = isAr
+            ? 'يرجى إدخال بريد إلكتروني صحيح'
+            : 'Veuillez saisir une adresse e-mail valide';
+      });
+      return false;
+    }
+    if (_passwordCtrl.text.length < 6) {
+      setState(() {
+        _error = isAr
+            ? 'كلمة المرور يجب أن تتكون من 6 أحرف على الأقل'
+            : '6 caractères minimum requis pour le mot de passe';
+      });
+      return false;
+    }
+    if (_confirmPasswordCtrl.text.isNotEmpty &&
+        _confirmPasswordCtrl.text != _passwordCtrl.text) {
+      setState(() {
+        _error = isAr
+            ? 'تأكيد كلمة المرور غير متطابق'
+            : 'Les mots de passe ne correspondent pas';
+      });
+      return false;
     }
     return true;
   }
@@ -201,132 +244,285 @@ class _AuthScreenState extends State<AuthScreen>
         });
         return;
       }
-      _submitAuth(isAr);
+      _submitLogin(isAr);
       return;
     }
-    if (!_validateCurrentRegisterStep(isAr)) return;
-    if (_registerStep < 3) {
-      setState(() => _registerStep++);
-    } else {
-      _submitAuth(isAr);
+
+    if (_registerStep == 0) {
+      if (!_validateCredentials(isAr)) return;
+      _submitRegister(isAr);
+    } else if (_registerStep == 1) {
+      _verifyOtp(isAr);
+    } else if (_registerStep == 2) {
+      setState(() => _registerStep = 3);
+    } else if (_registerStep == 3) {
+      setState(() => _registerStep = 4);
+    } else if (_registerStep == 4) {
+      _submitOnboarding(isAr);
     }
   }
 
-  Future<void> _submitAuth(bool isAr) async {
+  Future<void> _submitLogin(bool isAr) async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
-    final enteredName = _nameCtrl.text.trim().isNotEmpty
-        ? _nameCtrl.text.trim()
-        : (_emailCtrl.text.contains('@')
-            ? _emailCtrl.text.trim().split('@').first
-            : (isAr ? 'أمين' : 'Amine'));
-    final enteredHandle = _emailCtrl.text.contains('@')
-        ? _emailCtrl.text.trim().split('@').first
-        : enteredName.toLowerCase().replaceAll(' ', '');
-
     try {
-      if (!_isLogin) {
-        await _state.saveOnboardingPreferences(
-          accType: _accountType,
-          cityId: _selectedCityId,
-          selectedCategories: _selectedCategoryIds,
-        );
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('apolo_profile_name', enteredName);
-        await prefs.setString('apolo_profile_handle', enteredHandle);
-        if (_phoneCtrl.text.trim().isNotEmpty) {
-          await prefs.setString('apolo_profile_phone', _phoneCtrl.text.trim());
-        }
-      }
+      final res = await _state.api.dio.post('/auth/login', data: {
+        'login': _emailCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'password': _passwordCtrl.text,
+      });
 
-      if (_isLogin) {
-        final res = await _state.api.dio.post('/auth/login', data: {
-          'login': _emailCtrl.text.trim(),
-          'email': _emailCtrl.text.trim(),
-          'password': _passwordCtrl.text,
-        });
-        final data = res.data is Map ? res.data as Map : const {};
-        final subData = data['data'] is Map ? data['data'] as Map : data;
-        final token = (subData['token'] ?? subData['access_token'] ?? data['token'] ?? data['access_token'] ?? '').toString();
-        if (token.isNotEmpty) {
-          final userMap = subData['user'] is Map
-              ? Map<String, dynamic>.from(subData['user'] as Map)
-              : (data['user'] is Map ? Map<String, dynamic>.from(data['user'] as Map) : {'name': enteredName, 'email': _emailCtrl.text.trim()});
-          await _state.setAuthSession(token, userMap);
-          await _triggerCelebrationAndFinish();
+      final data = res.data is Map ? res.data as Map : const {};
+      final subData = data['data'] is Map ? data['data'] as Map : data;
+      final token = (subData['token'] ?? subData['access_token'] ?? data['token'] ?? data['access_token'] ?? '').toString();
+
+      if (token.isNotEmpty) {
+        final userMap = subData['user'] is Map
+            ? Map<String, dynamic>.from(subData['user'] as Map)
+            : (data['user'] is Map ? Map<String, dynamic>.from(data['user'] as Map) : {'email': _emailCtrl.text.trim()});
+
+        _tempToken = token;
+        _tempUserMap = userMap;
+
+        // Check if OTP verification is required
+        final bool requiresOtp = subData['requires_otp'] == true || data['requires_otp'] == true || userMap['email_verified_at'] == null;
+        if (requiresOtp) {
+          _state.api.setToken(token);
+          setState(() {
+            _loading = false;
+            _isLogin = false;
+            _registerStep = 1; // Go to OTP step
+          });
+          _startResendTimer();
           return;
-        } else {
-          final errMsg = (data['message'] ?? (isAr ? 'بيانات الدخول غير صحيحة' : 'Identifiants incorrects')).toString();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errMsg),
-                backgroundColor: const Color(0xFFE31B23),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
         }
+
+        // Check if onboarding is completed
+        final bool onboardingDone = userMap['onboarding_completed'] == true || userMap['onboarding_completed'] == 1;
+        if (!onboardingDone) {
+          _state.api.setToken(token);
+          setState(() {
+            _loading = false;
+            _isLogin = false;
+            _registerStep = 2; // Go to Onboarding step
+          });
+          return;
+        }
+
+        await _state.setAuthSession(token, userMap);
+        await _triggerCelebrationAndFinish();
       } else {
-        final res = await _state.api.dio.post('/auth/register', data: {
-          'name': enteredName,
-          'email': _emailCtrl.text.trim(),
-          'password': _passwordCtrl.text,
-          'password_confirmation': _passwordCtrl.text,
-          'phone': _phoneCtrl.text.trim(),
-          'city_id': _selectedCityId,
+        setState(() {
+          _error = (data['message'] ?? (isAr ? 'بيانات الدخول غير صحيحة' : 'Identifiants incorrects')).toString();
         });
-        final data = res.data is Map ? res.data as Map : const {};
-        final subData = data['data'] is Map ? data['data'] as Map : data;
-        final token = (subData['token'] ?? subData['access_token'] ?? data['token'] ?? data['access_token'] ?? '').toString();
-        if (token.isNotEmpty) {
-          final userMap = subData['user'] is Map
-              ? Map<String, dynamic>.from(subData['user'] as Map)
-              : {
-                  'name': enteredName,
-                  'email': _emailCtrl.text.trim(),
-                  'phone': _phoneCtrl.text.trim(),
-                  'account_type': _accountType,
-                };
-          await _state.setAuthSession(token, userMap);
-          await _triggerCelebrationAndFinish();
-          return;
-        } else {
-          final errMsg = (data['message'] ?? (isAr ? 'فشل إنشاء الحساب' : 'Échec de l’inscription')).toString();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errMsg),
-                backgroundColor: const Color(0xFFE31B23),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        }
       }
     } catch (e) {
+      _handleApiError(e, isAr);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _submitRegister(bool isAr) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final enteredName = _nameCtrl.text.trim();
+    final enteredEmail = _emailCtrl.text.trim();
+    final enteredPhone = _phoneCtrl.text.trim();
+    final password = _passwordCtrl.text;
+
+    try {
+      final res = await _state.api.dio.post('/auth/register', data: {
+        'name': enteredName,
+        'email': enteredEmail,
+        'phone': enteredPhone,
+        'password': password,
+        'password_confirmation': _confirmPasswordCtrl.text.isNotEmpty ? _confirmPasswordCtrl.text : password,
+        'referral_source': 'mobile_app',
+      });
+
+      final data = res.data is Map ? res.data as Map : const {};
+      final subData = data['data'] is Map ? data['data'] as Map : data;
+      final token = (subData['token'] ?? subData['access_token'] ?? data['token'] ?? data['access_token'] ?? '').toString();
+
+      if (token.isNotEmpty) {
+        final userMap = subData['user'] is Map
+            ? Map<String, dynamic>.from(subData['user'] as Map)
+            : {'name': enteredName, 'email': enteredEmail, 'phone': enteredPhone};
+
+        _tempToken = token;
+        _tempUserMap = userMap;
+        _state.api.setToken(token);
+
+        setState(() {
+          _registerStep = 1; // Transition to OTP Verification Step!
+          _loading = false;
+          _error = null;
+        });
+        _startResendTimer();
+      } else {
+        setState(() {
+          _error = (data['message'] ?? (isAr ? 'فشل إنشاء الحساب' : 'Échec de l’inscription')).toString();
+        });
+      }
+    } catch (e) {
+      _handleApiError(e, isAr);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _verifyOtp(bool isAr) async {
+    final code = _otpCtrl.text.trim();
+    if (code.length != 6) {
+      setState(() {
+        _error = isAr
+            ? 'يرجى إدخال رمز التحقق المكون من 6 أرقام'
+            : 'Veuillez saisir le code complet à 6 chiffres';
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      if (_tempToken.isNotEmpty) {
+        _state.api.setToken(_tempToken);
+      }
+
+      final res = await _state.api.dio.post('/auth/otp/verify', data: {
+        'code': code,
+      });
+
+      final data = res.data is Map ? res.data as Map : const {};
+      if (data['status'] == 'success') {
+        HapticFeedback.mediumImpact();
+        setState(() {
+          _registerStep = 2; // Advanced to Onboarding: Step 2 (Account Type)!
+          _error = null;
+        });
+      } else {
+        setState(() {
+          _error = (data['message'] ?? (isAr ? 'رمز التحقق غير صحيح أو انتهت صلاحيته' : 'Code OTP incorrect ou expiré')).toString();
+        });
+      }
+    } catch (e) {
+      _handleApiError(e, isAr);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _resendOtp(bool isAr) async {
+    if (_resendCountdown > 0) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      if (_tempToken.isNotEmpty) {
+        _state.api.setToken(_tempToken);
+      }
+      final res = await _state.api.dio.post('/auth/otp/resend');
+      final data = res.data is Map ? res.data as Map : const {};
+      final msg = (data['message'] ?? (isAr ? 'تم إرسال رمز جديد إلى بريدك الإلكتروني' : 'Un nouveau code a été envoyé')).toString();
+
       if (mounted) {
-        String errMsg = isAr ? 'تعذر إتمام العملية، يرجى المحاولة ثانية' : 'Une erreur s’est produite';
-        try {
-          final dynamic dynErr = e;
-          if (dynErr.response?.data is Map) {
-            errMsg = (dynErr.response.data['message'] ?? errMsg).toString();
-          }
-        } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errMsg),
-            backgroundColor: const Color(0xFFE31B23),
+            content: Text(msg),
+            backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
+      _startResendTimer();
+    } catch (e) {
+      _handleApiError(e, isAr);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _submitOnboarding(bool isAr) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      if (_tempToken.isNotEmpty) {
+        _state.api.setToken(_tempToken);
+      }
+
+      // Persist onboarding & category interests in database
+      await _state.api.dio.post('/auth/onboarding', data: {
+        'account_type': _accountType,
+        'preferred_city_id': _selectedCityId,
+        'category_interests': _selectedCategoryIds.toList(),
+      });
+
+      // Save local preferences
+      await _state.saveOnboardingPreferences(
+        accType: _accountType,
+        cityId: _selectedCityId,
+        selectedCategories: _selectedCategoryIds,
+      );
+
+      final enteredName = _nameCtrl.text.trim().isNotEmpty
+          ? _nameCtrl.text.trim()
+          : (_emailCtrl.text.contains('@') ? _emailCtrl.text.split('@').first : 'Apolo User');
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('apolo_profile_name', enteredName);
+      if (_phoneCtrl.text.trim().isNotEmpty) {
+        await prefs.setString('apolo_profile_phone', _phoneCtrl.text.trim());
+      }
+
+      _tempUserMap['account_type'] = _accountType;
+      _tempUserMap['preferred_city_id'] = _selectedCityId;
+      _tempUserMap['category_interests'] = _selectedCategoryIds.toList();
+      _tempUserMap['onboarding_completed'] = true;
+
+      await _state.setAuthSession(_tempToken, _tempUserMap);
+      await _triggerCelebrationAndFinish();
+    } catch (e) {
+      _handleApiError(e, isAr);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _handleApiError(dynamic e, bool isAr) {
+    if (!mounted) return;
+    String errMsg = isAr ? 'تعذر إتمام العملية، يرجى المحاولة ثانية' : 'Une erreur s’est produite';
+    try {
+      final dynamic dynErr = e;
+      if (dynErr.response?.data is Map) {
+        final rData = dynErr.response.data;
+        if (rData['message'] != null) {
+          errMsg = rData['message'].toString();
+        } else if (rData['errors'] is Map) {
+          final firstKey = (rData['errors'] as Map).keys.first;
+          final errList = (rData['errors'] as Map)[firstKey];
+          if (errList is List && errList.isNotEmpty) {
+            errMsg = errList.first.toString();
+          }
+        }
+      }
+    } catch (_) {}
+    setState(() => _error = errMsg);
   }
 
   Future<void> _triggerCelebrationAndFinish() async {
@@ -382,7 +578,7 @@ class _AuthScreenState extends State<AuthScreen>
               ? _buildCelebrationStage(isAr)
               : Column(
                   children: [
-                    // 1. Minimalist Apple Top Bar (Back + Step Indicator in Register Mode)
+                    // 1. Top Bar (Back + 5-Step Indicator in Register Mode)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                       child: Row(
@@ -416,17 +612,17 @@ class _AuthScreenState extends State<AuthScreen>
                             ),
                           ),
 
-                          // Step indicator only when registering
+                          // Step indicator dots for the 5-step registration wizard
                           if (!_isLogin)
                             Row(
-                              children: List.generate(4, (idx) {
+                              children: List.generate(5, (idx) {
                                 final active = idx <= _registerStep;
                                 final current = idx == _registerStep;
                                 return AnimatedContainer(
                                   duration: const Duration(milliseconds: 260),
                                   margin: const EdgeInsets.symmetric(horizontal: 3),
-                                  width: current ? 26 : 8,
-                                  height: 8,
+                                  width: current ? 24 : 7,
+                                  height: 7,
                                   decoration: BoxDecoration(
                                     color: active ? _primary : _surface,
                                     borderRadius: BorderRadius.circular(99),
@@ -437,12 +633,11 @@ class _AuthScreenState extends State<AuthScreen>
                           else
                             const SizedBox.shrink(),
 
-                          // Step fraction or empty spacer for symmetry
                           SizedBox(
                             width: 44,
                             child: !_isLogin
                                 ? Text(
-                                    '${_registerStep + 1}/4',
+                                    '${_registerStep + 1}/5',
                                     textAlign: TextAlign.end,
                                     style: const TextStyle(
                                       fontSize: 13,
@@ -457,7 +652,7 @@ class _AuthScreenState extends State<AuthScreen>
                       ),
                     ),
 
-                    // 2. Generous Whitespace Content Stage
+                    // 2. Main Content Area
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
@@ -468,7 +663,7 @@ class _AuthScreenState extends State<AuthScreen>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Expressive Floating 3D Sculpture (Morphs per step)
+                                // Floating 3D Sculpture
                                 Center(
                                   child: AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 350),
@@ -499,7 +694,7 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  /// Minimalist Apple-Whitespace Login View
+  /// Login View
   Widget _buildMinimalLoginStage(AppStrings s, bool isAr) {
     return ScrollReveal(
       child: Column(
@@ -568,7 +763,6 @@ class _AuthScreenState extends State<AuthScreen>
 
           const SizedBox(height: 32),
 
-          // Quiet Apple-style bottom mode switch
           Center(
             child: GestureDetector(
               onTap: () => setState(() {
@@ -589,7 +783,7 @@ class _AuthScreenState extends State<AuthScreen>
                       text: isAr ? 'ما عندكش حساب؟ ' : 'Pas encore de compte ? ',
                     ),
                     TextSpan(
-                      text: isAr ? 'أنشئ حسابك فـ 4 خطوات' : 'Créer un compte',
+                      text: isAr ? 'أنشئ حسابك الآن' : 'Créer un compte',
                       style: const TextStyle(
                         color: _primary,
                         fontWeight: FontWeight.w800,
@@ -605,34 +799,54 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  /// Minimalist 4-Step Apple-Whitespace Registration Wizard
+  /// 5-Step Registration Wizard
   Widget _buildMinimalRegisterStepStage(AppStrings s, bool isAr) {
     final titles = isAr
         ? [
+            'أنشئ حسابك الجديد',
+            'تأكيد البريد الإلكتروني (OTP)',
             'كيفاش بغيتي تستخدم Apolo؟',
-            'شنو سميتك ورقم التتبع؟',
-            'تأمين حسابك الجديد',
+            'مدينتك المفضلة',
             'شنو اللي كيهتم بيه؟',
           ]
         : [
-            'Comment souhaitez-vous utiliser Apolo ?',
-            'Vos coordonnées de contact',
-            'Sécurisez votre compte',
-            'Personnalisez votre flux',
+            'Créer votre compte',
+            'Vérification par code OTP',
+            'Type de compte',
+            'Votre ville principale',
+            'Vos centres d’intérêt',
           ];
 
     final subtitles = isAr
         ? [
-            'اختر نوع الحساب المناسب لك للبدء',
-            'باش المشترين يقدرو يتواصلو معاك بسهولة',
-            'بريدك الإلكتروني وكلمة مرور خاصة بحسابك',
-            'اختر مدينتك والأقسام المفضلة لتدريب الخوارزمية',
+            'أدخل بياناتك للانضمام إلى أكبر منصة إعلانات بالمغرب',
+            'أدخل رمز التحقق المكون من 6 أرقام المرسل إلى بريدك',
+            'اختر نوع الحساب المناسب لنشاطك',
+            'باش نظهرو ليك أفضل العروض والهمزات القريبة منك',
+            'اختر الأقسام المفضلة لتدريب خوارزمية خلاصتك',
           ]
         : [
+            'Rejoignez la plateforme d’annonces numéro 1 au Maroc',
+            'Entrez le code à 6 chiffres envoyé à votre adresse e-mail',
             'Choisissez le profil adapté à votre activité',
-            'Pour permettre aux acheteurs de vous joindre directement',
-            'Votre e-mail et un mot de passe sécurisé',
-            'Sélectionnez votre ville et vos catégories préférées',
+            'Pour afficher en priorité les offres proches de chez vous',
+            'Sélectionnez vos catégories préférées',
+          ];
+
+    final ctaLabels = isAr
+        ? [
+            'إنشاء الحساب ومتابعة',
+            'تأكيد رمز التحقق',
+            'متابعة',
+            'متابعة',
+            'إنهاء وحفظ الاهتمامات',
+          ]
+        : [
+            'Créer mon compte',
+            'Vérifier le code',
+            'Continuer',
+            'Continuer',
+            'Enregistrer et Explorer',
           ];
 
     return Column(
@@ -642,7 +856,7 @@ class _AuthScreenState extends State<AuthScreen>
           titles[_registerStep],
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 25,
+            fontSize: 24,
             fontWeight: FontWeight.w800,
             color: _ink,
             letterSpacing: -0.6,
@@ -653,12 +867,13 @@ class _AuthScreenState extends State<AuthScreen>
           subtitles[_registerStep],
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 13.5,
             color: _muted,
             fontWeight: FontWeight.w500,
+            height: 1.35,
           ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 28),
 
         if (_error != null) _buildErrorBanner(_error!),
 
@@ -667,12 +882,10 @@ class _AuthScreenState extends State<AuthScreen>
           child: _buildStepContent(isAr),
         ),
 
-        const SizedBox(height: 30),
+        const SizedBox(height: 28),
 
         _buildPrimaryAction(
-          label: _registerStep < 3
-              ? (isAr ? 'متابعة' : 'Continuer')
-              : (isAr ? 'إنهاء التسجيل' : 'Terminer l’inscription'),
+          label: ctaLabels[_registerStep],
           onTap: () => _nextStepOrSubmit(isAr),
         ),
 
@@ -719,63 +932,28 @@ class _AuthScreenState extends State<AuthScreen>
 
   Widget _buildStepContent(bool isAr) {
     switch (_registerStep) {
+      // Step 0: User Credentials
       case 0:
+        final bars = _passwordStrengthBars;
         return Column(
-          key: const ValueKey('step_0'),
+          key: const ValueKey('step_0_credentials'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildCleanAccountCard(
-              type: 'individual',
-              title: isAr ? 'حساب فردي' : 'Compte Particulier',
-              subtitle: isAr
-                  ? 'نشر مجاني وسريع للسيارات، الهواتف، العقارات والسلع الشخصية'
-                  : 'Vendez et achetez librement entre particuliers au Maroc',
-              icon: CupertinoIcons.person_fill,
+            _buildSoftField(
+              label: isAr ? 'الاسم الكامل' : 'Nom complet',
+              controller: _nameCtrl,
+              hint: isAr ? 'مثال: أمين العلوي' : 'Ex: Amine Alaoui',
+              icon: CupertinoIcons.person,
             ),
             const SizedBox(height: 14),
-            _buildCleanAccountCard(
-              type: 'pro',
-              title: isAr ? 'متجر احترافي (Boutique Pro)' : 'Boutique Pro Certifiée',
-              subtitle: isAr
-                  ? 'صفحة متجر موثقة، إحصائيات متقدمة، وأولوية في الظهور'
-                  : 'Vitrine officielle vérifiée et statistiques avancées',
-              icon: CupertinoIcons.bag_fill,
-              badge: 'PRO',
-            ),
-          ],
-        );
-
-      case 1:
-        final isPro = _accountType == 'pro';
-        return Column(
-          key: const ValueKey('step_1'),
-          children: [
             _buildSoftField(
-              label: isPro
-                  ? (isAr ? 'اسم المتجر أو الوكالة' : 'Nom de la boutique')
-                  : (isAr ? 'الاسم الكامل' : 'Nom complet'),
-              controller: _nameCtrl,
-              hint: isPro
-                  ? (isAr ? 'مثال: Auto Prestige Casa' : 'Ex: Auto Prestige Casa')
-                  : (isAr ? 'مثال: أمين العلوي' : 'Ex: Amine Alaoui'),
-              icon: isPro ? CupertinoIcons.bag : CupertinoIcons.person,
-            ),
-            const SizedBox(height: 16),
-            _buildSoftField(
-              label: isAr ? 'رقم الهاتف / الواتساب' : 'Numéro WhatsApp / Téléphone',
+              label: isAr ? 'رقم الهاتف / واتساب' : 'Téléphone / WhatsApp',
               controller: _phoneCtrl,
               hint: '06 00 00 00 00',
               icon: CupertinoIcons.phone,
               keyboardType: TextInputType.phone,
             ),
-          ],
-        );
-
-      case 2:
-        final bars = _passwordStrengthBars;
-        return Column(
-          key: const ValueKey('step_2'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+            const SizedBox(height: 14),
             _buildSoftField(
               label: isAr ? 'البريد الإلكتروني' : 'Adresse e-mail',
               controller: _emailCtrl,
@@ -783,11 +961,11 @@ class _AuthScreenState extends State<AuthScreen>
               icon: CupertinoIcons.mail,
               keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _buildSoftField(
               label: isAr ? 'كلمة المرور' : 'Mot de passe',
               controller: _passwordCtrl,
-              hint: isAr ? '6 أحرف أو أرقام على الأقل' : '6 caractères minimum',
+              hint: isAr ? '6 أحرف على الأقل' : '6 caractères minimum',
               icon: CupertinoIcons.lock,
               obscure: _obscurePassword,
               onChanged: (_) => setState(() {}),
@@ -800,8 +978,8 @@ class _AuthScreenState extends State<AuthScreen>
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            // 4-Bar Minimal Strength Indicator
+            const SizedBox(height: 10),
+            // Password Strength Indicator
             Row(
               children: List.generate(4, (idx) {
                 final active = idx < bars;
@@ -821,86 +999,243 @@ class _AuthScreenState extends State<AuthScreen>
                 );
               }),
             ),
+            const SizedBox(height: 14),
+            _buildSoftField(
+              label: isAr ? 'تأكيد كلمة المرور' : 'Confirmer le mot de passe',
+              controller: _confirmPasswordCtrl,
+              hint: isAr ? 'أعد كتابة كلمة المرور' : 'Retapez le mot de passe',
+              icon: CupertinoIcons.lock_fill,
+              obscure: true,
+            ),
           ],
         );
 
-      case 3:
-      default:
+      // Step 1: Email OTP Verification
+      case 1:
         return Column(
-          key: const ValueKey('step_3'),
+          key: const ValueKey('step_1_otp'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFDBEAFE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    CupertinoIcons.mail_solid,
+                    color: Color(0xFF2563EB),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isAr ? 'تم إرسال الرمز إلى بريدك الإلكتروني:' : 'Code envoyé à votre e-mail :',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF1E40AF),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _emailCtrl.text.trim(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF1E3A8A),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              isAr ? 'رمز التحقق (6 أرقام)' : 'Code de vérification (6 chiffres)',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _muted,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Formatted 6-digit OTP Box
+            Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: _surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+              ),
+              alignment: Alignment.center,
+              child: TextField(
+                controller: _otpCtrl,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 16,
+                  color: _ink,
+                ),
+                decoration: const InputDecoration(
+                  counterText: '',
+                  border: InputBorder.none,
+                  hintText: '••••••',
+                  hintStyle: TextStyle(
+                    fontSize: 24,
+                    letterSpacing: 12,
+                    color: _muted,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  isAr ? 'ما وصلكش الرمز؟ ' : 'Vous n’avez rien reçu ? ',
+                  style: const TextStyle(fontSize: 13, color: _muted),
+                ),
+                GestureDetector(
+                  onTap: _resendCountdown == 0 ? () => _resendOtp(isAr) : null,
+                  child: Text(
+                    _resendCountdown > 0
+                        ? (isAr ? 'إعادة الإرسال بعد $_resendCountdownث' : 'Renvoyer dans ${_resendCountdown}s')
+                        : (isAr ? 'إعادة إرسال الرمز' : 'Renvoyer le code'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: _resendCountdown > 0 ? _muted : _primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+
+      // Step 2: Account Type
+      case 2:
+        return Column(
+          key: const ValueKey('step_2_account_type'),
+          children: [
+            _buildCleanAccountCard(
+              type: 'individual',
+              title: isAr ? 'حساب شخصي' : 'Compte Particulier',
+              subtitle: isAr
+                  ? 'للبيع والشراء الشخصي، عروض يومية وتواصل مباشر مع المشترين'
+                  : 'Vendez et achetez librement entre particuliers au Maroc',
+              icon: CupertinoIcons.person_fill,
+            ),
+            const SizedBox(height: 14),
+            _buildCleanAccountCard(
+              type: 'pro',
+              title: isAr ? 'متجر احترافي (Boutique Pro)' : 'Boutique Pro Certifiée',
+              subtitle: isAr
+                  ? 'صفحة متجر موثقة، إحصائيات متقدمة، وأولوية في الظهور'
+                  : 'Vitrine officielle vérifiée et statistiques avancées',
+              icon: CupertinoIcons.bag_fill,
+              badge: 'PRO',
+            ),
+          ],
+        );
+
+      // Step 3: Preferred City
+      case 3:
+        return Column(
+          key: const ValueKey('step_3_city'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isAr ? 'مدينتك' : 'Votre ville',
+              isAr ? 'اختر مدينتك الرئيسية' : 'Sélectionnez votre ville',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: _muted,
               ),
             ),
-            const SizedBox(height: 10),
-            // Horizontal Apple-style City Pills (Cleaner than dropdown!)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                children: _cities.map((c) {
-                  final cid = int.tryParse((c['id'] ?? 1).toString()) ?? 1;
-                  final cname = (isAr
-                          ? (c['name_ar'] ?? c['name'] ?? '')
-                          : (c['name_fr'] ?? c['name'] ?? ''))
-                      .toString();
-                  final selected = _selectedCityId == cid;
-                  return Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: PressableScale(
-                      onTap: () => setState(() => _selectedCityId = cid),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected ? _ink : _surface,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          cname,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: selected ? Colors.white : _ink,
-                          ),
-                        ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 10,
+              children: _cities.map((c) {
+                final cid = int.tryParse((c['id'] ?? 1).toString()) ?? 1;
+                final cname = (isAr
+                        ? (c['name_ar'] ?? c['name'] ?? '')
+                        : (c['name_fr'] ?? c['name'] ?? ''))
+                    .toString();
+                final selected = _selectedCityId == cid;
+                return PressableScale(
+                  onTap: () => setState(() => _selectedCityId = cid),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 11,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected ? _ink : _surface,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: selected ? _ink : const Color(0xFFE2E8F0),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
+                    child: Text(
+                      cname,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: selected ? Colors.white : _ink,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
+          ],
+        );
 
-            const SizedBox(height: 24),
+      // Step 4: Category Interests (Interactive 3D Bento Grid)
+      case 4:
+      default:
+        return Column(
+          key: const ValueKey('step_4_categories'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
               isAr
-                  ? 'الأقسام المفضلة (لتخصيص الـ Feed)'
-                  : 'Catégories favorites',
+                  ? 'اختر الأقسام التي تهمك لتخصيص الخلاصات'
+                  : 'Sélectionnez vos catégories favorites',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: _muted,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: math.min(6, _categories.length),
+              itemCount: math.min(8, _categories.length),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 2.5,
+                childAspectRatio: 2.3,
               ),
               itemBuilder: (context, idx) {
                 final cat = _categories[idx];
@@ -921,17 +1256,29 @@ class _AuthScreenState extends State<AuthScreen>
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
                       color: selected ? _ink : _surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: selected ? _ink : const Color(0xFFE2E8F0),
+                        width: selected ? 1.5 : 1.0,
+                      ),
                     ),
                     child: Row(
                       children: [
                         SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: Image.asset(asset, fit: BoxFit.contain),
+                          width: 34,
+                          height: 34,
+                          child: Image.asset(
+                            asset,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              CupertinoIcons.cube_box,
+                              size: 22,
+                              color: _muted,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -940,12 +1287,18 @@ class _AuthScreenState extends State<AuthScreen>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
                               color: selected ? Colors.white : _ink,
                             ),
                           ),
                         ),
+                        if (selected)
+                          const Icon(
+                            CupertinoIcons.checkmark_circle_fill,
+                            size: 16,
+                            color: Color(0xFF10B981),
+                          ),
                       ],
                     ),
                   ),
@@ -973,6 +1326,10 @@ class _AuthScreenState extends State<AuthScreen>
         decoration: BoxDecoration(
           color: selected ? _ink : _surface,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? _ink : const Color(0xFFE2E8F0),
+            width: selected ? 1.5 : 1.0,
+          ),
         ),
         child: Row(
           children: [
@@ -1218,7 +1575,6 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  /// Celebratory Completion Screen upon finishing Login or 4-Step Registration
   Widget _buildCelebrationStage(bool isAr) {
     final displayName = _nameCtrl.text.trim().isNotEmpty
         ? _nameCtrl.text.trim()
@@ -1227,7 +1583,6 @@ class _AuthScreenState extends State<AuthScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. Continuous Animated Confetti, Fireworks & Sparkles Canvas
         IgnorePointer(
           child: AnimatedBuilder(
             animation: _celebrationCtrl,
@@ -1241,8 +1596,6 @@ class _AuthScreenState extends State<AuthScreen>
             },
           ),
         ),
-
-        // 2. Centered Apple-Whitespace Celebration Stage
         Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
@@ -1261,7 +1614,6 @@ class _AuthScreenState extends State<AuthScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Animated Party GIF / 3D Celebration Badge Showcase
                     SizedBox(
                       width: 210,
                       height: 210,
@@ -1272,7 +1624,6 @@ class _AuthScreenState extends State<AuthScreen>
                           return Stack(
                             alignment: Alignment.center,
                             children: [
-                              // Outer expanding celebration glow ring
                               Transform.scale(
                                 scale: 1.0 + (pulse.abs() * 0.14),
                                 child: Container(
@@ -1290,7 +1641,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   ),
                                 ),
                               ),
-                              // Rotating Orbiting Celebration Badges (GIF-like motion loop)
                               ...List.generate(4, (i) {
                                 final angle = (_celebrationCtrl.value * math.pi * 2) +
                                     (i * math.pi / 2);
@@ -1321,7 +1671,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   ),
                                 );
                               }),
-                              // Center Floating 3D Sculpture + Animated Party Popper GIF Badge
                               const Floating3DIllustration(
                                 assetPath: 'assets/images/auth_hero_3d.png',
                                 size: 146,
@@ -1375,10 +1724,7 @@ class _AuthScreenState extends State<AuthScreen>
                         },
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
-                    // Verified Pill
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
@@ -1407,9 +1753,7 @@ class _AuthScreenState extends State<AuthScreen>
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
                     Text(
                       isAr ? 'مرحباً بك، $displayName 👋' : 'Bienvenue, $displayName 👋',
                       textAlign: TextAlign.center,
@@ -1433,10 +1777,7 @@ class _AuthScreenState extends State<AuthScreen>
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-
                     const SizedBox(height: 28),
-
-                    // Primary CTA: Go Directly to Post Ad Screen
                     PressableScale(
                       onTap: _finishAndGoToPostAd,
                       child: Container(
@@ -1473,10 +1814,7 @@ class _AuthScreenState extends State<AuthScreen>
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
-                    // Secondary CTA: Continue to Home / Profile
                     PressableScale(
                       onTap: _finishAndExit,
                       child: Container(

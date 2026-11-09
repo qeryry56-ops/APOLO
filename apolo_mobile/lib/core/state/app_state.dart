@@ -295,7 +295,7 @@ class AppState extends ChangeNotifier {
         combined.contains('نقل') ||
         combined.contains('سيار') ||
         combined.contains('مركبات')) {
-      return 'assets/images/hero_car.png';
+      return 'assets/images/cat_vehicles.png';
     }
     if (combined.contains('immo') ||
         combined.contains('appart') ||

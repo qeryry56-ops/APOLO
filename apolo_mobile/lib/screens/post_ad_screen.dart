@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -182,7 +182,7 @@ class _PostAdScreenState extends State<PostAdScreen>
         combined.contains('نقل') ||
         combined.contains('سيار') ||
         combined.contains('مركبات')) {
-      return 'assets/images/hero_car.png';
+      return 'assets/images/cat_vehicles.png';
     }
     if (combined.contains('immo') ||
         combined.contains('appart') ||
@@ -289,7 +289,7 @@ class _PostAdScreenState extends State<PostAdScreen>
         final catName = _selectedCategoryName();
         return catName.isNotEmpty
             ? _assetForCategory(catName)
-            : 'assets/images/hero_car.png';
+            : 'assets/images/cat_vehicles.png';
       case 1:
         return 'assets/images/cat_phones.png';
       case 2:
