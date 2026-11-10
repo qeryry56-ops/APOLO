@@ -242,86 +242,78 @@ class _HomeScreenState extends State<HomeScreen> {
                         parent: AlwaysScrollableScrollPhysics(),
                       ),
                       slivers: [
-                        // 1. Top Header Row (Official Logo + Notifications + Greeting)
+                        // 1. Top Header Row (Greeting + Notification Bell)
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/apolo_logo_red.png',
-                                      height: 32,
-                                      fit: BoxFit.contain,
+                                Expanded(
+                                  child: Text(
+                                    isAr
+                                        ? 'مرحباً، $_userName 👋'
+                                        : 'Hi, $_userName 👋',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 27,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.6,
+                                      color: _ink,
+                                      height: 1.15,
                                     ),
-                                    PressableScale(
-                                      onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              const NotificationsScreen(),
-                                        ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                PressableScale(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const NotificationsScreen(),
+                                    ),
+                                  ),
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: _surface,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                        width: 1.0,
                                       ),
-                                      child: Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: _surface,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: const Color(0xFFE2E8F0),
-                                            width: 1.0,
-                                          ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        const Icon(
+                                          CupertinoIcons.bell,
+                                          size: 21,
+                                          color: _ink,
                                         ),
-                                        alignment: Alignment.center,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            const Icon(
-                                              CupertinoIcons.bell,
-                                              size: 21,
-                                              color: _ink,
-                                            ),
-                                            if (_state.unreadNotificationsCount > 0)
-                                              Positioned(
-                                                top: 1,
-                                                right: 1,
-                                                child: Container(
-                                                  width: 8,
-                                                  height: 8,
-                                                  decoration: BoxDecoration(
-                                                    color: _primary,
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(
-                                                      color: Colors.white,
-                                                      width: 1.5,
-                                                    ),
-                                                  ),
+                                        if (_state.unreadNotificationsCount > 0)
+                                          Positioned(
+                                            top: 1,
+                                            right: 1,
+                                            child: Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color: _primary,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 1.5,
                                                 ),
                                               ),
-                                          ],
-                                        ),
-                                      ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  isAr
-                                      ? 'Ù…Ø±Ø­Ø¨Ø§Ù‹ØŒ $_userName ðŸ‘‹'
-                                      : 'Hi, $_userName ðŸ‘‹',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -0.6,
-                                    color: _ink,
-                                    height: 1.15,
                                   ),
                                 ),
                               ],
