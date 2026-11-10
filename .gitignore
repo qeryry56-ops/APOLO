@@ -1,3 +1,20 @@
 .cursor/
 .idea/
 .vscode/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Flutter & Android Keystores & keys
+*.keystore
+*.jks
+key.properties
+google-services.json
+GoogleService-Info.plist
+
+# Temp & logs
+*.log
+*.bak
+*.tmp
