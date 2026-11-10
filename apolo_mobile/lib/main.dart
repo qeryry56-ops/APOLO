@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/app_config.dart';
 import 'core/state/app_state.dart';
 import 'screens/main_shell.dart';
+import 'screens/splash_screen.dart';
 import 'screens/welcome_screen.dart';
 
 void main() async {
@@ -80,11 +81,10 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: AppConfig.buildTheme(_state.locale),
-      home: _passedWelcome
-          ? const MainShell()
-          : WelcomeScreen(
-              onContinueAsGuest: _onCompleteWelcome,
-            ),
+      home: SplashScreen(
+        hasSeenWelcome: _passedWelcome,
+        onCompleteWelcome: _onCompleteWelcome,
+      ),
     );
   }
 }

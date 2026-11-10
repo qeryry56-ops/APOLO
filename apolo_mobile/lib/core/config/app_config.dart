@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConfig {
   static const String appName = 'Apolo.ma';
+  static const String appVersion = '2.4.0';
   static const String stagingBaseUrl = 'https://staging.apolo.ma/api/v1';
   static const String prodBaseUrl = 'https://apolo.ma/api/v1';
 
