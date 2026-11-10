@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -14,15 +14,15 @@ import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
 /// 2026 Next-Gen Apolo Reels (ريلز وسكرول الإعلانات الفاخر 🎬):
-/// - Vertical Full-Screen Swipe between different Ads (TikTok / Reels Feed).
-/// - Horizontal Multi-Photo Swipe Carousel inside each Ad ("بـ سكرول الصور بحال تيك توك").
-/// - Natural Image Aspect Ratio ("حجم الصورة طبيعي كيف هي" بدون أي تمطيط أو اقتطاع)
-///   مع خلفية سينمائية محيطية ضبابية Ambient Blur.
-/// - Pinch-to-zoom interactive viewer على أي صورة.
-/// - TikTok-style Photo Indicator Pill (مثلاً 1/4) ومؤشر النقاط المتفاعلة.
-/// - Double-tap anywhere to trigger a bursting 3D heart animation and add to favorites.
-/// - Right Action Dock: أفتار البائع مع النقطة الخضرا، زر الإعجاب، الشات، الاتصال المباشر، المشاركة.
-/// - Bottom Glass Info Overlay: فئات الإعلان، الثمن بالأحمر الرسمي، شارة التفاوض، تيكر الموسيقى، وزر تفاصيل الإعلان.
+/// - Apple HIG & TikTok 2026 Design Language.
+/// - Full-screen vertical swipe between ads.
+/// - Horizontal multi-photo carousel with natural aspect ratio & ambient blur.
+/// - Stories-style photo progress segments + counter pill.
+/// - Zen Mode: Tap media to toggle UI overlays smoothly for clean inspection.
+/// - Double-tap 3D spring heart burst with elastic bounce and haptics.
+/// - Interactive right action dock (Seller Avatar, Like with spring scale, Chat, Call, Share).
+/// - Frosted glass bottom card with category, price in Apolo red, location, and full ad CTA.
+/// - Shimmering dark skeleton loading and elegant empty feedback states.
 class AdReelsScreen extends StatefulWidget {
   final int initialIndex;
   const AdReelsScreen({super.key, this.initialIndex = 0});
@@ -37,17 +37,19 @@ class _AdReelsScreenState extends State<AdReelsScreen>
   late final PageController _pageController;
 
   int _currentIndex = 0;
-  int _selectedFeedTab = 0; // 0: لك ✨, 1: الأحدث ⚡, 2: VIP 👑
+  int _selectedFeedTab = 0; // 0: لك, 1: الأحدث, 2: VIP
   bool _isLoading = true;
   List<Map<String, dynamic>> _reelsAds = [];
+
+  // Zen Mode (Hide/Show UI on single tap)
+  bool _isUiVisible = true;
 
   // Double-tap heart burst animation
   Offset? _heartBurstPosition;
   late final AnimationController _heartAnimController;
 
   static const Color _red = Color(0xFFE31B23);
-  static const Color _ink = Color(0xFF0F172A);
-
+  static const Color _ink = Color(0xFF07111E);
 
   @override
   void initState() {
@@ -56,7 +58,7 @@ class _AdReelsScreenState extends State<AdReelsScreen>
     _currentIndex = widget.initialIndex;
     _heartAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: const Duration(milliseconds: 750),
     );
     _loadReels();
   }
@@ -118,7 +120,6 @@ class _AdReelsScreenState extends State<AdReelsScreen>
         int.tryParse('${raw['views_count'] ?? raw['views'] ?? 120}') ?? 120;
     final int likes = (views * 0.16).round().clamp(12, 9999);
 
-    // Multi-photo list normalization
     List<String> images = [];
     if (raw['images'] is List && (raw['images'] as List).isNotEmpty) {
       images = (raw['images'] as List).map((e) => e.toString()).toList();
@@ -135,8 +136,6 @@ class _AdReelsScreenState extends State<AdReelsScreen>
           .toString();
       if (mainImg.isNotEmpty) images = [mainImg];
     }
-
-    // Pure production: only valid images
 
     return {
       'id': adId,
@@ -159,7 +158,7 @@ class _AdReelsScreenState extends State<AdReelsScreen>
           seller['is_verified'] == true || raw['seller_verified'] == true,
       'seller_online': seller['is_online'] ?? true,
       'images': images,
-      'main_image': images.first,
+      'main_image': images.isNotEmpty ? images.first : '',
       'is_vip': raw['is_vip'] == true || raw['is_featured'] == true,
       'raw_ad': raw,
     };
@@ -178,7 +177,7 @@ class _AdReelsScreenState extends State<AdReelsScreen>
   }
 
   void _triggerHeartBurst(Offset localPos, int adId) {
-    HapticFeedback.mediumImpact();
+    HapticFeedback.heavyImpact();
     setState(() => _heartBurstPosition = localPos);
     _heartAnimController.forward(from: 0.0).then((_) {
       if (mounted) setState(() => _heartBurstPosition = null);
@@ -186,6 +185,11 @@ class _AdReelsScreenState extends State<AdReelsScreen>
     if (!_state.favoriteAdIds.contains(adId)) {
       _state.toggleFavorite(adId);
     }
+  }
+
+  void _toggleUiVisibility() {
+    HapticFeedback.selectionClick();
+    setState(() => _isUiVisible = !_isUiVisible);
   }
 
   void _callSeller(String phone, String name) async {
@@ -199,6 +203,7 @@ class _AdReelsScreenState extends State<AdReelsScreen>
               : 'Numéro non disponible'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: _red,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -256,25 +261,19 @@ class _AdReelsScreenState extends State<AdReelsScreen>
         children: [
           // 1. Vertical TikTok-style Reels PageView
           if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(color: _red, strokeWidth: 2.5),
-            )
+            const _ReelsSkeletonLoader()
           else if (reels.isEmpty)
-            Center(
-              child: Text(
-                isAr
-                    ? 'لا توجد إعلانات في هذا القسم'
-                    : 'Aucune annonce disponible',
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            )
+            _buildEmptyState(isAr)
           else
             PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
               physics: const BouncingScrollPhysics(),
               itemCount: reels.length,
-              onPageChanged: (idx) => setState(() => _currentIndex = idx),
+              onPageChanged: (idx) {
+                HapticFeedback.lightImpact();
+                setState(() => _currentIndex = idx);
+              },
               itemBuilder: (context, index) {
                 final reel = reels[index];
                 final int adId = reel['id'] as int;
@@ -284,8 +283,10 @@ class _AdReelsScreenState extends State<AdReelsScreen>
                   reel: reel,
                   isAr: isAr,
                   isLiked: isLiked,
+                  isUiVisible: _isUiVisible,
+                  onToggleUi: _toggleUiVisibility,
                   onToggleFavorite: () {
-                    HapticFeedback.lightImpact();
+                    HapticFeedback.mediumImpact();
                     _state.toggleFavorite(adId);
                     setState(() {});
                   },
@@ -333,157 +334,182 @@ class _AdReelsScreenState extends State<AdReelsScreen>
           // 2. Double-Tap Bursting Heart Animation
           if (_heartBurstPosition != null)
             Positioned(
-              left: _heartBurstPosition!.dx - 48,
-              top: _heartBurstPosition!.dy - 48,
+              left: _heartBurstPosition!.dx - 54,
+              top: _heartBurstPosition!.dy - 54,
               child: IgnorePointer(
                 child: ScaleTransition(
                   scale: TweenSequence<double>([
                     TweenSequenceItem(
-                      tween: Tween(begin: 0.0, end: 1.35)
-                          .chain(CurveTween(curve: Curves.easeOutBack)),
-                      weight: 50,
+                      tween: Tween(begin: 0.0, end: 1.45)
+                          .chain(CurveTween(curve: Curves.elasticOut)),
+                      weight: 60,
                     ),
                     TweenSequenceItem(
-                      tween: Tween(begin: 1.35, end: 1.0)
-                          .chain(CurveTween(curve: Curves.easeIn)),
-                      weight: 50,
+                      tween: Tween(begin: 1.45, end: 1.0)
+                          .chain(CurveTween(curve: Curves.easeInCubic)),
+                      weight: 40,
                     ),
                   ]).animate(_heartAnimController),
                   child: FadeTransition(
                     opacity: Tween<double>(begin: 1.0, end: 0.0).animate(
                       CurvedAnimation(
                         parent: _heartAnimController,
-                        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+                        curve: const Interval(0.65, 1.0, curve: Curves.easeOut),
                       ),
                     ),
-                    child: const Icon(
-                      CupertinoIcons.heart_fill,
-                      color: Color(0xFFFF2A42),
-                      size: 96,
-                      shadows: [
-                        BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 20,
-                        ),
-                      ],
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x66FF2A42),
+                            blurRadius: 32,
+                            spreadRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.heart_fill,
+                        color: Color(0xFFFF2A42),
+                        size: 108,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
 
-          // 3. Top Floating Glass Header (Back Button + Feed Filters + Reels Badge)
+          // 3. Top Floating Glass Header (Animated Opacity for Zen Mode)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    // Back button
-                    PressableScale(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.22),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.35),
-                              blurRadius: 8,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeInOutCubic,
+              opacity: _isUiVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_isUiVisible,
+                child: SafeArea(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        // Back button (Frosted Glass)
+                        PressableScale(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.pop(context);
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                              child: Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.40),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.20),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  isAr
+                                      ? CupertinoIcons.chevron_right
+                                      : CupertinoIcons.chevron_left,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
                             ),
-                          ],
+                          ),
                         ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          isAr
-                              ? CupertinoIcons.chevron_right
-                              : CupertinoIcons.chevron_left,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                        const SizedBox(width: 12),
 
-                    // Centered Feed Switcher Tabs (لك ✨ | الأحدث ⚡ | VIP 👑)
-                    Expanded(
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
+                        // Apple Segmented Filter Pill (لك | الأحدث | VIP)
+                        Expanded(
+                          child: Center(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.40),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.18),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildSegmentPill(0, isAr ? 'لك' : 'Pour vous'),
+                                      _buildSegmentPill(1, isAr ? 'الأحدث' : 'Récents'),
+                                      _buildSegmentPill(2, isAr ? 'VIP' : 'VIP'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Live Pulse Reels Capsule
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.45),
+                            color: Colors.black.withValues(alpha: 0.40),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.20),
+                              width: 0.8,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.30),
-                                blurRadius: 10,
-                              ),
-                            ],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _buildTabPill(0, isAr ? 'لك ✨' : 'Pour vous ✨'),
-                              _buildTabPill(1, isAr ? 'الأحدث ⚡' : 'Récents ⚡'),
-                              _buildTabPill(2, isAr ? 'VIP 👑' : 'VIP 👑'),
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: _red,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _red,
+                                      blurRadius: 6,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'REELS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
-
-                    // Reels 2026 glowing pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_red, Color(0xFFFF3366)],
-                        ),
-                        borderRadius: BorderRadius.circular(999),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _red.withValues(alpha: 0.45),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            CupertinoIcons.play_rectangle_fill,
-                            color: Colors.white,
-                            size: 13,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'REELS',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -493,7 +519,7 @@ class _AdReelsScreenState extends State<AdReelsScreen>
     );
   }
 
-  Widget _buildTabPill(int index, String label) {
+  Widget _buildSegmentPill(int index, String label) {
     final active = _selectedFeedTab == index;
     return GestureDetector(
       onTap: () {
@@ -501,8 +527,9 @@ class _AdReelsScreenState extends State<AdReelsScreen>
         setState(() => _selectedFeedTab = index);
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: active ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
@@ -510,10 +537,76 @@ class _AdReelsScreenState extends State<AdReelsScreen>
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+            fontSize: 12.5,
+            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
             color: active ? _ink : Colors.white70,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isAr) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              ),
+              child: const Icon(
+                CupertinoIcons.play_rectangle,
+                color: Colors.white54,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isAr ? 'لا توجد إعلانات في هذا التبويب' : 'Aucune annonce disponible',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isAr
+                  ? 'جرب اختيار قسم آخر أو السحب لتحديث المحتوى'
+                  : 'Essayez une autre section ou tirez pour rafraîchir',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 20),
+            PressableScale(
+              onTap: _loadReels,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isAr ? 'تحديث الإعلانات' : 'Actualiser',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -521,17 +614,18 @@ class _AdReelsScreenState extends State<AdReelsScreen>
 }
 
 /// Individual Reel Page View with:
-/// 1. Natural Aspect Ratio Main Image ("حجم الصورة طبيعي كيف هي" بدون تقطاع).
-/// 2. Ambient Blurred Background for immersive atmosphere.
-/// 3. Horizontal Multi-Photo Swiping Carousel ("سكرول الصور بحال تيك توك").
-/// 4. Interactive Zooming (`InteractiveViewer`).
-/// 5. TikTok-Style Photo Counter Pill (`1/4`) and animated page dots.
-/// 6. Floating Action Dock on the right (Avatar, Like, Chat, Phone, Share).
-/// 7. Glass bottom information card + Music/Listing ticker + Full Ad CTA.
+/// - Natural Aspect Ratio Main Image.
+/// - Ambient Blurred Backdrop.
+/// - TikTok / Stories horizontal multi-photo carousel with top progress segments.
+/// - InteractiveViewer for smooth zooming.
+/// - Right Action Dock with Spring Like Animation.
+/// - Apple Frosted Glass Bottom Card with rich listing telemetry.
 class _ReelAdItemView extends StatefulWidget {
   final Map<String, dynamic> reel;
   final bool isAr;
   final bool isLiked;
+  final bool isUiVisible;
+  final VoidCallback onToggleUi;
   final VoidCallback onToggleFavorite;
   final Function(Offset) onDoubleTap;
   final VoidCallback onOpenChat;
@@ -544,6 +638,8 @@ class _ReelAdItemView extends StatefulWidget {
     required this.reel,
     required this.isAr,
     required this.isLiked,
+    required this.isUiVisible,
+    required this.onToggleUi,
     required this.onToggleFavorite,
     required this.onDoubleTap,
     required this.onOpenChat,
@@ -558,10 +654,10 @@ class _ReelAdItemView extends StatefulWidget {
 }
 
 class _ReelAdItemViewState extends State<_ReelAdItemView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final PageController _photoPageController;
   int _currentPhotoIndex = 0;
-  late final AnimationController _tickerAnimController;
+  late final AnimationController _likeBounceController;
 
   static const Color _red = Color(0xFFE31B23);
 
@@ -569,16 +665,24 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
   void initState() {
     super.initState();
     _photoPageController = PageController();
-    _tickerAnimController = AnimationController(
+    _likeBounceController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat();
+      duration: const Duration(milliseconds: 380),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReelAdItemView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isLiked != oldWidget.isLiked && widget.isLiked) {
+      _likeBounceController.forward(from: 0.0);
+    }
   }
 
   @override
   void dispose() {
     _photoPageController.dispose();
-    _tickerAnimController.dispose();
+    _likeBounceController.dispose();
     super.dispose();
   }
 
@@ -608,11 +712,12 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
         : '';
 
     return GestureDetector(
+      onTap: widget.onToggleUi,
       onDoubleTapDown: (details) => widget.onDoubleTap(details.localPosition),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Ambient Blurred Backdrop (يعطي عمق سينمائي فخم خلف الصورة الطبيعية)
+          // 1. Ambient Blurred Backdrop
           Positioned.fill(
             child: Stack(
               fit: StackFit.expand,
@@ -620,14 +725,13 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
                 AppImage(
                   url: activePhotoUrl,
                   fit: BoxFit.cover,
-                  fallback: Container(color: const Color(0xFF0F172A)),
+                  fallback: Container(color: const Color(0xFF07111E)),
                 ),
-                // Gaussian Blur Filter
                 ClipRect(
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
+                    filter: ImageFilter.blur(sigmaX: 42, sigmaY: 42),
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.62),
+                      color: Colors.black.withValues(alpha: 0.65),
                     ),
                   ),
                 ),
@@ -635,67 +739,61 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
             ),
           ),
 
-          // 2. Central Multi-Photo Horizontal Carousel ("سكرول الصور بحال تيك توك")
-          // مع الحفاظ على الحجم الطبيعي للصورة بنسبة 100% ("حجم الصورة طبيعي كيف هي")
+          // 2. Central Multi-Photo Horizontal Carousel (Clean Natural Ratio)
           Positioned.fill(
-            child: SafeArea(
-              top: false,
-              bottom: false,
-              child: Center(
-                child: PageView.builder(
-                  controller: _photoPageController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: images.length,
-                  onPageChanged: (idx) {
-                    HapticFeedback.selectionClick();
-                    setState(() => _currentPhotoIndex = idx);
-                  },
-                  itemBuilder: (context, pIdx) {
-                    final photoUrl = images[pIdx];
-                    return Center(
-                      child: InteractiveViewer(
-                        minScale: 1.0,
-                        maxScale: 3.5,
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxHeight: MediaQuery.of(context).size.height * 0.76,
-                            maxWidth: MediaQuery.of(context).size.width,
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: AppImage(
-                              url: photoUrl,
-                              // BoxFit.contain يضمن أن الصورة تبان كاملة بدون أي اقتطاع أو تمطيط!
-                              fit: BoxFit.contain,
-                              fallback: Container(
-                                height: 320,
-                                color: const Color(0xFF1E293B),
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  CupertinoIcons.photo,
-                                  color: Colors.white24,
-                                  size: 64,
-                                ),
+            child: Center(
+              child: PageView.builder(
+                controller: _photoPageController,
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: images.length,
+                onPageChanged: (idx) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _currentPhotoIndex = idx);
+                },
+                itemBuilder: (context, pIdx) {
+                  final photoUrl = images[pIdx];
+                  return Center(
+                    child: InteractiveViewer(
+                      minScale: 1.0,
+                      maxScale: 3.5,
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.78,
+                          maxWidth: MediaQuery.of(context).size.width,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: AppImage(
+                            url: photoUrl,
+                            fit: BoxFit.contain,
+                            fallback: Container(
+                              height: 320,
+                              color: const Color(0xFF0E1E32),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                CupertinoIcons.photo,
+                                color: Colors.white24,
+                                size: 64,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
 
-          // 3. Top Vignette & Subtle Gradient
+          // 3. Vignette Gradients for readability
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: 140,
+            height: 160,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -703,7 +801,27 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.70),
+                      Colors.black.withValues(alpha: 0.75),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 240,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.85),
                       Colors.transparent,
                     ],
                   ),
@@ -712,481 +830,450 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
             ),
           ),
 
-          // 4. TikTok-Style Floating Photo Counter Pill (مثلاً 1/4)
+          // 4. Stories-Style Top Micro Progress Segments & Counter Pill
           if (images.length > 1)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 54,
-              right: isAr ? null : 16,
-              left: isAr ? 16 : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.25),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
+              top: MediaQuery.of(context).padding.top + 58,
+              left: 20,
+              right: 20,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: widget.isUiVisible ? 1.0 : 0.0,
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      CupertinoIcons.photo_on_rectangle,
-                      color: Colors.white,
-                      size: 13,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      '${_currentPhotoIndex + 1} / ${images.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
+                    // Segments
+                    Expanded(
+                      child: Row(
+                        children: List.generate(images.length, (sIdx) {
+                          final bool active = sIdx == _currentPhotoIndex;
+                          return Expanded(
+                            child: Container(
+                              height: 3,
+                              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                              decoration: BoxDecoration(
+                                color: active
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-          // 5. TikTok-Style Photo Pagination Dots (أسفل الصور)
-          if (images.length > 1)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 236,
-              child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.40),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(images.length, (dotIdx) {
-                      final bool active = dotIdx == _currentPhotoIndex;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                        width: active ? 16 : 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: active ? Colors.white : Colors.white38,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-            ),
-
-          // 6. Right Action Dock (TikTok 2026 Style)
-          PositionedDirectional(
-            end: 14,
-            bottom: 30,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Seller Avatar with Online Indicator & Verified Badge
-                PressableScale(
-                  onTap: widget.onOpenSellerProfile,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.bottomCenter,
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.45),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: sellerAvatar != null && sellerAvatar.isNotEmpty
-                              ? Image.network(
-                                  sellerAvatar,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      _buildAvatarFallback(sellerName),
-                                )
-                              : _buildAvatarFallback(sellerName),
-                        ),
-                      ),
-                      if (isOnline)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.black, width: 2),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Favorite / Like Button
-                _buildActionBtn(
-                  icon: widget.isLiked
-                      ? CupertinoIcons.heart_fill
-                      : CupertinoIcons.heart,
-                  iconColor:
-                      widget.isLiked ? const Color(0xFFFF2A42) : Colors.white,
-                  label: '${likes + (widget.isLiked ? 1 : 0)}',
-                  onTap: widget.onToggleFavorite,
-                ),
-                const SizedBox(height: 16),
-
-                // In-App Direct Chat Button
-                _buildActionBtn(
-                  icon: CupertinoIcons.chat_bubble_2_fill,
-                  iconColor: Colors.white,
-                  label: isAr ? 'شات' : 'Chat',
-                  onTap: widget.onOpenChat,
-                ),
-                const SizedBox(height: 16),
-
-                // Direct Phone Call Button
-                _buildActionBtn(
-                  icon: CupertinoIcons.phone_fill,
-                  iconColor: const Color(0xFF10B981),
-                  label: isAr ? 'اتصال' : 'Appel',
-                  onTap: widget.onCallSeller,
-                ),
-                const SizedBox(height: 16),
-
-                // Share Button
-                _buildActionBtn(
-                  icon: CupertinoIcons.share,
-                  iconColor: Colors.white,
-                  label: isAr ? 'مشاركة' : 'Partager',
-                  onTap: widget.onShare,
-                ),
-              ],
-            ),
-          ),
-
-          // 7. Bottom Information Card & Quick Action Deck (2026 High UI/UX)
-          PositionedDirectional(
-            start: 14,
-            end: 80,
-            bottom: 24,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Category & VIP & Negotiable Badges
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
+                    const SizedBox(width: 10),
+                    // Counter Tag
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 3.5,
-                      ),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.black.withValues(alpha: 0.50),
+                        borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.28),
+                          color: Colors.white.withValues(alpha: 0.20),
+                          width: 0.8,
                         ),
                       ),
                       child: Text(
-                        category,
+                        '${_currentPhotoIndex + 1}/${images.length}',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 10.5,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    if (isVip)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3.5,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              CupertinoIcons.sparkles,
-                              color: Colors.white,
-                              size: 11,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isAr ? 'VIP' : 'VIP',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (negotiable)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.50),
-                          ),
-                        ),
-                        child: Text(
-                          isAr ? 'قابل للتفاوض 🤝' : 'Négociable 🤝',
-                          style: const TextStyle(
-                            color: Color(0xFF34D399),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
-                const SizedBox(height: 7),
+              ),
+            ),
 
-                // Seller Name with Verified Blue Shield (Tappable to view Profile)
-                PressableScale(
-                  onTap: widget.onOpenSellerProfile,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '@$sellerName',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w900,
-                          shadows: [
-                            BoxShadow(color: Colors.black, blurRadius: 6),
-                          ],
-                        ),
-                      ),
-                      if (isVerified) ...[
-                        const SizedBox(width: 5),
-                        const Icon(
-                          CupertinoIcons.checkmark_seal_fill,
-                          color: Color(0xFF38BDF8),
-                          size: 15,
-                        ),
-                      ],
-                      const SizedBox(width: 6),
-                      Icon(
-                        isAr ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
-                        color: Colors.white70,
-                        size: 12,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 5),
-
-                // Ad Title (Max 2 lines)
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w800,
-                    height: 1.3,
-                    shadows: [
-                      BoxShadow(color: Colors.black, blurRadius: 8),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Price Tag + City
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 10,
-                  runSpacing: 6,
+          // 5. Right Action Dock (Interactive Floating Actions)
+          PositionedDirectional(
+            end: 14,
+            bottom: 34,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeInOutCubic,
+              opacity: widget.isUiVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !widget.isUiVisible,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Price Pill in Apolo Crimson
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 4,
+                    // Seller Avatar
+                    PressableScale(
+                      onTap: widget.onOpenSellerProfile,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.45),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: sellerAvatar != null && sellerAvatar.isNotEmpty
+                                  ? Image.network(
+                                      sellerAvatar,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          _buildAvatarFallback(sellerName),
+                                    )
+                                  : _buildAvatarFallback(sellerName),
+                            ),
+                          ),
+                          if (isOnline)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.black, width: 2),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_red, Color(0xFFC80E16)],
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Like Button with Spring Bounce Scale
+                    ScaleTransition(
+                      scale: TweenSequence<double>([
+                        TweenSequenceItem(
+                          tween: Tween(begin: 1.0, end: 1.35)
+                              .chain(CurveTween(curve: Curves.easeOutBack)),
+                          weight: 50,
                         ),
-                        borderRadius: BorderRadius.circular(9),
+                        TweenSequenceItem(
+                          tween: Tween(begin: 1.35, end: 1.0)
+                              .chain(CurveTween(curve: Curves.easeIn)),
+                          weight: 50,
+                        ),
+                      ]).animate(_likeBounceController),
+                      child: _buildActionBtn(
+                        icon: widget.isLiked
+                            ? CupertinoIcons.heart_fill
+                            : CupertinoIcons.heart,
+                        iconColor:
+                            widget.isLiked ? const Color(0xFFFF2A42) : Colors.white,
+                        label: '${likes + (widget.isLiked ? 1 : 0)}',
+                        onTap: widget.onToggleFavorite,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // In-App Chat Button
+                    _buildActionBtn(
+                      icon: CupertinoIcons.chat_bubble_2_fill,
+                      iconColor: Colors.white,
+                      label: isAr ? 'شات' : 'Chat',
+                      onTap: widget.onOpenChat,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Direct Phone Call Button
+                    _buildActionBtn(
+                      icon: CupertinoIcons.phone_fill,
+                      iconColor: const Color(0xFF10B981),
+                      label: isAr ? 'اتصال' : 'Appel',
+                      onTap: widget.onCallSeller,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Share Button
+                    _buildActionBtn(
+                      icon: CupertinoIcons.share,
+                      iconColor: Colors.white,
+                      label: isAr ? 'مشاركة' : 'Partager',
+                      onTap: widget.onShare,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 6. Bottom Information Card (Apple Glass 2026 Material)
+          PositionedDirectional(
+            start: 14,
+            end: 80,
+            bottom: 26,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeInOutCubic,
+              opacity: widget.isUiVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !widget.isUiVisible,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF07111E).withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          width: 0.8,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: _red.withValues(alpha: 0.40),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withValues(alpha: 0.35),
+                            blurRadius: 16,
                           ),
                         ],
                       ),
-                      child: Text(
-                        priceStr,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-
-                    // City Tag
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          CupertinoIcons.location_solid,
-                          color: Colors.white70,
-                          size: 13,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          city,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // TikTok-Style Verified Listing Sound / Audio Marquee Ticker
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _tickerAnimController,
-                      builder: (context, child) {
-                        return Transform.rotate(
-                          angle: _tickerAnimController.value * 2 * math.pi,
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.35),
-                            width: 1.5,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          CupertinoIcons.music_note,
-                          color: Colors.white,
-                          size: 10,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isAr
-                          ? 'إعلان موثوق فـ Apolo.ma ⚡ تصفح الصور بالسحب'
-                          : 'Annonce vérifiée sur Apolo.ma ⚡ Balayez pour voir',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.78),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // "عرض الإعلان الكامل" Glass Button
-                PressableScale(
-                  onTap: widget.onOpenFullAd,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 7.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.20),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.32),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              isAr
-                                  ? 'عرض الإعلان الكامل'
-                                  : 'Voir l\'annonce complète',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w900,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Badges Row (Category + VIP + Negotiable)
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.22),
+                                    width: 0.6,
+                                  ),
+                                ),
+                                child: Text(
+                                  category,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
+                              if (isVip)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.sparkles,
+                                        color: Colors.white,
+                                        size: 11,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'VIP',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (negotiable)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981)
+                                        .withValues(alpha: 0.20),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(0xFF10B981)
+                                          .withValues(alpha: 0.40),
+                                      width: 0.6,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isAr ? 'قابل للتفاوض' : 'Négociable',
+                                    style: const TextStyle(
+                                      color: Color(0xFF34D399),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+
+                          // Seller Row
+                          PressableScale(
+                            onTap: widget.onOpenSellerProfile,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '@$sellerName',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (isVerified) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    CupertinoIcons.checkmark_seal_fill,
+                                    color: Color(0xFF38BDF8),
+                                    size: 14,
+                                  ),
+                                ],
+                                const SizedBox(width: 4),
+                                Icon(
+                                  isAr
+                                      ? CupertinoIcons.chevron_left
+                                      : CupertinoIcons.chevron_right,
+                                  color: Colors.white60,
+                                  size: 11,
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 5),
-                            Icon(
-                              isAr
-                                  ? CupertinoIcons.arrow_left
-                                  : CupertinoIcons.arrow_right,
+                          ),
+                          const SizedBox(height: 4),
+
+                          // Ad Title
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
                               color: Colors.white,
-                              size: 12,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                              height: 1.25,
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Price & City Row
+                          Row(
+                            children: [
+                              // Price Tag in Apolo Crimson
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _red,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  priceStr,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // City
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    CupertinoIcons.location_solid,
+                                    color: Colors.white70,
+                                    size: 13,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    city,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+
+                              // View Ad Button
+                              PressableScale(
+                                onTap: widget.onOpenFullAd,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.25),
+                                      width: 0.6,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        isAr ? 'التفاصيل' : 'Détails',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        isAr
+                                            ? CupertinoIcons.arrow_left
+                                            : CupertinoIcons.arrow_right,
+                                        color: Colors.white,
+                                        size: 11,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -1196,14 +1283,14 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
 
   Widget _buildAvatarFallback(String name) {
     return Container(
-      color: const Color(0xFF1E293B),
+      color: const Color(0xFF0E1E32),
       alignment: Alignment.center,
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : 'A',
         style: const TextStyle(
           color: Colors.white,
           fontSize: 18,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -1220,24 +1307,30 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
       children: [
         PressableScale(
           onTap: onTap,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.45),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.22),
-                width: 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 8,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.40),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.20),
+                    width: 0.8,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.30),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
-              ],
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
             ),
-            child: Icon(icon, color: iconColor, size: 21),
           ),
         ),
         const SizedBox(height: 3),
@@ -1246,13 +1339,78 @@ class _ReelAdItemViewState extends State<_ReelAdItemView>
           style: const TextStyle(
             color: Colors.white,
             fontSize: 10.5,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             shadows: [
               BoxShadow(color: Colors.black, blurRadius: 6),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 2026 Dark Shimmer Skeleton Loader for Reels Loading State
+class _ReelsSkeletonLoader extends StatelessWidget {
+  const _ReelsSkeletonLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF07111E),
+      child: Stack(
+        children: [
+          // Center Placeholder Image Shimmer
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: MediaQuery.of(context).size.height * 0.70,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0E1E32),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: const Center(
+                child: CupertinoActivityIndicator(color: Colors.white54),
+              ),
+            ),
+          ),
+          // Bottom Card Shimmer
+          Positioned(
+            left: 14,
+            right: 80,
+            bottom: 26,
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0E1E32).withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white10),
+              ),
+            ),
+          ),
+          // Right Dock Shimmer
+          Positioned(
+            right: 14,
+            bottom: 40,
+            child: Column(
+              children: List.generate(
+                4,
+                (_) => Container(
+                  width: 44,
+                  height: 44,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0E1E32).withValues(alpha: 0.8),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white10),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
