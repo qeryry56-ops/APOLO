@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import 'widgets/price_text.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
 import 'widgets/boost_sheet.dart';
@@ -21,12 +22,14 @@ class AdDetailScreen extends StatefulWidget {
   final int adId;
   final Map<String, dynamic>? initialAd;
   final Map<String, dynamic>? initialData;
+  final bool openChatOnLoad;
 
   const AdDetailScreen({
     super.key,
     required this.adId,
     this.initialAd,
     this.initialData,
+    this.openChatOnLoad = false,
   });
 
   @override
@@ -41,6 +44,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   bool _loading = true;
   int _currentImgIndex = 0;
   bool _descExpanded = false;
+  bool _openingChat = false;
+  bool _savingFavorite = false;
 
   // Calibrated Apple Whitespace & Brand Palette
   static const Color _ink = Color(0xFF0F172A);
@@ -58,13 +63,43 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       final catId = _state.extractAdCategoryId(_ad!);
       _state.recordCategoryInterest(catId, weight: 2);
     }
-    _fetchDetails();
+    _state.addListener(_onStateChanged);
+    _fetchDetails().then((_) {
+      if (mounted && widget.openChatOnLoad && _ad != null) _openInAppChat();
+    });
   }
 
   @override
   void dispose() {
+    _state.removeListener(_onStateChanged);
     _pageCtrl.dispose();
     super.dispose();
+  }
+
+  void _onStateChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_savingFavorite) return;
+    if (!_state.isLoggedIn) {
+      await Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const AuthScreen()));
+      return;
+    }
+    _savingFavorite = true;
+    final previous = _state.favoriteAdIds.contains(widget.adId);
+    try {
+      final result = await _state.toggleFavorite(widget.adId,
+          categoryId: _ad == null ? null : _state.extractAdCategoryId(_ad!));
+      if (mounted && result == previous) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(_state.s.tr('تعذر تحديث المفضلة. حاول مرة أخرى.',
+                'Impossible de modifier les favoris. Réessayez.'))));
+      }
+    } finally {
+      _savingFavorite = false;
+    }
   }
 
   Future<void> _fetchDetails() async {
@@ -245,6 +280,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   }
 
   Future<void> _openInAppChat({String? presetMessage}) async {
+    if (_openingChat) return;
     HapticFeedback.selectionClick();
     if (!_state.isLoggedIn) {
       Navigator.push(
@@ -254,10 +290,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       return;
     }
 
-    final peerName = (_ad?['store']?['name'] ??
-            _ad?['seller']?['name'] ??
-            'Apolo Seller')
-        .toString();
+    _openingChat = true;
+    final peerName =
+        (_ad?['store']?['name'] ?? _ad?['seller']?['name'] ?? 'Apolo Seller')
+            .toString();
     final peerAvatar = (_ad?['store']?['logo_url'] ??
             _ad?['seller']?['avatar_url'] ??
             _ad?['seller']?['avatar'])
@@ -271,18 +307,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           .post('/chat/start', data: {'ad_id': widget.adId});
       if (res.data is Map && res.data['status'] == 'success') {
         final conv = res.data['conversation'] ?? {};
-        final int convId = int.tryParse(conv['id'].toString()) ?? widget.adId;
-        if (mounted) {
+        final int convId = int.tryParse(conv['id'].toString()) ?? 0;
+        if (mounted && convId > 0) {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => ChatRoomScreen(
-                conversationId: convId > 0 ? convId : widget.adId,
-                peerName:
-                    (conv['other_user']?['name'] ?? peerName).toString(),
+                conversationId: convId,
+                peerName: (conv['other_user']?['name'] ?? peerName).toString(),
                 adTitle: adTitle,
-                peerAvatar:
-                    (conv['other_user']?['avatar_url'] ?? peerAvatar)?.toString(),
+                peerAvatar: (conv['other_user']?['avatar_url'] ?? peerAvatar)
+                    ?.toString(),
                 adImage: chatAdImage(_ad),
                 adPrice: adPrice,
                 initialDraft: presetMessage,
@@ -292,24 +327,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           return;
         }
       }
-    } catch (_) {}
-
-    // Seamless fallback to In-App Chat room even if staging endpoint is offline
+    } catch (_) {
+      // Do not invent a conversation identifier when chat creation fails.
+    } finally {
+      _openingChat = false;
+    }
     if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChatRoomScreen(
-            conversationId: widget.adId > 0 ? widget.adId : 1,
-            peerName: peerName,
-            adTitle: adTitle,
-            peerAvatar: peerAvatar,
-            adImage: chatAdImage(_ad),
-            adPrice: adPrice,
-            initialDraft: presetMessage,
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_state.s.tr(
+        'تعذر فتح المحادثة. حاول مرة أخرى.',
+        'Impossible de démarrer la conversation. Réessayez.',
+      ))));
     }
   }
 
@@ -482,6 +510,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         seller != null &&
         _state.currentUser!['id'].toString() == seller['id'].toString();
 
+    final sellerId = int.tryParse(
+            '${seller?['id'] ?? ad['seller_id'] ?? ad['user_id'] ?? ''}') ??
+        0;
+
     final String sellerDisplayName =
         (store?['name'] ?? seller?['name'] ?? 'Apolo Seller').toString();
 
@@ -506,7 +538,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final bool isNegotiable =
         ad['negotiable'] == true || metadata['negotiable'] == true;
     final int viewsCount =
-        int.tryParse((ad['views_count'] ?? ad['views'] ?? 24).toString()) ?? 24;
+        int.tryParse((ad['views_count'] ?? ad['views'] ?? 0).toString()) ?? 0;
 
     final rawSpecs = metadata.entries
         .where(
@@ -530,7 +562,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       MapEntry(s.tr('المدينة', 'Ville'), cityName),
       MapEntry(
         s.tr('الحالة', 'État'),
-        s.tr('ممتازة / متوفر', 'Excellent état'),
+        (ad['condition'] ??
+                metadata['condition'] ??
+                s.tr('غير محددة', 'Non précisé'))
+            .toString(),
       ),
       MapEntry(
         s.tr('رقم الإعلان', 'Référence'),
@@ -542,8 +577,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final String rawDesc = (ad['description'] ?? '').toString().trim();
     final String fullDescription = rawDesc.isEmpty
         ? s.tr(
-            'المنتج متوفر بحالة ممتازة على Apolo.ma. يمكنك التواصل مباشرة مع البائع عبر شات التطبيق أو الاتصال الهاتفي لمعاينة المنتج والاتفاق على التفاصيل.',
-            'Article disponible en très bon état sur Apolo.ma. Contactez directement le vendeur via le chat Apolo ou par appel téléphonique.',
+            'لم يضف البائع وصفاً لهذا الإعلان. تواصل معه لمعرفة التفاصيل.',
+            'Le vendeur n’a pas ajouté de description. Contactez-le pour en savoir plus.',
           )
         : rawDesc;
 
@@ -579,7 +614,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         : CupertinoIcons.chevron_left,
                     onTap: () => Navigator.pop(context),
                   ),
-                  Container(
+                  Expanded(
+                      child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 6,
@@ -600,8 +636,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 145),
+                        Flexible(
                           child: Text(
                             categoryName,
                             maxLines: 1,
@@ -615,7 +650,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         ),
                       ],
                     ),
-                  ),
+                  )),
                   Row(
                     children: [
                       _SoftCircleButton(
@@ -623,22 +658,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                             ? CupertinoIcons.heart_fill
                             : CupertinoIcons.heart,
                         iconColor: isFav ? _red : _ink,
-                        onTap: () async {
-                          HapticFeedback.selectionClick();
-                          final catId = _state.extractAdCategoryId(ad);
-                          await _state.toggleFavorite(
-                            widget.adId,
-                            categoryId: catId,
-                          );
-                          if (mounted) setState(() {});
-                        },
+                        onTap: _toggleFavorite,
                       ),
                       const SizedBox(width: 8),
                       _SoftCircleButton(
                         icon: CupertinoIcons.share,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          final shareUrl = ad['share_url'] ?? 'https://apolo.ma';
+                          final shareUrl =
+                              ad['share_url'] ?? 'https://apolo.ma';
                           Share.share(
                             '${ad['title']} - $priceFormatted\n$shareUrl',
                           );
@@ -700,7 +728,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                   size: 135,
                                 ),
                               ),
-
                         if (images.isNotEmpty)
                           PositionedDirectional(
                             bottom: 14,
@@ -800,19 +827,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                priceFormatted,
-                                style: const TextStyle(
-                                  fontSize: 31,
-                                  fontWeight: FontWeight.w900,
-                                  color: _red,
-                                  letterSpacing: -0.8,
-                                  fontFeatures: [FontFeature.tabularFigures()],
-                                ),
+                            PriceText(
+                              priceFormatted,
+                              style: const TextStyle(
+                                fontSize: 31,
+                                fontWeight: FontWeight.w900,
+                                color: _red,
+                                letterSpacing: -0.8,
+                                fontFeatures: [FontFeature.tabularFigures()],
                               ),
                             ),
                             if (isNegotiable)
@@ -890,7 +915,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           icon: CupertinoIcons.eye_fill,
                           iconColor: const Color(0xFF3B82F6),
                           label: s.tr('المشاهدات', 'Vues'),
-                          value: '$viewsCount',
+                          value:
+                              ad['views_count'] == null && ad['views'] == null
+                                  ? '—'
+                                  : '$viewsCount',
                         ),
                       ),
                     ],
@@ -961,7 +989,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   // D. Ordered 2-Column Technical Specs Bento Grid
                   _SectionHeader(
                     icon: CupertinoIcons.square_list_fill,
-                    title: s.tr('معلومات ومواصفات الإعلان', 'Informations clés'),
+                    title:
+                        s.tr('معلومات ومواصفات الإعلان', 'Informations clés'),
                   ),
                   const SizedBox(height: 12),
                   GridView.builder(
@@ -1059,7 +1088,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 Text(
                                   _descExpanded
                                       ? s.tr('عرض أقل', 'Voir moins')
-                                      : s.tr('قراءة الوصف كامل', 'Lire la suite'),
+                                      : s.tr(
+                                          'قراءة الوصف كامل', 'Lire la suite'),
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
@@ -1086,8 +1116,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
                   // F. Seller Card + 1-Tap In-App Chat Quick Questions
                   _SectionHeader(
-                    icon: CupertinoIcons.person_crop_circle_fill_badge_checkmark,
-                    title: s.tr('البائع والتواصل السريع', 'Vendeur & Chat rapide'),
+                    icon:
+                        CupertinoIcons.person_crop_circle_fill_badge_checkmark,
+                    title:
+                        s.tr('البائع والتواصل السريع', 'Vendeur & Chat rapide'),
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -1100,28 +1132,34 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         PressableScale(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => SellerProfileScreen(
-                                  sellerId: int.tryParse(seller?['id']?.toString() ?? '0') ?? widget.adId,
-                                  sellerName: sellerDisplayName,
-                                  sellerAvatar: (store?['logo_url'] ?? seller?['avatar_url'])?.toString(),
-                                  sellerPhone: phone,
-                                  sellerCity: cityName,
-                                  isVerified: seller?['is_verified'] == true || store != null,
-                                  isOnline: true,
-                                  initialAd: ad,
-                                ),
-                              ),
-                            );
-                          },
+                          onTap: sellerId <= 0
+                              ? null
+                              : () {
+                                  HapticFeedback.lightImpact();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SellerProfileScreen(
+                                        sellerId: sellerId,
+                                        sellerName: sellerDisplayName,
+                                        sellerAvatar: (store?['logo_url'] ??
+                                                seller?['avatar_url'])
+                                            ?.toString(),
+                                        sellerPhone: phone,
+                                        sellerCity: cityName,
+                                        isVerified:
+                                            seller?['is_verified'] == true,
+                                        isOnline: seller?['is_online'] == true,
+                                        initialAd: ad,
+                                      ),
+                                    ),
+                                  );
+                                },
                           child: Row(
                             children: [
                               AppAvatar(
-                                url: (store?['logo_url'] ?? seller?['avatar_url'])
+                                url: (store?['logo_url'] ??
+                                        seller?['avatar_url'])
                                     ?.toString(),
                                 radius: 26,
                               ),
@@ -1144,24 +1182,26 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 5),
-                                        const Icon(
-                                          CupertinoIcons.checkmark_seal_fill,
-                                          size: 16,
-                                          color: _red,
-                                        ),
+                                        if (seller?['is_verified'] == true) ...[
+                                          const SizedBox(width: 5),
+                                          const Icon(
+                                            CupertinoIcons.checkmark_seal_fill,
+                                            size: 16,
+                                            color: _red,
+                                          ),
+                                        ],
                                       ],
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
                                       store != null
                                           ? s.tr(
-                                              'متجر احترافي موثق • كيجاوب بسرعة فـ الشات',
-                                              'Boutique Pro Vérifiée • Réponse rapide',
+                                              'متجر على Apolo',
+                                              'Boutique sur Apolo',
                                             )
                                           : s.tr(
-                                              'عضو موثق • اضغط لعرض البروفايل الكامل',
-                                              'Membre vérifié • Toucher pour voir le profil',
+                                              'بائع على Apolo',
+                                              'Vendeur sur Apolo',
                                             ),
                                       style: const TextStyle(
                                         fontSize: 12.5,
@@ -1179,7 +1219,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => StoreDetailScreen(
-                                          subdomain: store['subdomain'].toString(),
+                                          subdomain:
+                                              store['subdomain'].toString(),
                                         ),
                                       ),
                                     );
@@ -1241,7 +1282,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                             ],
                           ),
                         ),
-
                         if (!isOwner) ...[
                           const SizedBox(height: 16),
                           Container(
@@ -1345,7 +1385,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     const SizedBox(height: 28),
                     _SectionHeader(
                       icon: CupertinoIcons.square_grid_2x2_fill,
-                      title: s.tr('إعلانات مشابهة فـ نفس القسم', 'Annonces similaires'),
+                      title: s.tr(
+                          'إعلانات مشابهة فـ نفس القسم', 'Annonces similaires'),
                     ),
                     const SizedBox(height: 14),
                     SizedBox(
@@ -1425,8 +1466,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 // Button 2: Direct Phone Call (Vibrant Apolo Red Pill)
                 Expanded(
                   child: PressableScale(
-                    onTap: () =>
-                        _showCallSheetOrDial(phone, sellerDisplayName),
+                    onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
                     child: Container(
                       height: 54,
                       decoration: BoxDecoration(

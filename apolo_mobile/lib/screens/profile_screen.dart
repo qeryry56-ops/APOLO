@@ -1,9 +1,5 @@
-﻿import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../core/state/app_state.dart';
 import 'ad_detail_screen.dart';
 import 'ad_reels_screen.dart';
@@ -11,6 +7,7 @@ import 'auth_screen.dart';
 import 'post_ad_screen.dart';
 import 'settings_screen.dart';
 import 'widgets/app_image.dart';
+import 'widgets/price_text.dart';
 import 'widgets/boost_sheet.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
@@ -24,20 +21,17 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AppState _state = AppState();
-  final ImagePicker _picker = ImagePicker();
 
   List<Map<String, dynamic>> _myAds = [];
   bool _loadingAds = false;
   int _activeTab = 0; // 0: My Ads (Default clean grid), 1: Insights & Boost
-  int _statsPeriod = 0; // 0: 7d, 1: 30d, 2: All time
-
-  // Local persisted profile customization (Photo, Name, @handle, Bio, Phone)
-  Uint8List? _customAvatarBytes;
-  String? _presetAvatarUrl;
-  String? _customName;
-  String? _customHandle;
-  String? _customBio;
-  String? _customPhone;
+  String? _adsError;
+  final Set<int> _deletingAds = {};
+  String? _profileIdentity;
+  String? get _identity =>
+      _state.isLoggedIn && _state.currentUser?['id'] != null
+          ? '${_state.api.dio.options.baseUrl}:${_state.currentUser!['id']}'
+          : null;
 
   static const Color _primary = Color(0xFFE31B23);
   static const Color _ink = Color(0xFF0F172A);
@@ -45,125 +39,128 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _surface = Color(0xFFF5F6F8);
   static const Color _hairline = Color(0xFFECEEF2);
 
-
   @override
   void initState() {
     super.initState();
-    _loadLocalProfileCustomizations();
+    _profileIdentity = _identity;
+    _state.addListener(_onAccountChanged);
     _loadProfileData();
   }
 
-  Future<void> _loadLocalProfileCustomizations() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final b64 = prefs.getString('apolo_profile_avatar_b64');
-      if (!mounted) return;
-      setState(() {
-        if (b64 != null && b64.isNotEmpty) {
-          _customAvatarBytes = base64Decode(b64);
-        }
-        _presetAvatarUrl = prefs.getString('apolo_profile_avatar_url');
-        _customName = prefs.getString('apolo_profile_name');
-        _customHandle = prefs.getString('apolo_profile_handle');
-        _customBio = prefs.getString('apolo_profile_bio');
-        _customPhone = prefs.getString('apolo_profile_phone');
-      });
-    } catch (_) {}
+  @override
+  void dispose() {
+    _state.removeListener(_onAccountChanged);
+    super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (_profileIdentity != _identity) {
+      _profileIdentity = _identity;
+      _myAds = [];
+      _adsError = null;
+      _loadProfileData();
+    }
+    setState(() {});
   }
 
   Future<void> _loadProfileData() async {
-    setState(() => _loadingAds = true);
+    if (!mounted) return;
+    final identity = _identity;
+    if (identity == null) {
+      setState(() {
+        _myAds = [];
+        _loadingAds = false;
+      });
+      return;
+    }
+    setState(() {
+      _loadingAds = true;
+      _adsError = null;
+    });
     try {
-      if (_state.isLoggedIn) {
-        await _state.fetchMe();
+      await _state.fetchMe();
+      if (!mounted || identity != _identity) return;
+      final res = await _state.api.dio.get('/my-ads');
+      if (res.data is! Map ||
+          res.data['data'] is! List ||
+          (res.data['status'] != null && res.data['status'] != 'success')) {
+        throw StateError('Invalid ads response');
       }
-    } catch (_) {}
-
-    try {
-      List<dynamic> rawList = [];
-      if (_state.isLoggedIn) {
-        final res = await _state.api.dio.get('/my-ads');
-        if (res.data is Map) {
-          rawList = (res.data['data'] as List?) ?? [];
-        }
-      }
-      final parsed = rawList
+      final parsed = (res.data['data'] as List)
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
-
-      if (mounted) {
-        setState(() {
-          _myAds = parsed;
-          _loadingAds = false;
-        });
-      }
+      if (!mounted || identity != _identity) return;
+      setState(() {
+        _myAds = parsed;
+        _loadingAds = false;
+      });
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _myAds = [];
-          _loadingAds = false;
-        });
-      }
+      if (!mounted || identity != _identity) return;
+      setState(() {
+        _loadingAds = false;
+        _adsError = _state.s.tr('تعذر تحميل الإعلانات. اسحب للمحاولة مجدداً.',
+            'Impossible de charger les annonces. Réessayez en actualisant.');
+      });
     }
   }
 
-
-  int get _baseViews {
-    if (_myAds.isEmpty) return 0;
-    return _myAds.fold<int>(0, (sum, ad) {
-      final v = int.tryParse((ad['views_count'] ?? ad['views'] ?? 145).toString()) ?? 145;
-      return sum + (v > 0 ? v : 145);
-    });
-  }
-
-  int get _periodViews {
-    if (_statsPeriod == 0) return _baseViews;
-    if (_statsPeriod == 1) return (_baseViews * 3.4).round();
-    return (_baseViews * 8.2).round();
-  }
-
-  int get _periodImpressions => (_periodViews * 4.2).round();
-
-  int get _periodLeads => (_periodViews * 0.085).round().clamp(4, 99999);
-
-  String get _periodGrowthLabel {
-    if (_statsPeriod == 0) return '+28%';
-    if (_statsPeriod == 1) return '+64%';
-    return '+142%';
-  }
-
-  String _displayName(bool isAr) {
-    if (_customName != null && _customName!.trim().isNotEmpty) {
-      return _customName!.trim();
+  int? get _baseViews {
+    if (_loadingAds || _adsError != null) return null;
+    var total = 0;
+    for (final ad in _myAds) {
+      final views =
+          int.tryParse((ad['views_count'] ?? ad['views'] ?? '').toString());
+      if (views == null || views < 0) return null;
+      total += views;
     }
-    final apiName = _state.currentUser?['name']?.toString().trim();
-    if (apiName != null && apiName.isNotEmpty) return apiName;
-    return isAr ? 'أمين' : 'Amine';
+    return total;
   }
 
-  String get _displayHandle {
-    if (_customHandle != null && _customHandle!.trim().isNotEmpty) {
-      return _customHandle!.trim().replaceAll('@', '');
+  String _displayName(bool isAr) =>
+      _state.currentUser?['name']?.toString().trim() ??
+      (isAr ? 'حسابي' : 'Mon compte');
+  String get _displayHandle =>
+      _state.currentUser?['username']?.toString() ?? 'profil';
+  String _displayBio(bool isAr) => _state.currentUser?['bio']?.toString() ?? '';
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
-    final emailHandle = _state.currentUser?['email']?.toString().split('@').first;
-    if (emailHandle != null && emailHandle.isNotEmpty) return emailHandle;
-    return 'amine';
-  }
-
-  String _displayBio(bool isAr) {
-    if (_customBio != null && _customBio!.trim().isNotEmpty) {
-      return _customBio!.trim();
-    }
-    return isAr
-        ? 'عروض مختارة بعناية · الدار البيضاء والمغرب'
-        : 'Sélection d’annonces vérifiées · Casablanca & Maroc';
   }
 
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
     final isAr = s.isAr;
+    if (!_state.isLoggedIn) {
+      return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(title: Text(s.profile), actions: [
+            IconButton(
+                key: const Key('guest-settings'),
+                tooltip: s.tr('الإعدادات والدعم', 'Paramètres et assistance'),
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                icon: const Icon(Icons.settings_outlined)),
+          ]),
+          body: Center(
+              child: ElevatedButton(
+            key: const Key('profile-sign-in'),
+            onPressed: () async {
+              await Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AuthScreen()));
+              if (mounted) {
+                _profileIdentity = _identity;
+                await _loadProfileData();
+              }
+            },
+            child: Text(s.tr('سجّل الدخول لعرض حسابك',
+                'Connectez-vous pour voir votre profil')),
+          )));
+    }
     final name = _displayName(isAr);
     final handle = _displayHandle;
     final bio = _displayBio(isAr);
@@ -181,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             slivers: [
-              // 1. Balanced Apple Top Bar: [+] on start, [@amine] in center, [Settings] on end
+              // 1. Balanced Apple Top Bar: [+] on start, [profile] in center, [Settings] on end
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
@@ -192,7 +189,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       PressableScale(
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const PostAdScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const PostAdScreen()),
                         ).then((_) => _loadProfileData()),
                         child: Container(
                           width: 40,
@@ -247,7 +245,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFE31B23).withValues(alpha: 0.35),
+                                color: const Color(0xFFE31B23)
+                                    .withValues(alpha: 0.35),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3),
                               ),
@@ -268,7 +267,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => SettingsScreen(
-                              onOpenEditProfile: () => _openEditProfileSheet(isAr),
+                              onOpenEditProfile: () =>
+                                  _openEditProfileSheet(isAr),
                             ),
                           ),
                         ).then((_) {
@@ -312,7 +312,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               decoration: BoxDecoration(
                                 color: _surface,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: _hairline, width: 1.5),
+                                border:
+                                    Border.all(color: _hairline, width: 1.5),
                               ),
                               clipBehavior: Clip.antiAlias,
                               alignment: Alignment.center,
@@ -327,7 +328,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 decoration: BoxDecoration(
                                   color: _ink,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2.5),
+                                  border: Border.all(
+                                      color: Colors.white, width: 2.5),
                                 ),
                                 child: const Icon(
                                   CupertinoIcons.pencil,
@@ -361,12 +363,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            const Icon(
-                              CupertinoIcons.checkmark_seal_fill,
-                              color: _primary,
-                              size: 17,
-                            ),
                           ],
                         ),
                       ),
@@ -394,7 +390,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         PressableScale(
                           onTap: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const AuthScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const AuthScreen()),
                           ).then((_) => _loadProfileData()),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -406,7 +403,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              isAr ? 'تسجيل الدخول أو إنشاء حساب' : 'Se connecter',
+                              isAr
+                                  ? 'تسجيل الدخول أو إنشاء حساب'
+                                  : 'Se connecter',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -430,15 +429,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           Container(width: 1, height: 24, color: _hairline),
                           _buildMinimalStat(
-                            value: '$_baseViews',
+                            value: _baseViews?.toString() ?? '—',
                             label: isAr ? 'مشاهدة' : 'Vues',
                             onTap: () => setState(() => _activeTab = 1),
                           ),
                           Container(width: 1, height: 24, color: _hairline),
                           _buildMinimalStat(
-                            value: '+28%',
+                            value: '—',
                             label: isAr ? 'النمو' : 'Croissance',
-                            valueColor: const Color(0xFF16A34A),
+                            valueColor: _muted,
                             onTap: () => setState(() => _activeTab = 1),
                           ),
                         ],
@@ -481,7 +480,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 height: 40,
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFE31B23), Color(0xFFFF3366)],
+                                    colors: [
+                                      Color(0xFFE31B23),
+                                      Color(0xFFFF3366)
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -517,7 +519,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFE31B23),
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                           ),
                                           child: const Text(
                                             'NEW',
@@ -536,7 +539,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           ? 'تصفح العروض بالفيديو والصور بـ سكرول عمودي سريع'
                                           : 'Scrollez les annonces en plein écran façon Reels',
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.72),
+                                        color: Colors.white
+                                            .withValues(alpha: 0.72),
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -575,7 +579,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             _buildSegmentButton(
                               index: 1,
-                              label: isAr ? 'الإحصائيات و Boost' : 'Statistiques & Boost',
+                              label: isAr
+                                  ? 'الإحصائيات و Boost'
+                                  : 'Statistiques & Boost',
                               icon: CupertinoIcons.chart_bar,
                             ),
                           ],
@@ -591,7 +597,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisSpacing: 18,
                       crossAxisSpacing: 18,
@@ -619,15 +626,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildAvatarContent(String name) {
-    if (_customAvatarBytes != null) {
-      return Image.memory(
-        _customAvatarBytes!,
-        width: 88,
-        height: 88,
-        fit: BoxFit.cover,
-      );
-    }
-    final avatarUrl = _presetAvatarUrl ?? _state.currentUser?['avatar']?.toString();
+    final avatarUrl = _state.currentUser?['avatar']?.toString();
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       return AppImage(url: avatarUrl, width: 88, height: 88, fit: BoxFit.cover);
     }
@@ -731,6 +730,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Tab 0: Clean, Airy Instagram/Apple Grid of User's Ads
   Widget _buildCleanAdsGrid(bool isAr) {
+    if (_adsError != null) {
+      return SliverToBoxAdapter(
+          child: Padding(
+              padding: const EdgeInsets.all(24), child: Text(_adsError!)));
+    }
     if (_myAds.isEmpty) {
       return SliverToBoxAdapter(
         child: IllustratedStateView(
@@ -763,9 +767,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             final ad = _myAds[index];
             final adId = int.tryParse((ad['id'] ?? index).toString()) ?? index;
             final title = (ad['title'] ?? '').toString();
-            final imgUrl = (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
+            final imgUrl =
+                (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
             final priceStr = (ad['price_formatted'] ??
-                    (ad['price'] != null ? '${ad['price']} ${isAr ? 'د.م' : 'DH'}' : ''))
+                    (ad['price'] != null
+                        ? '${ad['price']} ${isAr ? 'د.م' : 'DH'}'
+                        : ''))
                 .toString();
 
             return ScrollReveal(
@@ -796,7 +803,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               bottom: 10,
                               end: 10,
                               child: GestureDetector(
-                                onTap: () => _openBoostModal(adId: adId, adTitle: title),
+                                onTap: () =>
+                                    _openBoostModal(adId: adId, adTitle: title),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
@@ -807,7 +815,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     borderRadius: BorderRadius.circular(999),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.08),
+                                        color: Colors.black
+                                            .withValues(alpha: 0.08),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -853,7 +862,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 2),
                     if (priceStr.isNotEmpty)
-                      Text(
+                      PriceText(
                         priceStr,
                         style: const TextStyle(
                           fontSize: 13,
@@ -875,416 +884,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Tab 1: Upgraded Apple-Style Insights & Boost Studio (Period Switcher, Funnel, Cities, Ad Ranking)
   Widget _buildUpgradedInsightsStudio(bool isAr) {
-    final firstAdId =
-        int.tryParse((_myAds.isNotEmpty ? _myAds.first['id'] : 1).toString()) ?? 1;
-    final firstAdTitle =
-        (_myAds.isNotEmpty ? _myAds.first['title'] : 'Apolo Boost').toString();
-
-    return ScrollReveal(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Period Filter Pills (7d | 30d | All)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  isAr ? 'ملخص الأداء' : 'Aperçu des performances',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: _surface,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildPeriodPill(0, isAr ? '7 أيام' : '7j'),
-                      _buildPeriodPill(1, isAr ? '30 يوم' : '30j'),
-                      _buildPeriodPill(2, isAr ? 'الكل' : 'Tout'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // 2. Main Views Curve Surface
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: _surface,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isAr ? 'مجموع المشاهدات' : 'Vues totales',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _muted,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '$_periodViews',
-                        style: const TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          color: _ink,
-                          letterSpacing: -1.0,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _periodGrowthLabel,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF16A34A),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 26),
-                  SizedBox(
-                    height: 110,
-                    width: double.infinity,
-                    child: CustomPaint(
-                      painter: _SellerTrendChartPainter(periodIndex: _statsPeriod),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Buyer Conversion Funnel (Impressions -> Views -> Leads)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildFunnelStep(
-                          value: '$_periodImpressions',
-                          label: isAr ? 'الظهور بالبحث' : 'Impressions',
-                        ),
-                        Container(width: 1, height: 22, color: _hairline),
-                        _buildFunnelStep(
-                          value: '$_periodViews',
-                          label: isAr ? 'زيارات الإعلان' : 'Visites',
-                        ),
-                        Container(width: 1, height: 22, color: _hairline),
-                        _buildFunnelStep(
-                          value: '$_periodLeads',
-                          label: isAr ? 'تواصل واتساب' : 'Contacts',
-                          highlight: true,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Primary Boost CTA
-                  SizedBox(
-                    width: double.infinity,
-                    child: PressableScale(
-                      onTap: () => _openBoostModal(
-                        adId: firstAdId,
-                        adTitle: firstAdTitle,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: _primary,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              CupertinoIcons.bolt_fill,
-                              color: Colors.white,
-                              size: 15,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isAr
-                                  ? 'مضاعفة المشاهدات بـ Boost VIP'
-                                  : 'Multiplier mes vues avec Boost VIP',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // 3. Top Cities Breakdown (Clean Apple Health style bars)
             Text(
-              isAr ? 'أكثر المدن اهتماماً بإعلاناتك' : 'Villes les plus actives',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: _ink,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _surface,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  _buildCityDemandRow(
-                    city: isAr ? 'الدار البيضاء' : 'Casablanca',
-                    percent: 0.54,
-                    label: '54%',
-                  ),
-                  const SizedBox(height: 14),
-                  _buildCityDemandRow(
-                    city: isAr ? 'الرباط سلا' : 'Rabat - Salé',
-                    percent: 0.28,
-                    label: '28%',
-                  ),
-                  const SizedBox(height: 14),
-                  _buildCityDemandRow(
-                    city: isAr ? 'مراكش وطنجة' : 'Marrakech & Tanger',
-                    percent: 0.18,
-                    label: '18%',
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // 4. Per-Ad Performance List
+                isAr
+                    ? 'مشاهدات الإعلانات الحالية'
+                    : 'Vues des annonces actuelles',
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            Text(_baseViews?.toString() ??
+                (isAr
+                    ? 'عدد المشاهدات غير متاح.'
+                    : 'Nombre de vues indisponible.')),
+            const SizedBox(height: 12),
             Text(
-              isAr ? 'ترتيب أداء إعلاناتك' : 'Performance par annonce',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: _ink,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(height: 14),
-            ..._myAds.map((ad) {
-              final adId = int.tryParse((ad['id'] ?? 1).toString()) ?? 1;
-              final title = (ad['title'] ?? '').toString();
-              final imgUrl = (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
-              final views =
-                  int.tryParse((ad['views_count'] ?? ad['views'] ?? 210).toString()) ?? 210;
-              final leads = (views * 0.08).round().clamp(2, 999);
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _surface,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: AppImage(url: imgUrl, fit: BoxFit.cover),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: _ink,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              isAr
-                                  ? '$views مشاهدة · $leads رسائل'
-                                  : '$views vues · $leads contacts',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: _muted,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      PressableScale(
-                        onTap: () => _openBoostModal(adId: adId, adTitle: title),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Text(
-                            'Boost',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: _primary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+                isAr
+                    ? 'إحصائيات النمو والرسائل والمناطق والفترات الزمنية غير متاحة حالياً.'
+                    : 'Les statistiques de croissance, contacts, régions et périodes ne sont pas disponibles.',
+                style: const TextStyle(color: _muted)),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPeriodPill(int index, String label) {
-    final selected = _statsPeriod == index;
-    return GestureDetector(
-      onTap: () => setState(() => _statsPeriod = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            color: selected ? _ink : _muted,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFunnelStep({
-    required String value,
-    required String label,
-    bool highlight = false,
-  }) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: highlight ? _primary : _ink,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: _muted,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCityDemandRow({
-    required String city,
-    required double percent,
-    required String label,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              city,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _ink,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: _muted,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(
-            value: percent,
-            minHeight: 6,
-            backgroundColor: Colors.white,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              percent > 0.4 ? _primary : _ink,
-            ),
-          ),
-        ),
-      ],
-    );
+        ));
   }
 
   void _openBoostModal({required int adId, required String adTitle}) {
@@ -1296,235 +919,120 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Full Edit Profile Bottom Sheet (Photo Picker, Studio Avatars, Name, @handle, Bio, Phone)
-  void _openEditProfileSheet(bool isAr) {
+  // Profile identity is server-backed. Never read legacy unscoped preferences.
+  Future<void> _openEditProfileSheet(bool isAr) async {
+    final identity = _identity;
+    if (identity == null) return;
     final nameCtrl = TextEditingController(text: _displayName(isAr));
-    final handleCtrl = TextEditingController(text: _displayHandle);
     final bioCtrl = TextEditingController(text: _displayBio(isAr));
     final phoneCtrl = TextEditingController(
-      text: _customPhone ?? _state.currentUser?['phone']?.toString() ?? '',
-    );
-
-    Uint8List? tempBytes = _customAvatarBytes;
-    String? tempAvatarUrl = _presetAvatarUrl;
-
-    showModalBottomSheet(
+        text: _state.currentUser?['phone']?.toString() ?? '');
+    bool saving = false;
+    String? error;
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          return Directionality(
-            textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 32),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                child: SafeArea(
-                  top: false,
+          builder: (ctx, update) => PopScope(
+                canPop: !saving,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
                   child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD1D5DB),
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          isAr ? 'تعديل البروفايل' : 'Modifier le profil',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            color: _ink,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Photo Picker Preview
-                        Center(
-                          child: GestureDetector(
-                            onTap: () async {
-                              try {
-                                final file = await _picker.pickImage(
-                                  source: ImageSource.gallery,
-                                  maxWidth: 512,
-                                  maxHeight: 512,
-                                  imageQuality: 82,
-                                );
-                                if (file != null) {
-                                  final bytes = await file.readAsBytes();
-                                  setSheetState(() {
-                                    tempBytes = bytes;
-                                    tempAvatarUrl = null;
-                                  });
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(isAr ? 'تعديل البروفايل' : 'Modifier le profil',
+                        style: const TextStyle(
+                            fontSize: 19, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 20),
+                    IgnorePointer(
+                        ignoring: saving,
+                        child: Column(children: [
+                          _buildEditField(
+                              label: isAr ? 'الاسم الكامل' : 'Nom complet',
+                              controller: nameCtrl,
+                              icon: CupertinoIcons.person),
+                          const SizedBox(height: 12),
+                          _buildEditField(
+                              label: isAr ? 'النبذة التعريفية' : 'Biographie',
+                              controller: bioCtrl,
+                              icon: CupertinoIcons.text_alignleft,
+                              maxLines: 2),
+                          const SizedBox(height: 12),
+                          _buildEditField(
+                              label: isAr ? 'رقم الهاتف' : 'Téléphone',
+                              controller: phoneCtrl,
+                              icon: CupertinoIcons.phone,
+                              keyboardType: TextInputType.phone),
+                        ])),
+                    if (error != null)
+                      Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(error!,
+                              style: const TextStyle(color: _primary))),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                        key: const Key('profile-save'),
+                        onPressed: saving
+                            ? null
+                            : () async {
+                                if (identity != _identity) return;
+                                if (nameCtrl.text.trim().isEmpty) {
+                                  update(() => error = isAr
+                                      ? 'الاسم مطلوب.'
+                                      : 'Le nom est requis.');
+                                  return;
                                 }
-                              } catch (_) {}
-                            },
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 84,
-                                  height: 84,
-                                  decoration: BoxDecoration(
-                                    color: _surface,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: _hairline, width: 1.5),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  alignment: Alignment.center,
-                                  child: tempBytes != null
-                                      ? Image.memory(tempBytes!, fit: BoxFit.cover, width: 84, height: 84)
-                                      : (tempAvatarUrl != null && tempAvatarUrl!.isNotEmpty)
-                                          ? AppImage(url: tempAvatarUrl!, width: 84, height: 84, fit: BoxFit.cover)
-                                          : const Icon(
-                                              CupertinoIcons.camera_fill,
-                                              color: _ink,
-                                              size: 26,
-                                            ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  isAr ? 'تغيير صورة البروفايل' : 'Changer la photo de profil',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: _primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-
-                        const SizedBox(height: 20),
-
-                        _buildEditField(
-                          label: isAr ? 'الاسم الكامل أو اسم المتجر' : 'Nom complet',
-                          controller: nameCtrl,
-                          icon: CupertinoIcons.person,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildEditField(
-                          label: isAr ? 'اسم المستخدم (@)' : 'Nom d’utilisateur (@)',
-                          controller: handleCtrl,
-                          icon: CupertinoIcons.at,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildEditField(
-                          label: isAr ? 'النبذة التعريفية (Bio)' : 'Biographie (Bio)',
-                          controller: bioCtrl,
-                          icon: CupertinoIcons.text_alignleft,
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildEditField(
-                          label: isAr ? 'رقم الهاتف / الواتساب' : 'Téléphone / WhatsApp',
-                          controller: phoneCtrl,
-                          icon: CupertinoIcons.phone,
-                          keyboardType: TextInputType.phone,
-                        ),
-                        const SizedBox(height: 22),
-
-                        PressableScale(
-                          onTap: () async {
-                            final newName = nameCtrl.text.trim();
-                            final newHandle = handleCtrl.text.trim().replaceAll('@', '');
-                            final newBio = bioCtrl.text.trim();
-                            final newPhone = phoneCtrl.text.trim();
-
-                            setState(() {
-                              _customAvatarBytes = tempBytes;
-                              _presetAvatarUrl = tempAvatarUrl;
-                              _customName = newName;
-                              _customHandle = newHandle;
-                              _customBio = newBio;
-                              _customPhone = newPhone;
-                            });
-
-                            Navigator.pop(ctx);
-
-                            try {
-                              final prefs = await SharedPreferences.getInstance();
-                              if (tempBytes != null) {
-                                await prefs.setString(
-                                  'apolo_profile_avatar_b64',
-                                  base64Encode(tempBytes!),
-                                );
-                              } else {
-                                await prefs.remove('apolo_profile_avatar_b64');
-                              }
-                              if (tempAvatarUrl != null) {
-                                await prefs.setString('apolo_profile_avatar_url', tempAvatarUrl!);
-                              }
-                              await prefs.setString('apolo_profile_name', newName);
-                              await prefs.setString('apolo_profile_handle', newHandle);
-                              await prefs.setString('apolo_profile_bio', newBio);
-                              await prefs.setString('apolo_profile_phone', newPhone);
-                            } catch (_) {}
-
-                            if (_state.isLoggedIn) {
-                              try {
-                                await _state.api.dio.put('/auth/profile', data: {
-                                  'name': newName,
-                                  'phone': newPhone,
-                                  'bio': newBio,
+                                final values = {
+                                  'name': nameCtrl.text.trim(),
+                                  'bio': bioCtrl.text.trim(),
+                                  'phone': phoneCtrl.text.trim()
+                                };
+                                update(() {
+                                  saving = true;
+                                  error = null;
                                 });
-                              } catch (_) {}
-                            }
-                            _state.currentUser = {
-                              ...?_state.currentUser,
-                              'name': newName,
-                              'username': newHandle,
-                              'bio': newBio,
-                              'phone': newPhone,
-                            };
-                          },
-                          child: Container(
-                            height: 48,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: _ink,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Text(
-                              isAr ? 'حفظ التغييرات' : 'Enregistrer',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                                try {
+                                  final response = await _state.api.dio
+                                      .put('/auth/profile', data: values);
+                                  if (response.data is! Map ||
+                                      response.data['status'] != 'success') {
+                                    throw StateError(
+                                        'Profile update not confirmed');
+                                  }
+                                  if (!mounted || identity != _identity) return;
+                                  final user = response.data['user'];
+                                  _state.currentUser = {
+                                    ...?_state.currentUser,
+                                    ...values,
+                                    if (user is Map)
+                                      ...Map<String, dynamic>.from(user)
+                                  };
+                                  setState(() {});
+                                  if (ctx.mounted) {
+                                    update(() => saving = false);
+                                    Navigator.pop(ctx);
+                                  }
+                                } catch (_) {
+                                  if (ctx.mounted) {
+                                    update(() => error = isAr
+                                        ? 'تعذر حفظ التغييرات. حاول مجدداً.'
+                                        : 'Enregistrement impossible. Réessayez.');
+                                  }
+                                } finally {
+                                  if (ctx.mounted) update(() => saving = false);
+                                }
+                              },
+                        child: Text(saving
+                            ? (isAr ? 'جارٍ الحفظ...' : 'Enregistrement...')
+                            : (isAr ? 'حفظ التغييرات' : 'Enregistrer'))),
+                  ])),
                 ),
-              ),
-            ),
-          );
-        },
-      ),
+              )),
     );
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    nameCtrl.dispose();
+    bioCtrl.dispose();
+    phoneCtrl.dispose();
   }
 
   Widget _buildEditField({
@@ -1559,7 +1067,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             prefixIcon: Icon(icon, size: 18, color: _muted),
             filled: true,
             fillColor: _surface,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -1579,7 +1088,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showAdQuickActions(Map<String, dynamic> ad, bool isAr) {
-    final adId = int.tryParse((ad['id'] ?? 1).toString()) ?? 1;
+    final adId = int.tryParse((ad['id'] ?? '').toString());
+    if (!_state.isLoggedIn || adId == null || adId <= 0) return;
     final title = (ad['title'] ?? '').toString();
     showModalBottomSheet(
       context: context,
@@ -1595,7 +1105,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               ListTile(
                 leading: const Icon(CupertinoIcons.bolt_fill, color: _primary),
-                title: Text(isAr ? 'تمويل الإعلان (Boost)' : 'Booster cette annonce'),
+                title: Text(
+                    isAr ? 'تمويل الإعلان (Boost)' : 'Booster cette annonce'),
                 onTap: () {
                   Navigator.pop(ctx);
                   _openBoostModal(adId: adId, adTitle: title);
@@ -1609,16 +1120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  try {
-                    await _state.api.dio.delete('/ads/$adId');
-                  } catch (_) {}
-                  if (mounted) {
-                    setState(() {
-                      _myAds.removeWhere(
-                        (item) => (int.tryParse((item['id'] ?? 0).toString()) ?? 0) == adId,
-                      );
-                    });
-                  }
+                  await _deleteAd(adId, isAr);
                 },
               ),
             ],
@@ -1627,70 +1129,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-}
 
-class _SellerTrendChartPainter extends CustomPainter {
-  final int periodIndex;
-
-  const _SellerTrendChartPainter({this.periodIndex = 0});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final yMultipliers = periodIndex == 0
-        ? [0.80, 0.65, 0.68, 0.42, 0.35, 0.20, 0.10]
-        : periodIndex == 1
-            ? [0.85, 0.72, 0.54, 0.58, 0.32, 0.22, 0.08]
-            : [0.90, 0.76, 0.60, 0.44, 0.28, 0.16, 0.06];
-
-    final points = List<Offset>.generate(yMultipliers.length, (i) {
-      final x = size.width * (i / (yMultipliers.length - 1));
-      final y = size.height * yMultipliers[i];
-      return Offset(x, y);
-    });
-
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (int i = 0; i < points.length - 1; i++) {
-      final p0 = points[i];
-      final p1 = points[i + 1];
-      final controlX = (p0.dx + p1.dx) / 2;
-      path.cubicTo(controlX, p0.dy, controlX, p1.dy, p1.dx, p1.dy);
+  Future<void> _deleteAd(int adId, bool isAr) async {
+    if (!_state.isLoggedIn || _deletingAds.contains(adId)) return;
+    final identity = _identity;
+    _deletingAds.add(adId);
+    try {
+      final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+                title:
+                    Text(isAr ? 'حذف الإعلان؟' : 'Supprimer cette annonce ?'),
+                content: Text(isAr
+                    ? 'لا يمكن التراجع عن الحذف.'
+                    : 'Cette action est irréversible.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(isAr ? 'إلغاء' : 'Annuler')),
+                  TextButton(
+                      key: const Key('profile-confirm-delete'),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text(isAr ? 'حذف' : 'Supprimer')),
+                ],
+              ));
+      if (confirmed != true || !mounted || identity != _identity) return;
+      final response = await _state.api.dio.delete('/ads/$adId');
+      if (response.statusCode != 204 &&
+          (response.data is! Map || response.data['status'] != 'success')) {
+        throw StateError('Deletion not confirmed');
+      }
+      if (!mounted || identity != _identity) return;
+      setState(() =>
+          _myAds.removeWhere((ad) => ad['id'].toString() == adId.toString()));
+    } catch (_) {
+      if (identity == _identity) {
+        _showError(isAr
+            ? 'تعذر حذف الإعلان. حاول مجدداً.'
+            : 'Suppression impossible. Réessayez.');
+      }
+    } finally {
+      _deletingAds.remove(adId);
     }
-
-    final fillPath = Path.from(path)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFFE31B23).withValues(alpha: 0.14),
-          const Color(0xFFE31B23).withValues(alpha: 0.0),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    canvas.drawPath(fillPath, fillPaint);
-
-    final linePaint = Paint()
-      ..color = const Color(0xFFE31B23)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.6
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawPath(path, linePaint);
-
-    final last = points.last;
-    canvas.drawCircle(
-      last,
-      6,
-      Paint()..color = const Color(0xFFE31B23).withValues(alpha: 0.20),
-    );
-    canvas.drawCircle(last, 3.5, Paint()..color = const Color(0xFFE31B23));
   }
-
-  @override
-  bool shouldRepaint(covariant _SellerTrendChartPainter oldDelegate) =>
-      oldDelegate.periodIndex != periodIndex;
 }

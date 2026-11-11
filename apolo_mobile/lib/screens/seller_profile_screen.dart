@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,8 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/state/app_state.dart';
 import 'ad_detail_screen.dart';
-import 'chat_room_screen.dart';
 import 'widgets/app_image.dart';
+import 'widgets/price_text.dart';
 import 'widgets/kinetic_widgets.dart';
 
 /// Apple Human Interface Guidelines (HIG) 2026 Public Seller Profile:
@@ -124,7 +124,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_state.s.isAr ? 'رقم هاتف البائع غير متوفر حالياً' : 'Numéro non disponible'),
+            content: Text(_state.s.isAr
+                ? 'رقم هاتف البائع غير متوفر حالياً'
+                : 'Numéro non disponible'),
             backgroundColor: _red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -139,31 +141,20 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   void _openChatWithSeller() {
-    HapticFeedback.lightImpact();
-    final adTitle = widget.initialAd?['title']?.toString() ??
-        (_sellerAds.isNotEmpty ? _sellerAds.first['title'].toString() : 'إعلان');
-    final adPrice = widget.initialAd?['price_formatted']?.toString() ??
-        (_sellerAds.isNotEmpty
-            ? _sellerAds.first['price_formatted'].toString()
-            : '');
-    final adImage = widget.initialAd?['main_image']?.toString() ??
-        (_sellerAds.isNotEmpty
-            ? _sellerAds.first['main_image'].toString()
-            : null);
-
+    final ad =
+        widget.initialAd ?? (_sellerAds.isNotEmpty ? _sellerAds.first : null);
+    final id = int.tryParse((ad?['id'] ?? '').toString());
+    if (ad == null || id == null || id <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppState().s.tr('اختر إعلاناً للبائع لبدء المحادثة.',
+              'Choisissez une annonce pour contacter ce vendeur.'))));
+      return;
+    }
     Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChatRoomScreen(
-          conversationId: widget.sellerId,
-          peerName: widget.sellerName,
-          adTitle: adTitle,
-          peerAvatar: widget.sellerAvatar,
-          adImage: adImage,
-          adPrice: adPrice,
-        ),
-      ),
-    );
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                AdDetailScreen(adId: id, initialAd: ad, openChatOnLoad: true)));
   }
 
   void _showMoreActions(bool isAr) {
@@ -173,9 +164,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       builder: (ctx) => CupertinoActionSheet(
         title: Text(widget.sellerName),
         message: Text(
-          isAr
-              ? 'خيارات الملف الشخصي للبائع'
-              : 'Options du profil vendeur',
+          isAr ? 'خيارات الملف الشخصي للبائع' : 'Options du profil vendeur',
         ),
         actions: [
           CupertinoActionSheetAction(
@@ -261,7 +250,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isAr = _state.s.isAr;
-    final city = widget.sellerCity ?? (isAr ? 'الدار البيضاء • المعاريف' : 'Casablanca • Maarif');
+    final city = widget.sellerCity ??
+        (isAr ? 'الدار البيضاء • المعاريف' : 'Casablanca • Maarif');
 
     return Scaffold(
       backgroundColor: _bg,
@@ -278,7 +268,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               leading: IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: Icon(
-                  isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left,
+                  isAr
+                      ? CupertinoIcons.chevron_right
+                      : CupertinoIcons.chevron_left,
                   color: _ink,
                   size: 22,
                 ),
@@ -362,7 +354,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                             decoration: BoxDecoration(
                               color: _emerald,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2.5),
+                              border:
+                                  Border.all(color: Colors.white, width: 2.5),
                             ),
                           ),
                         ),
@@ -600,7 +593,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             delegate: _SliverTabsDelegate(
               child: Container(
                 color: _bg,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Container(
                   height: 42,
                   padding: const EdgeInsets.all(3.5),
@@ -757,7 +751,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
           child: Center(
             child: Text(
-              isAr ? 'لا توجد إعلانات منشورة حالياً' : 'Aucune annonce disponible',
+              isAr
+                  ? 'لا توجد إعلانات منشورة حالياً'
+                  : 'Aucune annonce disponible',
               style: const TextStyle(color: _muted, fontSize: 14),
             ),
           ),
@@ -779,9 +775,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             final ad = _sellerAds[index];
             final int adId = int.tryParse(ad['id'].toString()) ?? 0;
             final title = (ad['title'] ?? '').toString();
-            final price = (ad['price_formatted'] ?? '${ad['price'] ?? ''} DH').toString();
+            final price =
+                (ad['price_formatted'] ?? '${ad['price'] ?? ''} DH').toString();
             final image = (ad['main_image'] ?? ad['image'] ?? '').toString();
-            final city = (ad['city_name'] ?? widget.sellerCity ?? 'المغرب').toString();
+            final city =
+                (ad['city_name'] ?? widget.sellerCity ?? 'المغرب').toString();
             final bool negotiable = ad['negotiable'] == true;
 
             return PressableScale(
@@ -888,7 +886,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                PriceText(
                                   price,
                                   style: const TextStyle(
                                     fontSize: 14,
@@ -1203,7 +1201,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             _buildTrustRow(
               icon: CupertinoIcons.person_badge_plus_fill,
               iconColor: _blueVerified,
-              title: isAr ? 'بطاقة التعريف الوطنية مؤكدة' : 'Pièce d\'identité vérifiée',
+              title: isAr
+                  ? 'بطاقة التعريف الوطنية مؤكدة'
+                  : 'Pièce d\'identité vérifiée',
               desc: isAr
                   ? 'تم فحص ومصادقة وثائق الهوية الوطنية من طرف فريق التوثيق في Apolo.'
                   : 'Document d\'identité officiel validé par l\'équipe de conformité Apolo.',
@@ -1219,7 +1219,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             _buildTrustRow(
               icon: CupertinoIcons.shield_lefthalf_fill,
               iconColor: _red,
-              title: isAr ? 'حماية المعاملات Apolo Safety' : 'Protection Apolo Safety',
+              title: isAr
+                  ? 'حماية المعاملات Apolo Safety'
+                  : 'Protection Apolo Safety',
               desc: isAr
                   ? 'ينصح فريق Apolo بمعاينة وفحص السلعة شخصياً قبل دفع أي مبلغ.'
                   : 'Nous vous recommandons de vérifier l\'article en personne avant tout paiement.',
@@ -1227,7 +1229,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             _buildTrustRow(
               icon: CupertinoIcons.cube_box_fill,
               iconColor: const Color(0xFF8B5CF6),
-              title: isAr ? 'طرق التسليم المتاحة' : 'Modes de livraison disponibles',
+              title: isAr
+                  ? 'طرق التسليم المتاحة'
+                  : 'Modes de livraison disponibles',
               desc: isAr
                   ? 'التسليم يداً بيد فـ المعاريف (الدار البيضاء)، أو الإرسال عبر أمانة كوليس بعد الاتفاق.'
                   : 'Remise en main propre ou livraison express sécurisée selon accord.',

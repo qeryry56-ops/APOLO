@@ -99,7 +99,8 @@ Future<void> showAiContentReportSheet(
                               color: Color(0xFF0F1B2D),
                             ),
                           ),
-                          if (featureContext != null && featureContext.isNotEmpty)
+                          if (featureContext != null &&
+                              featureContext.isNotEmpty)
                             Text(
                               featureContext,
                               style: const TextStyle(
@@ -127,7 +128,8 @@ Future<void> showAiContentReportSheet(
                 const SizedBox(height: 12),
                 ...List.generate(reasons.length, (idx) {
                   final active = selectedReason == idx;
-                  final label = s.isAr ? reasons[idx]['ar']! : reasons[idx]['fr']!;
+                  final label =
+                      s.isAr ? reasons[idx]['ar']! : reasons[idx]['fr']!;
                   return GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -216,17 +218,33 @@ Future<void> showAiContentReportSheet(
                                 ? reasons[selectedReason]['ar']!
                                 : reasons[selectedReason]['fr']!;
                             try {
-                              await state.api.dio.post(
+                              final response = await state.api.dio.post(
                                 '/reports',
                                 data: {
                                   'type': 'ai_content',
                                   'reason': chosen,
-                                  'context': featureContext ?? 'app_ai_assistant',
+                                  'context':
+                                      featureContext ?? 'app_ai_assistant',
                                   'details': notesCtrl.text.trim(),
                                 },
                               );
+                              if (response.data is! Map ||
+                                  response.data['status'] != 'success') {
+                                throw StateError('Report not confirmed');
+                              }
                             } catch (_) {
-                              // Graceful fallback so in-app reporting always succeeds
+                              if (ctx.mounted) {
+                                setModalState(() => submitting = false);
+                              }
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(s.tr(
+                                      'تعذر إرسال البلاغ. حاول مجدداً.',
+                                      'Signalement non envoyé. Réessayez.')),
+                                ));
+                              }
+                              return;
                             }
                             if (ctx.mounted) Navigator.pop(ctx);
                             if (context.mounted) {
@@ -276,6 +294,7 @@ class PrivacyComplianceScreen extends StatefulWidget {
 class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
   final AppState _state = AppState();
   late int _selectedTab;
+  bool _deleting = false;
 
   static const Color _ink = Color(0xFF0F1B2D);
   static const Color _red = Color(0xFFE31B23);
@@ -294,7 +313,9 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
   Future<void> _openExternalUrl(String url) async {
     final uri = Uri.parse(url);
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw StateError('No URL handler');
+      }
     } catch (_) {
       if (mounted) {
         Clipboard.setData(ClipboardData(text: url));
@@ -310,59 +331,73 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
   }
 
   Future<void> _handleInAppAccountDeletion() async {
+    if (_deleting || !_state.isLoggedIn) return;
+    setState(() => _deleting = true);
+    final userId = _state.currentUser?['id'];
     final s = _state.s;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: Text(
-          s.tr('تأكيد حذف الحساب نهائياً', 'Confirmer la suppression du compte'),
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          s.tr(
-            'هل أنت متأكد من حذف حسابك وجميع بياناتك الشخصية وإعلاناتك ومحادثاتك نهائياً من خوادم Apolo.ma؟ لا يمكن التراجع عن هذا الإجراء.',
-            'Voulez-vous vraiment supprimer définitivement votre compte, vos données personnelles, vos annonces et vos messages des serveurs Apolo.ma ?',
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: Text(
+            s.tr('تأكيد حذف الحساب نهائياً',
+                'Confirmer la suppression du compte'),
+            style: const TextStyle(fontWeight: FontWeight.w800),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.tr('إلغاء', 'Annuler')),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              s.tr('حذف حسابي وبياناتي', 'Supprimer définitivement'),
-              style: const TextStyle(color: Colors.white),
+          content: Text(
+            s.tr(
+              'هل أنت متأكد من حذف حسابك وجميع بياناتك الشخصية وإعلاناتك ومحادثاتك نهائياً من خوادم Apolo.ma؟ لا يمكن التراجع عن هذا الإجراء.',
+              'Voulez-vous vraiment supprimer définitivement votre compte, vos données personnelles, vos annonces et vos messages des serveurs Apolo.ma ?',
             ),
           ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        if (_state.isLoggedIn) {
-          await _state.api.dio.delete('/auth/account');
-          await _state.logout();
-        }
-      } catch (_) {}
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppConfig.success,
-            content: Text(
-              s.tr(
-                'تم استلام وتنفيذ طلب حذف الحساب والبيانات بنجاح.',
-                'Votre compte et vos données ont été supprimés avec succès.',
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(s.tr('إلغاء', 'Annuler')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _red),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                s.tr('حذف حسابي وبياناتي', 'Supprimer définitivement'),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
-          ),
-        );
-        setState(() {});
+          ],
+        ),
+      );
+
+      if (confirmed != true ||
+          !mounted ||
+          !_state.isLoggedIn ||
+          userId != _state.currentUser?['id']) {
+        return;
       }
+      final response = await _state.api.dio.delete('/auth/account');
+      if (response.statusCode != 204 &&
+          (response.data is! Map || response.data['status'] != 'success')) {
+        throw StateError('Account deletion not confirmed');
+      }
+      if (userId != _state.currentUser?['id']) return;
+      await _state.logout();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: AppConfig.success,
+        content: Text(s.tr('تم حذف الحساب والبيانات بنجاح.',
+            'Votre compte et vos données ont été supprimés.')),
+      ));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.tr(
+              'تعذر تأكيد حذف الحساب. لم يتم تسجيل خروجك. حاول مجدداً.',
+              'Suppression non confirmée. Vous restez connecté. Réessayez.')),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
     }
   }
 
@@ -470,13 +505,13 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           ),
           body: s.tr(
             '• معلومات الحساب: الاسم، البريد الإلكتروني، رقم الهاتف، أو معرف تسجيل الدخول عبر Google OAuth عند إنشاء حساب.\n'
-            '• محتوى الإعلانات: الصور، العناوين، الأوصاف، الأسعار، والمدينة التي تختارها لنشر إعلانك.\n'
-            '• الرسائل والمحادثات: الرسائل المتبادلة بين البائع والمشتري داخل نظام الدردشة الآمن في التطبيق.\n'
-            '• البيانات التقنية: نوع الجهاز ومعرف الإشعارات لتحسين الأداء وإرسال تنبيهات الرسائل.',
+                '• محتوى الإعلانات: الصور، العناوين، الأوصاف، الأسعار، والمدينة التي تختارها لنشر إعلانك.\n'
+                '• الرسائل والمحادثات: الرسائل المتبادلة بين البائع والمشتري داخل نظام الدردشة الآمن في التطبيق.\n'
+                '• البيانات التقنية: نوع الجهاز ومعرف الإشعارات لتحسين الأداء وإرسال تنبيهات الرسائل.',
             '• Informations de compte : Nom, adresse e-mail, numéro de téléphone ou identifiant Google OAuth.\n'
-            '• Contenu des annonces : Photos, titres, descriptions, prix et ville choisie.\n'
-            '• Messagerie : Messages échangés entre acheteurs et vendeurs.\n'
-            '• Données techniques : Informations d\'appareil pour la sécurité et les notifications.',
+                '• Contenu des annonces : Photos, titres, descriptions, prix et ville choisie.\n'
+                '• Messagerie : Messages échangés entre acheteurs et vendeurs.\n'
+                '• Données techniques : Informations d\'appareil pour la sécurité et les notifications.',
           ),
         ),
         const SizedBox(height: 14),
@@ -488,13 +523,13 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           ),
           body: s.tr(
             '• تمكين نشر وإدارة الإعلانات المبوبة والمتاجر الإلكترونية على منصة Apolo.ma.\n'
-            '• تسهيل التواصل المباشر والآمن بين المشترين والبائعين.\n'
-            '• حماية المنصة من الإعلانات الاحتيالية أو المحتوى المسيء ومراجعة بلاغات المستخدمين.\n'
-            '• لا نقوم ببيع أو تأجير بياناتك الشخصية لأي طرف ثالث لأغراض إعلانية.',
+                '• تسهيل التواصل المباشر والآمن بين المشترين والبائعين.\n'
+                '• حماية المنصة من الإعلانات الاحتيالية أو المحتوى المسيء ومراجعة بلاغات المستخدمين.\n'
+                '• لا نقوم ببيع أو تأجير بياناتك الشخصية لأي طرف ثالث لأغراض إعلانية.',
             '• Publier et gérer vos annonces et boutiques sur Apolo.ma.\n'
-            '• Permettre la communication directe entre acheteurs et vendeurs.\n'
-            '• Prévenir la fraude et modérer les contenus signalés.\n'
-            '• Nous ne vendons jamais vos données personnelles à des tiers.',
+                '• Permettre la communication directe entre acheteurs et vendeurs.\n'
+                '• Prévenir la fraude et modérer les contenus signalés.\n'
+                '• Nous ne vendons jamais vos données personnelles à des tiers.',
           ),
         ),
         const SizedBox(height: 14),
@@ -518,13 +553,13 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           ),
           body: s.tr(
             'وفقاً للقانون المغربي 09-08 المتعلق بحماية الأشخاص الذاتيين تجاه معالجة المعطيات ذات الطابع الشخصي ومتطلبات Google Play:\n'
-            '• البريد الإلكتروني للدعم والخصوصية: support@apolo.ma / contact@apolo.ma\n'
-            '• الموقع الرسمي: https://apolo.ma\n'
-            '• يحق لك طلب الاطلاع على بياناتك أو تعديلها أو حذفها نهائياً في أي وقت.',
+                '• البريد الإلكتروني للدعم والخصوصية: support@apolo.ma / contact@apolo.ma\n'
+                '• الموقع الرسمي: https://apolo.ma\n'
+                '• يحق لك طلب الاطلاع على بياناتك أو تعديلها أو حذفها نهائياً في أي وقت.',
             'Conformément à la loi 09-08 et aux exigences Google Play :\n'
-            '• Email : support@apolo.ma / contact@apolo.ma\n'
-            '• Site officiel : https://apolo.ma\n'
-            '• Vous disposez d\'un droit d\'accès, de rectification et de suppression définitive.',
+                '• Email : support@apolo.ma / contact@apolo.ma\n'
+                '• Site officiel : https://apolo.ma\n'
+                '• Vous disposez d\'un droit d\'accès, de rectification et de suppression définitive.',
           ),
         ),
         const SizedBox(height: 18),
@@ -623,15 +658,15 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
               Text(
                 s.tr(
                   'عند حذف حسابك، يتم مسح البيانات التالية نهائياً وبشكل فوري:\n'
-                  '• معلومات الملف الشخصي (الاسم، البريد الإلكتروني، رقم الهاتف).\n'
-                  '• جميع الإعلانات المنشورة والصور المرتبطة بها.\n'
-                  '• سجل المحادثات والرسائل والتنبيهات المحفوظة.\n\n'
-                  'يمكنك تنفيذ الحذف مباشرة من داخل التطبيق بالزر أدناه، أو عبر الرابط الخارجي المخصص لحذف البيانات على الويب:',
+                      '• معلومات الملف الشخصي (الاسم، البريد الإلكتروني، رقم الهاتف).\n'
+                      '• جميع الإعلانات المنشورة والصور المرتبطة بها.\n'
+                      '• سجل المحادثات والرسائل والتنبيهات المحفوظة.\n\n'
+                      'يمكنك تنفيذ الحذف مباشرة من داخل التطبيق بالزر أدناه، أو عبر الرابط الخارجي المخصص لحذف البيانات على الويب:',
                   'La suppression de votre compte entraîne l\'effacement définitif de :\n'
-                  '• Vos informations personnelles (nom, e-mail, téléphone).\n'
-                  '• Toutes vos annonces publiées et photos.\n'
-                  '• Votre historique de messages et favoris.\n\n'
-                  'Vous pouvez supprimer votre compte directement ci-dessous ou via notre formulaire web externe :',
+                      '• Vos informations personnelles (nom, e-mail, téléphone).\n'
+                      '• Toutes vos annonces publiées et photos.\n'
+                      '• Votre historique de messages et favoris.\n\n'
+                      'Vous pouvez supprimer votre compte directement ci-dessous ou via notre formulaire web externe :',
                 ),
                 style: const TextStyle(
                   fontSize: 13.5,
@@ -651,7 +686,10 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: _handleInAppAccountDeletion,
+                  key: const Key('privacy-delete-account'),
+                  onPressed: _deleting || !_state.isLoggedIn
+                      ? null
+                      : _handleInAppAccountDeletion,
                   icon: const Icon(CupertinoIcons.trash, size: 18),
                   label: Text(
                     s.tr(

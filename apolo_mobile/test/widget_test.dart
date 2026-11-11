@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
@@ -29,15 +28,31 @@ void main() {
   });
 
   group('AppState Core Logic & Taxonomy Tests', () {
-    test('Category asset resolver maps automotive categories to hero_car.png', () {
+    test(
+        'Category asset resolver maps automotive categories to cat_vehicles.png',
+        () {
       final state = AppState();
-      final catVoiture = {'name': 'Véhicules', 'name_fr': 'Voiture', 'slug': 'auto'};
-      final catPhone = {'name': 'Téléphones', 'name_ar': 'هواتف', 'slug': 'telephones'};
-      final catImmo = {'name': 'Immobilier', 'name_ar': 'عقارات', 'slug': 'immobilier'};
+      final catVoiture = {
+        'name': 'Véhicules',
+        'name_fr': 'Voiture',
+        'slug': 'auto'
+      };
+      final catPhone = {
+        'name': 'Téléphones',
+        'name_ar': 'هواتف',
+        'slug': 'telephones'
+      };
+      final catImmo = {
+        'name': 'Immobilier',
+        'name_ar': 'عقارات',
+        'slug': 'immobilier'
+      };
 
-      expect(state.assetForCategory(catVoiture), 'assets/images/hero_car.png');
+      expect(
+          state.assetForCategory(catVoiture), 'assets/images/cat_vehicles.png');
       expect(state.assetForCategory(catPhone), 'assets/images/cat_phones.png');
-      expect(state.assetForCategory(catImmo), 'assets/images/cat_realestate.png');
+      expect(
+          state.assetForCategory(catImmo), 'assets/images/cat_realestate.png');
     });
 
     test('Category label formatting keeps clean non-overflowing text', () {
@@ -49,9 +64,12 @@ void main() {
       expect(state.formatCategoryLabel(catImmo), 'عقارات');
     });
 
-    test('Personalized ranking algorithm ranks preferred categories higher', () {
+    test('Personalized ranking algorithm ranks preferred categories higher',
+        () {
       final state = AppState();
-      state.categoryInterestWeights = {1: 5}; // High interest in category 1 (cars)
+      state.categoryInterestWeights = {
+        1: 5
+      }; // High interest in category 1 (cars)
 
       final ads = [
         {'id': 101, 'category_id': 2, 'title': 'Appartement'},

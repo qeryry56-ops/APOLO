@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +10,7 @@ import 'post_ad_screen.dart';
 import 'search_screen.dart';
 import 'stores_screen.dart';
 import 'widgets/app_image.dart';
+import 'widgets/price_text.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
@@ -73,9 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _autoSlideTimer?.cancel();
     _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final trending = _trendingAds;
-      if (!mounted ||
-          trending.length <= 1 ||
-          !_trendingController.hasClients) {
+      if (!mounted || trending.length <= 1 || !_trendingController.hasClients) {
         return;
       }
       final next = (_activeTrendingPage + 1) % trending.length;
@@ -107,12 +106,11 @@ class _HomeScreenState extends State<HomeScreen> {
               .get('/ads', queryParameters: {'per_page': 36});
           if (adsRes.data is Map) {
             final more = (adsRes.data['data'] as List?) ?? [];
-            final existingIds = rawAds
-                .whereType<Map>()
-                .map((a) => a['id']?.toString())
-                .toSet();
+            final existingIds =
+                rawAds.whereType<Map>().map((a) => a['id']?.toString()).toSet();
             for (final item in more) {
-              if (item is Map && !existingIds.contains(item['id']?.toString())) {
+              if (item is Map &&
+                  !existingIds.contains(item['id']?.toString())) {
                 rawAds.add(item);
               }
             }
@@ -138,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _ads = parsedAds;
           _categories = parsedCats;
-          _networkError = parsedAds.isEmpty;
+          _networkError = false;
           _loading = false;
         });
       }
@@ -175,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (full != null && full.isNotEmpty) {
       return full.split(' ').first;
     }
-    return _state.s.isAr ? 'أمين' : 'Amine';
+    return '';
   }
 
   void _openSearchScreen([int? categoryId]) {
@@ -251,9 +249,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    isAr
-                                        ? 'مرحباً، $_userName 👋'
-                                        : 'Hi, $_userName 👋',
+                                    _userName.isEmpty
+                                        ? (isAr ? 'مرحباً بك' : 'Bienvenue')
+                                        : (isAr
+                                            ? 'مرحباً، $_userName'
+                                            : 'Bonjour, $_userName'),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -367,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(width: 8),
                                     Text(
                                       isAr
-                                          ? 'تصفح جميع الإعلانات في المغرب (3,400+)'
+                                          ? 'تصفح الإعلانات في المغرب'
                                           : 'Explorer toutes les annonces au Maroc',
                                       style: const TextStyle(
                                         color: Colors.white,
@@ -536,8 +536,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 6),
                       Text(
                         isAr
-                            ? 'طوموبيلات، هواتف، عقارات وأكثر من 3,000 إعلان بين يديك.'
-                            : 'Voitures, smartphones, immobilier et plus de 3 000 annonces.',
+                            ? 'طوموبيلات، هواتف وعقارات. اكتشف الإعلانات القريبة منك.'
+                            : 'Voitures, smartphones, immobilier. Découvrez les annonces près de chez vous.',
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.35,
@@ -568,7 +568,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                isAr ? 'استكشف الإعلانات' : 'Explorer les annonces',
+                                isAr
+                                    ? 'استكشف الإعلانات'
+                                    : 'Explorer les annonces',
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w900,
@@ -700,8 +702,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, idx) {
                   final cat = _categories[idx];
-                  final catId =
-                      int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
+                  final catId = int.tryParse((cat['id'] ?? 0).toString()) ?? 0;
                   final assetPath = _state.assetForCategory(cat);
                   final label = _state.formatCategoryLabel(cat);
 
@@ -836,17 +837,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   final adId =
                       int.tryParse((ad['id'] ?? idx).toString()) ?? idx;
                   final title = (ad['title'] ?? '').toString();
-                  final imgUrl =
-                      (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
+                  final imgUrl = (ad['main_image'] ?? ad['primary_image'] ?? '')
+                      .toString();
                   final cityMap =
                       ad['city'] is Map ? ad['city'] as Map : const {};
                   final cityName = (isAr
-                          ? (cityMap['name_ar'] ??
-                              cityMap['name'] ??
-                              'المغرب')
-                          : (cityMap['name_fr'] ??
-                              cityMap['name'] ??
-                              'Maroc'))
+                          ? (cityMap['name_ar'] ?? cityMap['name'] ?? 'المغرب')
+                          : (cityMap['name_fr'] ?? cityMap['name'] ?? 'Maroc'))
                       .toString();
                   final priceStr = (ad['price_formatted'] ??
                           (ad['price'] != null
@@ -954,9 +951,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 6),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -966,14 +963,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                               size: 13,
                                             ),
                                             const SizedBox(width: 4),
-                                            Text(
+                                            Flexible(
+                                                child: Text(
                                               cityName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                 color: Colors.white70,
                                                 fontSize: 12.5,
                                                 fontWeight: FontWeight.w600,
                                               ),
-                                            ),
+                                            )),
                                           ],
                                         ),
                                         if (priceStr.isNotEmpty)
@@ -987,7 +987,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               borderRadius:
                                                   BorderRadius.circular(999),
                                             ),
-                                            child: Text(
+                                            child: PriceText(
                                               priceStr,
                                               style: const TextStyle(
                                                 color: _primary,

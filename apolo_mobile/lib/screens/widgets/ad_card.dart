@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../core/state/app_state.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
+import 'price_text.dart';
+import '../auth_screen.dart';
 
 class AdCard extends StatelessWidget {
   final Map<String, dynamic> ad;
@@ -22,10 +24,9 @@ class AdCard extends StatelessWidget {
     final state = AppState();
     final int id = int.tryParse(ad['id'].toString()) ?? 0;
     final String title = (ad['title'] ?? '').toString();
-    final String priceFormatted =
-        (ad['price_formatted'] ??
-                (ad['price'] != null ? '${ad['price']} DH' : ''))
-            .toString();
+    final String priceFormatted = (ad['price_formatted'] ??
+            (ad['price'] != null ? '${ad['price']} DH' : ''))
+        .toString();
     final String? primaryImage =
         (ad['main_image'] ?? ad['primary_image'])?.toString();
     final bool isFeatured = ad['is_vip'] == true ||
@@ -252,12 +253,17 @@ class AdCard extends StatelessWidget {
           end: 8,
           child: AnimatedBuilder(
             animation: state,
-            builder: (_, __) {
+            builder: (context, __) {
               final bool currentFav = state.favoriteAdIds.contains(id);
               return GestureDetector(
-                onTap: () {
+                onTap: () async {
+                  if (!state.isLoggedIn) {
+                    await Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const AuthScreen()));
+                    return;
+                  }
                   HapticFeedback.selectionClick();
-                  state.toggleFavorite(
+                  await state.toggleFavorite(
                     id,
                     categoryId: state.extractAdCategoryId(ad),
                   );
@@ -328,7 +334,7 @@ class AdCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: PriceText(
                       price,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -467,7 +473,7 @@ class AdCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  PriceText(
                     price,
                     style: const TextStyle(
                       color: _red,
@@ -491,7 +497,8 @@ class AdCard extends StatelessWidget {
                   Row(
                     children: [
                       if (category.isNotEmpty)
-                        Container(
+                        Flexible(
+                            child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
@@ -512,7 +519,8 @@ class AdCard extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 5),
-                              Text(
+                              Flexible(
+                                  child: Text(
                                 category,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -521,10 +529,10 @@ class AdCard extends StatelessWidget {
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                 ),
-                              ),
+                              )),
                             ],
                           ),
-                        ),
+                        )),
                       const Spacer(),
                       Icon(
                         state.s.isAr

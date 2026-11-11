@@ -1,22 +1,21 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/app_config.dart';
 import 'core/state/app_state.dart';
-import 'screens/main_shell.dart';
 import 'screens/splash_screen.dart';
-import 'screens/welcome_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppState().initialize();
+  await AppState().initialize(loadRemote: false);
   final prefs = await SharedPreferences.getInstance();
   final hasSeenWelcome = prefs.getBool('has_seen_onboarding') ?? false;
 
   runApp(
     ApoloMobileApp(hasSeenWelcome: hasSeenWelcome),
   );
+  unawaited(AppState().refreshRemote());
 }
 
 class ApoloMobileApp extends StatefulWidget {
@@ -49,10 +48,12 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
   }
 
   void _onCompleteWelcome() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_seen_onboarding', true);
-    if (mounted) {
-      setState(() => _passedWelcome = true);
+    if (mounted) setState(() => _passedWelcome = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_seen_onboarding', true);
+    } catch (_) {
+      // Storage failure must not block entering the app.
     }
   }
 
@@ -64,8 +65,9 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
       locale: _state.locale,
       builder: (context, child) {
         return DefaultTextStyle.merge(
-          style: const TextStyle(
-            fontFamily: AppConfig.fontPrimary,
+          style: TextStyle(
+            fontFamily:
+                _state.s.isAr ? 'IBMPlexSansArabic' : AppConfig.fontPrimary,
             fontFamilyFallback: AppConfig.fontFallback,
           ),
           child: child ?? const SizedBox.shrink(),

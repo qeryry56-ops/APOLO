@@ -97,7 +97,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               const SizedBox(height: 16),
               if (_ads.isNotEmpty)
                 DropdownButtonFormField<int>(
-                  value: selectedAdId,
+                  initialValue: selectedAdId,
                   decoration: InputDecoration(labelText: s.tr('اختر المنتج', 'Choisir le produit')),
                   items: _ads
                       .map((a) => DropdownMenuItem<int>(

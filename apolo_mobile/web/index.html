@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
   <base href="$FLUTTER_BASE_HREF">
 
@@ -23,16 +23,11 @@
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <!-- Preload critical Splash LCP Image -->
-  <link rel="preload" as="image" href="icons/Icon-512.png" fetchpriority="high"/>
+  <link rel="preload" as="image" href="assets/assets/images/apolo_logo.png" fetchpriority="high"/>
 
   <!-- Preconnect to Apolo API / Backend -->
   <link rel="preconnect" href="https://apolo.ma" crossorigin>
   <link rel="dns-prefetch" href="https://apolo.ma">
-
-  <!-- 2026 UI/UX Typography Preconnect: Plus Jakarta Sans + IBM Plex Sans Arabic -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <title>Apolo.ma</title>
   <link rel="manifest" href="manifest.json">
@@ -40,7 +35,7 @@
     html, body {
       margin: 0;
       padding: 0;
-      background-color: #E31B23;
+      background-color: #FFFFFF;
       height: 100%;
       overflow: hidden;
     }
@@ -48,7 +43,7 @@
       position: fixed;
       inset: 0;
       z-index: 999999;
-      background: linear-gradient(145deg, #E31B23 0%, #C21018 100%);
+      background: #FFFFFF;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -58,21 +53,18 @@
     #apolo-splash img {
       width: 112px;
       height: 112px;
-      border-radius: 28px;
-      box-shadow: 0 20px 44px rgba(0, 0, 0, 0.22);
-      animation: apoloPulse 1.6s ease-in-out infinite;
+      object-fit: contain;
     }
     #apolo-splash .brand-sub {
       margin-top: 18px;
-      color: rgba(255, 255, 255, 0.92);
+      color: #111111;
       font-family: 'Plus Jakarta Sans', 'IBM Plex Sans Arabic', sans-serif;
       font-size: 15px;
       font-weight: 700;
       letter-spacing: 0.4px;
     }
-    @keyframes apoloPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+    @media (prefers-reduced-motion: reduce) {
+      #apolo-splash { transition: none; }
     }
   </style>
 </head>
@@ -97,6 +89,6 @@
       }
     });
   </script>
-  <script src="flutter_bootstrap.js?v=20261105_brand" async></script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

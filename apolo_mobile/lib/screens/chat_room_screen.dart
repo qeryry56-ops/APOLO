@@ -1,25 +1,18 @@
-﻿import 'dart:async';
-import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../core/state/app_state.dart';
 import 'call_screen.dart';
 import 'seller_profile_screen.dart';
 import 'widgets/chat_utils.dart';
 
-/// 2026 Production Chat Room with Apolo Brand Styling & Real Calling/Voice Features:
-/// - Apolo Brand Red palette (`#E31B23`) for outgoing bubbles & accents.
-/// - In-App Voice Call (`📞`) & Video Call (`📹`) navigating to `CallScreen`.
-/// - Live Voice Note Recorder ("تسجيل رسالة صوتية") with blinking red dot, timer & animated equalizer.
-/// - Voice Note Player Bubbles with interactive Play/Pause & audio waveform.
-/// - Live Typing Indicator ("يكتب الآن... ✍️") with animated bouncing 3 dots.
-/// - Dropdown Call Menu matching the reference screenshot.
+/// Text messaging; unsupported media actions are explicitly unavailable.
 class ChatRoomScreen extends StatefulWidget {
   final int conversationId;
   final String peerName;
+  final int? peerId;
   final String adTitle;
   final String? peerAvatar;
   final String? adImage;
@@ -30,6 +23,7 @@ class ChatRoomScreen extends StatefulWidget {
     super.key,
     required this.conversationId,
     required this.peerName,
+    this.peerId,
     this.adTitle = '',
     this.peerAvatar,
     this.adImage,
@@ -42,30 +36,21 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen>
-    with TickerProviderStateMixin {
+    with WidgetsBindingObserver {
   final AppState _state = AppState();
   final TextEditingController _msgCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focus = FocusNode();
-  final ImagePicker _picker = ImagePicker();
 
   List<Map<String, dynamic>> _messages = [];
   final List<Map<String, dynamic>> _pending = [];
   bool _loading = true;
   bool _showCallMenu = false;
-  bool _isPeerTyping = false;
+  bool _sending = false;
+  bool _loadingRequest = false;
+  String? _loadError;
   Timer? _pollTimer;
-
-  // Voice Note Recording State ("يساجل")
-  bool _isRecording = false;
-  int _recordSeconds = 0;
-  Timer? _recordTimer;
-  late final AnimationController _waveAnimController;
-
-  // Audio Playback Simulation State
-  int? _playingAudioIndex;
-  double _playbackProgress = 0.0;
-  Timer? _playbackTimer;
+  Object? _accountId;
 
   static const Color _bg = Color(0xFFFFFFFF);
   static const Color _apoloRed = Color(0xFFE31B23);
@@ -73,25 +58,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   static const Color _textBlack = Color(0xFF0F172A);
   static const Color _textMuted = Color(0xFF6B7280);
   static const Color _textSubtle = Color(0xFF9CA3AF);
-  static const Color _onlineGreen = Color(0xFF10B981);
-
-
 
   @override
   void initState() {
     super.initState();
-    _waveAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 650),
-    )..repeat(reverse: true);
-
+    WidgetsBinding.instance.addObserver(this);
+    _accountId = _state.currentUser?['id'];
+    _state.addListener(_onAccountChanged);
     _loadMessages(scrollToBottom: true);
 
-    if (widget.initialDraft != null && widget.initialDraft!.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _sendText(widget.initialDraft!.trim());
-      });
-    }
+    if (widget.initialDraft != null) _msgCtrl.text = widget.initialDraft!;
 
     _msgCtrl.addListener(() {
       if (mounted) setState(() {});
@@ -103,27 +79,47 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
     });
 
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) _loadMessages(silent: true);
-    });
+    _startPolling();
+  }
 
-    // Simulated peer typing for live feel
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) {
-        setState(() => _isPeerTyping = true);
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) setState(() => _isPeerTyping = false);
-        });
+  void _onAccountChanged() {
+    if (!mounted || _accountId == _state.currentUser?['id']) return;
+    _accountId = _state.currentUser?['id'];
+    setState(() {
+      _messages = [];
+      _pending.clear();
+      _loading = false;
+    });
+    _msgCtrl.clear();
+    _loadMessages();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        _loadMessages(silent: true);
       }
     });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startPolling();
+      if (ModalRoute.of(context)?.isCurrent == true) {
+        _loadMessages(silent: true);
+      }
+    } else {
+      _pollTimer?.cancel();
+    }
+  }
+
+  @override
   void dispose() {
     _pollTimer?.cancel();
-    _recordTimer?.cancel();
-    _playbackTimer?.cancel();
-    _waveAnimController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _state.removeListener(_onAccountChanged);
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     _focus.dispose();
@@ -138,6 +134,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         _messages = [];
         _pending.clear();
         _loading = true;
+        _loadError = null;
+        _msgCtrl.text = widget.initialDraft ?? '';
       });
       _loadMessages(scrollToBottom: true);
     }
@@ -145,7 +143,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
+      if (mounted && _scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
           duration: const Duration(milliseconds: 240),
@@ -157,177 +155,125 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Future<void> _loadMessages(
       {bool silent = false, bool scrollToBottom = false}) async {
+    if (_loadingRequest || !mounted) return;
+    final conversationId = widget.conversationId;
+    final userId = _state.currentUser?['id'];
+    _loadingRequest = true;
     try {
-      if (_state.isLoggedIn && widget.conversationId > 0) {
-        final res = await _state.api.dio.get(
-          '/chat/conversations/${widget.conversationId}/messages',
-        );
-        if (res.data is Map && res.data['status'] == 'success') {
-          final dynamic raw = res.data['messages'] ?? res.data['data'];
-          List<dynamic> incoming = [];
-          if (raw is List) {
-            incoming = raw;
-          } else if (raw is Map && raw['data'] is List) {
-            incoming = raw['data'] as List<dynamic>;
-          }
-          if (mounted) {
-            setState(() {
-              _messages = incoming
-                  .whereType<Map>()
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList();
-              
-              _loading = false;
-            });
-            if (scrollToBottom) _scrollToEnd();
-            return;
-          }
-        }
+      if (!_state.isLoggedIn || conversationId <= 0) {
+        throw StateError('Sign in required');
       }
-    } catch (_) {}
-
-    if (mounted) {
+      final res = await _state.api.dio
+          .get('/chat/conversations/$conversationId/messages');
+      if (res.data is! Map || res.data['status'] != 'success') {
+        throw StateError('Messages unavailable');
+      }
+      final dynamic raw = res.data['messages'] ?? res.data['data'];
+      final dynamic incoming = raw is Map ? raw['data'] : raw;
+      if (incoming is! List) throw StateError('Invalid messages');
+      if (!mounted ||
+          conversationId != widget.conversationId ||
+          userId != _state.currentUser?['id']) {
+        return;
+      }
       setState(() {
-        
+        _messages = incoming
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
         _loading = false;
+        _loadError = null;
       });
       if (scrollToBottom) _scrollToEnd();
+    } catch (_) {
+      if (mounted && conversationId == widget.conversationId) {
+        setState(() {
+          _loading = false;
+          _loadError = _state.s.tr('تعذر تحميل الرسائل. حاول مجدداً.',
+              'Chargement impossible. Réessayez.');
+        });
+      }
+    } finally {
+      _loadingRequest = false;
+      if (mounted && conversationId != widget.conversationId) _loadMessages();
     }
   }
 
   Future<void> _sendText([String? preset]) async {
     final text = (preset ?? _msgCtrl.text).trim();
-    if (text.isEmpty) return;
-
-    HapticFeedback.lightImpact();
-    if (preset == null) _msgCtrl.clear();
-
-    final nowTime = formatChatClock(DateTime.now());
-    final tempMsg = {
-      'id': DateTime.now().millisecondsSinceEpoch,
+    if (text.isEmpty || _sending || !mounted) return;
+    if (!_state.isLoggedIn || widget.conversationId <= 0) {
+      _notice(_state.s.tr('سجّل الدخول لإرسال رسالة.',
+          'Connectez-vous pour envoyer un message.'));
+      return;
+    }
+    final conversationId = widget.conversationId;
+    final userId = _state.currentUser?['id'];
+    final tempMsg = <String, dynamic>{
       'body': text,
       'is_mine': true,
-      'created_at_time': nowTime,
       'type': 'text',
       'read': false,
+      'created_at_time': formatChatClock(DateTime.now()),
       '_pending': true,
     };
-
     setState(() {
+      _sending = true;
       _pending.add(tempMsg);
     });
     _scrollToEnd();
-
     try {
-      if (_state.isLoggedIn) {
-        final res = await _state.api.dio.post(
-          '/chat/conversations/${widget.conversationId}/messages',
-          data: {'body': text, 'message': text},
-        );
-        if (res.data is Map && res.data['status'] == 'success') {
-          final dynamic created = res.data['message'];
-          if (mounted) {
-            setState(() {
-              _pending.remove(tempMsg);
-              if (created is Map) {
-                _messages.add(Map<String, dynamic>.from(created));
-              } else {
-                tempMsg['_pending'] = false;
-                _messages.add(tempMsg);
-              }
-            });
-            _scrollToEnd();
-            return;
-          }
-        }
+      final res = await _state.api.dio.post(
+          '/chat/conversations/$conversationId/messages',
+          data: {'body': text, 'message': text});
+      if (res.data is! Map || res.data['status'] != 'success') {
+        throw StateError('Send not confirmed');
       }
-    } catch (_) {}
-
-    if (mounted) {
+      if (!mounted ||
+          conversationId != widget.conversationId ||
+          userId != _state.currentUser?['id']) {
+        return;
+      }
+      final created = res.data['message'];
       setState(() {
         _pending.remove(tempMsg);
-        tempMsg['_pending'] = false;
-        tempMsg['read'] = true;
-        _messages.add(tempMsg);
-      });
-      _scrollToEnd();
-    }
-  }
-
-  // ───────────────────────── Audio Voice Recording ─────────────────────────
-  void _startVoiceRecording() {
-    HapticFeedback.heavyImpact();
-    setState(() {
-      _isRecording = true;
-      _recordSeconds = 0;
-    });
-    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _recordSeconds++);
-    });
-  }
-
-  void _cancelVoiceRecording() {
-    HapticFeedback.mediumImpact();
-    _recordTimer?.cancel();
-    setState(() {
-      _isRecording = false;
-      _recordSeconds = 0;
-    });
-  }
-
-  void _sendVoiceRecording() {
-    HapticFeedback.mediumImpact();
-    _recordTimer?.cancel();
-    final durationStr =
-        '0:${_recordSeconds.toString().padLeft(2, '0')}';
-    final nowTime = formatChatClock(DateTime.now());
-
-    final audioMsg = {
-      'id': DateTime.now().millisecondsSinceEpoch,
-      'body': 'تسجيل صوتي ($durationStr)',
-      'is_mine': true,
-      'created_at_time': nowTime,
-      'type': 'audio',
-      'audio_duration': durationStr,
-      'read': true,
-    };
-
-    setState(() {
-      _isRecording = false;
-      _recordSeconds = 0;
-      _messages.add(audioMsg);
-    });
-    _scrollToEnd();
-  }
-
-  void _toggleAudioPlayback(int index) {
-    HapticFeedback.lightImpact();
-    if (_playingAudioIndex == index) {
-      _playbackTimer?.cancel();
-      setState(() {
-        _playingAudioIndex = null;
-        _playbackProgress = 0.0;
-      });
-    } else {
-      _playbackTimer?.cancel();
-      setState(() {
-        _playingAudioIndex = index;
-        _playbackProgress = 0.0;
-      });
-      _playbackTimer = Timer.periodic(const Duration(milliseconds: 100), (t) {
-        if (mounted) {
-          setState(() {
-            _playbackProgress += 0.05;
-            if (_playbackProgress >= 1.0) {
-              t.cancel();
-              _playingAudioIndex = null;
-              _playbackProgress = 0.0;
-            }
-          });
+        if (created is Map &&
+            !_messages
+                .any((m) => m['id'] != null && m['id'] == created['id'])) {
+          _messages.add(Map<String, dynamic>.from(created));
         }
       });
+      if (preset == null && _msgCtrl.text.trim() == text) _msgCtrl.clear();
+      await _loadMessages(silent: true);
+      _scrollToEnd();
+    } catch (_) {
+      if (mounted &&
+          conversationId == widget.conversationId &&
+          userId == _state.currentUser?['id']) {
+        if (preset != null && _msgCtrl.text.isEmpty) _msgCtrl.text = text;
+        _notice(_state.s.tr(
+            'تعذر تأكيد الإرسال. النص محفوظ؛ تحقق من المحادثة قبل إعادة المحاولة.',
+            'Envoi non confirmé. Brouillon conservé ; vérifiez la conversation avant de réessayer.'));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pending.remove(tempMsg);
+          _sending = false;
+        });
+      }
     }
   }
+
+  void _notice(String text) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    }
+  }
+
+  void _mediaUnavailable() => _notice(_state.s.tr(
+      'الرسائل الصوتية والصور غير متاحة حالياً. لم يتم تسجيل أو إرسال أي ملف.',
+      'Les messages vocaux et les photos sont indisponibles. Aucun fichier enregistré ou envoyé.'));
 
   // ───────────────────────── Voice & Video Calls ─────────────────────────
   void _startCall({required bool isVideo}) {
@@ -346,12 +292,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   void _openPeerProfile() {
+    if (widget.peerId == null || widget.peerId! <= 0) return;
     HapticFeedback.lightImpact();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => SellerProfileScreen(
-          sellerId: widget.conversationId,
+          sellerId: widget.peerId!,
           sellerName: widget.peerName,
           sellerAvatar: widget.peerAvatar,
           initialAd: widget.adTitle.isNotEmpty
@@ -378,6 +325,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           Column(
             children: [
               _buildHeader(),
+              if (_loadError != null)
+                TextButton(
+                    onPressed: () => _loadMessages(), child: Text(_loadError!)),
               Expanded(
                 child: _loading
                     ? const Center(
@@ -385,23 +335,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       )
                     : GestureDetector(
                         onTap: () {
-                          if (_showCallMenu) setState(() => _showCallMenu = false);
+                          if (_showCallMenu) {
+                            setState(() => _showCallMenu = false);
+                          }
                           FocusScope.of(context).unfocus();
                         },
                         child: all.isEmpty
                             ? _buildEmptyChatState()
                             : ListView.builder(
-                          controller: _scrollCtrl,
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                          itemCount: all.length + (_isPeerTyping ? 1 : 0),
-                          itemBuilder: (_, idx) {
-                            if (idx == all.length && _isPeerTyping) {
-                              return _buildTypingIndicatorBubble();
-                            }
-                            return _buildMessageBubble(all[idx], idx);
-                          },
-                        ),
+                                controller: _scrollCtrl,
+                                physics: const BouncingScrollPhysics(),
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                                itemCount: all.length,
+                                itemBuilder: (_, idx) {
+                                  return _buildMessageBubble(all[idx], idx);
+                                },
+                              ),
                       ),
               ),
               _buildComposer(),
@@ -436,10 +386,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFFFEECEE),
-                border: Border.all(color: _apoloRed.withValues(alpha: 0.15), width: 2),
+                border: Border.all(
+                    color: _apoloRed.withValues(alpha: 0.15), width: 2),
               ),
               child: const Center(
-                child: Icon(CupertinoIcons.chat_bubble_2_fill, color: _apoloRed, size: 32),
+                child: Icon(CupertinoIcons.chat_bubble_2_fill,
+                    color: _apoloRed, size: 32),
               ),
             ),
             const SizedBox(height: 14),
@@ -511,6 +463,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ),
     );
   }
+
   Widget _buildHeader() {
     final topInset = MediaQuery.of(context).padding.top;
     return Container(
@@ -535,7 +488,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ),
           ),
           GestureDetector(
-            onTap: _openPeerProfile,
+            onTap: widget.peerId != null && widget.peerId! > 0
+                ? _openPeerProfile
+                : null,
             child: Container(
               width: 40,
               height: 40,
@@ -545,14 +500,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(999),
-                child: widget.peerAvatar != null && widget.peerAvatar!.isNotEmpty
-                    ? Image.network(
-                        widget.peerAvatar!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _buildAvatarFallback(widget.peerName),
-                      )
-                    : _buildAvatarFallback(widget.peerName),
+                child:
+                    widget.peerAvatar != null && widget.peerAvatar!.isNotEmpty
+                        ? Image.network(
+                            widget.peerAvatar!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _buildAvatarFallback(widget.peerName),
+                          )
+                        : _buildAvatarFallback(widget.peerName),
               ),
             ),
           ),
@@ -560,7 +516,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: _openPeerProfile,
+              onTap: widget.peerId != null && widget.peerId! > 0
+                  ? _openPeerProfile
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -582,19 +540,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         width: 7,
                         height: 7,
                         decoration: BoxDecoration(
-                          color: _isPeerTyping ? _apoloRed : _onlineGreen,
+                          color: _textSubtle,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        _isPeerTyping ? 'يكتب الآن... ✍️' : 'Online',
+                        _state.s.tr(
+                            'حالة الاتصال غير متاحة', 'Statut indisponible'),
                         style: TextStyle(
                           fontSize: 12,
-                          color: _isPeerTyping ? _apoloRed : _textMuted,
-                          fontWeight: _isPeerTyping
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                          color: _textMuted,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -642,62 +599,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   // Floating Call Dropdown Card (Voice & Video)
   Widget _buildCallDropdownCard() {
     return Material(
-      color: Colors.transparent,
       elevation: 12,
-      shadowColor: Colors.black.withValues(alpha: 0.16),
       borderRadius: BorderRadius.circular(18),
-      child: Container(
-        width: 170,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
-        ),
+      child: SizedBox(
+        width: 260,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            InkWell(
+            ListTile(
+              leading: const Icon(CupertinoIcons.phone, color: _apoloRed),
+              title: Text(_state.s.tr('مكالمة صوتية — غير متاحة',
+                  'Appel vocal — indisponible')),
               onTap: () => _startCall(isVideo: false),
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    Icon(CupertinoIcons.phone, color: _apoloRed, size: 19),
-                    SizedBox(width: 10),
-                    Text(
-                      'Voice call',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: _textBlack,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
-            InkWell(
+            ListTile(
+              leading: const Icon(CupertinoIcons.videocam_fill, color: _apoloRed),
+              title: Text(_state.s.tr('مكالمة فيديو — غير متاحة',
+                  'Appel vidéo — indisponible')),
               onTap: () => _startCall(isVideo: true),
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    Icon(CupertinoIcons.videocam_fill, color: _apoloRed, size: 21),
-                    SizedBox(width: 10),
-                    Text(
-                      'Video call',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: _textBlack,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),
@@ -709,9 +628,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Widget _buildMessageBubble(dynamic m, int index) {
     final bool isMine = m['is_mine'] == true;
     final String body = (m['body'] ?? '').toString();
-    final String timeStr = (m['created_at_time'] ?? '08:24 AM').toString();
+    final String timeStr = (m['created_at_time'] ?? '').toString();
     final bool isAudio = m['type'] == 'audio';
-    final String audioDuration = (m['audio_duration'] ?? '0:14').toString();
+    final String audioDuration = (m['audio_duration'] ?? '').toString();
 
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(18),
@@ -757,8 +676,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (isAudio)
-                  _buildAudioBubbleContent(
-                      index, audioDuration, isMine)
+                  _buildAudioBubbleContent(index, audioDuration, isMine)
                 else
                   Text(
                     body,
@@ -785,8 +703,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     ),
                     if (isMine) ...[
                       const SizedBox(width: 4),
-                      const Icon(
-                        Icons.done_all_rounded,
+                      Icon(
+                        m['_pending'] == true
+                            ? CupertinoIcons.clock
+                            : m['read'] == true
+                                ? Icons.done_all_rounded
+                                : Icons.done_rounded,
                         size: 14,
                         color: Colors.white,
                       ),
@@ -801,218 +723,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
-  // Audio Voice Note Player in Bubble
-  Widget _buildAudioBubbleContent(
-      int index, String duration, bool isMine) {
-    final isPlaying = _playingAudioIndex == index;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: () => _toggleAudioPlayback(index),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isMine ? Colors.white : _apoloRed,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              isPlaying ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill,
-              color: isMine ? _apoloRed : Colors.white,
-              size: 16,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Waveform bars simulation
-            Row(
-              children: List.generate(14, (barIdx) {
-                final double height = (barIdx % 3 == 0)
-                    ? 18
-                    : (barIdx % 2 == 0 ? 12 : 7);
-                final bool played = isPlaying &&
-                    (barIdx / 14.0) <= _playbackProgress;
-                return Container(
-                  width: 3,
-                  height: height,
-                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                  decoration: BoxDecoration(
-                    color: isMine
-                        ? (played ? Colors.white : Colors.white38)
-                        : (played ? _apoloRed : const Color(0xFFCBD5E1)),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              duration,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: isMine ? Colors.white70 : _textMuted,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+  Widget _buildAudioBubbleContent(int index, String duration, bool isMine) {
+    return Text(
+        _state.s.tr('رسالة صوتية — التشغيل غير متاح',
+            'Message vocal — lecture indisponible'),
+        style: TextStyle(color: isMine ? Colors.white : _textBlack));
   }
 
-  // Live Typing Indicator Bubble ("● ● ●")
-  Widget _buildTypingIndicatorBubble() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: _surfaceGrey,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildBouncingDot(0),
-                const SizedBox(width: 4),
-                _buildBouncingDot(1),
-                const SizedBox(width: 4),
-                _buildBouncingDot(2),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBouncingDot(int delay) {
-    return AnimatedBuilder(
-      animation: _waveAnimController,
-      builder: (context, child) {
-        final val = math.sin((_waveAnimController.value * 2 * math.pi) + delay);
-        return Container(
-          width: 6,
-          height: 6 + (val.abs() * 4),
-          decoration: BoxDecoration(
-            color: _textMuted,
-            borderRadius: BorderRadius.circular(99),
-          ),
-        );
-      },
-    );
-  }
-
-  // ───────────────────────── 3. Bottom Composer ─────────────────────────
   Widget _buildComposer() {
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final canSend = _msgCtrl.text.trim().isNotEmpty;
 
-    if (_isRecording) {
-      // Voice Recording Mode View ("يساجل")
-      return Container(
-        color: Colors.white,
-        padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset + 10),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
-        ),
-        child: Row(
-          children: [
-            // Cancel Recording (Red Trash)
-            GestureDetector(
-              onTap: _cancelVoiceRecording,
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFEECEE),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Icon(CupertinoIcons.trash_fill,
-                    color: _apoloRed, size: 18),
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Blinking Red Dot + Timer
-            Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: _apoloRed,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '0:${_recordSeconds.toString().padLeft(2, '0')}',
-              style: const TextStyle(
-                color: _apoloRed,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(width: 14),
-
-            // Equalizer Waveform Animation
-            Expanded(
-              child: AnimatedBuilder(
-                animation: _waveAnimController,
-                builder: (context, child) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(12, (i) {
-                      final h = 6.0 +
-                          (math.sin(_waveAnimController.value * math.pi * 2 + i)
-                                  .abs() *
-                              16.0);
-                      return Container(
-                        width: 3,
-                        height: h,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          color: _apoloRed,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                      );
-                    }),
-                  );
-                },
-              ),
-            ),
-
-            // Send Voice Note Button
-            GestureDetector(
-              onTap: _sendVoiceRecording,
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: const BoxDecoration(
-                  color: _apoloRed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Icon(CupertinoIcons.arrow_up,
-                    color: Colors.white, size: 20),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final bool canSend = _msgCtrl.text.trim().isNotEmpty;
     return Container(
-      color: Colors.white,
       padding: EdgeInsets.fromLTRB(14, 8, 14, bottomInset + 8),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1022,7 +744,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         children: [
           // Left `+` button in circular soft grey container
           GestureDetector(
-            onTap: () => _sendPhoto(ImageSource.gallery),
+            onTap: _mediaUnavailable,
             child: Container(
               width: 40,
               height: 40,
@@ -1053,6 +775,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 children: [
                   Expanded(
                     child: TextField(
+                      key: const Key('chat-draft'),
                       controller: _msgCtrl,
                       focusNode: _focus,
                       textCapitalization: TextCapitalization.sentences,
@@ -1078,7 +801,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                   ),
                   if (!canSend) ...[
                     GestureDetector(
-                      onTap: () => _sendPhoto(ImageSource.camera),
+                      onTap: _mediaUnavailable,
                       child: const Icon(
                         CupertinoIcons.camera,
                         color: _textMuted,
@@ -1086,9 +809,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Mic button: Tap to start recording voice note ("يساجل")
+                    // Media integration is not available; tapping explains the limitation.
                     GestureDetector(
-                      onTap: _startVoiceRecording,
+                      onTap: _mediaUnavailable,
                       child: const Icon(
                         CupertinoIcons.mic_fill,
                         color: _apoloRed,
@@ -1105,7 +828,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           if (canSend) ...[
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () => _sendText(),
+              key: const Key('chat-send'),
+              onTap: _sending ? null : () => _sendText(),
               child: Container(
                 width: 40,
                 height: 40,
@@ -1125,13 +849,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         ],
       ),
     );
-  }
-
-  void _sendPhoto(ImageSource src) async {
-    final XFile? file = await _picker.pickImage(source: src, imageQuality: 80);
-    if (file != null) {
-      _sendText('📷 صورة مرفقة');
-    }
   }
 
   Widget _buildAvatarFallback(String name) {

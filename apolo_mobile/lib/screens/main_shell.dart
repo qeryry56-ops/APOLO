@@ -65,7 +65,7 @@ class _MainShellState extends State<MainShell> {
         key: ValueKey(_searchInitialCategory),
         initialCategoryId: _searchInitialCategory,
       ),
-      const ChatListScreen(),
+      ChatListScreen(onExploreAds: () => setState(() => _currentIndex = 2)),
       const ProfileScreen(),
     ];
 
@@ -104,7 +104,10 @@ class _MainShellState extends State<MainShell> {
         children: [
           IndexedStack(
             index: _currentIndex,
-            children: pages,
+            children: [
+              for (var i = 0; i < pages.length; i++)
+                TickerMode(enabled: _currentIndex == i, child: pages[i])
+            ],
           ),
           // Floating iOS 26 Liquid-Glass Pill Tab Bar (exact triply-ai style)
           Positioned(
@@ -130,7 +133,8 @@ class _MainShellState extends State<MainShell> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.88),
                       borderRadius: BorderRadius.circular(36),
@@ -147,40 +151,44 @@ class _MainShellState extends State<MainShell> {
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTap: () => setState(() => _currentIndex = idx),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOutCubic,
-                              decoration: BoxDecoration(
-                                color: selected
-                                    ? const Color(0xFFFEECEE)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    selected ? item.activeIcon : item.icon,
-                                    size: 24,
-                                    color: selected ? _blue : _ink,
+                            child: Semantics(
+                                button: true,
+                                selected: selected,
+                                label: item.label,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOutCubic,
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? const Color(0xFFFEECEE)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(30),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    item.label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: selected
-                                          ? FontWeight.w700
-                                          : FontWeight.w600,
-                                      color: selected ? _blue : _ink,
-                                      letterSpacing: -0.1,
-                                    ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        selected ? item.activeIcon : item.icon,
+                                        size: 24,
+                                        color: selected ? _blue : _ink,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        item.label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: selected
+                                              ? FontWeight.w700
+                                              : FontWeight.w600,
+                                          color: selected ? _blue : _ink,
+                                          letterSpacing: -0.1,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
+                                )),
                           ),
                         );
                       }),

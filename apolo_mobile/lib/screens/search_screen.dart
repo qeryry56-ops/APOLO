@@ -132,8 +132,7 @@ class _SearchScreenState extends State<SearchScreen> {
         );
         if (adCityId != _cityId) return false;
       }
-      final priceVal =
-          double.tryParse((ad['price'] ?? 0).toString()) ?? 0.0;
+      final priceVal = double.tryParse((ad['price'] ?? 0).toString()) ?? 0.0;
       if (_minPrice != null && priceVal < _minPrice!) return false;
       if (_maxPrice != null && priceVal > _maxPrice!) return false;
       if (_onlyNegotiable) {
@@ -261,36 +260,19 @@ class _SearchScreenState extends State<SearchScreen> {
     if (mounted) setState(() => _loadingMore = false);
   }
 
+  bool _savingSearch = false;
+
   Future<void> _saveCurrentSearch() async {
-    HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _ink,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        content: Row(
-          children: [
-            const Icon(
-              CupertinoIcons.bell_solid,
-              color: Colors.white,
-              size: 16,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _state.s.tr(
-                  'تم تفعيل التنبيه! غادي نعلموك غير يتحط إعلان جديد فهاد البحث 🔔',
-                  'Alerte activée ! Vous serez notifié des nouvelles annonces 🔔',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!_state.isLoggedIn) return;
+    if (_savingSearch) return;
+    if (!_state.isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_state.s.tr('سجّل الدخول لحفظ البحث.',
+              'Connectez-vous pour enregistrer une recherche.'))));
+      return;
+    }
+    setState(() => _savingSearch = true);
     try {
-      await _state.api.dio.post('/saved-searches', data: {
+      final response = await _state.api.dio.post('/saved-searches', data: {
         'title': _queryCtrl.text.trim().isNotEmpty
             ? _queryCtrl.text.trim()
             : _state.s.tr('بحث محفوظ', 'Recherche sauvegardée'),
@@ -300,7 +282,22 @@ class _SearchScreenState extends State<SearchScreen> {
         'price_min': _minPrice,
         'price_max': _maxPrice,
       });
-    } catch (_) {}
+      if (response.data is! Map || response.data['status'] != 'success') {
+        throw StateError('Save not confirmed');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(_state.s.tr('تم حفظ البحث.', 'Recherche enregistrée.'))));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(_state.s.tr('تعذر حفظ البحث. أعد المحاولة.',
+                'Impossible d’enregistrer la recherche. Réessayez.'))));
+      }
+    } finally {
+      if (mounted) setState(() => _savingSearch = false);
+    }
   }
 
   Map<String, dynamic>? _activeCategoryObj() {
@@ -375,7 +372,8 @@ class _SearchScreenState extends State<SearchScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          s.tr('تصفية وترتيب الإعلانات', 'Filtrer les annonces'),
+                          s.tr(
+                              'تصفية وترتيب الإعلانات', 'Filtrer les annonces'),
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -490,7 +488,11 @@ class _SearchScreenState extends State<SearchScreen> {
                         Expanded(
                           child: TextField(
                             controller: minCtrl,
-                            keyboardType: TextInputType.number,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            textDirection: TextDirection.ltr,
+                            textAlign:
+                                s.isAr ? TextAlign.right : TextAlign.left,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: _ink,
@@ -668,7 +670,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         Text(
                           activeCat != null
                               ? _state.formatCategoryLabel(activeCat)
-                              : s.tr('استكشف الإعلانات', 'Explorer les annonces'),
+                              : s.tr(
+                                  'استكشف الإعلانات', 'Explorer les annonces'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -919,8 +922,10 @@ class _SearchScreenState extends State<SearchScreen> {
             // 4. Quick Sort Strip & Live Results Count
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                runSpacing: 8,
+                spacing: 8,
                 children: [
                   Text(
                     '${_ads.length} ${s.tr('إعلان متوفر', 'annonces')}',
@@ -931,7 +936,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
-                  Row(
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
                       _SortMiniPill(
                         label: s.tr('الذكي ✨', 'Pour vous ✨'),

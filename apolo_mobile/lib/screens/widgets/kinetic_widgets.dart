@@ -54,6 +54,7 @@ class _ScrollRevealState extends State<ScrollReveal>
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) return widget.child;
     return AnimatedBuilder(
       animation: _curved,
       child: widget.child,
@@ -104,17 +105,21 @@ class _PressableScaleState extends State<PressableScale> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onLongPress: widget.onLongPress,
-      onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
+      onTapDown:
+          widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
       onTapUp: widget.onTap != null
           ? (_) {
               setState(() => _pressed = false);
               widget.onTap?.call();
             }
           : null,
-      onTapCancel: widget.onTap != null ? () => setState(() => _pressed = false) : null,
+      onTapCancel:
+          widget.onTap != null ? () => setState(() => _pressed = false) : null,
       child: AnimatedScale(
         scale: _pressed ? widget.pressedScale : 1.0,
-        duration: const Duration(milliseconds: 150),
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 150),
         curve: const Cubic(0.22, 1.0, 0.36, 1.0),
         child: widget.child,
       ),
@@ -154,7 +159,18 @@ class _Floating3DIllustrationState extends State<Floating3DIllustration>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2800),
-    )..repeat(reverse: true);
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override
@@ -192,7 +208,8 @@ class _Floating3DIllustrationState extends State<Floating3DIllustration>
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          widget.accentColor.withValues(alpha: 0.10 * (1.0 - t * 0.3)),
+                          widget.accentColor
+                              .withValues(alpha: 0.10 * (1.0 - t * 0.3)),
                           widget.accentColor.withValues(alpha: 0.03),
                           Colors.transparent,
                         ],
@@ -245,7 +262,8 @@ class _Floating3DIllustrationState extends State<Floating3DIllustration>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: shadowOpacity),
+                          color: const Color(0xFF0F172A)
+                              .withValues(alpha: shadowOpacity),
                           blurRadius: 20,
                           spreadRadius: 4,
                         ),
@@ -360,13 +378,15 @@ class IllustratedStateView extends StatelessWidget {
                 PressableScale(
                   onTap: onAction,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 28, vertical: 14),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE31B23),
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFE31B23).withValues(alpha: 0.22),
+                          color:
+                              const Color(0xFFE31B23).withValues(alpha: 0.22),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),

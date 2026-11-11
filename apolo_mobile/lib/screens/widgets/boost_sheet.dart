@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../core/config/app_config.dart';
@@ -33,9 +34,13 @@ class _BoostSheetState extends State<BoostSheet> {
   void initState() {
     super.initState();
     _loadPlans();
-    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
-      final Stream<List<PurchaseDetails>> purchaseUpdated = InAppPurchase.instance.purchaseStream;
-      _iapSub = purchaseUpdated.listen(_onPurchaseUpdate, onDone: () => _iapSub?.cancel(), onError: (_) {});
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      final Stream<List<PurchaseDetails>> purchaseUpdated =
+          InAppPurchase.instance.purchaseStream;
+      _iapSub = purchaseUpdated.listen(_onPurchaseUpdate,
+          onDone: () => _iapSub?.cancel(), onError: (_) {});
     }
   }
 
@@ -49,91 +54,92 @@ class _BoostSheetState extends State<BoostSheet> {
     try {
       final res = await _state.api.dio.get('/boost/plans');
       if (res.data is Map && res.data['status'] == 'success') {
+        if (!mounted) return;
         setState(() {
-          _plans = res.data['plans'] ?? [];
+          _plans = (res.data['plans'] is List ? res.data['plans'] as List : [])
+              .whereType<Map>()
+              .toList();
+          if (_plans.isNotEmpty) {
+            _selectedPlanId = _plans.first['id'].toString();
+          }
           _loading = false;
         });
         return;
       }
     } catch (_) {}
+    if (!mounted) return;
     setState(() {
-      _plans = [
-        {
-          'id': 'highlight',
-          'iap_product_id': 'ma.apolo.boost.highlight',
-          'name_ar': 'إعلان مميز (7 أيام)',
-          'name_fr': 'Annonce Mise en avant (7 jours)',
-          'price_mad': 49,
-          'duration_days': 7,
-          'features_ar': ['ظهور أعلى نتائج البحث', 'شارة مميز رسمية', 'مشاهدات مضاعفة 3x'],
-          'features_fr': ['En tête des résultats', 'Badge spécial', '3x plus de vues'],
-        },
-        {
-          'id': 'vip',
-          'iap_product_id': 'ma.apolo.boost.vip',
-          'name_ar': 'باقة VIP الاحترافية (15 يوم)',
-          'name_fr': 'Pack VIP Pro (15 jours)',
-          'price_mad': 99,
-          'duration_days': 15,
-          'features_ar': ['الظهور في الصفحة الرئيسية VIP', 'أولوية قصوى في البحث', 'شارة VIP رسمية', 'مشاهدات مضاعفة 7x'],
-          'features_fr': ['Affichage accueil VIP', 'Priorité maximale', 'Badge VIP Pro', '7x plus de vues'],
-        }
-      ];
+      _plans = [];
       _loading = false;
     });
   }
 
   Future<void> _onPurchaseUpdate(List<PurchaseDetails> detailsList) async {
     for (final details in detailsList) {
-      if (details.status == PurchaseStatus.purchased || details.status == PurchaseStatus.restored) {
-        await _verifyWithBackend(
-          planId: _selectedPlanId,
-          transactionId: details.purchaseID ?? 'IAP_${DateTime.now().millisecondsSinceEpoch}',
+      if (details.status == PurchaseStatus.purchased ||
+          details.status == PurchaseStatus.restored) {
+        final matching = _plans.where((p) =>
+            (p['iap_product_id'] ?? p['product_id']) == details.productID);
+        if (matching.isEmpty ||
+            details.purchaseID == null ||
+            details.verificationData.serverVerificationData.isEmpty) {
+          continue;
+        }
+        final verified = await _verifyWithBackend(
+          planId: matching.first['id'].toString(),
+          transactionId: details.purchaseID!,
           receiptData: details.verificationData.serverVerificationData,
         );
-        if (details.pendingCompletePurchase) {
+        if (verified && details.pendingCompletePurchase) {
           await InAppPurchase.instance.completePurchase(details);
         }
-      } else if (details.status == PurchaseStatus.error || details.status == PurchaseStatus.canceled) {
+      } else if (details.status == PurchaseStatus.error ||
+          details.status == PurchaseStatus.canceled) {
         if (mounted) setState(() => _purchasing = false);
       }
     }
   }
 
   Future<void> _startPurchase() async {
-    final plan = _plans.firstWhere((p) => p['id'] == _selectedPlanId, orElse: () => _plans.first);
-    final String productId = (plan['iap_product_id'] ?? plan['product_id']).toString();
+    if (_purchasing || _plans.isEmpty || !_state.isLoggedIn) return;
+    final plan = _plans.firstWhere((p) => p['id'] == _selectedPlanId,
+        orElse: () => _plans.first);
+    final String productId =
+        (plan['iap_product_id'] ?? plan['product_id']).toString();
     setState(() => _purchasing = true);
 
     try {
-      if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+      if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)) {
         final bool available = await InAppPurchase.instance.isAvailable();
         if (available) {
-          final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({productId});
+          final ProductDetailsResponse response =
+              await InAppPurchase.instance.queryProductDetails({productId});
           if (response.productDetails.isNotEmpty) {
-            final param = PurchaseParam(productDetails: response.productDetails.first);
-            await InAppPurchase.instance.buyConsumable(purchaseParam: param);
+            final param =
+                PurchaseParam(productDetails: response.productDetails.first);
+            final started = await InAppPurchase.instance
+                .buyConsumable(purchaseParam: param);
+            if (!started) throw StateError('Purchase did not start');
             return;
           }
         }
       }
-      // Fallback for Staging / Sandbox / Web testing
-      await _verifyWithBackend(
-        planId: _selectedPlanId,
-        transactionId: 'STG_${DateTime.now().millisecondsSinceEpoch}',
-        receiptData: 'STAGING_SANDBOX_RECEIPT',
-      );
+      throw StateError('Purchases unavailable on this platform');
     } catch (e) {
       if (mounted) {
         setState(() => _purchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_state.s.tr('تعذر إتمام عملية الدفع', 'Erreur lors du paiement'))),
+          SnackBar(
+              content: Text(_state.s
+                  .tr('تعذر إتمام عملية الدفع', 'Erreur lors du paiement'))),
         );
       }
     }
   }
 
-  Future<void> _verifyWithBackend({
+  Future<bool> _verifyWithBackend({
     required String planId,
     required String transactionId,
     required String receiptData,
@@ -143,7 +149,8 @@ class _BoostSheetState extends State<BoostSheet> {
         '/ads/${widget.adId}/boost/verify-iap',
         data: {
           'plan': planId,
-          'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+          'platform':
+              defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
           'transaction_id': transactionId,
           'receipt_data': receiptData,
         },
@@ -151,18 +158,29 @@ class _BoostSheetState extends State<BoostSheet> {
       if (mounted) {
         setState(() => _purchasing = false);
         if (res.data is Map && res.data['status'] == 'success') {
+          final messenger = ScaffoldMessenger.of(context);
           Navigator.pop(context, true);
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               backgroundColor: AppConfig.success,
-              content: Text(res.data['message']?.toString() ?? _state.s.tr('تم تمييز إعلانك بنجاح!', 'Annonce boostée avec succès !')),
+              content: Text(res.data['message']?.toString() ??
+                  _state.s.tr('تم تمييز إعلانك بنجاح!',
+                      'Annonce boostée avec succès !')),
             ),
           );
+          return true;
         }
       }
     } catch (_) {
       if (mounted) setState(() => _purchasing = false);
     }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_state.s.tr(
+              'لم يتم تأكيد الدفع. تواصل مع الدعم قبل إعادة الشراء.',
+              'Paiement non confirmé. Contactez l’assistance avant de racheter.'))));
+    }
+    return false;
   }
 
   @override
@@ -175,7 +193,9 @@ class _BoostSheetState extends State<BoostSheet> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: _loading
-          ? const SizedBox(height: 220, child: Center(child: CircularProgressIndicator(color: _red)))
+          ? const SizedBox(
+              height: 220,
+              child: Center(child: CircularProgressIndicator(color: _red)))
           : Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +204,9 @@ class _BoostSheetState extends State<BoostSheet> {
                   child: Container(
                     width: 40,
                     height: 4,
-                    decoration: BoxDecoration(color: _border, borderRadius: BorderRadius.circular(99)),
+                    decoration: BoxDecoration(
+                        color: _border,
+                        borderRadius: BorderRadius.circular(99)),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -193,8 +215,10 @@ class _BoostSheetState extends State<BoostSheet> {
                     Container(
                       width: 44,
                       height: 44,
-                      decoration: const BoxDecoration(color: _badgeBg, shape: BoxShape.circle),
-                      child: const Icon(Icons.bolt_rounded, color: _red, size: 24),
+                      decoration: const BoxDecoration(
+                          color: _badgeBg, shape: BoxShape.circle),
+                      child:
+                          const Icon(Icons.bolt_rounded, color: _red, size: 24),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -202,15 +226,23 @@ class _BoostSheetState extends State<BoostSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            s.tr('ميّز إعلانك وضاعف مبيعاتك', 'Boostez votre annonce'),
-                            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.4),
+                            s.tr('ميّز إعلانك وضاعف مبيعاتك',
+                                'Boostez votre annonce'),
+                            style: const TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                color: _ink,
+                                letterSpacing: -0.4),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             widget.adTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: _muted, fontSize: 13, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                                color: _muted,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -218,18 +250,31 @@ class _BoostSheetState extends State<BoostSheet> {
                   ],
                 ),
                 const SizedBox(height: 18),
+                if (_plans.isEmpty)
+                  Text(s.tr('العروض غير متوفرة حالياً. أعد المحاولة لاحقاً.',
+                      'Les offres sont indisponibles. Réessayez plus tard.')),
+                if (kIsWeb)
+                  Text(s.tr('الشراء من الويب غير متاح حالياً.',
+                      'Les achats sur le Web ne sont pas disponibles.')),
                 ..._plans.map((plan) {
                   final String id = plan['id'].toString();
                   final bool selected = _selectedPlanId == id;
-                  final String name = (s.isAr ? plan['name_ar'] : plan['name_fr']).toString();
-                  final List features = (s.isAr ? plan['features_ar'] : plan['features_fr']) ?? [];
+                  final String name =
+                      (s.isAr ? plan['name_ar'] : plan['name_fr']).toString();
+                  final List features =
+                      (s.isAr ? plan['features_ar'] : plan['features_fr']) ??
+                          [];
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedPlanId = id),
+                    onTap: _purchasing
+                        ? null
+                        : () => setState(() => _selectedPlanId = id),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: selected ? _badgeBg.withValues(alpha: 0.55) : Colors.white,
+                        color: selected
+                            ? _badgeBg.withValues(alpha: 0.55)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: selected ? _red : _border,
@@ -245,17 +290,24 @@ class _BoostSheetState extends State<BoostSheet> {
                               Expanded(
                                 child: Text(
                                   name,
-                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5, color: _ink, letterSpacing: -0.2),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15.5,
+                                      color: _ink,
+                                      letterSpacing: -0.2),
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: selected ? _red : const Color(0xFFF1F3F7),
+                                  color:
+                                      selected ? _red : const Color(0xFFF1F3F7),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
                                   '${plan['price_mad']} MAD',
+                                  textDirection: TextDirection.ltr,
                                   style: TextStyle(
                                     color: selected ? Colors.white : _ink,
                                     fontWeight: FontWeight.w800,
@@ -270,12 +322,19 @@ class _BoostSheetState extends State<BoostSheet> {
                                 padding: const EdgeInsets.only(bottom: 4),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.check_circle_rounded, size: 16, color: selected ? _red : AppConfig.success),
+                                    Icon(Icons.check_circle_rounded,
+                                        size: 16,
+                                        color: selected
+                                            ? _red
+                                            : AppConfig.success),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         f.toString(),
-                                        style: const TextStyle(fontSize: 13, color: _ink, fontWeight: FontWeight.w500),
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            color: _ink,
+                                            fontWeight: FontWeight.w500),
                                       ),
                                     ),
                                   ],
@@ -296,13 +355,23 @@ class _BoostSheetState extends State<BoostSheet> {
                       foregroundColor: Colors.white,
                       shape: const StadiumBorder(),
                     ),
-                    onPressed: _purchasing ? null : _startPurchase,
+                    onPressed: _purchasing ||
+                            _plans.isEmpty ||
+                            kIsWeb ||
+                            !_state.isLoggedIn
+                        ? null
+                        : _startPurchase,
                     icon: _purchasing
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.bolt_rounded, size: 20),
                     label: Text(
                       s.tr('تفعيل التمييز الآن', 'Activer le Boost maintenant'),
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15.5),
                     ),
                   ),
                 ),

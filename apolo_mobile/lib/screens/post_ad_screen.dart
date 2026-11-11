@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import 'auth_screen.dart';
+import '../account/account_helpers.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
@@ -61,37 +62,8 @@ class _PostAdScreenState extends State<PostAdScreen>
   static const Color _surface = Color(0xFFF5F6F8);
   static const Color _emerald = Color(0xFF10B981);
 
-  static const List<Map<String, dynamic>> _fallbackCategories = [
-    {'id': 1, 'name_ar': 'المعلوماتية والوسائط المتعددة', 'name_fr': 'Informatique & Multimédia'},
-    {'id': 2, 'name_ar': 'عقارات', 'name_fr': 'Immobilier'},
-    {'id': 3, 'name_ar': 'وسائل النقل', 'name_fr': 'Véhicules'},
-    {'id': 4, 'name_ar': 'ملابس ـ صحة وجمال', 'name_fr': 'Habillement & Bien-être'},
-    {'id': 5, 'name_ar': 'أدوات السفر', 'name_fr': 'Outils de voyage'},
-    {'id': 6, 'name_ar': 'بارافارماسي', 'name_fr': 'Parapharmacie'},
-    {'id': 7, 'name_ar': 'الاطفال', 'name_fr': 'Enfants'},
-    {'id': 8, 'name_ar': 'بريكولاج', 'name_fr': 'Bricolage'},
-    {'id': 9, 'name_ar': 'ألات صناعية', 'name_fr': 'Machines industrielles'},
-    {'id': 10, 'name_ar': 'المجوهرات', 'name_fr': 'Bijoux'},
-    {'id': 11, 'name_ar': 'منتجات العتيقة', 'name_fr': 'Antique'},
-    {'id': 12, 'name_ar': 'آخر...', 'name_fr': 'Autre...'},
-  ];
-
-  static const List<Map<String, dynamic>> _fallbackCities = [
-    {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-    {'id': 2, 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
-    {'id': 3, 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
-    {'id': 4, 'name_ar': 'طنجة', 'name_fr': 'Tanger'},
-    {'id': 5, 'name_ar': 'أكادير', 'name_fr': 'Agadir'},
-    {'id': 6, 'name_ar': 'فاس', 'name_fr': 'Fès'},
-    {'id': 7, 'name_ar': 'مكناس', 'name_fr': 'Meknès'},
-    {'id': 8, 'name_ar': 'وجدة', 'name_fr': 'Oujda'},
-  ];
-
-  List<dynamic> get _effectiveCategories =>
-      _state.categories.isNotEmpty ? _state.categories : _fallbackCategories;
-
-  List<dynamic> get _effectiveCities =>
-      _state.cities.isNotEmpty ? _state.cities : _fallbackCities;
+  List<dynamic> get _effectiveCategories => _state.categories;
+  List<dynamic> get _effectiveCities => _state.cities;
 
   bool get _isEditing => widget.initialAd != null;
 
@@ -150,7 +122,7 @@ class _PostAdScreenState extends State<PostAdScreen>
             (ad['images'] as List).map((e) => e.toString()).toList();
       }
     } else {
-      _cityId = _state.preferredCityId ?? 1;
+      _cityId = _state.preferredCityId;
       if (_state.currentUser != null && _state.currentUser!['phone'] != null) {
         _phoneCtrl.text = _state.currentUser!['phone'].toString();
       }
@@ -194,7 +166,8 @@ class _PostAdScreenState extends State<PostAdScreen>
     if (combined.contains('voyage') || combined.contains('سفر')) {
       return 'assets/images/cat_travel.png';
     }
-    if (combined.contains('parapharmacie') || combined.contains('بارافارماسي')) {
+    if (combined.contains('parapharmacie') ||
+        combined.contains('بارافارماسي')) {
       return 'assets/images/cat_parapharmacy.png';
     }
     if (combined.contains('enfant') ||
@@ -265,7 +238,9 @@ class _PostAdScreenState extends State<PostAdScreen>
       orElse: () => null,
     );
     if (cat == null) return '';
-    return (s.isAr ? (cat['name_ar'] ?? cat['name']) : (cat['name_fr'] ?? cat['name']))
+    return (s.isAr
+            ? (cat['name_ar'] ?? cat['name'])
+            : (cat['name_fr'] ?? cat['name']))
         .toString();
   }
 
@@ -337,18 +312,31 @@ class _PostAdScreenState extends State<PostAdScreen>
     return [];
   }
 
+  double? get _parsedPrice {
+    final raw = AccountValidation.normalizeDigits(_priceCtrl.text)
+        .replaceAll(RegExp(r'[\s ]'), '')
+        .replaceAll('٫', '.')
+        .replaceAll(',', '.');
+    final value = double.tryParse(raw);
+    return value != null && value.isFinite && value > 0 ? value : null;
+  }
+
   bool _isStepValid(int step) {
     switch (step) {
       case 0:
-        return _categoryId != null && _cityId != null;
+        return _effectiveCategories.any(
+                (c) => c is Map && int.tryParse('${c['id']}') == _categoryId) &&
+            _effectiveCities
+                .any((c) => c is Map && int.tryParse('${c['id']}') == _cityId);
       case 1:
         return true; // Allow continuing even if user skips photo during quick flow
       case 2:
         return _titleCtrl.text.trim().length >= 3;
       case 3:
-        final hasPrice =
-            _free || (double.tryParse(_priceCtrl.text.trim()) ?? 0) > 0;
-        return hasPrice;
+        final hasPrice = _free || _parsedPrice != null;
+        return hasPrice &&
+            (_phoneCtrl.text.trim().isEmpty ||
+                AccountValidation.phone(_phoneCtrl.text) != null);
       default:
         return false;
     }
@@ -378,8 +366,8 @@ class _PostAdScreenState extends State<PostAdScreen>
         break;
       default:
         msg = s.tr(
-          'حدد الثمن بالدرهم أو اختر مجاني',
-          'Indiquez le prix en MAD ou choisissez Gratuit',
+          'حدد ثمناً صحيحاً أو اختر مجاني، وتحقق من رقم الهاتف',
+          'Indiquez un prix valide ou Gratuit et vérifiez le téléphone',
         );
     }
     HapticFeedback.heavyImpact();
@@ -459,9 +447,13 @@ class _PostAdScreenState extends State<PostAdScreen>
 
   Future<void> _submitAd() async {
     final s = _state.s;
-    if (!_isStepValid(0) || !_isStepValid(1) || !_isStepValid(2)) {
-      _showStepError(_currentStep);
-      return;
+    if (_submitting) return;
+    for (var step = 0; step <= 3; step++) {
+      if (!_isStepValid(step)) {
+        setState(() => _currentStep = step);
+        _showStepError(step);
+        return;
+      }
     }
     if (!_state.isLoggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -475,7 +467,8 @@ class _PostAdScreenState extends State<PostAdScreen>
       );
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const AuthScreen(initialIsLogin: true)),
+        MaterialPageRoute(
+            builder: (_) => const AuthScreen(initialIsLogin: true)),
       );
       return;
     }
@@ -489,11 +482,11 @@ class _PostAdScreenState extends State<PostAdScreen>
       final map = <String, dynamic>{
         'title': _titleCtrl.text.trim(),
         'description': desc,
-        'price': _free ? 0 : (double.tryParse(_priceCtrl.text.trim()) ?? 0),
+        'price': _free ? 0 : _parsedPrice!,
         'category_id': _categoryId,
         'city_id': _cityId,
-        'phone_call': _phoneCtrl.text.trim(),
-        'phone_whatsapp': _phoneCtrl.text.trim(),
+        'phone_call': AccountValidation.phone(_phoneCtrl.text) ?? '',
+        'phone_whatsapp': AccountValidation.phone(_phoneCtrl.text) ?? '',
         'negotiable': _negotiable ? 1 : 0,
         'free': _free ? 1 : 0,
         'hide_phone': _hidePhone ? 1 : 0,
@@ -526,11 +519,13 @@ class _PostAdScreenState extends State<PostAdScreen>
 
       if (mounted) {
         setState(() => _submitting = false);
-        if (res.data is Map && (res.data['status'] == 'success' || res.statusCode == 200 || res.statusCode == 201)) {
+        if (res.data is Map && res.data['status'] == 'success') {
           _triggerCelebration();
           return;
         } else {
-          final errMsg = res.data is Map ? (res.data['message'] ?? 'فشل نشر الإعلان') : 'فشل نشر الإعلان';
+          final errMsg = res.data is Map
+              ? (res.data['message'] ?? 'فشل نشر الإعلان')
+              : 'فشل نشر الإعلان';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(errMsg.toString()),
@@ -564,7 +559,8 @@ class _PostAdScreenState extends State<PostAdScreen>
   }
 
   /// Borderless soft Apple input decoration (#F5F6F8)
-  InputDecoration _softDecoration(String hint, {IconData? icon, Widget? suffix}) {
+  InputDecoration _softDecoration(String hint,
+      {IconData? icon, Widget? suffix}) {
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(
@@ -608,6 +604,16 @@ class _PostAdScreenState extends State<PostAdScreen>
         bottom: false,
         child: Column(
           children: [
+            if (_state.categories.isEmpty || _state.cities.isEmpty)
+              TextButton.icon(
+                onPressed: () async {
+                  await _state.fetchTaxonomy();
+                  if (mounted) setState(() {});
+                },
+                icon: const Icon(Icons.refresh),
+                label: Text(s.tr('تعذر تحميل الأقسام والمدن. أعد المحاولة',
+                    'Catégories et villes indisponibles. Réessayer')),
+              ),
             // 1. Minimalist Apple Top Bar (Back + 4-Segment Progress Pills + Step Fraction)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
@@ -921,7 +927,8 @@ class _PostAdScreenState extends State<PostAdScreen>
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: active ? _redSoft : _surface,
                   borderRadius: BorderRadius.circular(18),
@@ -949,7 +956,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12.5,
-                          fontWeight: active ? FontWeight.w800 : FontWeight.w700,
+                          fontWeight:
+                              active ? FontWeight.w800 : FontWeight.w700,
                           color: active ? _red : _ink,
                           height: 1.2,
                         ),
@@ -1002,8 +1010,10 @@ class _PostAdScreenState extends State<PostAdScreen>
                 const SizedBox(height: 14),
                 Text(
                   totalPhotos == 0
-                      ? s.tr('اضغط لإضافة صور الإعلان', 'Appuyez pour ajouter des photos')
-                      : s.tr('إضافة المزيد من الصور ($totalPhotos/8)', 'Ajouter plus de photos ($totalPhotos/8)'),
+                      ? s.tr('اضغط لإضافة صور الإعلان',
+                          'Appuyez pour ajouter des photos')
+                      : s.tr('إضافة المزيد من الصور ($totalPhotos/8)',
+                          'Ajouter plus de photos ($totalPhotos/8)'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -1032,7 +1042,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                     _miniActionChip(
                       icon: CupertinoIcons.camera_fill,
                       label: s.tr('الكاميرا', 'Caméra'),
-                      onTap: () => _pickImages(singleSource: ImageSource.camera),
+                      onTap: () =>
+                          _pickImages(singleSource: ImageSource.camera),
                     ),
                   ],
                 ),
@@ -1040,7 +1051,6 @@ class _PostAdScreenState extends State<PostAdScreen>
             ),
           ),
         ),
-
         if (totalPhotos > 0) ...[
           const SizedBox(height: 22),
           Row(
@@ -1087,9 +1097,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                     decoration: BoxDecoration(
                       color: _surface,
                       borderRadius: BorderRadius.circular(18),
-                      border: isCover
-                          ? Border.all(color: _red, width: 2)
-                          : null,
+                      border:
+                          isCover ? Border.all(color: _red, width: 2) : null,
                     ),
                     child: _pickedImages.isNotEmpty
                         ? (kIsWeb
@@ -1100,7 +1109,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                             : FutureBuilder(
                                 future: _pickedImages[idx].readAsBytes(),
                                 builder: (_, snap) => snap.hasData
-                                    ? Image.memory(snap.data!, fit: BoxFit.cover)
+                                    ? Image.memory(snap.data!,
+                                        fit: BoxFit.cover)
                                     : const Center(
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
@@ -1221,9 +1231,7 @@ class _PostAdScreenState extends State<PostAdScreen>
               ),
             ),
             Text(
-              titleLen >= 3
-                  ? s.tr('ممتاز ✓', 'Parfait ✓')
-                  : '$titleLen / 3+',
+              titleLen >= 3 ? s.tr('ممتاز ✓', 'Parfait ✓') : '$titleLen / 3+',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -1352,7 +1360,8 @@ class _PostAdScreenState extends State<PostAdScreen>
           const SizedBox(height: 8),
           TextField(
             controller: _priceCtrl,
-            keyboardType: TextInputType.number,
+            textDirection: TextDirection.ltr,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.w800,
@@ -1391,7 +1400,6 @@ class _PostAdScreenState extends State<PostAdScreen>
           ),
           const SizedBox(height: 14),
         ],
-
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -1416,7 +1424,6 @@ class _PostAdScreenState extends State<PostAdScreen>
             ),
           ],
         ),
-
         if (!_hidePhone) ...[
           const SizedBox(height: 20),
           Text(
@@ -1430,6 +1437,7 @@ class _PostAdScreenState extends State<PostAdScreen>
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
+            textDirection: TextDirection.ltr,
             keyboardType: TextInputType.phone,
             style: const TextStyle(
               fontSize: 15.5,
@@ -1442,7 +1450,6 @@ class _PostAdScreenState extends State<PostAdScreen>
             ),
           ),
         ],
-
         const SizedBox(height: 24),
         Text(
           s.tr('معاينة الإعلان قبل النشر', 'Aperçu de votre annonce'),
@@ -1479,7 +1486,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                             future: _pickedImages.first.readAsBytes(),
                             builder: (_, snap) => snap.hasData
                                 ? Image.memory(snap.data!, fit: BoxFit.cover)
-                                : const Icon(CupertinoIcons.photo, color: _muted),
+                                : const Icon(CupertinoIcons.photo,
+                                    color: _muted),
                           ))
                     : (_existingImageUrls.isNotEmpty
                         ? AppImage(
@@ -1514,6 +1522,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                     const SizedBox(height: 4),
                     Text(
                       previewPrice,
+                      textDirection: _free ? null : TextDirection.ltr,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -1629,7 +1638,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                             isLast
                                 ? (_isEditing
                                     ? s.tr('حفظ التعديلات', 'Enregistrer')
-                                    : s.tr('نشر الإعلان الآن', 'Publier mon annonce'))
+                                    : s.tr('نشر الإعلان الآن',
+                                        'Publier mon annonce'))
                                 : s.tr('المتابعة', 'Continuer'),
                             style: const TextStyle(
                               fontSize: 15.5,
@@ -1750,8 +1760,10 @@ class _PostAdScreenState extends State<PostAdScreen>
                   const SizedBox(height: 18),
                   Text(
                     _isEditing
-                        ? s.tr('تم تحديث إعلانك بنجاح! 🎉', 'Annonce mise à jour ! 🎉')
-                        : s.tr('مبروك! تم نشر إعلانك بنجاح 🎉', 'Félicitations ! Annonce publiée 🎉'),
+                        ? s.tr('تم تحديث إعلانك بنجاح! 🎉',
+                            'Annonce mise à jour ! 🎉')
+                        : s.tr('مبروك! تم نشر إعلانك بنجاح 🎉',
+                            'Félicitations ! Annonce publiée 🎉'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 25,
@@ -1802,7 +1814,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                             children: [
                               Text(
                                 _titleCtrl.text.trim().isEmpty
-                                    ? s.tr('إعلانك الجديد', 'Votre nouvelle annonce')
+                                    ? s.tr('إعلانك الجديد',
+                                        'Votre nouvelle annonce')
                                     : _titleCtrl.text.trim(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -1849,7 +1862,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        s.tr('العودة للرئيسية ومشاهدة الإعلانات', 'Retour à l\'accueil'),
+                        s.tr('العودة للرئيسية ومشاهدة الإعلانات',
+                            'Retour à l\'accueil'),
                         style: const TextStyle(
                           fontSize: 15.5,
                           fontWeight: FontWeight.w800,

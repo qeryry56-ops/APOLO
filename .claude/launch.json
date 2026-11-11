@@ -1,0 +1,1 @@
+{"version":"0.0.1","configurations":[{"name":"apolo-release-preview","runtimeExecutable":"node","runtimeArgs":["apolo_mobile/tool/preview_server.cjs"],"port":8080}]}

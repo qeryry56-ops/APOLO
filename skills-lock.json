@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "feedback-states": {
+      "source": "60fps-Design/plugin",
+      "sourceType": "github",
+      "skillPath": "skills/feedback-states/SKILL.md",
+      "computedHash": "98a82c53624a1d7f9614893dd9b9305e5e9040a19567e85bb41ae91194e34049"
+    },
+    "find-animation-opportunities": {
+      "source": "60fps-Design/plugin",
+      "sourceType": "github",
+      "skillPath": "skills/find-animation-opportunities/SKILL.md",
+      "computedHash": "d48f021b4b5da516fcc6a9c736a91db4d53f77ca150538f180a3b9734500b6b2"
+    },
+    "motion-reference": {
+      "source": "60fps-Design/plugin",
+      "sourceType": "github",
+      "skillPath": "skills/motion-reference/SKILL.md",
+      "computedHash": "a15a4cb60e9a12e31a1e6e0ee0ac3ea4773e9be0cf546d86f3f62338b02482e7"
+    },
+    "motion-spec": {
+      "source": "60fps-Design/plugin",
+      "sourceType": "github",
+      "skillPath": "skills/motion-spec/SKILL.md",
+      "computedHash": "86ce4f8d98c627e27e9b0454476a386f4d3c244a9a66554840f6fbe23d403f6f"
+    },
+    "motion-system": {
+      "source": "60fps-Design/plugin",
+      "sourceType": "github",
+      "skillPath": "skills/motion-system/SKILL.md",
+      "computedHash": "40f33aa9127d79e47e74ec5e95b5170cc3867dbb1e1752980b2619443dab4e76"
+    }
+  }
+}

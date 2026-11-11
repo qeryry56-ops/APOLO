@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../network/api_client.dart';
@@ -30,17 +31,20 @@ class AppState extends ChangeNotifier {
 
   bool get hasPersonalizedInterests => categoryInterestWeights.isNotEmpty;
 
-  Future<void> initialize() async {
+  Future<void> initialize({bool loadRemote = true}) async {
     await api.init();
     _locale = Locale(api.locale);
     await _loadPersonalizationPrefs();
-    await Future.wait([
-      fetchTaxonomy(),
-      if (api.isAuthenticated) fetchMe(),
-    ]);
+    if (loadRemote) await refreshRemote();
     isInitialized = true;
     notifyListeners();
   }
+
+  Future<void> refreshRemote() async {
+    await Future.wait([fetchTaxonomy(), if (api.isAuthenticated) fetchMe()]);
+  }
+
+  int _sessionRevision = 0;
 
   Future<void> _loadPersonalizationPrefs() async {
     try {
@@ -117,7 +121,8 @@ class AppState extends ChangeNotifier {
         score += (categoryInterestWeights[catId]! * 15);
       }
       final int? adCityId = int.tryParse(
-        (ad['city_id'] ?? (ad['city'] is Map ? ad['city']['id'] : '')).toString(),
+        (ad['city_id'] ?? (ad['city'] is Map ? ad['city']['id'] : ''))
+            .toString(),
       );
       if (preferredCityId != null && adCityId == preferredCityId) {
         score += 25;
@@ -125,7 +130,8 @@ class AppState extends ChangeNotifier {
       if (ad['is_vip'] == true || ad['is_featured'] == true) {
         score += 18;
       }
-      final views = int.tryParse((ad['views'] ?? ad['views_count'] ?? 0).toString()) ?? 0;
+      final views =
+          int.tryParse((ad['views'] ?? ad['views_count'] ?? 0).toString()) ?? 0;
       score += (views > 100 ? 10 : views ~/ 10);
       return score;
     }
@@ -145,7 +151,9 @@ class AppState extends ChangeNotifier {
     // Fallback: match by category name or slug against known categories
     final catName = (ad['category_name'] ??
             (ad['category'] is Map
-                ? (ad['category']['name'] ?? ad['category']['name_ar'] ?? ad['category']['name_fr'])
+                ? (ad['category']['name'] ??
+                    ad['category']['name_ar'] ??
+                    ad['category']['name_fr'])
                 : ad['category']) ??
             '')
         .toString()
@@ -159,9 +167,11 @@ class AppState extends ChangeNotifier {
           final fr = (c['name_fr'] ?? '').toString().toLowerCase();
           final nm = (c['name'] ?? '').toString().toLowerCase();
           if (id != null &&
-              (catName == ar || catName == fr || catName == nm ||
-               (ar.isNotEmpty && catName.contains(ar)) ||
-               (fr.isNotEmpty && catName.contains(fr)))) {
+              (catName == ar ||
+                  catName == fr ||
+                  catName == nm ||
+                  (ar.isNotEmpty && catName.contains(ar)) ||
+                  (fr.isNotEmpty && catName.contains(fr)))) {
             return id;
           }
         }
@@ -239,7 +249,8 @@ class AppState extends ChangeNotifier {
     if (combined.contains('voyage') || combined.contains('سفر')) {
       return isAr ? 'أدوات السفر' : 'Voyage';
     }
-    if (combined.contains('parapharmacie') || combined.contains('بارافارماسي')) {
+    if (combined.contains('parapharmacie') ||
+        combined.contains('بارافارماسي')) {
       return isAr ? 'بارافارماسي' : 'Parapharmacie';
     }
     if (combined.contains('enfant') ||
@@ -280,8 +291,11 @@ class AppState extends ChangeNotifier {
   }
 
   /// Centralized 12+ category global-brand cutout asset resolver
-  String assetForCategory(Map<dynamic, dynamic>? cat, [String fallbackName = '']) {
-    if (cat != null && cat['asset'] is String && (cat['asset'] as String).isNotEmpty) {
+  String assetForCategory(Map<dynamic, dynamic>? cat,
+      [String fallbackName = '']) {
+    if (cat != null &&
+        cat['asset'] is String &&
+        (cat['asset'] as String).isNotEmpty) {
       return cat['asset'] as String;
     }
     final combined =
@@ -307,7 +321,8 @@ class AppState extends ChangeNotifier {
     if (combined.contains('voyage') || combined.contains('سفر')) {
       return 'assets/images/cat_travel.png';
     }
-    if (combined.contains('parapharmacie') || combined.contains('بارافارماسي')) {
+    if (combined.contains('parapharmacie') ||
+        combined.contains('بارافارماسي')) {
       return 'assets/images/cat_parapharmacy.png';
     }
     if (combined.contains('enfant') ||
@@ -396,35 +411,37 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> fetchMe() async {
+    if (!api.isAuthenticated) return;
+    final revision = _sessionRevision;
     try {
-      final results = await Future.wait([
-        api.dio.get('/auth/profile'),
-        api.dio.get('/favorites'),
-      ]);
-      final profileRes = results[0];
-      final favRes = results[1];
-
-      if (profileRes.data is Map && profileRes.data['status'] == 'success') {
-        currentUser = profileRes.data['user'];
+      final response = await api.dio.get('/auth/profile');
+      if (revision != _sessionRevision) return;
+      final body = response.data;
+      if (body is Map && body['status'] == 'success' && body['user'] is Map) {
+        currentUser = Map<String, dynamic>.from(body['user'] as Map);
+        notifyListeners();
+        await fetchFavoritesIds();
       }
-      if (favRes.data is Map && favRes.data['status'] == 'success') {
-        final List items = favRes.data['data'] ?? [];
-        favoriteAdIds = items
-            .map<int>((e) => int.tryParse(e['id'].toString()) ?? 0)
-            .toSet();
+    } on DioException catch (error) {
+      // Network errors and a failing favorites service must never log users out.
+      if (revision == _sessionRevision && error.response?.statusCode == 401) {
+        _sessionRevision++;
+        currentUser = null;
+        favoriteAdIds.clear();
+        await api.setToken(null);
+        notifyListeners();
       }
-      notifyListeners();
     } catch (_) {
-      currentUser = null;
-      await api.setToken(null);
-      notifyListeners();
+      // Leave the last verified session intact for retry.
     }
   }
 
   Future<void> fetchFavoritesIds() async {
     if (!api.isAuthenticated) return;
+    final revision = _sessionRevision;
     try {
       final res = await api.dio.get('/favorites');
+      if (revision != _sessionRevision) return;
       if (res.data is Map && res.data['status'] == 'success') {
         final List items = res.data['data'] ?? [];
         favoriteAdIds = items
@@ -479,13 +496,16 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setAuthSession(String token, Map<String, dynamic> user) async {
+    _sessionRevision++;
+    favoriteAdIds.clear();
     await api.setToken(token);
-    currentUser = user;
+    currentUser = Map<String, dynamic>.from(user);
     await fetchFavoritesIds();
     notifyListeners();
   }
 
   Future<void> logout() async {
+    _sessionRevision++;
     try {
       await api.dio.post('/auth/logout');
     } catch (_) {}
