@@ -115,20 +115,17 @@ void main() {
     }
   }
 
-  testWidgets('language switch changes copy and reading direction', (
+  testWidgets('renders all three authentication providers', (
     tester,
   ) async {
     await tester.pumpWidget(_app(const WelcomeScreen()));
     await tester.pumpAndSettle();
-    final language = find.byKey(const ValueKey('welcome-language'));
-    await tester.tap(language);
-    await tester.pumpAndSettle();
-    expect(find.text('Se connecter'), findsOneWidget);
-    expect(Directionality.of(tester.element(language)), TextDirection.ltr);
-    await tester.tap(language);
-    await tester.pumpAndSettle();
-    expect(find.text('تسجيل الدخول'), findsOneWidget);
-    expect(Directionality.of(tester.element(language)), TextDirection.rtl);
+    expect(find.byKey(const ValueKey('welcome-apple')), findsOneWidget);
+    expect(find.byKey(const ValueKey('welcome-google')), findsOneWidget);
+    expect(find.byKey(const ValueKey('welcome-sign-in')), findsOneWidget);
+    expect(find.text('Continue with Apple'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Continue with email'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -140,13 +137,12 @@ void main() {
       WelcomeScreen(onContinueAsGuest: () => completed++),
       reducedMotion: true,
     ));
-    final register = find.byKey(const ValueKey('welcome-register'));
-    await tester.ensureVisible(register);
-    await tester.tap(register);
+    final emailBtn = find.byKey(const ValueKey('welcome-sign-in'));
+    await tester.ensureVisible(emailBtn);
+    await tester.tap(emailBtn);
     await tester.pumpAndSettle();
     final auth = tester.widget<AuthScreen>(find.byType(AuthScreen));
-    expect(auth.initialIsLogin, isFalse);
-    expect(auth.autoTriggerGoogle, isFalse);
+    expect(auth.initialIsLogin, isTrue);
     expect(completed, 0);
     final route = ModalRoute.of(tester.element(find.byType(AuthScreen)))!;
     expect(route.transitionDuration, Duration.zero);

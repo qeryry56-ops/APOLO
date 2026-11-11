@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/state/app_state.dart';
 import 'main_shell.dart';
 import 'welcome_screen.dart';
 
@@ -54,9 +55,9 @@ class _SplashScreenState extends State<SplashScreen> {
   void _proceedToNext() {
     if (!mounted) return;
 
-    final target = (widget.targetWelcome && widget.hasSeenWelcome == false)
-        ? WelcomeScreen(onContinueAsGuest: widget.onCompleteWelcome)
-        : const MainShell();
+    final target = AppState().isLoggedIn
+        ? const MainShell()
+        : WelcomeScreen(onContinueAsGuest: widget.onCompleteWelcome);
 
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
