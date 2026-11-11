@@ -6,13 +6,22 @@ import 'auth_screen.dart';
 import 'privacy_compliance_screen.dart';
 import 'support_screen.dart';
 
-/// A modern, minimalist settings screen faithfully implementing the Figma design:
-/// - Light clean canvas background (#F8F9FA)
-/// - Grouped rounded card containers (16px border radius)
-/// - Section 1 "ACCOUNT": Edit Profile, Saved content, Notification settings, Change password
-/// - Section 2 "OTHER SETTING": App Language, Terms & conditions, Privacy policy, Help & Support, Deactivate account
-/// - Soft red pill action button at the bottom (LOGIN / LOGOUT)
-/// - Interactive, responsive, and bidirectional (RTL / Arabic support)
+/// Pixel-perfect implementation of the Figma Setting Screen UI:
+/// - Light clean canvas (#F8F9FA)
+/// - Top App Bar with back chevron and bold "Setting" title (#0B132B)
+/// - Section "ACCOUNT" with white rounded card (16px radius, soft drop shadow):
+///     * Edit Profile
+///     * Saved content
+///     * Notification settings
+///     * Change password
+/// - Section "OTHER SETTING" with white rounded card:
+///     * Terms & conditions
+///     * Privacy policy
+///     * Help & support
+///     * Deactivate account (in vibrant red #E31828 with red trash icon)
+/// - Bottom capsule / stadium pill button:
+///     * Soft pastel red background (#FDE8E8)
+///     * Bold red text (#E31828) "LOGIN" (or "LOGOUT" when authenticated)
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onOpenEditProfile;
   const SettingsScreen({super.key, this.onOpenEditProfile});
@@ -28,11 +37,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   static const Color _bg = Color(0xFFF8F9FA);
   static const Color _cardBg = Colors.white;
-  static const Color _textPrimary = Color(0xFF0F172A);
+  static const Color _textDark = Color(0xFF0F172A);
   static const Color _sectionLabel = Color(0xFF8E95A5);
   static const Color _divider = Color(0xFFF1F5F9);
-  static const Color _danger = Color(0xFFEF4444);
-  static const Color _dangerBg = Color(0xFFFEE2E2);
+  static const Color _red = Color(0xFFE31828);
+  static const Color _lightRedBg = Color(0xFFFDE8E8);
 
   Future<void> _language() async {
     if (_busy) return;
@@ -70,7 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(s.tr('إلغاء', 'Annuler')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _danger),
+            style: FilledButton.styleFrom(backgroundColor: _red),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(s.logout),
           ),
@@ -118,36 +127,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               titleSpacing: 0,
               leading: IconButton(
                 icon: Icon(
-                  isAr ? Icons.chevron_right : Icons.chevron_left,
-                  color: _textPrimary,
-                  size: 28,
+                  isAr ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new_rounded,
+                  color: _textDark,
+                  size: 20,
                 ),
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
               title: Text(
                 s.tr('الإعدادات', 'Setting'),
                 style: const TextStyle(
-                  color: _textPrimary,
-                  fontSize: 20,
+                  color: _textDark,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.4,
                 ),
               ),
             ),
             body: SafeArea(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 500),
+                  constraints: const BoxConstraints(maxWidth: 480),
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     children: [
                       // Section 1: ACCOUNT
-                      _buildSectionTitle(s.tr('الحساب', 'ACCOUNT')),
+                      _buildSectionHeader(s.tr('الحساب', 'ACCOUNT')),
                       _buildCard([
-                        _buildItem(
+                        _buildRow(
                           icon: Icons.edit_outlined,
                           title: s.tr('تعديل الملف الشخصي', 'Edit Profile'),
                           onTap: () {
@@ -161,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             }
                           },
                         ),
-                        _buildItem(
+                        _buildRow(
                           icon: Icons.bookmark_border_rounded,
                           title: s.tr('المحتوى المحفوظ', 'Saved content'),
                           onTap: () {
@@ -180,7 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             }
                           },
                         ),
-                        _buildItem(
+                        _buildRow(
                           icon: Icons.notifications_none_rounded,
                           title: s.tr('إعدادات الإشعارات', 'Notification settings'),
                           onTap: () {
@@ -195,9 +201,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             );
                           },
                         ),
-                        _buildItem(
+                        _buildRow(
                           icon: Icons.lock_outline,
-                          title: s.tr('أمان الحساب وكلمة المرور', 'Change password'),
+                          title: s.tr('تغيير كلمة المرور', 'Change password'),
                           onTap: () => _open(const AccountSecurityScreen()),
                         ),
                       ]),
@@ -205,32 +211,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Section 2: OTHER SETTING
-                      _buildSectionTitle(s.tr('إعدادات أخرى', 'OTHER SETTING')),
+                      _buildSectionHeader(s.tr('إعدادات أخرى', 'OTHER SETTING')),
                       _buildCard([
-                        _buildItem(
-                          icon: Icons.language_rounded,
-                          title: s.tr('لغة التطبيق', 'App Language'),
-                          trailingText: s.isAr ? 'العربية' : 'Français',
-                          onTap: _busy ? null : _language,
-                        ),
-                        _buildItem(
+                        _buildRow(
                           icon: Icons.article_outlined,
                           title: s.tr('الشروط والأحكام', 'Terms & conditions'),
                           onTap: () => _open(const PrivacyComplianceScreen(initialTab: 0)),
                         ),
-                        _buildItem(
-                          icon: Icons.policy_outlined,
+                        _buildRow(
+                          icon: Icons.folder_outlined,
                           title: s.tr('سياسة الخصوصية', 'Privacy policy'),
                           onTap: () => _open(const PrivacyComplianceScreen(initialTab: 0)),
                         ),
-                        _buildItem(
+                        _buildRow(
                           icon: Icons.help_outline,
-                          title: s.tr('المساعدة والدعم', 'Help & Support'),
+                          title: s.tr('المساعدة والدعم', 'Help & support'),
                           onTap: () => _open(const SupportScreen()),
                         ),
+                        _buildRow(
+                          icon: Icons.language_rounded,
+                          title: s.tr('لغة التطبيق', 'Language'),
+                          trailingLabel: s.isAr ? 'العربية' : 'Français',
+                          onTap: _busy ? null : _language,
+                        ),
                         if (_state.isLoggedIn)
-                          _buildItem(
-                            icon: Icons.delete_outline,
+                          _buildRow(
+                            icon: Icons.delete_outline_rounded,
                             title: s.tr('تعطيل الحساب', 'Deactivate account'),
                             isDanger: true,
                             showChevron: false,
@@ -241,8 +247,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 32),
 
                       // Bottom Pill Button (LOGIN / LOGOUT)
-                      SizedBox(
-                        height: 52,
+                      Container(
+                        width: double.infinity,
+                        height: 54,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
                         child: TextButton(
                           key: ValueKey(_state.isLoggedIn ? 'settings-logout' : 'settings-login'),
                           onPressed: _busy
@@ -251,15 +259,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ? _logout
                                   : () => _open(const AuthScreen())),
                           style: TextButton.styleFrom(
-                            backgroundColor: _dangerBg,
-                            foregroundColor: _danger,
+                            backgroundColor: _lightRedBg,
+                            foregroundColor: _red,
                             shape: const StadiumBorder(),
                             elevation: 0,
                           ),
                           child: Text(
-                            _state.isLoggedIn ? s.logout.toUpperCase() : s.login.toUpperCase(),
+                            _state.isLoggedIn ? s.logout.toUpperCase() : 'LOGIN',
                             style: const TextStyle(
-                              fontSize: 15,
+                              color: _red,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.8,
                             ),
@@ -288,14 +297,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _error!,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                color: _danger,
+                                color: _red,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                         ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -307,16 +316,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 8),
+      padding: const EdgeInsets.only(left: 6, right: 6, bottom: 10, top: 6),
       child: Text(
         title,
         style: const TextStyle(
           color: _sectionLabel,
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.6,
+          letterSpacing: 0.8,
         ),
       ),
     );
@@ -327,7 +336,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     for (int i = 0; i < children.length; i++) {
       list.add(children[i]);
       if (i < children.length - 1) {
-        list.add(const Divider(height: 1, thickness: 1, color: _divider));
+        list.add(
+          const Padding(
+            padding: EdgeInsets.only(left: 52, right: 16),
+            child: Divider(height: 1, thickness: 1, color: _divider),
+          ),
+        );
       }
     }
 
@@ -337,9 +351,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
           ),
         ],
       ),
@@ -348,52 +362,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildItem({
+  Widget _buildRow({
     required IconData icon,
     required String title,
     required VoidCallback? onTap,
-    String? trailingText,
+    String? trailingLabel,
     bool isDanger = false,
     bool showChevron = true,
   }) {
-    final color = isDanger ? _danger : _textPrimary;
+    final textColor = isDanger ? _red : _textDark;
+    final iconColor = isDanger ? _red : _textDark;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: _busy ? null : onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: color),
+              Icon(icon, size: 22, color: iconColor),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: color,
+                    color: textColor,
                     fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: isDanger ? FontWeight.w500 : FontWeight.w500,
                   ),
                 ),
               ),
-              if (trailingText != null) ...[
+              if (trailingLabel != null) ...[
                 Text(
-                  trailingText,
+                  trailingLabel,
                   style: const TextStyle(
                     color: _sectionLabel,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
               ],
               if (showChevron)
                 const Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: Color(0xFF64748B),
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: _textDark,
                 ),
             ],
           ),
