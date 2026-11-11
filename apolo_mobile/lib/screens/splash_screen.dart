@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../core/state/app_state.dart';
 import 'main_shell.dart';
 import 'welcome_screen.dart';
 
@@ -16,17 +15,19 @@ import 'welcome_screen.dart';
 /// - Subtle, elegant white curved wave shape at the bottom (~10–15% of screen).
 /// - Clean, smooth shapes and premium visual appearance.
 /// - Responsive across different smartphone screen sizes.
-/// - Minimalist: no extra text, buttons, nav bar, icons, or spinners.
+/// - Shows when the app launches and transitions directly into the main application.
 class SplashScreen extends StatefulWidget {
-  final bool hasSeenWelcome;
+  final bool? hasSeenWelcome;
+  final bool targetWelcome;
   final VoidCallback? onCompleteWelcome;
   final Duration duration;
 
   const SplashScreen({
     super.key,
-    required this.hasSeenWelcome,
+    this.hasSeenWelcome,
+    this.targetWelcome = false,
     this.onCompleteWelcome,
-    this.duration = const Duration(milliseconds: 650),
+    this.duration = const Duration(milliseconds: 1800),
   });
 
   @override
@@ -53,15 +54,16 @@ class _SplashScreenState extends State<SplashScreen> {
   void _proceedToNext() {
     if (!mounted) return;
 
-    final target = (widget.hasSeenWelcome || AppState().isLoggedIn)
-        ? const MainShell()
-        : WelcomeScreen(onContinueAsGuest: widget.onCompleteWelcome);
+    final target = (widget.targetWelcome && widget.hasSeenWelcome == false)
+        ? WelcomeScreen(onContinueAsGuest: widget.onCompleteWelcome)
+        : const MainShell();
+
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         transitionDuration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 220),
+            reduceMotion ? Duration.zero : const Duration(milliseconds: 300),
         pageBuilder: (context, animation, secondaryAnimation) => target,
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),

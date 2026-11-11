@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/auth_screen.dart';
+import 'package:apolo_mobile/screens/main_shell.dart';
 import 'package:apolo_mobile/screens/splash_screen.dart';
 import 'package:apolo_mobile/screens/welcome_screen.dart';
 import 'package:dio/dio.dart';
@@ -173,13 +174,15 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('splash is brief, static, and forwards guest completion', (
+  testWidgets('splash is brief, static, and forwards to target', (
     tester,
   ) async {
     var completed = 0;
     await tester.pumpWidget(_app(
       SplashScreen(
+        duration: const Duration(milliseconds: 650),
         hasSeenWelcome: false,
+        targetWelcome: true,
         onCompleteWelcome: () => completed++,
       ),
       reducedMotion: true,
