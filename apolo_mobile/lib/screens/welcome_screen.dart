@@ -127,7 +127,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               ),
                             ),
                             const Spacer(),
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 20),
                             Center(
                               child: Image.asset(
                                 'assets/images/apolo_logo.png',
@@ -137,7 +137,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 semanticLabel: 'Apolo',
                               ),
                             ),
-                            const SizedBox(height: 48),
+                            const SizedBox(height: 24),
                             Semantics(
                               header: true,
                               child: Text(
@@ -168,7 +168,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 color: _muted,
                               ),
                             ),
-                            const SizedBox(height: 36),
+                            const SizedBox(height: 20),
                             const Spacer(),
                             FilledButton(
                               key: const ValueKey('welcome-sign-in'),

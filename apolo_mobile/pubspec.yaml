@@ -48,6 +48,7 @@ flutter:
     - assets/images/cat_other.png
     - assets/images/apolo_icon_white.png
     - assets/images/apolo_logo_white.png
+    - assets/images/apolo_logo_white_transparent.png
     - assets/images/state_no_internet.png
     - assets/images/state_notifications.png
     - assets/images/auth_hero_3d.png
