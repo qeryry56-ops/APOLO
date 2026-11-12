@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/app_typography.dart';
 
 class AppConfig {
   static const String appName = 'Apolo.ma';
@@ -16,12 +18,15 @@ class AppConfig {
   // Default to production API; switchable to staging in Profile Settings
   static String currentBaseUrl = prodBaseUrl;
 
-  // 2026 UI/UX Typography Pairing:
-  // Plus Jakarta Sans (Latin + Geometric Numerals) + IBM Plex Sans Arabic (Modern Arabic UI)
+  // Typography Constants
+  static const String fontTajawal = AppTypography.fontTajawal;
+  static const String fontInter = AppTypography.fontInter;
   static const String fontPrimary = 'PlusJakartaSans';
   static const List<String> fontFallback = [
     'IBMPlexSansArabic',
-    'PlusJakartaSans'
+    'PlusJakartaSans',
+    'Inter',
+    'Tajawal',
   ];
 
   // Apolo.ma Official Brand Identity + 2026 Unslop / Triply Neutral Ramp
@@ -56,119 +61,8 @@ class AppConfig {
         ),
       ];
 
-  static ThemeData buildTheme(Locale locale) {
-    final family =
-        locale.languageCode == 'ar' ? 'IBMPlexSansArabic' : fontPrimary;
-    final baseTheme = ThemeData(
-      useMaterial3: true,
-      fontFamily: family,
-      fontFamilyFallback: fontFallback,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primary,
-        primary: primary,
-        secondary: accent,
-        surface: cardBg,
-      ),
-      scaffoldBackgroundColor: bgLight,
-    );
-
-    final textTheme = baseTheme.textTheme.apply(
-      fontFamily: family,
-      fontFamilyFallback: fontFallback,
-      bodyColor: textPrimary,
-      displayColor: textPrimary,
-    );
-
-    return baseTheme.copyWith(
-      textTheme: textTheme,
-      primaryTextTheme: textTheme,
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: textPrimary,
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          fontFamily: family,
-          fontFamilyFallback: fontFallback,
-          color: textPrimary,
-          fontSize: 19,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.4,
-        ),
-      ),
-      cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: borderGray),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: surfaceGray,
-        hintStyle: TextStyle(
-          fontFamily: family,
-          fontFamilyFallback: fontFallback,
-          color: textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-        labelStyle: TextStyle(
-          fontFamily: family,
-          fontFamilyFallback: fontFallback,
-          color: textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: borderGray),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: borderGray),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: primary, width: 1.6),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: const StadiumBorder(),
-          elevation: 0,
-          textStyle: TextStyle(
-            fontFamily: family,
-            fontFamilyFallback: fontFallback,
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
-            letterSpacing: -0.2,
-          ),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-          side: const BorderSide(color: borderGray, width: 1.5),
-          shape: const StadiumBorder(),
-          textStyle: TextStyle(
-            fontFamily: family,
-            fontFamilyFallback: fontFallback,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-            letterSpacing: -0.2,
-          ),
-        ),
-      ),
-    );
+  static ThemeData buildTheme(Locale locale, {TargetPlatform? platform}) {
+    return AppTheme.light(locale, platform: platform);
   }
 }
 
@@ -177,32 +71,52 @@ class AppStrings {
   AppStrings(this.lang);
 
   bool get isAr => lang == 'ar';
+  bool get isEn => lang == 'en';
+  bool get isFr => lang == 'fr';
 
-  String tr(String ar, String fr) => isAr ? ar : fr;
+  String tr(String ar, String fr, [String? en]) {
+    if (isAr) return ar;
+    if (isEn && en != null) return en;
+    return fr;
+  }
 
-  String get home => tr('الرئيسية', 'Accueil');
-  String get search => tr('استكشف', 'Explorer');
-  String get postAd => tr('أضف إعلان', 'Publier');
-  String get stores => tr('المتاجر', 'Boutiques');
-  String get messages => tr('الرسائل', 'Messages');
-  String get profile => tr('حسابي', 'Profil');
-  String get categories => tr('تصفح الأقسام', 'Catégories');
-  String get featuredAds => tr('إعلانات VIP المميزة', 'Sélection VIP');
-  String get latestAds => tr('أحدث العروض المختارة', 'Dernières annonces');
-  String get allCities => tr('كل مدن المغرب', 'Toutes les villes');
-  String get allCategories => tr('جميع الأقسام', 'Toutes les catégories');
-  String get login => tr('تسجيل الدخول', 'Se connecter');
-  String get register => tr('إنشاء حساب جديد', 'Créer un compte');
-  String get logout => tr('تسجيل الخروج', 'Déconnexion');
-  String get callSeller => tr('اتصال', 'Appeler');
-  String get whatsapp => tr('واتساب', 'WhatsApp');
-  String get chatInApp => tr('دردشة فورية', 'Discuter');
-  String get boostAd => tr('تمييز الإعلان VIP', 'Booster VIP');
-  String get deleteAccount => tr('حذف الحساب نهائياً', 'Supprimer le compte');
-  String get reportAd => tr('التبليغ عن الإعلان', 'Signaler l\'annonce');
-  String get blockUser => tr('حظر المستخدم', 'Bloquer l\'utilisateur');
-  String get searchHint => tr('ابحث عن سيارة، شقة، هاتف...',
-      'Rechercher une voiture, appartement, téléphone...');
-  String get noAdsFound =>
-      tr('لا توجد إعلانات مطابقة لبحثك', 'Aucune annonce trouvée');
+  String get home => tr('الرئيسية', 'Accueil', 'Home');
+  String get search => tr('استكشف', 'Explorer', 'Explore');
+  String get postAd => tr('أضف إعلان', 'Publier', 'Post Ad');
+  String get stores => tr('المتاجر', 'Boutiques', 'Stores');
+  String get messages => tr('الرسائل', 'Messages', 'Messages');
+  String get profile => tr('حسابي', 'Profil', 'Profile');
+  String get categories => tr('تصفح الأقسام', 'Catégories', 'Categories');
+  String get featuredAds =>
+      tr('إعلانات VIP المميزة', 'Sélection VIP', 'VIP Ads');
+  String get latestAds =>
+      tr('أحدث العروض المختارة', 'Dernières annonces', 'Latest Ads');
+  String get allCities =>
+      tr('كل مدن المغرب', 'Toutes les villes', 'All Cities');
+  String get allCategories =>
+      tr('جميع الأقسام', 'Toutes les catégories', 'All Categories');
+  String get login => tr('تسجيل الدخول', 'Se connecter', 'Login');
+  String get register =>
+      tr('إنشاء حساب جديد', 'Créer un compte', 'Create Account');
+  String get logout => tr('تسجيل الخروج', 'Déconnexion', 'Logout');
+  String get callSeller => tr('اتصال', 'Appeler', 'Call');
+  String get whatsapp => tr('واتساب', 'WhatsApp', 'WhatsApp');
+  String get chatInApp => tr('دردشة فورية', 'Discuter', 'Chat');
+  String get boostAd => tr('تمييز الإعلان VIP', 'Booster VIP', 'Boost Ad');
+  String get deleteAccount =>
+      tr('حذف الحساب نهائياً', 'Supprimer le compte', 'Delete Account');
+  String get reportAd =>
+      tr('التبليغ عن الإعلان', 'Signaler l\'annonce', 'Report Ad');
+  String get blockUser =>
+      tr('حظر المستخدم', 'Bloquer l\'utilisateur', 'Block User');
+  String get searchHint => tr(
+        'ابحث عن سيارة، شقة، هاتف...',
+        'Rechercher une voiture, appartement, téléphone...',
+        'Search for a car, apartment, phone...',
+      );
+  String get noAdsFound => tr(
+        'لا توجد إعلانات مطابقة لبحثك',
+        'Aucune annonce trouvée',
+        'No ads found matching your search',
+      );
 }

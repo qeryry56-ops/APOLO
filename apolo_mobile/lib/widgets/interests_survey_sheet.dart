@@ -206,7 +206,6 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                       Text(
                         s.tr('ما هي اهتماماتك؟', 'What are your interests?'),
                         style: const TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF111827),
@@ -220,7 +219,6 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                           'Pick categories to personalize your Apolo feed',
                         ),
                         style: const TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
                           fontSize: 13,
                           color: Color(0xFF6B7280),
                         ),
@@ -293,7 +291,6 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                                   Text(
                                     label,
                                     style: TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
                                       fontSize: 13.5,
                                       fontWeight: isSelected
                                           ? FontWeight.w600
@@ -342,7 +339,6 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                                 'Save & continue (${_selectedCategoryIds.length})',
                               ),
                         style: const TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
                           fontSize: 15.5,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -366,7 +362,6 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                 child: Text(
                   s.tr('تخطي الآن', 'Skip for now'),
                   style: const TextStyle(
-                    fontFamily: AppConfig.fontPrimary,
                     fontSize: 13.5,
                     color: Color(0xFF9CA3AF),
                   ),

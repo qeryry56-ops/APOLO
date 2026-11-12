@@ -207,12 +207,16 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
-  /// Returns a clean, balanced, non-overflowing category label in Arabic or French
+  /// Returns a clean, balanced, non-overflowing category label in Arabic, French, or English
   String formatCategoryLabel(Map<dynamic, dynamic> cat) {
-    final isAr = _locale.languageCode == 'ar';
+    final lang = _locale.languageCode;
+    final isAr = lang == 'ar';
+    final isEn = lang == 'en';
     final raw = (isAr
             ? (cat['name_ar'] ?? cat['name'] ?? '')
-            : (cat['name_fr'] ?? cat['name'] ?? ''))
+            : (isEn
+                ? (cat['name_en'] ?? cat['name'] ?? cat['name_fr'] ?? '')
+                : (cat['name_fr'] ?? cat['name'] ?? '')))
         .toString()
         .trim();
     final combined =
@@ -224,68 +228,68 @@ class AppState extends ChangeNotifier {
         combined.contains('auto') ||
         combined.contains('نقل') ||
         combined.contains('سيار')) {
-      return isAr ? 'وسائل النقل' : 'Véhicules';
+      return isAr ? 'وسائل النقل' : (isEn ? 'Vehicles' : 'Véhicules');
     }
     if (combined.contains('immo') || combined.contains('عقار')) {
-      return isAr ? 'عقارات' : 'Immobilier';
+      return isAr ? 'عقارات' : (isEn ? 'Real Estate' : 'Immobilier');
     }
     if (combined.contains('télé') ||
         combined.contains('phone') ||
         combined.contains('هواتف')) {
-      return isAr ? 'هواتف وتقنية' : 'Téléphones';
+      return isAr ? 'هواتف وتقنية' : (isEn ? 'Phones' : 'Téléphones');
     }
     if (combined.contains('info') ||
         combined.contains('multimedia') ||
         combined.contains('معلوماتية') ||
         combined.contains('حواسيب')) {
-      return isAr ? 'إعلاميات وتقنية' : 'Informatique';
+      return isAr ? 'إعلاميات وتقنية' : (isEn ? 'Computers' : 'Informatique');
     }
     if (combined.contains('habillement') ||
         combined.contains('mode') ||
         combined.contains('ملابس') ||
         combined.contains('أزياء')) {
-      return isAr ? 'أزياء وجمال' : 'Mode & Beauté';
+      return isAr ? 'أزياء وجمال' : (isEn ? 'Fashion & Beauty' : 'Mode & Beauté');
     }
     if (combined.contains('voyage') || combined.contains('سفر')) {
-      return isAr ? 'أدوات السفر' : 'Voyage';
+      return isAr ? 'أدوات السفر' : (isEn ? 'Travel' : 'Voyage');
     }
     if (combined.contains('parapharmacie') ||
         combined.contains('بارافارماسي')) {
-      return isAr ? 'بارافارماسي' : 'Parapharmacie';
+      return isAr ? 'بارافارماسي' : (isEn ? 'Parapharmacy' : 'Parapharmacie');
     }
     if (combined.contains('enfant') ||
         combined.contains('اطفال') ||
         combined.contains('أطفال')) {
-      return isAr ? 'الأطفال' : 'Enfants';
+      return isAr ? 'الأطفال' : (isEn ? 'Kids & Baby' : 'Enfants');
     }
     if (combined.contains('bricolage') || combined.contains('بريكولاج')) {
-      return isAr ? 'بريكولاج' : 'Bricolage';
+      return isAr ? 'بريكولاج' : (isEn ? 'DIY & Tools' : 'Bricolage');
     }
     if (combined.contains('industriel') ||
         combined.contains('machine') ||
         combined.contains('صناعية') ||
         combined.contains('ألات') ||
         combined.contains('آلات')) {
-      return isAr ? 'آلات صناعية' : 'Industrie & Pro';
+      return isAr ? 'آلات صناعية' : (isEn ? 'Industrial & Pro' : 'Industrie & Pro');
     }
     if (combined.contains('bijou') || combined.contains('مجوهرات')) {
-      return isAr ? 'المجوهرات' : 'Bijoux';
+      return isAr ? 'المجوهرات' : (isEn ? 'Jewelry' : 'Bijoux');
     }
     if (combined.contains('antique') || combined.contains('عتيقة')) {
-      return isAr ? 'تحف وأنتيك' : 'Antiquités';
+      return isAr ? 'تحف وأنتيك' : (isEn ? 'Antiques' : 'Antiquités');
     }
     if (combined.contains('maison') ||
         combined.contains('meuble') ||
         combined.contains('أثاث')) {
-      return isAr ? 'أثاث وديكور' : 'Maison & Déco';
+      return isAr ? 'أثاث وديكور' : (isEn ? 'Home & Furniture' : 'Maison & Déco');
     }
     if (combined.contains('emploi') ||
         combined.contains('service') ||
         combined.contains('وظائف')) {
-      return isAr ? 'وظائف وخدمات' : 'Emploi & Pro';
+      return isAr ? 'وظائف وخدمات' : (isEn ? 'Jobs & Services' : 'Emploi & Pro');
     }
     if (combined.contains('autre') || combined.contains('آخر')) {
-      return isAr ? 'أقسام أخرى' : 'Autres';
+      return isAr ? 'أقسام أخرى' : (isEn ? 'Other' : 'Autres');
     }
     return raw;
   }
@@ -385,12 +389,18 @@ class AppState extends ChangeNotifier {
     return 'assets/images/cat_other.png';
   }
 
-  Future<void> toggleLanguage() async {
-    final nextLang = _locale.languageCode == 'ar' ? 'fr' : 'ar';
-    _locale = Locale(nextLang);
-    await api.setLocale(nextLang);
+  Future<void> setLocale(Locale newLocale) async {
+    _locale = newLocale;
+    await api.setLocale(newLocale.languageCode);
     notifyListeners();
     await fetchTaxonomy();
+  }
+
+  Future<void> toggleLanguage() async {
+    final nextLang = _locale.languageCode == 'ar'
+        ? 'fr'
+        : (_locale.languageCode == 'fr' ? 'en' : 'ar');
+    await setLocale(Locale(nextLang));
   }
 
   Future<void> switchEnvironment(String url) async {

@@ -145,7 +145,6 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                         duration: const Duration(milliseconds: 180),
                         curve: Curves.easeOut,
                         style: TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
                           fontSize: _shouldFloat ? 10.5 : 14.5,
                           fontWeight: _shouldFloat
                               ? FontWeight.w600
@@ -208,7 +207,6 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                               enableSuggestions: !widget.secret,
                               textInputAction: TextInputAction.next,
                               style: const TextStyle(
-                                fontFamily: AppConfig.fontPrimary,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF111827),
@@ -263,7 +261,6 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                                     const TextStyle(height: 0, fontSize: 0),
                                 hintText: _shouldFloat ? widget.hint : null,
                                 hintStyle: const TextStyle(
-                                  fontFamily: AppConfig.fontPrimary,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
                                   color: Color(0xFF9CA3AF),
@@ -303,7 +300,6 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
               child: Text(
                 _error!,
                 style: const TextStyle(
-                  fontFamily: AppConfig.fontPrimary,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
                   color: Color(0xFFEF4444),
