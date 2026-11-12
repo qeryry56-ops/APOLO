@@ -208,6 +208,49 @@ class AccountAuth {
         requiresOtp: false);
   }
 
+  Future<void> requestPasswordReset(String email) async {
+    if (!AccountValidation.email(email)) {
+      throw const AccountFailure('validation');
+    }
+    try {
+      final res = await dio.post('/auth/forgot-password', data: {
+        'email': email.trim(),
+        'login': email.trim(),
+      });
+      _payload(res);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // Fallback for standard Laravel password reset route
+        final res = await dio.post('/auth/password/email', data: {
+          'email': email.trim(),
+        });
+        _payload(res);
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> resetPasswordWithToken({
+    required String email,
+    required String token,
+    required String password,
+    required String confirmation,
+  }) async {
+    if (!AccountValidation.email(email) ||
+        !AccountValidation.password(password) ||
+        password != confirmation) {
+      throw const AccountFailure('validation');
+    }
+    final res = await dio.post('/auth/password/reset', data: {
+      'email': email.trim(),
+      'token': token.trim(),
+      'password': password,
+      'password_confirmation': confirmation,
+    });
+    _payload(res);
+  }
+
   void close() => dio.close(force: true);
 }
 
