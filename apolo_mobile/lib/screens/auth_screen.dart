@@ -701,19 +701,27 @@ class _AuthScreenState extends State<AuthScreen> {
                         // MODE 1: LOGIN (EMAIL OR PHONE + PASSWORD)
                         // ============================================
                         if (_login && !otp) ...[
-                          CustomAuthInputField(
+                          _SpecLoginField(
+                            fieldKey: const Key('auth-email'),
                             controller: _email,
-                            label: s.tr(
-                              'البريد الإلكتروني أو رقم الهاتف',
-                              'Email or phone number',
-                            ),
-                            keyName: 'auth-email',
-                            type: TextInputType.text,
-                            autofill: const [
+                            placeholder: 'Username, email or mobile number',
+                            width: 868.0,
+                            height: 146.0,
+                            borderRadius: 40.0,
+                            borderColor: const Color(0xFF48484A),
+                            borderWidth: 2.0,
+                            backgroundColor: Colors.transparent,
+                            leftPadding: 39.0,
+                            fontSize: 36.0,
+                            fontWeight: FontWeight.w400,
+                            placeholderColor: const Color(0xFFA5A5AA),
+                            textAlign: TextAlign.left,
+                            textAlignVertical: TextAlignVertical.center,
+                            keyboardType: TextInputType.text,
+                            autofillHints: const [
                               AutofillHints.email,
                               AutofillHints.telephoneNumber,
                             ],
-                            hint: 'name@apolo.ma / 06 12 34 56 78',
                             enabled: !_busy,
                             validator: (v) {
                               final text = (v ?? '').trim();
@@ -736,12 +744,26 @@ class _AuthScreenState extends State<AuthScreen> {
                             },
                           ),
 
-                          CustomAuthInputField(
+                          const SizedBox(height: 30),
+
+                          _SpecLoginField(
+                            fieldKey: const Key('auth-password'),
                             controller: _password,
-                            label: s.tr('كلمة المرور', 'Password'),
-                            keyName: 'auth-password',
-                            secret: true,
-                            autofill: const [AutofillHints.password],
+                            placeholder: 'Password',
+                            width: 868.0,
+                            height: 145.0,
+                            borderRadius: 40.0,
+                            borderColor: const Color(0xFF48484A),
+                            borderWidth: 2.0,
+                            backgroundColor: Colors.transparent,
+                            leftPadding: 39.0,
+                            fontSize: 36.0,
+                            fontWeight: FontWeight.w400,
+                            placeholderColor: const Color(0xFFA5A5AA),
+                            textAlign: TextAlign.left,
+                            textAlignVertical: TextAlignVertical.center,
+                            isPassword: true,
+                            autofillHints: const [AutofillHints.password],
                             enabled: !_busy,
                             validator: (v) => (v ?? '').isNotEmpty
                                 ? null
@@ -750,6 +772,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                     'Please enter your password',
                                   ),
                           ),
+
+                          const SizedBox(height: 16),
 
                           // Forgot password link
                           Align(
@@ -1821,3 +1845,195 @@ class _GoogleIconPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+/// Dedicated login input field matching exact specifications:
+/// - Width: 868px (scaled responsively to fit container without overflow)
+/// - Height: 146px (Field 1) / 145px (Field 2)
+/// - Border radius: 40px
+/// - Border: 2px solid #48484A
+/// - Background: transparent
+/// - Left padding: 39px
+/// - Font size: 36px, Font weight: 400
+/// - Placeholder color: #A5A5AA
+/// - Text alignment: left and vertically centered
+class _SpecLoginField extends StatefulWidget {
+  final Key fieldKey;
+  final TextEditingController controller;
+  final String placeholder;
+  final double width;
+  final double height;
+  final double borderRadius;
+  final Color borderColor;
+  final double borderWidth;
+  final Color backgroundColor;
+  final double leftPadding;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final Color placeholderColor;
+  final TextAlign textAlign;
+  final TextAlignVertical textAlignVertical;
+  final bool isPassword;
+  final bool enabled;
+  final TextInputType keyboardType;
+  final Iterable<String>? autofillHints;
+  final FormFieldValidator<String>? validator;
+
+  const _SpecLoginField({
+    super.key,
+    required this.fieldKey,
+    required this.controller,
+    required this.placeholder,
+    this.width = 868.0,
+    required this.height,
+    this.borderRadius = 40.0,
+    this.borderColor = const Color(0xFF48484A),
+    this.borderWidth = 2.0,
+    this.backgroundColor = Colors.transparent,
+    this.leftPadding = 39.0,
+    this.fontSize = 36.0,
+    this.fontWeight = FontWeight.w400,
+    this.placeholderColor = const Color(0xFFA5A5AA),
+    this.textAlign = TextAlign.left,
+    this.textAlignVertical = TextAlignVertical.center,
+    this.isPassword = false,
+    this.enabled = true,
+    this.keyboardType = TextInputType.text,
+    this.autofillHints,
+    this.validator,
+  });
+
+  @override
+  State<_SpecLoginField> createState() => _SpecLoginFieldState();
+}
+
+class _SpecLoginFieldState extends State<_SpecLoginField> {
+  bool _obscure = true;
+  String? _error;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF111827);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: widget.width,
+                height: widget.height,
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor,
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  border: Border.all(
+                    color: _error != null && _error!.isNotEmpty
+                        ? const Color(0xFFDC2626)
+                        : widget.borderColor,
+                    width: widget.borderWidth,
+                  ),
+                ),
+                padding: EdgeInsets.only(
+                  left: widget.leftPadding,
+                  right: widget.isPassword ? 24.0 : widget.leftPadding,
+                ),
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        key: widget.fieldKey,
+                        controller: widget.controller,
+                        enabled: widget.enabled,
+                        obscureText: widget.isPassword ? _obscure : false,
+                        keyboardType: widget.keyboardType,
+                        autofillHints: widget.autofillHints,
+                        textAlign: widget.textAlign,
+                        textAlignVertical: widget.textAlignVertical,
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(
+                          fontSize: widget.fontSize,
+                          fontWeight: widget.fontWeight,
+                          color: textColor,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                          hintText: widget.placeholder,
+                          hintStyle: TextStyle(
+                            fontSize: widget.fontSize,
+                            fontWeight: widget.fontWeight,
+                            color: widget.placeholderColor,
+                          ),
+                          errorStyle: const TextStyle(height: 0, fontSize: 0),
+                        ),
+                        validator: (val) {
+                          final err = widget.validator?.call(val);
+                          if (mounted && _error != err) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) setState(() => _error = err);
+                            });
+                          }
+                          return err;
+                        },
+                        onChanged: (val) {
+                          if (_error != null) {
+                            setState(() => _error = null);
+                          }
+                        },
+                      ),
+                    ),
+                    if (widget.isPassword)
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _obscure = !_obscure);
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 12, right: 4),
+                          child: Icon(
+                            _obscure
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            size: 36,
+                            color: widget.placeholderColor,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_error != null && _error!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 16),
+            child: Text(
+              _error!,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFDC2626),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
