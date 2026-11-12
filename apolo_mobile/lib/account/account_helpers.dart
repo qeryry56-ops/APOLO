@@ -39,6 +39,8 @@ class AccountValidation {
       return '+${text.substring(2)}';
     }
     if (RegExp(r'^\+212[5-7][0-9]{8}$').hasMatch(text)) return text;
+    if (RegExp(r'^212[5-7][0-9]{8}$').hasMatch(text)) return '+$text';
+    if (RegExp(r'^[5-7][0-9]{8}$').hasMatch(text)) return '+212$text';
     return null;
   }
 
