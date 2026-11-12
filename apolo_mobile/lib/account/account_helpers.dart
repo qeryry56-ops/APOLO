@@ -110,13 +110,17 @@ class AccountAuth {
             user['email_verified_at'] == null);
   }
 
-  Future<AccountSession> login(String email, String password) async {
-    if (!AccountValidation.email(email) || password.isEmpty) {
+  Future<AccountSession> login(String login, String password) async {
+    final trimmed = login.trim();
+    final isEmail = AccountValidation.email(trimmed);
+    final normalizedPhone = AccountValidation.phone(trimmed);
+    if ((!isEmail && normalizedPhone == null) || password.isEmpty) {
       throw const AccountFailure('validation');
     }
     return _session(await dio.post('/auth/login', data: {
-      'login': email.trim(),
-      'email': email.trim(),
+      'login': normalizedPhone ?? trimmed,
+      'email': isEmail ? trimmed : (normalizedPhone ?? trimmed),
+      if (normalizedPhone != null) 'phone': normalizedPhone,
       'password': password
     }));
   }
