@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/state/app_state.dart';
+import '../../theme/app_typography.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'price_text.dart';
@@ -338,12 +339,13 @@ class AdCard extends StatelessWidget {
                       price,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _red,
                         fontWeight: FontWeight.w900,
                         fontSize: 15.5,
-                        letterSpacing: -0.3,
-                        fontFeatures: [FontFeature.tabularFigures()],
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.3),
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                   ),
@@ -374,11 +376,12 @@ class AdCard extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _ink,
                   fontWeight: FontWeight.w700,
                   fontSize: 13.5,
-                  letterSpacing: -0.2,
+                  letterSpacing:
+                      AppTypography.trackingForContext(context, -0.2),
                 ),
               ),
               const SizedBox(height: 6),
@@ -468,30 +471,32 @@ class AdCard extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 14, 12),
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 12, 14, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   PriceText(
                     price,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _red,
                       fontWeight: FontWeight.w900,
                       fontSize: 16.5,
-                      letterSpacing: -0.3,
-                      fontFeatures: [FontFeature.tabularFigures()],
+                      letterSpacing:
+                          AppTypography.trackingForContext(context, -0.3),
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                   Text(
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                       color: _ink,
-                      letterSpacing: -0.2,
+                      letterSpacing:
+                          AppTypography.trackingForContext(context, -0.2),
                     ),
                   ),
                   Row(

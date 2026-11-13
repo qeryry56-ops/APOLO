@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'ad_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
@@ -247,11 +248,15 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     );
   }
 
+  String get _resolvedCity =>
+      (widget.sellerCity != null && widget.sellerCity!.trim().isNotEmpty)
+          ? widget.sellerCity!.trim()
+          : _state.s.tr('المغرب', 'Maroc', 'Morocco');
+
   @override
   Widget build(BuildContext context) {
     final isAr = _state.s.isAr;
-    final city = widget.sellerCity ??
-        (isAr ? 'الدار البيضاء • المعاريف' : 'Casablanca • Maarif');
+    final city = _resolvedCity;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -276,12 +281,14 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 ),
               ),
               title: Text(
-                isAr ? 'بروفايل البائع' : 'Profil Vendeur',
-                style: const TextStyle(
+                _state.s
+                    .tr('بروفايل البائع', 'Profil Vendeur', 'Seller Profile'),
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: _ink,
-                  letterSpacing: -0.3,
+                  letterSpacing:
+                      AppTypography.trackingForContext(context, -0.3),
                 ),
               ),
               actions: [
@@ -372,11 +379,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                           widget.sellerName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
                             color: _ink,
-                            letterSpacing: -0.5,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.5),
                           ),
                         ),
                       ),
@@ -996,13 +1004,14 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 children: [
                   Column(
                     children: [
-                      const Text(
+                      Text(
                         '4.9',
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.w900,
                           color: _ink,
-                          letterSpacing: -1,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -1),
                         ),
                       ),
                       Row(
@@ -1193,6 +1202,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
   // ───────────────────────── TAB 3: TRUST & GUARANTEES ─────────────────────────
   Widget _buildTrustTab(bool isAr) {
+    final city = _resolvedCity;
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -1228,13 +1238,17 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             ),
             _buildTrustRow(
               icon: CupertinoIcons.cube_box_fill,
-              iconColor: const Color(0xFF8B5CF6),
-              title: isAr
-                  ? 'طرق التسليم المتاحة'
-                  : 'Modes de livraison disponibles',
-              desc: isAr
-                  ? 'التسليم يداً بيد فـ المعاريف (الدار البيضاء)، أو الإرسال عبر أمانة كوليس بعد الاتفاق.'
-                  : 'Remise en main propre ou livraison express sécurisée selon accord.',
+              iconColor: _red,
+              title: _state.s.tr(
+                'طرق التسليم المتاحة',
+                'Modes de livraison disponibles',
+                'Available Delivery Methods',
+              ),
+              desc: _state.s.tr(
+                'التسليم يداً بيد في $city، أو الإرسال عبر أمانة كوليس بعد الاتفاق.',
+                'Remise en main propre à $city ou livraison express sécurisée selon accord.',
+                'Hand-to-hand pickup in $city, or insured express shipping by agreement.',
+              ),
             ),
           ],
         ),

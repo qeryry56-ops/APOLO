@@ -45,8 +45,7 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
   @override
   Widget build(BuildContext context) {
     final fontFamily = AppTypography.resolveFontFamily(_state.locale);
-    final fontFallback =
-        AppTypography.resolveFontFamilyFallback(_state.locale);
+    final fontFallback = AppTypography.resolveFontFamilyFallback(_state.locale);
 
     return MaterialApp(
       title: AppConfig.appName,

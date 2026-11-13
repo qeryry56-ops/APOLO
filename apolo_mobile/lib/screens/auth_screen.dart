@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import '../widgets/custom_auth_input_field.dart';
 import '../widgets/interests_survey_sheet.dart';
 import 'forgot_password_screen.dart';
@@ -221,7 +222,7 @@ class _AuthScreenState extends State<AuthScreen>
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF5E48E8),
+              primary: AppConfig.primary,
               onPrimary: Colors.white,
               onSurface: Color(0xFF111827),
             ),
@@ -255,9 +256,9 @@ class _AuthScreenState extends State<AuthScreen>
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  s.tr('اختر مدينتك', 'Select your city'),
+                  s.tr('اختر مدينتك', 'Choisissez votre ville',
+                      'Select your city'),
                   style: const TextStyle(
-                    fontFamily: AppConfig.fontPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -278,18 +279,17 @@ class _AuthScreenState extends State<AuthScreen>
                       title: Text(
                         name,
                         style: TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: isSelected
-                              ? const Color(0xFF5E48E8)
+                              ? AppConfig.primary
                               : const Color(0xFF111827),
                         ),
                       ),
                       trailing: isSelected
                           ? const Icon(
                               Icons.check_circle_rounded,
-                              color: Color(0xFF5E48E8),
+                              color: AppConfig.primary,
                             )
                           : null,
                       onTap: () {
@@ -674,12 +674,12 @@ class _AuthScreenState extends State<AuthScreen>
                           _login
                               ? s.tr('تسجيل الدخول', 'Sign in')
                               : s.tr('إنشاء حساب', 'Sign up'),
-                          style: const TextStyle(
-                            fontFamily: AppConfig.fontPrimary,
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF111827),
-                            letterSpacing: -0.2,
+                            color: const Color(0xFF111827),
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.2),
                           ),
                         ),
                     ],
@@ -706,10 +706,9 @@ class _AuthScreenState extends State<AuthScreen>
                               'Step $_registerStep of 4',
                             ),
                             style: const TextStyle(
-                              fontFamily: AppConfig.fontPrimary,
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF5E48E8),
+                              color: AppConfig.primary,
                             ),
                           ),
                           Text(
@@ -721,7 +720,6 @@ class _AuthScreenState extends State<AuthScreen>
                                         ? s.tr('بيانات الدخول', 'Credentials')
                                         : s.tr('التحقق', 'Verification'),
                             style: const TextStyle(
-                              fontFamily: AppConfig.fontPrimary,
                               fontSize: 12.5,
                               color: Color(0xFF6B7280),
                             ),
@@ -737,13 +735,13 @@ class _AuthScreenState extends State<AuthScreen>
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               height: 4,
-                              margin: EdgeInsets.only(
-                                left: index == 0 ? 0 : 4,
-                                right: index == 3 ? 0 : 4,
+                              margin: EdgeInsetsDirectional.only(
+                                start: index == 0 ? 0 : 4,
+                                end: index == 3 ? 0 : 4,
                               ),
                               decoration: BoxDecoration(
                                 color: isPassed
-                                    ? const Color(0xFF5E48E8)
+                                    ? AppConfig.primary
                                     : const Color(0xFFE5E7EB),
                                 borderRadius: BorderRadius.circular(2),
                               ),
@@ -787,11 +785,11 @@ class _AuthScreenState extends State<AuthScreen>
                                           : s.tr('حسابك وأمانك',
                                               'Account & Security'),
                           style: TextStyle(
-                            fontFamily: AppConfig.fontPrimary,
                             fontSize: otp ? 26 : 27,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF0A0B0D),
-                            letterSpacing: -0.5,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.5),
                             height: 1.2,
                           ),
                         ),
@@ -837,7 +835,6 @@ class _AuthScreenState extends State<AuthScreen>
                             return Text(
                               subtitle,
                               style: TextStyle(
-                                fontFamily: AppConfig.fontPrimary,
                                 fontSize: 15,
                                 color: otp
                                     ? const Color(0xFF5B616E)
@@ -876,7 +873,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   child: Text(
                                     _error!,
                                     style: const TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                       color: Color(0xFFB91C1C),
@@ -913,7 +909,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   child: Text(
                                     _notice!,
                                     style: const TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                       color: Color(0xFF334155),
@@ -1004,17 +999,17 @@ class _AuthScreenState extends State<AuthScreen>
                                       );
                                     },
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
                                 child: Text(
                                   s.tr(
                                     'نسيت كلمة المرور؟',
                                     'Forgot your password?',
                                   ),
                                   style: const TextStyle(
-                                    fontFamily: AppConfig.fontPrimary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF5E48E8),
+                                    color: AppConfig.primary,
                                   ),
                                 ),
                               ),
@@ -1046,9 +1041,9 @@ class _AuthScreenState extends State<AuthScreen>
                                       ),
                                     )
                                   : Text(
-                                      s.tr('تسجيل الدخول', 'Sign in'),
+                                      s.tr('تسجيل الدخول', 'Se connecter',
+                                          'Sign in'),
                                       style: const TextStyle(
-                                        fontFamily: AppConfig.fontPrimary,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,
@@ -1076,7 +1071,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   child: Text(
                                     s.tr('أو', 'or'),
                                     style: const TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w400,
                                       color: Color(0xFF9CA3AF),
@@ -1151,7 +1145,6 @@ class _AuthScreenState extends State<AuthScreen>
                                 ? null
                                 : s.tr('أدخل اسمك الشخصي', 'Enter first name'),
                           ),
-
                           CustomAuthInputField(
                             controller: _lastName,
                             label: s.tr('الاسم العائلي', 'Last name'),
@@ -1161,21 +1154,16 @@ class _AuthScreenState extends State<AuthScreen>
                                 ? null
                                 : s.tr('أدخل اسمك العائلي', 'Enter last name'),
                           ),
-
                           const SizedBox(height: 4),
-
                           Text(
                             s.tr('الجنس', 'Gender'),
                             style: const TextStyle(
-                              fontFamily: AppConfig.fontPrimary,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF4B5563),
                             ),
                           ),
-
                           const SizedBox(height: 8),
-
                           Row(
                             children: [
                               Expanded(
@@ -1203,9 +1191,7 @@ class _AuthScreenState extends State<AuthScreen>
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 24),
-
                           SizedBox(
                             width: double.infinity,
                             height: 54,
@@ -1219,9 +1205,8 @@ class _AuthScreenState extends State<AuthScreen>
                                 elevation: 0,
                               ),
                               child: Text(
-                                s.tr('متابعة', 'Continue'),
+                                s.tr('متابعة', 'Continuer', 'Continue'),
                                 style: const TextStyle(
-                                  fontFamily: AppConfig.fontPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -1273,7 +1258,6 @@ class _AuthScreenState extends State<AuthScreen>
                                       Text(
                                         s.tr('المدينة', 'City'),
                                         style: const TextStyle(
-                                          fontFamily: AppConfig.fontPrimary,
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF6B7280),
@@ -1283,7 +1267,6 @@ class _AuthScreenState extends State<AuthScreen>
                                       Text(
                                         _cityName,
                                         style: const TextStyle(
-                                          fontFamily: AppConfig.fontPrimary,
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF111827),
@@ -1308,7 +1291,6 @@ class _AuthScreenState extends State<AuthScreen>
                               'How will you use Apolo?',
                             ),
                             style: const TextStyle(
-                              fontFamily: AppConfig.fontPrimary,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF4B5563),
@@ -1368,9 +1350,8 @@ class _AuthScreenState extends State<AuthScreen>
                                       shape: const StadiumBorder(),
                                     ),
                                     child: Text(
-                                      s.tr('رجوع', 'Back'),
+                                      s.tr('رجوع', 'Retour', 'Back'),
                                       style: const TextStyle(
-                                        fontFamily: AppConfig.fontPrimary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1392,9 +1373,8 @@ class _AuthScreenState extends State<AuthScreen>
                                       elevation: 0,
                                     ),
                                     child: Text(
-                                      s.tr('متابعة', 'Continue'),
+                                      s.tr('متابعة', 'Continuer', 'Continue'),
                                       style: const TextStyle(
-                                        fontFamily: AppConfig.fontPrimary,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -1418,15 +1398,13 @@ class _AuthScreenState extends State<AuthScreen>
                             autofill: const [AutofillHints.email],
                             hint: 'example@apolo.ma',
                             enabled: !_busy,
-                            validator: (v) =>
-                                AccountValidation.email(v ?? '')
-                                    ? null
-                                    : s.tr(
-                                        'أدخل بريداً إلكترونياً صحيحاً',
-                                        'Enter a valid email address',
-                                      ),
+                            validator: (v) => AccountValidation.email(v ?? '')
+                                ? null
+                                : s.tr(
+                                    'أدخل بريداً إلكترونياً صحيحاً',
+                                    'Enter a valid email address',
+                                  ),
                           ),
-
                           CustomAuthInputField(
                             controller: _password,
                             label: s.tr('كلمة المرور', 'Password'),
@@ -1442,10 +1420,10 @@ class _AuthScreenState extends State<AuthScreen>
                                         'Must be at least 8 characters',
                                       ),
                           ),
-
                           CustomAuthInputField(
                             controller: _confirmation,
-                            label: s.tr('تأكيد كلمة المرور', 'Confirm password'),
+                            label:
+                                s.tr('تأكيد كلمة المرور', 'Confirm password'),
                             keyName: 'auth-confirmation',
                             secret: true,
                             enabled: !_busy,
@@ -1457,9 +1435,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         'Passwords do not match',
                                       ),
                           ),
-
                           const SizedBox(height: 20),
-
                           Row(
                             children: [
                               Expanded(
@@ -1477,9 +1453,8 @@ class _AuthScreenState extends State<AuthScreen>
                                       shape: const StadiumBorder(),
                                     ),
                                     child: Text(
-                                      s.tr('رجوع', 'Back'),
+                                      s.tr('رجوع', 'Retour', 'Back'),
                                       style: const TextStyle(
-                                        fontFamily: AppConfig.fontPrimary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1510,9 +1485,11 @@ class _AuthScreenState extends State<AuthScreen>
                                             ),
                                           )
                                         : Text(
-                                            s.tr('إنشاء الحساب', 'Create account'),
+                                            s.tr(
+                                                'إنشاء الحساب',
+                                                'Créer un compte',
+                                                'Create account'),
                                             style: const TextStyle(
-                                              fontFamily: AppConfig.fontPrimary,
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1529,17 +1506,11 @@ class _AuthScreenState extends State<AuthScreen>
                         // ============================================
                         if (otp) ...[
                           _buildOtpBoxesSection(s),
-
                           const SizedBox(height: 36),
-
                           _buildOtpResendRow(s),
-
                           const SizedBox(height: 24),
-
                           _buildOtpSecurityBanner(s),
-
                           const SizedBox(height: 24),
-
                           SizedBox(
                             width: double.infinity,
                             height: 52,
@@ -1547,14 +1518,12 @@ class _AuthScreenState extends State<AuthScreen>
                               key: const Key('auth-submit'),
                               onPressed: _busy ? null : _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    _code.text.trim().length == 6
-                                        ? const Color(0xFF0A0B0D)
-                                        : const Color(0xFFF3F5F8),
-                                foregroundColor:
-                                    _code.text.trim().length == 6
-                                        ? Colors.white
-                                        : const Color(0xFF8A94A6),
+                                backgroundColor: _code.text.trim().length == 6
+                                    ? const Color(0xFF0A0B0D)
+                                    : const Color(0xFFF3F5F8),
+                                foregroundColor: _code.text.trim().length == 6
+                                    ? Colors.white
+                                    : const Color(0xFF8A94A6),
                                 shape: const StadiumBorder(),
                                 elevation: 0,
                               ),
@@ -1582,7 +1551,6 @@ class _AuthScreenState extends State<AuthScreen>
                                             'Verify code',
                                           ),
                                           style: const TextStyle(
-                                            fontFamily: AppConfig.fontPrimary,
                                             fontSize: 15.5,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -1620,7 +1588,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   textAlign: TextAlign.center,
                                   text: TextSpan(
                                     style: const TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
                                       fontSize: 14.5,
                                     ),
                                     children: [
@@ -1651,7 +1618,7 @@ class _AuthScreenState extends State<AuthScreen>
                                               ),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF5E48E8),
+                                          color: AppConfig.primary,
                                         ),
                                       ),
                                     ],
@@ -1677,7 +1644,6 @@ class _AuthScreenState extends State<AuthScreen>
                               child: Text(
                                 s.tr('المساعدة والدعم', 'Need help?'),
                                 style: const TextStyle(
-                                  fontFamily: AppConfig.fontPrimary,
                                   fontSize: 13,
                                   color: Color(0xFF9CA3AF),
                                 ),
@@ -1740,7 +1706,7 @@ class _AuthScreenState extends State<AuthScreen>
                       borderWidth = 1.5;
                     } else if (isActive) {
                       bgColor = Colors.white;
-                      borderColor = const Color(0xFF0052FF);
+                      borderColor = AppConfig.primary;
                       borderWidth = 1.8;
                     } else {
                       bgColor = const Color(0xFFF3F5F8);
@@ -1750,9 +1716,9 @@ class _AuthScreenState extends State<AuthScreen>
 
                     return Expanded(
                       child: Padding(
-                        padding: EdgeInsets.only(
-                          left: index == 0 ? 0 : 4,
-                          right: index == 5 ? 0 : 4,
+                        padding: EdgeInsetsDirectional.only(
+                          start: index == 0 ? 0 : 4,
+                          end: index == 5 ? 0 : 4,
                         ),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 140),
@@ -1770,7 +1736,6 @@ class _AuthScreenState extends State<AuthScreen>
                           child: Text(
                             digit,
                             style: const TextStyle(
-                              fontFamily: AppConfig.fontPrimary,
                               fontSize: 23,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF0A0B0D),
@@ -1844,7 +1809,6 @@ class _AuthScreenState extends State<AuthScreen>
               "Didn't get a code?",
             ),
             style: const TextStyle(
-              fontFamily: AppConfig.fontPrimary,
               fontSize: 14.5,
               color: Color(0xFF5B616E),
               fontWeight: FontWeight.w400,
@@ -1859,7 +1823,6 @@ class _AuthScreenState extends State<AuthScreen>
                 Text(
                   s.tr('جاري الإرسال...', 'Envoi...', 'Sending...'),
                   style: const TextStyle(
-                    fontFamily: AppConfig.fontPrimary,
                     fontSize: 14.5,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF5B616E),
@@ -1887,11 +1850,10 @@ class _AuthScreenState extends State<AuthScreen>
                           'Resend',
                         ),
                   style: TextStyle(
-                    fontFamily: AppConfig.fontPrimary,
                     fontSize: 14.5,
                     fontWeight: FontWeight.w600,
                     color: canTapResend
-                        ? const Color(0xFF0052FF)
+                        ? AppConfig.primary
                         : const Color(0xFFC4C8D0),
                   ),
                 ),
@@ -1930,7 +1892,6 @@ class _AuthScreenState extends State<AuthScreen>
                 'Apolo will never ask you to set up a new account or transfer funds. Never enter a code given to you by someone else.',
               ),
               style: const TextStyle(
-                fontFamily: AppConfig.fontPrimary,
                 fontSize: 13.5,
                 color: Color(0xFF5B616E),
                 height: 1.45,
@@ -2013,11 +1974,11 @@ class _AuthScreenState extends State<AuthScreen>
         height: 52,
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFF5E48E8).withValues(alpha: 0.06)
+              ? AppConfig.primary.withValues(alpha: 0.06)
               : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? const Color(0xFF5E48E8) : const Color(0xFFE5E7EB),
+            color: selected ? AppConfig.primary : const Color(0xFFE5E7EB),
             width: selected ? 1.8 : 1.2,
           ),
         ),
@@ -2028,16 +1989,15 @@ class _AuthScreenState extends State<AuthScreen>
             Icon(
               icon,
               size: 20,
-              color: selected ? const Color(0xFF5E48E8) : const Color(0xFF6B7280),
+              color: selected ? AppConfig.primary : const Color(0xFF6B7280),
             ),
             const SizedBox(width: 8),
             Text(
               title,
               style: TextStyle(
-                fontFamily: AppConfig.fontPrimary,
                 fontSize: 14,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? const Color(0xFF5E48E8) : const Color(0xFF374151),
+                color: selected ? AppConfig.primary : const Color(0xFF374151),
               ),
             ),
           ],
@@ -2060,11 +2020,11 @@ class _AuthScreenState extends State<AuthScreen>
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFF5E48E8).withValues(alpha: 0.05)
+              ? AppConfig.primary.withValues(alpha: 0.05)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? const Color(0xFF5E48E8) : const Color(0xFFE5E7EB),
+            color: selected ? AppConfig.primary : const Color(0xFFE5E7EB),
             width: selected ? 1.8 : 1.2,
           ),
         ),
@@ -2075,7 +2035,7 @@ class _AuthScreenState extends State<AuthScreen>
               height: 44,
               decoration: BoxDecoration(
                 color: selected
-                    ? const Color(0xFF5E48E8).withValues(alpha: 0.12)
+                    ? AppConfig.primary.withValues(alpha: 0.12)
                     : const Color(0xFFF3F4F6),
                 shape: BoxShape.circle,
               ),
@@ -2083,9 +2043,7 @@ class _AuthScreenState extends State<AuthScreen>
                 child: Icon(
                   icon,
                   size: 22,
-                  color: selected
-                      ? const Color(0xFF5E48E8)
-                      : const Color(0xFF4B5563),
+                  color: selected ? AppConfig.primary : const Color(0xFF4B5563),
                 ),
               ),
             ),
@@ -2097,11 +2055,10 @@ class _AuthScreenState extends State<AuthScreen>
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: AppConfig.fontPrimary,
                       fontSize: 15.5,
                       fontWeight: FontWeight.w700,
                       color: selected
-                          ? const Color(0xFF5E48E8)
+                          ? AppConfig.primary
                           : const Color(0xFF111827),
                     ),
                   ),
@@ -2109,7 +2066,6 @@ class _AuthScreenState extends State<AuthScreen>
                   Text(
                     subtitle,
                     style: const TextStyle(
-                      fontFamily: AppConfig.fontPrimary,
                       fontSize: 12.5,
                       color: Color(0xFF6B7280),
                       height: 1.3,
@@ -2122,9 +2078,7 @@ class _AuthScreenState extends State<AuthScreen>
               selected
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
-              color: selected
-                  ? const Color(0xFF5E48E8)
-                  : const Color(0xFFD1D5DB),
+              color: selected ? AppConfig.primary : const Color(0xFFD1D5DB),
               size: 22,
             ),
           ],
@@ -2163,12 +2117,12 @@ class _AuthScreenState extends State<AuthScreen>
                 text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: AppConfig.fontPrimary,
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF111827),
-                  letterSpacing: -0.2,
+                  color: const Color(0xFF111827),
+                  letterSpacing:
+                      AppTypography.trackingForContext(context, -0.2),
                 ),
               ),
             ),
@@ -2291,4 +2245,3 @@ class _GoogleIconPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

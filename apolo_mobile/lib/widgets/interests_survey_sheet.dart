@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 
 /// Interactive Interests Survey Modal (نافذة منبثقة لاستطلاع الاهتمامات والتصنيفات)
 ///
@@ -61,16 +62,66 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
   bool _saving = false;
 
   static const List<Map<String, dynamic>> _defaultCategories = [
-    {'id': 1, 'name_ar': 'هواتف وإلكترونيات', 'name_fr': 'Électronique & Tech', 'icon': Icons.devices_outlined},
-    {'id': 2, 'name_ar': 'سيارات ودراجات', 'name_fr': 'Véhicules & Autos', 'icon': Icons.directions_car_outlined},
-    {'id': 3, 'name_ar': 'أزياء وملابس', 'name_fr': 'Mode & Vêtements', 'icon': Icons.checkroom_outlined},
-    {'id': 4, 'name_ar': 'منزل وديكور', 'name_fr': 'Maison & Déco', 'icon': Icons.home_outlined},
-    {'id': 5, 'name_ar': 'عقارات', 'name_fr': 'Immobilier', 'icon': Icons.apartment_outlined},
-    {'id': 6, 'name_ar': 'رياضة وهوايات', 'name_fr': 'Sport & Loisirs', 'icon': Icons.fitness_center_outlined},
-    {'id': 7, 'name_ar': 'مستلزمات الأطفال', 'name_fr': 'Bébés & Enfants', 'icon': Icons.child_care_outlined},
-    {'id': 8, 'name_ar': 'خدمات وأعمال', 'name_fr': 'Services & Emploi', 'icon': Icons.work_outline},
-    {'id': 9, 'name_ar': 'صحة وجمال', 'name_fr': 'Beauté & Santé', 'icon': Icons.spa_outlined},
-    {'id': 10, 'name_ar': 'ألعاب وفيديو', 'name_fr': 'Jeux Vidéo', 'icon': Icons.sports_esports_outlined},
+    {
+      'id': 1,
+      'name_ar': 'هواتف وإلكترونيات',
+      'name_fr': 'Électronique & Tech',
+      'icon': Icons.devices_outlined
+    },
+    {
+      'id': 2,
+      'name_ar': 'سيارات ودراجات',
+      'name_fr': 'Véhicules & Autos',
+      'icon': Icons.directions_car_outlined
+    },
+    {
+      'id': 3,
+      'name_ar': 'أزياء وملابس',
+      'name_fr': 'Mode & Vêtements',
+      'icon': Icons.checkroom_outlined
+    },
+    {
+      'id': 4,
+      'name_ar': 'منزل وديكور',
+      'name_fr': 'Maison & Déco',
+      'icon': Icons.home_outlined
+    },
+    {
+      'id': 5,
+      'name_ar': 'عقارات',
+      'name_fr': 'Immobilier',
+      'icon': Icons.apartment_outlined
+    },
+    {
+      'id': 6,
+      'name_ar': 'رياضة وهوايات',
+      'name_fr': 'Sport & Loisirs',
+      'icon': Icons.fitness_center_outlined
+    },
+    {
+      'id': 7,
+      'name_ar': 'مستلزمات الأطفال',
+      'name_fr': 'Bébés & Enfants',
+      'icon': Icons.child_care_outlined
+    },
+    {
+      'id': 8,
+      'name_ar': 'خدمات وأعمال',
+      'name_fr': 'Services & Emploi',
+      'icon': Icons.work_outline
+    },
+    {
+      'id': 9,
+      'name_ar': 'صحة وجمال',
+      'name_fr': 'Beauté & Santé',
+      'icon': Icons.spa_outlined
+    },
+    {
+      'id': 10,
+      'name_ar': 'ألعاب وفيديو',
+      'name_fr': 'Jeux Vidéo',
+      'icon': Icons.sports_esports_outlined
+    },
   ];
 
   @override
@@ -187,13 +238,13 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF5E48E8).withValues(alpha: 0.1),
+                    color: AppConfig.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
                     child: Icon(
                       Icons.auto_awesome,
-                      color: Color(0xFF5E48E8),
+                      color: AppConfig.primary,
                       size: 22,
                     ),
                   ),
@@ -204,12 +255,16 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        s.tr('ما هي اهتماماتك؟', 'What are your interests?'),
-                        style: const TextStyle(
+                        s.tr(
+                            'ما هي اهتماماتك؟',
+                            'Quels sont vos centres d’intérêt ?',
+                            'What are your interests?'),
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
-                          letterSpacing: -0.2,
+                          color: const Color(0xFF111827),
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.2),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -237,7 +292,7 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                   ? const Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Color(0xFF5E48E8),
+                        color: AppConfig.primary,
                       ),
                     )
                   : SingleChildScrollView(
@@ -265,12 +320,12 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(0xFF5E48E8).withValues(alpha: 0.08)
+                                    ? AppConfig.primary.withValues(alpha: 0.08)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isSelected
-                                      ? const Color(0xFF5E48E8)
+                                      ? AppConfig.primary
                                       : const Color(0xFFE5E7EB),
                                   width: isSelected ? 1.6 : 1.2,
                                 ),
@@ -284,7 +339,7 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                                         : icon,
                                     size: 18,
                                     color: isSelected
-                                        ? const Color(0xFF5E48E8)
+                                        ? AppConfig.primary
                                         : const Color(0xFF6B7280),
                                   ),
                                   const SizedBox(width: 8),
@@ -296,7 +351,7 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                                           ? FontWeight.w600
                                           : FontWeight.w500,
                                       color: isSelected
-                                          ? const Color(0xFF5E48E8)
+                                          ? AppConfig.primary
                                           : const Color(0xFF374151),
                                     ),
                                   ),

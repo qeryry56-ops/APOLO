@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../theme/app_typography.dart';
 
 /// Spring-physics entrance + scroll-staggered reveal widget.
 /// Ensures screens feel alive as the user scrolls through sections and cards.
@@ -351,11 +352,12 @@ class IllustratedStateView extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                  letterSpacing: -0.4,
+                  color: const Color(0xFF0F172A),
+                  letterSpacing:
+                      AppTypography.trackingForContext(context, -0.4),
                   height: 1.25,
                 ),
               ),

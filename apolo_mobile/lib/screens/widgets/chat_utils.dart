@@ -10,7 +10,11 @@ DateTime? parseChatDate(dynamic raw) {
 
 String? chatAdImage(dynamic ad) {
   if (ad is! Map) return null;
-  final v = ad['main_image'] ?? ad['primary_image'] ?? ad['image_url'] ?? ad['image'] ?? ad['thumbnail'];
+  final v = ad['main_image'] ??
+      ad['primary_image'] ??
+      ad['image_url'] ??
+      ad['image'] ??
+      ad['thumbnail'];
   if (v == null) return null;
   final str = v.toString();
   return str.trim().isEmpty ? null : str;
@@ -24,9 +28,36 @@ bool isSameChatDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
 String _weekday(int wd, AppStrings s) {
-  const ar = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
-  const fr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-  return s.isAr ? ar[wd - 1] : fr[wd - 1];
+  const ar = [
+    'الإثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت',
+    'الأحد'
+  ];
+  const fr = [
+    'Lundi',
+    'Mardi',
+    'Mercredi',
+    'Jeudi',
+    'Vendredi',
+    'Samedi',
+    'Dimanche'
+  ];
+  const en = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+  ];
+  if (s.isAr) return ar[wd - 1];
+  if (s.isEn) return en[wd - 1];
+  return fr[wd - 1];
 }
 
 /// "14:32" today, "Hier", weekday within a week, else dd/MM/yy.
@@ -43,7 +74,9 @@ String formatChatListTime(DateTime t, AppStrings s) {
 String formatChatDayLabel(DateTime t, AppStrings s) {
   final now = DateTime.now();
   if (isSameChatDay(t, now)) return s.tr('اليوم', "Aujourd'hui");
-  if (isSameChatDay(t, now.subtract(const Duration(days: 1)))) return s.tr('أمس', 'Hier');
+  if (isSameChatDay(t, now.subtract(const Duration(days: 1)))) {
+    return s.tr('أمس', 'Hier');
+  }
   if (now.difference(t).inDays < 7) return _weekday(t.weekday, s);
   return '${_two(t.day)}/${_two(t.month)}/${t.year}';
 }
@@ -60,14 +93,15 @@ class ChatInitialAvatar extends StatelessWidget {
     [Color(0xFFFFA26B), Color(0xFFF2552C)],
     [Color(0xFF7C8CF8), Color(0xFF4F5BD5)],
     [Color(0xFF4FD1A5), Color(0xFF1FA67A)],
-    [Color(0xFFB98AF5), Color(0xFF8B5CF6)],
+    [Color(0xFFFB7185), Color(0xFFE31B23)],
     [Color(0xFF5BC0F8), Color(0xFF2B8FD6)],
   ];
 
   @override
   Widget build(BuildContext context) {
     final trimmed = name.trim();
-    final initial = trimmed.isNotEmpty ? trimmed.characters.first.toUpperCase() : 'A';
+    final initial =
+        trimmed.isNotEmpty ? trimmed.characters.first.toUpperCase() : 'A';
     final palette = _palettes[trimmed.hashCode.abs() % _palettes.length];
     return Container(
       width: size,

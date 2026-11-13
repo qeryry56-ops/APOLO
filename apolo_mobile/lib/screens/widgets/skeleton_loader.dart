@@ -81,7 +81,8 @@ class HomeFeedSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const ShimmerBox(width: double.infinity, height: 215, borderRadius: 24),
+          const ShimmerBox(
+              width: double.infinity, height: 215, borderRadius: 24),
           const SizedBox(height: 22),
           const ShimmerBox(width: 150, height: 20, borderRadius: 8),
           const SizedBox(height: 14),
@@ -169,7 +170,8 @@ class SearchGridSkeleton extends StatelessWidget {
                   children: [
                     ShimmerBox(width: 90, height: 16, borderRadius: 6),
                     SizedBox(height: 8),
-                    ShimmerBox(width: double.infinity, height: 14, borderRadius: 6),
+                    ShimmerBox(
+                        width: double.infinity, height: 14, borderRadius: 6),
                     SizedBox(height: 8),
                     ShimmerBox(width: 100, height: 12, borderRadius: 6),
                   ],
@@ -218,7 +220,8 @@ class AdDetailSkeleton extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const ShimmerBox(width: double.infinity, height: 22, borderRadius: 8),
+              const ShimmerBox(
+                  width: double.infinity, height: 22, borderRadius: 8),
               const SizedBox(height: 8),
               const ShimmerBox(width: 200, height: 16, borderRadius: 6),
               const SizedBox(height: 20),
@@ -234,9 +237,11 @@ class AdDetailSkeleton extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              const ShimmerBox(width: double.infinity, height: 110, borderRadius: 18),
+              const ShimmerBox(
+                  width: double.infinity, height: 110, borderRadius: 18),
               const SizedBox(height: 20),
-              const ShimmerBox(width: double.infinity, height: 84, borderRadius: 20),
+              const ShimmerBox(
+                  width: double.infinity, height: 84, borderRadius: 20),
             ],
           ),
         ),

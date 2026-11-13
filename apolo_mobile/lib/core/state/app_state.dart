@@ -248,7 +248,9 @@ class AppState extends ChangeNotifier {
         combined.contains('mode') ||
         combined.contains('ملابس') ||
         combined.contains('أزياء')) {
-      return isAr ? 'أزياء وجمال' : (isEn ? 'Fashion & Beauty' : 'Mode & Beauté');
+      return isAr
+          ? 'أزياء وجمال'
+          : (isEn ? 'Fashion & Beauty' : 'Mode & Beauté');
     }
     if (combined.contains('voyage') || combined.contains('سفر')) {
       return isAr ? 'أدوات السفر' : (isEn ? 'Travel' : 'Voyage');
@@ -270,7 +272,9 @@ class AppState extends ChangeNotifier {
         combined.contains('صناعية') ||
         combined.contains('ألات') ||
         combined.contains('آلات')) {
-      return isAr ? 'آلات صناعية' : (isEn ? 'Industrial & Pro' : 'Industrie & Pro');
+      return isAr
+          ? 'آلات صناعية'
+          : (isEn ? 'Industrial & Pro' : 'Industrie & Pro');
     }
     if (combined.contains('bijou') || combined.contains('مجوهرات')) {
       return isAr ? 'المجوهرات' : (isEn ? 'Jewelry' : 'Bijoux');
@@ -281,12 +285,16 @@ class AppState extends ChangeNotifier {
     if (combined.contains('maison') ||
         combined.contains('meuble') ||
         combined.contains('أثاث')) {
-      return isAr ? 'أثاث وديكور' : (isEn ? 'Home & Furniture' : 'Maison & Déco');
+      return isAr
+          ? 'أثاث وديكور'
+          : (isEn ? 'Home & Furniture' : 'Maison & Déco');
     }
     if (combined.contains('emploi') ||
         combined.contains('service') ||
         combined.contains('وظائف')) {
-      return isAr ? 'وظائف وخدمات' : (isEn ? 'Jobs & Services' : 'Emploi & Pro');
+      return isAr
+          ? 'وظائف وخدمات'
+          : (isEn ? 'Jobs & Services' : 'Emploi & Pro');
     }
     if (combined.contains('autre') || combined.contains('آخر')) {
       return isAr ? 'أقسام أخرى' : (isEn ? 'Other' : 'Autres');
@@ -430,7 +438,10 @@ class AppState extends ChangeNotifier {
       if (body is Map && body['status'] == 'success' && body['user'] is Map) {
         currentUser = Map<String, dynamic>.from(body['user'] as Map);
         notifyListeners();
-        await fetchFavoritesIds();
+        await Future.wait([
+          fetchFavoritesIds(),
+          fetchUnreadNotificationsCount(),
+        ]);
       }
     } on DioException catch (error) {
       // Network errors and a failing favorites service must never log users out.
@@ -438,12 +449,45 @@ class AppState extends ChangeNotifier {
         _sessionRevision++;
         currentUser = null;
         favoriteAdIds.clear();
+        unreadNotificationsCount = 0;
         await api.setToken(null);
         notifyListeners();
       }
     } catch (_) {
       // Leave the last verified session intact for retry.
     }
+  }
+
+  Future<void> fetchUnreadNotificationsCount() async {
+    if (!api.isAuthenticated) return;
+    final revision = _sessionRevision;
+    try {
+      final res = await api.dio.get('/notifications');
+      if (revision != _sessionRevision) return;
+      final body = res.data;
+      if (body is Map && body['status'] == 'success') {
+        int count;
+        final rawUnread = body['unread_count'];
+        if (rawUnread is int) {
+          count = rawUnread;
+        } else if (rawUnread != null &&
+            int.tryParse(rawUnread.toString()) != null) {
+          count = int.parse(rawUnread.toString());
+        } else {
+          final List items =
+              (body['notifications'] ?? body['data'] ?? []) as List;
+          count = items.where((item) {
+            if (item is! Map) return false;
+            if (item.containsKey('is_read')) return item['is_read'] != true;
+            return item['read_at'] == null;
+          }).length;
+        }
+        if (unreadNotificationsCount != count) {
+          unreadNotificationsCount = count;
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> fetchFavoritesIds() async {

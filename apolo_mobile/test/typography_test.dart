@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/theme/app_theme.dart';
@@ -88,7 +89,9 @@ void main() {
   });
 
   group('Typography Design Specifications & Scale', () {
-    test('Arabic typography respects comfortable line-height and no negative letter spacing', () {
+    test(
+        'Arabic typography respects comfortable line-height and no negative letter spacing',
+        () {
       final textTheme = AppTypography.buildTextTheme(
         const Locale('ar'),
         platform: TargetPlatform.android,
@@ -133,7 +136,9 @@ void main() {
       expect(textTheme.labelMedium?.fontWeight, equals(FontWeight.w500));
     });
 
-    test('English & French typography uses Inter on Android with balanced metrics', () {
+    test(
+        'English & French typography uses Inter on Android with balanced metrics',
+        () {
       final textTheme = AppTypography.buildTextTheme(
         const Locale('en'),
         platform: TargetPlatform.android,
@@ -220,6 +225,55 @@ void main() {
       expect(en.isEn, isTrue);
       expect(en.home, equals('Home'));
       expect(en.login, equals('Login'));
+    });
+
+    test('Arabic tracking helper eliminates negative/positive letterSpacing',
+        () {
+      expect(AppTypography.isArabicLocale(const Locale('ar')), isTrue);
+      expect(AppTypography.isArabicLocale(const Locale('fr')), isFalse);
+      expect(AppTypography.isArabicLocale(const Locale('en')), isFalse);
+
+      expect(AppTypography.tracking(const Locale('ar'), -0.5), equals(0.0));
+      expect(AppTypography.tracking(const Locale('ar'), 0.8), equals(0.0));
+      expect(AppTypography.tracking(const Locale('fr'), -0.5), equals(-0.5));
+      expect(AppTypography.tracking(const Locale('en'), 0.8), equals(0.8));
+    });
+
+    testWidgets('trackingForContext & RTL/LTR directionality react to locale', (
+      tester,
+    ) async {
+      double? tracked;
+      TextDirection? resolvedDir;
+
+      Widget buildProbe(Locale locale) => MaterialApp(
+            locale: locale,
+            supportedLocales: const [Locale('ar'), Locale('fr'), Locale('en')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: AppTheme.dark(locale, platform: TargetPlatform.iOS),
+            home: Builder(
+              builder: (context) {
+                tracked = AppTypography.trackingForContext(context, -0.4);
+                resolvedDir = Directionality.of(context);
+                return const Scaffold(body: Text('Apolo 1234'));
+              },
+            ),
+          );
+
+      await tester.pumpWidget(buildProbe(const Locale('ar')));
+      expect(tracked, equals(0.0));
+      expect(resolvedDir, equals(TextDirection.rtl));
+
+      await tester.pumpWidget(buildProbe(const Locale('en')));
+      expect(tracked, equals(-0.4));
+      expect(resolvedDir, equals(TextDirection.ltr));
+
+      await tester.pumpWidget(buildProbe(const Locale('fr')));
+      expect(tracked, equals(-0.4));
+      expect(resolvedDir, equals(TextDirection.ltr));
     });
   });
 }

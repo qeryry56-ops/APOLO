@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
 
@@ -50,20 +51,25 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
   void _openOrderSheet() {
     final s = _state.s;
-    final nameCtrl = TextEditingController(text: _state.currentUser?['name']?.toString() ?? '');
-    final phoneCtrl = TextEditingController(text: _state.currentUser?['phone']?.toString() ?? '');
+    final nameCtrl = TextEditingController(
+        text: _state.currentUser?['name']?.toString() ?? '');
+    final phoneCtrl = TextEditingController(
+        text: _state.currentUser?['phone']?.toString() ?? '');
     final cityCtrl = TextEditingController();
     final locCtrl = TextEditingController();
     final msgCtrl = TextEditingController();
-    int? selectedAdId = _ads.isNotEmpty ? int.tryParse(_ads.first['id'].toString()) : null;
+    int? selectedAdId =
+        _ads.isNotEmpty ? int.tryParse(_ads.first['id'].toString()) : null;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
+        padding: EdgeInsets.fromLTRB(
+            20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -73,7 +79,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(color: _border, borderRadius: BorderRadius.circular(99)),
+                  decoration: BoxDecoration(
+                      color: _border, borderRadius: BorderRadius.circular(99)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -82,14 +89,23 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(color: _badgeBg, shape: BoxShape.circle),
-                    child: const Icon(Icons.shopping_bag_outlined, color: _red, size: 20),
+                    decoration: const BoxDecoration(
+                        color: _badgeBg, shape: BoxShape.circle),
+                    child: const Icon(Icons.shopping_bag_outlined,
+                        color: _red, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      s.tr('طلب سريع من المتجر', 'Commande directe'),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.4),
+                      s.tr('طلب سريع من المتجر', 'Commande directe',
+                          'Direct Store Order'),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: _ink,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.4),
+                      ),
                     ),
                   ),
                 ],
@@ -98,25 +114,43 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               if (_ads.isNotEmpty)
                 DropdownButtonFormField<int>(
                   initialValue: selectedAdId,
-                  decoration: InputDecoration(labelText: s.tr('اختر المنتج', 'Choisir le produit')),
+                  decoration: InputDecoration(
+                      labelText: s.tr('اختر المنتج', 'Choisir le produit')),
                   items: _ads
                       .map((a) => DropdownMenuItem<int>(
                             value: int.tryParse(a['id'].toString()),
-                            child: Text(a['title'].toString(), overflow: TextOverflow.ellipsis),
+                            child: Text(a['title'].toString(),
+                                overflow: TextOverflow.ellipsis),
                           ))
                       .toList(),
                   onChanged: (v) => selectedAdId = v,
                 ),
               const SizedBox(height: 10),
-              TextField(controller: nameCtrl, decoration: InputDecoration(labelText: s.tr('الاسم الكامل', 'Nom complet'))),
+              TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                      labelText: s.tr('الاسم الكامل', 'Nom complet'))),
               const SizedBox(height: 10),
-              TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: s.tr('رقم الهاتف', 'Téléphone'))),
+              TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                      labelText: s.tr('رقم الهاتف', 'Téléphone'))),
               const SizedBox(height: 10),
-              TextField(controller: cityCtrl, decoration: InputDecoration(labelText: s.tr('المدينة', 'Ville'))),
+              TextField(
+                  controller: cityCtrl,
+                  decoration:
+                      InputDecoration(labelText: s.tr('المدينة', 'Ville'))),
               const SizedBox(height: 10),
-              TextField(controller: locCtrl, decoration: InputDecoration(labelText: s.tr('العنوان', 'Adresse de livraison'))),
+              TextField(
+                  controller: locCtrl,
+                  decoration: InputDecoration(
+                      labelText: s.tr('العنوان', 'Adresse de livraison'))),
               const SizedBox(height: 10),
-              TextField(controller: msgCtrl, decoration: InputDecoration(labelText: s.tr('ملاحظات الطلب', 'Notes'))),
+              TextField(
+                  controller: msgCtrl,
+                  decoration: InputDecoration(
+                      labelText: s.tr('ملاحظات الطلب', 'Notes'))),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
@@ -128,22 +162,34 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     shape: const StadiumBorder(),
                   ),
                   onPressed: () async {
-                    if (selectedAdId == null || nameCtrl.text.trim().isEmpty || phoneCtrl.text.trim().isEmpty) return;
+                    if (selectedAdId == null ||
+                        nameCtrl.text.trim().isEmpty ||
+                        phoneCtrl.text.trim().isEmpty) {
+                      return;
+                    }
                     Navigator.pop(ctx);
                     try {
-                      final res = await _state.api.dio.post('/stores/${widget.subdomain}/order', data: {
+                      final res = await _state.api.dio
+                          .post('/stores/${widget.subdomain}/order', data: {
                         'ad_id': selectedAdId,
                         'full_name': nameCtrl.text.trim(),
                         'phone_number': phoneCtrl.text.trim(),
-                        'city': cityCtrl.text.trim().isNotEmpty ? cityCtrl.text.trim() : 'Casablanca',
-                        'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : '-',
+                        'city': cityCtrl.text.trim().isNotEmpty
+                            ? cityCtrl.text.trim()
+                            : 'Casablanca',
+                        'location': locCtrl.text.trim().isNotEmpty
+                            ? locCtrl.text.trim()
+                            : '-',
                         'message': msgCtrl.text.trim(),
                       });
-                      if (mounted && res.data is Map && res.data['status'] == 'success') {
+                      if (mounted &&
+                          res.data is Map &&
+                          res.data['status'] == 'success') {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: AppConfig.success,
-                            content: Text(s.tr('تم إرسال طلبك للمتجر بنجاح!', 'Commande envoyée avec succès !')),
+                            content: Text(s.tr('تم إرسال طلبك للمتجر بنجاح!',
+                                'Commande envoyée avec succès !')),
                           ),
                         );
                       }
@@ -151,7 +197,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   },
                   child: Text(
                     s.tr('تأكيد الطلب الآن', 'Confirmer la commande'),
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 15.5),
                   ),
                 ),
               ),
@@ -176,7 +223,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(),
-        body: Center(child: Text(s.tr('المتجر غير موجود', 'Boutique introuvable'))),
+        body: Center(
+            child: Text(s.tr('المتجر غير موجود', 'Boutique introuvable'))),
       );
     }
     final logo = store['logo_url'] ?? store['logo'];
@@ -192,7 +240,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               icon: const Icon(Icons.shopping_bag_outlined, size: 20),
               label: Text(
                 s.tr('اطلب الآن', 'Commander'),
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 14.5),
               ),
             )
           : null,
@@ -216,7 +265,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: _border),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 17, color: _ink),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            size: 17, color: _ink),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -225,16 +275,18 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         (store['name'] ?? '').toString(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                           color: _ink,
-                          letterSpacing: -0.5,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.5),
                         ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: _badgeBg,
                         borderRadius: BorderRadius.circular(999),
@@ -244,7 +296,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         children: [
                           Icon(Icons.verified_rounded, size: 14, color: _red),
                           SizedBox(width: 4),
-                          Text('PRO', style: TextStyle(color: _red, fontWeight: FontWeight.w800, fontSize: 11.5)),
+                          Text('PRO',
+                              style: TextStyle(
+                                  color: _red,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11.5)),
                         ],
                       ),
                     ),
@@ -279,7 +335,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: _red.withValues(alpha: 0.3), width: 2),
+                              border: Border.all(
+                                  color: _red.withValues(alpha: 0.3), width: 2),
                             ),
                             child: AppAvatar(
                               url: logo?.toString(),
@@ -296,9 +353,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               decoration: BoxDecoration(
                                 color: _red,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2.5),
+                                border:
+                                    Border.all(color: Colors.white, width: 2.5),
                               ),
-                              child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                              child: const Icon(Icons.check_rounded,
+                                  size: 14, color: Colors.white),
                             ),
                           ),
                         ],
@@ -307,19 +366,30 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                       Text(
                         (store['name'] ?? '').toString(),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.4),
+                        style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                          color: _ink,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.4),
+                        ),
                       ),
-                      if ((store['description'] ?? '').toString().trim().isNotEmpty) ...[
+                      if ((store['description'] ?? '')
+                          .toString()
+                          .trim()
+                          .isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
                           (store['description'] ?? '').toString(),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: _muted, fontSize: 13.5, height: 1.4),
+                          style: const TextStyle(
+                              color: _muted, fontSize: 13.5, height: 1.4),
                         ),
                       ],
                       const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 8),
                         decoration: BoxDecoration(
                           color: _pillBg,
                           borderRadius: BorderRadius.circular(18),
@@ -331,12 +401,18 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                 children: [
                                   Text(
                                     '${_ads.length}',
-                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _ink),
+                                    style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800,
+                                        color: _ink),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     s.tr('المنتجات', 'Produits'),
-                                    style: const TextStyle(fontSize: 11.5, color: _muted, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: _muted,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ],
                               ),
@@ -347,12 +423,18 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                 children: [
                                   const Text(
                                     '100%',
-                                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _red),
+                                    style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800,
+                                        color: _red),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     s.tr('موثوق', 'Vérifié'),
-                                    style: const TextStyle(fontSize: 11.5, color: _muted, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: _muted,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ],
                               ),
@@ -363,12 +445,18 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                 children: [
                                   const Text(
                                     '24/48h',
-                                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _ink),
+                                    style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800,
+                                        color: _ink),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     s.tr('التوصيل', 'Livraison'),
-                                    style: const TextStyle(fontSize: 11.5, color: _muted, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: _muted,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ],
                               ),
@@ -387,8 +475,15 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                 child: Text(
-                  s.tr('منتجات المتجر', 'Catalogue de la boutique'),
-                  style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.4),
+                  s.tr('منتجات المتجر', 'Catalogue de la boutique',
+                      'Store Catalog'),
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                    letterSpacing:
+                        AppTypography.trackingForContext(context, -0.4),
+                  ),
                 ),
               ),
             ),

@@ -41,7 +41,8 @@ class _SupportScreenState extends State<SupportScreen> {
         child: Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
-              title: Text(s.tr('المساعدة والدعم', 'Aide et assistance'))),
+              title: Text(s.tr(
+                  'المساعدة والدعم', 'Aide et assistance', 'Help & Support'))),
           body: Center(
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
@@ -51,15 +52,18 @@ class _SupportScreenState extends State<SupportScreen> {
                         child: Icon(Icons.mail_outline, size: 36)),
                     const SizedBox(height: 24),
                     Text(
-                        s.tr('كيف يمكننا مساعدتك؟',
-                            'Comment pouvons-nous vous aider ?'),
+                        s.tr(
+                            'كيف يمكننا مساعدتك؟',
+                            'Comment pouvons-nous vous aider ?',
+                            'How can we help you?'),
                         style: const TextStyle(
                             fontSize: 26, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 16),
                     Text(
                         s.tr(
                             'اشرح المشكلة والخطوات التي سبقتها. يمكنك إرفاق صورة بعد إخفاء المعلومات الشخصية.',
-                            'Décrivez le problème et les étapes qui l’ont précédé. Vous pouvez joindre une capture après avoir masqué vos informations personnelles.'),
+                            'Décrivez le problème et les étapes qui l’ont précédé. Vous pouvez joindre une capture après avoir masqué vos informations personnelles.',
+                            'Explain the issue and the steps before it. You may attach a screenshot after masking personal details.'),
                         style: const TextStyle(height: 1.6)),
                     const SizedBox(height: 24),
                     const SelectableText('support@apolo.ma',
@@ -70,19 +74,21 @@ class _SupportScreenState extends State<SupportScreen> {
                     FilledButton.icon(
                         onPressed: _opening ? null : _contact,
                         icon: const Icon(Icons.open_in_new),
-                        label: Text(
-                            s.tr('فتح تطبيق البريد', 'Ouvrir la messagerie'))),
+                        label: Text(s.tr('فتح تطبيق البريد',
+                            'Ouvrir la messagerie', 'Open Mail App'))),
                     const SizedBox(height: 12),
                     Text(s.tr(
                         'لن تُرسل رسالة تلقائياً. راجعها ثم أرسلها من تطبيق البريد.',
-                        'Aucun message n’est envoyé automatiquement. Relisez-le et envoyez-le depuis votre messagerie.')),
+                        'Aucun message n’est envoyé automatiquement. Relisez-le et envoyez-le depuis votre messagerie.',
+                        'No email is sent automatically. Review and send it from your mail app.')),
                     const SizedBox(height: 32),
                     const Divider(),
                     const SizedBox(height: 16),
                     Text(
                         s.tr(
                             'لا تشارك كلمة المرور أو رمز التحقق أو بيانات الدفع مع أي شخص.',
-                            'Ne partagez jamais votre mot de passe, code de vérification ou données de paiement.'),
+                            'Ne partagez jamais votre mot de passe, code de vérification ou données de paiement.',
+                            'Never share your password, verification code, or payment details with anyone.'),
                         style: const TextStyle(
                             fontWeight: FontWeight.w600, height: 1.6)),
                     if (_error != null)

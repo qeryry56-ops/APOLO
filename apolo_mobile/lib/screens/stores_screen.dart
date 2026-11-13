@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'store_detail_screen.dart';
 import 'widgets/app_image.dart';
 
@@ -45,7 +46,8 @@ class _StoresScreenState extends State<StoresScreen> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 240) {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 240) {
       if (!_loading && !_loadingMore && _currentPage < _lastPage) {
         _loadMoreStores();
       }
@@ -59,7 +61,8 @@ class _StoresScreenState extends State<StoresScreen> {
     });
     try {
       final res = await _state.api.dio.get('/stores', queryParameters: {
-        if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
+        if (_searchCtrl.text.trim().isNotEmpty)
+          'search': _searchCtrl.text.trim(),
         'page': 1,
       });
       if (res.data is Map && res.data['status'] == 'success') {
@@ -67,7 +70,8 @@ class _StoresScreenState extends State<StoresScreen> {
           final meta = res.data['meta'];
           setState(() {
             _stores = res.data['data'] ?? [];
-            _currentPage = int.tryParse((meta?['current_page'] ?? 1).toString()) ?? 1;
+            _currentPage =
+                int.tryParse((meta?['current_page'] ?? 1).toString()) ?? 1;
             _lastPage = int.tryParse((meta?['last_page'] ?? 1).toString()) ?? 1;
             _loading = false;
           });
@@ -84,7 +88,8 @@ class _StoresScreenState extends State<StoresScreen> {
     final nextPage = _currentPage + 1;
     try {
       final res = await _state.api.dio.get('/stores', queryParameters: {
-        if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
+        if (_searchCtrl.text.trim().isNotEmpty)
+          'search': _searchCtrl.text.trim(),
         'page': nextPage,
       });
       if (res.data is Map && res.data['status'] == 'success') {
@@ -98,8 +103,12 @@ class _StoresScreenState extends State<StoresScreen> {
                 _stores.add(it);
               }
             }
-            _currentPage = int.tryParse((meta?['current_page'] ?? nextPage).toString()) ?? nextPage;
-            _lastPage = int.tryParse((meta?['last_page'] ?? _lastPage).toString()) ?? _lastPage;
+            _currentPage =
+                int.tryParse((meta?['current_page'] ?? nextPage).toString()) ??
+                    nextPage;
+            _lastPage =
+                int.tryParse((meta?['last_page'] ?? _lastPage).toString()) ??
+                    _lastPage;
             _loadingMore = false;
           });
         }
@@ -136,7 +145,8 @@ class _StoresScreenState extends State<StoresScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: _border),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 17, color: _ink),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            size: 17, color: _ink),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -144,17 +154,19 @@ class _StoresScreenState extends State<StoresScreen> {
                   Expanded(
                     child: Text(
                       s.stores,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: _ink,
-                        letterSpacing: -0.6,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.6),
                         height: 1.1,
                       ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: _badgeBg,
                       borderRadius: BorderRadius.circular(999),
@@ -162,11 +174,18 @@ class _StoresScreenState extends State<StoresScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(CupertinoIcons.checkmark_seal_fill, size: 14, color: _red),
+                        const Icon(CupertinoIcons.checkmark_seal_fill,
+                            size: 14, color: _red),
                         const SizedBox(width: 5),
                         Text(
                           'PRO',
-                          style: const TextStyle(color: _red, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.4),
+                          style: TextStyle(
+                            color: _red,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, 0.4),
+                          ),
                         ),
                       ],
                     ),
@@ -194,10 +213,17 @@ class _StoresScreenState extends State<StoresScreen> {
                       child: TextField(
                         controller: _searchCtrl,
                         onSubmitted: (_) => _fetchStores(),
-                        style: const TextStyle(color: _ink, fontSize: 14.5, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                            color: _ink,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
-                          hintText: s.tr('ابحث عن متجر احترافي معتمد...', 'Rechercher une boutique officielle...'),
-                          hintStyle: const TextStyle(color: _muted, fontSize: 14, fontWeight: FontWeight.w500),
+                          hintText: s.tr('ابحث عن متجر احترافي معتمد...',
+                              'Rechercher une boutique officielle...'),
+                          hintStyle: const TextStyle(
+                              color: _muted,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -216,7 +242,8 @@ class _StoresScreenState extends State<StoresScreen> {
                           color: _red,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(CupertinoIcons.search, size: 16, color: Colors.white),
+                        child: const Icon(CupertinoIcons.search,
+                            size: 16, color: Colors.white),
                       ),
                     ),
                   ],
@@ -240,12 +267,17 @@ class _StoresScreenState extends State<StoresScreen> {
                                   color: _badgeBg,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.storefront_rounded, size: 32, color: _red),
+                                child: const Icon(Icons.storefront_rounded,
+                                    size: 32, color: _red),
                               ),
                               const SizedBox(height: 14),
                               Text(
-                                s.tr('لا توجد متاجر مطابقة حالياً', 'Aucune boutique trouvée'),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink),
+                                s.tr('لا توجد متاجر مطابقة حالياً',
+                                    'Aucune boutique trouvée'),
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: _ink),
                               ),
                             ],
                           ),
@@ -255,10 +287,12 @@ class _StoresScreenState extends State<StoresScreen> {
                           onRefresh: _fetchStores,
                           child: ListView.separated(
                             controller: _scrollCtrl,
-                            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                            physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics()),
                             padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
                             itemCount: _stores.length + (_loadingMore ? 1 : 0),
-                            separatorBuilder: (_, __) => const SizedBox(height: 14),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 14),
                             itemBuilder: (context, idx) {
                               if (idx >= _stores.length) {
                                 return const Padding(
@@ -267,20 +301,28 @@ class _StoresScreenState extends State<StoresScreen> {
                                     child: SizedBox(
                                       width: 22,
                                       height: 22,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: _red),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: _red),
                                     ),
                                   ),
                                 );
                               }
                               final store = _stores[idx];
                               final logo = store['logo_url'] ?? store['logo'];
-                              final int count = int.tryParse((store['active_products_count'] ?? store['ads_count'] ?? 0).toString()) ?? 0;
+                              final int count = int.tryParse(
+                                      (store['active_products_count'] ??
+                                              store['ads_count'] ??
+                                              0)
+                                          .toString()) ??
+                                  0;
                               return GestureDetector(
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => StoreDetailScreen(subdomain: store['subdomain'].toString()),
+                                      builder: (_) => StoreDetailScreen(
+                                          subdomain:
+                                              store['subdomain'].toString()),
                                     ),
                                   );
                                 },
@@ -306,12 +348,16 @@ class _StoresScreenState extends State<StoresScreen> {
                                             padding: const EdgeInsets.all(3),
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              border: Border.all(color: _red.withValues(alpha: 0.25), width: 1.5),
+                                              border: Border.all(
+                                                  color: _red.withValues(
+                                                      alpha: 0.25),
+                                                  width: 1.5),
                                             ),
                                             child: AppAvatar(
                                               url: logo?.toString(),
                                               radius: 30,
-                                              fallbackIcon: Icons.storefront_rounded,
+                                              fallbackIcon:
+                                                  Icons.storefront_rounded,
                                             ),
                                           ),
                                           Positioned(
@@ -323,9 +369,14 @@ class _StoresScreenState extends State<StoresScreen> {
                                               decoration: BoxDecoration(
                                                 color: _red,
                                                 shape: BoxShape.circle,
-                                                border: Border.all(color: Colors.white, width: 2),
+                                                border: Border.all(
+                                                    color: Colors.white,
+                                                    width: 2),
                                               ),
-                                              child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+                                              child: const Icon(
+                                                  Icons.check_rounded,
+                                                  size: 12,
+                                                  color: Colors.white),
                                             ),
                                           ),
                                         ],
@@ -333,43 +384,68 @@ class _StoresScreenState extends State<StoresScreen> {
                                       const SizedBox(width: 14),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               (store['name'] ?? '').toString(),
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontWeight: FontWeight.w800,
                                                 fontSize: 16.5,
                                                 color: _ink,
-                                                letterSpacing: -0.3,
+                                                letterSpacing: AppTypography
+                                                    .trackingForContext(
+                                                        context, -0.3),
                                               ),
                                             ),
-                                            if ((store['description'] ?? '').toString().trim().isNotEmpty) ...[
+                                            if ((store['description'] ?? '')
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty) ...[
                                               const SizedBox(height: 4),
                                               Text(
-                                                (store['description'] ?? '').toString(),
+                                                (store['description'] ?? '')
+                                                    .toString(),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(color: _muted, fontSize: 12.5, height: 1.35),
+                                                style: const TextStyle(
+                                                    color: _muted,
+                                                    fontSize: 12.5,
+                                                    height: 1.35),
                                               ),
                                             ],
                                             const SizedBox(height: 8),
                                             Row(
                                               children: [
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4),
                                                   decoration: BoxDecoration(
                                                     color: _badgeBg,
-                                                    borderRadius: BorderRadius.circular(999),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            999),
                                                   ),
                                                   child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
-                                                      const Icon(Icons.inventory_2_outlined, size: 13, color: _red),
+                                                      const Icon(
+                                                          Icons
+                                                              .inventory_2_outlined,
+                                                          size: 13,
+                                                          color: _red),
                                                       const SizedBox(width: 4),
                                                       Text(
                                                         '$count ${s.tr('منتج', 'produits')}',
-                                                        style: const TextStyle(color: _red, fontSize: 11.5, fontWeight: FontWeight.w700),
+                                                        style: const TextStyle(
+                                                            color: _red,
+                                                            fontSize: 11.5,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w700),
                                                       ),
                                                     ],
                                                   ),
@@ -378,11 +454,20 @@ class _StoresScreenState extends State<StoresScreen> {
                                                 Row(
                                                   children: [
                                                     Text(
-                                                      s.tr('زيارة المتجر', 'Visiter'),
-                                                      style: const TextStyle(color: _red, fontSize: 12.5, fontWeight: FontWeight.w700),
+                                                      s.tr('زيارة المتجر',
+                                                          'Visiter'),
+                                                      style: const TextStyle(
+                                                          color: _red,
+                                                          fontSize: 12.5,
+                                                          fontWeight:
+                                                              FontWeight.w700),
                                                     ),
                                                     const SizedBox(width: 2),
-                                                    const Icon(Icons.chevron_right_rounded, size: 17, color: _red),
+                                                    const Icon(
+                                                        Icons
+                                                            .chevron_right_rounded,
+                                                        size: 17,
+                                                        color: _red),
                                                   ],
                                                 ),
                                               ],

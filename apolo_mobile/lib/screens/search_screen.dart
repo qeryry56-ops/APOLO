@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
@@ -372,13 +373,14 @@ class _SearchScreenState extends State<SearchScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          s.tr(
-                              'تصفية وترتيب الإعلانات', 'Filtrer les annonces'),
-                          style: const TextStyle(
+                          s.tr('تصفية وترتيب الإعلانات', 'Filtrer les annonces',
+                              'Filter & Sort Ads'),
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
                             color: _ink,
-                            letterSpacing: -0.4,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.4),
                           ),
                         ),
                         TextButton(
@@ -670,14 +672,15 @@ class _SearchScreenState extends State<SearchScreen> {
                         Text(
                           activeCat != null
                               ? _state.formatCategoryLabel(activeCat)
-                              : s.tr(
-                                  'استكشف الإعلانات', 'Explorer les annonces'),
+                              : s.tr('استكشف الإعلانات',
+                                  'Explorer les annonces', 'Explore Ads'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.5),
                             color: _ink,
                           ),
                         ),

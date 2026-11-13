@@ -128,13 +128,14 @@ class AccountAuth {
         user['id'] == null) {
       throw const AccountFailure('response');
     }
+    final isVerified =
+        user['email_verified'] == true || user['email_verified_at'] != null;
     final requiresOtp = registration ||
         root['requires_otp'] == true ||
         data['requires_otp'] == true ||
-        user['email_verified_at'] == null;
-    final otpSent = registration ||
-        root['otp_sent'] == true ||
-        data['otp_sent'] == true;
+        !isVerified;
+    final otpSent =
+        registration || root['otp_sent'] == true || data['otp_sent'] == true;
     return AccountSession(
       token,
       Map<String, dynamic>.from(user),

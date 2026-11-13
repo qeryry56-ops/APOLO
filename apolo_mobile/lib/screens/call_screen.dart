@@ -21,7 +21,7 @@ class CallScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppState().s;
     return Scaffold(
-      appBar: AppBar(title: Text(s.tr('المكالمات', 'Appels'))),
+      appBar: AppBar(title: Text(s.tr('المكالمات', 'Appels', 'Calls'))),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -32,8 +32,10 @@ class CallScreen extends StatelessWidget {
                   size: 48, color: Color(0xFFE31B23)),
               const SizedBox(height: 20),
               Text(
-                  s.tr('المكالمات غير متاحة حالياً',
-                      'Appels indisponibles pour le moment'),
+                  s.tr(
+                      'المكالمات غير متاحة حالياً',
+                      'Appels indisponibles pour le moment',
+                      'Calls are currently unavailable'),
                   key: const Key('calls-unavailable'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -42,13 +44,14 @@ class CallScreen extends StatelessWidget {
               Text(
                   s.tr(
                       'لم يتم إجراء أي اتصال. يمكنك التواصل عبر الرسائل النصية.',
-                      'Aucun appel lancé. Vous pouvez utiliser les messages texte.'),
+                      'Aucun appel lancé. Vous pouvez utiliser les messages texte.',
+                      'No call was placed. You can stay in touch using text messages.'),
                   textAlign: TextAlign.center),
               const SizedBox(height: 24),
               ElevatedButton(
                   onPressed: () => Navigator.maybePop(context),
-                  child: Text(
-                      s.tr('العودة للمحادثة', 'Revenir à la conversation'))),
+                  child: Text(s.tr('العودة للمحادثة',
+                      'Revenir à la conversation', 'Back to Chat'))),
             ],
           ),
         ),

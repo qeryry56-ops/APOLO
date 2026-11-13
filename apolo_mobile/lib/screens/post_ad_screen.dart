@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'auth_screen.dart';
 import '../account/account_helpers.dart';
 import 'widgets/app_image.dart';
@@ -779,11 +780,11 @@ class _PostAdScreenState extends State<PostAdScreen>
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w800,
             color: _ink,
-            letterSpacing: -0.5,
+            letterSpacing: AppTypography.trackingForContext(context, -0.5),
           ),
         ),
         const SizedBox(height: 6),
@@ -1765,11 +1766,12 @@ class _PostAdScreenState extends State<PostAdScreen>
                         : s.tr('مبروك! تم نشر إعلانك بنجاح 🎉',
                             'Félicitations ! Annonce publiée 🎉'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.w900,
                       color: _ink,
-                      letterSpacing: -0.5,
+                      letterSpacing:
+                          AppTypography.trackingForContext(context, -0.5),
                     ),
                   ),
                   const SizedBox(height: 8),

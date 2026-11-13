@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'auth_screen.dart';
 import 'main_shell.dart';
 import 'privacy_compliance_screen.dart';
@@ -154,12 +154,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               end: Alignment.bottomCenter,
               colors: [
                 Color(0xFFE31828), // Deep vibrant APOLO red top
-                Color(0xFFE31828), // Solid vibrant red through logo and headline
+                Color(
+                    0xFFE31828), // Solid vibrant red through logo and headline
                 Color(0xFFEA3B4A), // Smooth transition initiation
                 Color(0xFFF67584), // Light rose transition
                 Color(0xFFFFBCC6), // Soft light pink
                 Color(0xFFFFEEF1), // Very pale pink
-                Colors.white,      // Fading cleanly into pure white at bottom
+                Colors.white, // Fading cleanly into pure white at bottom
               ],
               stops: [0.0, 0.48, 0.58, 0.68, 0.80, 0.91, 1.0],
             ),
@@ -203,16 +204,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 SizedBox(height: isCompact ? 14 : 24),
 
                                 // Welcome Message
-                                const Text(
+                                Text(
                                   'Millions of Products.\nFree on Apolo.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontFamily: AppConfig.fontPrimary,
                                     fontSize: 27,
                                     fontWeight: FontWeight.w700,
                                     height: 1.25,
                                     color: Colors.white,
-                                    letterSpacing: -0.4,
+                                    letterSpacing:
+                                        AppTypography.trackingForContext(
+                                            context, -0.4),
                                   ),
                                 ),
 
@@ -273,7 +275,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                       child: const Text(
                                         'Privacy policy',
                                         style: TextStyle(
-                                          fontFamily: AppConfig.fontPrimary,
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF737373),
@@ -285,7 +286,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                       child: const Text(
                                         'Terms of services',
                                         style: TextStyle(
-                                          fontFamily: AppConfig.fontPrimary,
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF737373),
@@ -362,11 +362,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: AppConfig.fontPrimary,
                   fontSize: 15.5,
                   fontWeight: FontWeight.w600,
                   color: textColor,
-                  letterSpacing: -0.2,
+                  letterSpacing:
+                      AppTypography.trackingForContext(context, -0.2),
                 ),
               ),
             ),

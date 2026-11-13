@@ -1,9 +1,10 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'chat_room_screen.dart';
 import 'post_ad_screen.dart';
 import 'auth_screen.dart';
@@ -88,7 +89,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
             as List<dynamic>;
         final parsed = rawList
             .whereType<Map>()
-            .map((e) => _normalizeBackendConversation(Map<String, dynamic>.from(e)))
+            .map((e) =>
+                _normalizeBackendConversation(Map<String, dynamic>.from(e)))
             .toList();
 
         if (mounted) {
@@ -131,14 +133,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
       'id': convId,
       'ad_id': raw['ad_id'] ?? ad['id'] ?? 0,
       'ad_title': (raw['ad_title'] ?? ad['title'] ?? '').toString(),
-      'ad_price': (raw['ad_price'] ?? ad['price_formatted'] ?? ad['price'] ?? '')
+      'ad_price':
+          (raw['ad_price'] ?? ad['price_formatted'] ?? ad['price'] ?? '')
+              .toString(),
+      'ad_image': (raw['ad_image'] ?? ad['primary_image'] ?? ad['image'] ?? '')
           .toString(),
-      'ad_image':
-          (raw['ad_image'] ?? ad['primary_image'] ?? ad['image'] ?? '').toString(),
       'peer_id': raw['peer_id'] ?? peer['id'] ?? 0,
       'peer_name':
           (raw['peer_name'] ?? peer['name'] ?? 'Jenny Wilson').toString(),
-      'peer_avatar': (raw['peer_avatar'] ?? peer['avatar_url'] ?? peer['avatar'] ?? '').toString(),
+      'peer_avatar':
+          (raw['peer_avatar'] ?? peer['avatar_url'] ?? peer['avatar'] ?? '')
+              .toString(),
       'peer_online': raw['peer_online'] ?? true,
       'last_message': lastBody.isNotEmpty ? lastBody : 'Hello! How are you?',
       'last_message_time':
@@ -270,9 +275,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   Navigator.pop(dialogCtx);
                                   HapticFeedback.mediumImpact();
                                   setState(() {
-                                    _conversations.removeWhere((c) => c['id'] == convId);
+                                    _conversations
+                                        .removeWhere((c) => c['id'] == convId);
                                   });
-                                  _showActionSnackBar('تم نقل المحادثة إلى الأرشيف');
+                                  _showActionSnackBar(
+                                      'تم نقل المحادثة إلى الأرشيف');
                                 },
                               ),
                               _buildAppleMenuItem(
@@ -302,7 +309,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   Navigator.pop(dialogCtx);
                                   HapticFeedback.heavyImpact();
                                   setState(() {
-                                    _conversations.removeWhere((c) => c['id'] == convId);
+                                    _conversations
+                                        .removeWhere((c) => c['id'] == convId);
                                   });
                                   _showActionSnackBar('تم حظر $peerName');
                                 },
@@ -313,7 +321,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 onTap: () {
                                   Navigator.pop(dialogCtx);
                                   HapticFeedback.mediumImpact();
-                                  _showActionSnackBar('تم إرسال البلاغ للإدارة');
+                                  _showActionSnackBar(
+                                      'تم إرسال البلاغ للإدارة');
                                 },
                               ),
                               _buildAppleMenuItem(
@@ -324,9 +333,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   Navigator.pop(dialogCtx);
                                   HapticFeedback.heavyImpact();
                                   setState(() {
-                                    _conversations.removeWhere((c) => c['id'] == convId);
+                                    _conversations
+                                        .removeWhere((c) => c['id'] == convId);
                                   });
-                                  _showActionSnackBar('تم حذف المحادثة نهائياً');
+                                  _showActionSnackBar(
+                                      'تم حذف المحادثة نهائياً');
                                 },
                               ),
                             ],
@@ -337,7 +348,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         // 2. Active Chat Preview Row Card (Exact match to screenshot)
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(18),
@@ -361,7 +373,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(999),
-                                  child: avatarUrl != null && avatarUrl.isNotEmpty
+                                  child: avatarUrl != null &&
+                                          avatarUrl.isNotEmpty
                                       ? Image.network(
                                           avatarUrl,
                                           fit: BoxFit.cover,
@@ -382,16 +395,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       peerName,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Color(0xFF0F172A),
+                                      style: TextStyle(
+                                        color: const Color(0xFF0F172A),
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
-                                        letterSpacing: -0.2,
+                                        letterSpacing:
+                                            AppTypography.trackingForContext(
+                                                context, -0.2),
                                       ),
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
-                                      'Sent $lastTime',
+                                      _state.s.tr(
+                                        'أُرسلت $lastTime',
+                                        'Envoyé $lastTime',
+                                        'Sent $lastTime',
+                                      ),
                                       style: const TextStyle(
                                         color: Color(0xFF9CA3AF),
                                         fontSize: 13,
@@ -450,7 +469,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 color: itemColor,
                 fontSize: 15.5,
                 fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w600,
-                letterSpacing: -0.2,
+                letterSpacing: AppTypography.trackingForContext(context, -0.2),
               ),
             ),
           ],
@@ -500,7 +519,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: Container(
                 decoration: const BoxDecoration(
                   color: _bgWhite,
-                  border: Border(right: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+                  border: Border(
+                      right: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
                 ),
                 child: _buildChatsListPane(isDesktop: true),
               ),
@@ -518,8 +538,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       peerName: (_activeWebConversation!['peer_name'] ??
                               'Jenny Wilson')
                           .toString(),
-                      adTitle: _activeWebConversation!['ad_title']?.toString() ??
-                          '',
+                      adTitle:
+                          _activeWebConversation!['ad_title']?.toString() ?? '',
                       peerAvatar:
                           _activeWebConversation!['peer_avatar']?.toString(),
                       adPrice: _activeWebConversation!['ad_price']?.toString(),
@@ -625,16 +645,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ),
 
-        // 2. Large Bold Title: `Chats`
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 10, 20, 14),
+        // 2. Large Bold Title
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
           child: Text(
-            'Chats',
+            _state.s.tr('المحادثات', 'Messages', 'Chats'),
             style: TextStyle(
               color: _textBlack,
               fontSize: 32,
               fontWeight: FontWeight.w900,
-              letterSpacing: -0.6,
+              letterSpacing: AppTypography.trackingForContext(context, -0.6),
             ),
           ),
         ),
@@ -860,16 +880,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         )
                       : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final conv = filtered[index];
-                        final isSelected = isDesktop &&
-                            _activeWebConversation?['id'] == conv['id'];
-                        return _buildChatRow(conv, isSelected, isDesktop);
-                      },
-                    ),
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final conv = filtered[index];
+                            final isSelected = isDesktop &&
+                                _activeWebConversation?['id'] == conv['id'];
+                            return _buildChatRow(conv, isSelected, isDesktop);
+                          },
+                        ),
         ),
       ],
     );
@@ -980,11 +1000,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           peerName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: _textBlack,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -0.2,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.2),
                           ),
                         ),
                       ),

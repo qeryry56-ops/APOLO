@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'ad_detail_screen.dart';
 import 'ad_reels_screen.dart';
 import 'auth_screen.dart';
@@ -215,11 +216,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: _ink,
-                            letterSpacing: -0.3,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.3),
                           ),
                         ),
                       ),
@@ -355,11 +357,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
                                   color: _ink,
-                                  letterSpacing: -0.5,
+                                  letterSpacing:
+                                      AppTypography.trackingForContext(
+                                          context, -0.5),
                                 ),
                               ),
                             ),
@@ -632,11 +636,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     return Text(
       name.isNotEmpty ? name[0].toUpperCase() : 'A',
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.w800,
         color: _ink,
-        letterSpacing: -0.5,
+        letterSpacing: AppTypography.trackingForContext(context, -0.5),
       ),
     );
   }
@@ -660,7 +664,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
                 color: valueColor,
-                letterSpacing: -0.5,
+                letterSpacing: AppTypography.trackingForContext(context, -0.5),
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -853,11 +857,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                         color: _ink,
-                        letterSpacing: -0.2,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.2),
                       ),
                     ),
                     const SizedBox(height: 2),

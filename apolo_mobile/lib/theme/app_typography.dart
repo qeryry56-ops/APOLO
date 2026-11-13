@@ -266,4 +266,16 @@ class AppTypography {
       fontFeatures: const [FontFeature.tabularFigures()],
     );
   }
+
+  /// Returns `true` when [locale] uses Arabic script.
+  static bool isArabicLocale(Locale? locale) => locale?.languageCode == 'ar';
+
+  /// Returns zero letter-spacing for Arabic to preserve connected glyphs,
+  /// otherwise returns [latinValue].
+  static double tracking(Locale? locale, double latinValue) =>
+      isArabicLocale(locale) ? 0.0 : latinValue;
+
+  /// Context-aware wrapper around [tracking].
+  static double trackingForContext(BuildContext context, double latinValue) =>
+      tracking(Localizations.maybeLocaleOf(context), latinValue);
 }

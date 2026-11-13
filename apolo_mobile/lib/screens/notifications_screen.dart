@@ -1,8 +1,10 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
 import 'chat_room_screen.dart';
@@ -102,7 +104,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Map<String, dynamic> _normalizeNotification(Map<String, dynamic> raw) {
-    final type = (raw['type'] ?? raw['category'] ?? '').toString().toLowerCase();
+    final type =
+        (raw['type'] ?? raw['category'] ?? '').toString().toLowerCase();
     int category = 2; // Default: Activity
     if (type.contains('chat') ||
         type.contains('message') ||
@@ -116,13 +119,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       'id': raw['id'] ?? DateTime.now().millisecondsSinceEpoch,
       'category': category,
       'unread': raw['is_read'] != true && raw['read_at'] == null,
-      'title': (raw['title'] ?? raw['data']?['title'] ?? 'إشعار جديد').toString(),
-      'body': (raw['body'] ?? raw['message'] ?? raw['data']?['message'] ?? '').toString(),
+      'title':
+          (raw['title'] ?? raw['data']?['title'] ?? 'إشعار جديد').toString(),
+      'body': (raw['body'] ?? raw['message'] ?? raw['data']?['message'] ?? '')
+          .toString(),
       'time': (raw['created_at_human'] ?? raw['time'] ?? 'منذ قليل').toString(),
       'ad_id': raw['ad_id'] ?? raw['data']?['ad_id'],
-      'conversation_id': raw['conversation_id'] ?? raw['data']?['conversation_id'],
+      'conversation_id':
+          raw['conversation_id'] ?? raw['data']?['conversation_id'],
       'asset': _assetForNotification(raw),
-      'accent': category == 1 ? _red : const Color(0xFF2563EB),
+      'accent': category == 1 ? _red : _ink,
     };
   }
 
@@ -130,16 +136,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final title = (raw['title'] ?? '').toString().toLowerCase();
     final body = (raw['body'] ?? '').toString().toLowerCase();
     final combined = '$title $body';
-    if (combined.contains('سيار') || combined.contains('auto') || combined.contains('car')) {
+    if (combined.contains('سيار') ||
+        combined.contains('auto') ||
+        combined.contains('car')) {
       return 'assets/images/hero_car.png';
     }
-    if (combined.contains('هاتف') || combined.contains('iphone') || combined.contains('phone')) {
+    if (combined.contains('هاتف') ||
+        combined.contains('iphone') ||
+        combined.contains('phone')) {
       return 'assets/images/cat_phones.png';
     }
-    if (combined.contains('حاسوب') || combined.contains('mac') || combined.contains('pc')) {
+    if (combined.contains('حاسوب') ||
+        combined.contains('mac') ||
+        combined.contains('pc')) {
       return 'assets/images/cat_computers.png';
     }
-    if (combined.contains('عقار') || combined.contains('شقة') || combined.contains('villa')) {
+    if (combined.contains('عقار') ||
+        combined.contains('شقة') ||
+        combined.contains('villa')) {
       return 'assets/images/cat_realestate.png';
     }
     return 'assets/images/state_notifications.png';
@@ -240,65 +254,71 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               leading: IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: Icon(
-                  isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left,
+                  isAr
+                      ? CupertinoIcons.chevron_right
+                      : CupertinoIcons.chevron_left,
                   color: _ink,
                   size: 22,
                 ),
               ),
               actions: [
-                // Offline toggle test pill
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 8),
-                  child: PressableScale(
-                    onTap: () {
-                      setState(() => _isOffline = !_isOffline);
-                      if (!_isOffline) _loadNotifications();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isOffline
-                            ? const Color(0xFFFEF2F2)
-                            : _surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _isOffline
-                              ? const Color(0xFFFECACA)
-                              : const Color(0xFFE2E8F0),
+                if (kDebugMode)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8),
+                    child: PressableScale(
+                      onTap: () {
+                        setState(() => _isOffline = !_isOffline);
+                        if (!_isOffline) _loadNotifications();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _isOffline
-                                ? CupertinoIcons.wifi_slash
-                                : CupertinoIcons.wifi,
-                            size: 13,
-                            color: _isOffline ? _red : const Color(0xFF475569),
+                        decoration: BoxDecoration(
+                          color:
+                              _isOffline ? const Color(0xFFFEF2F2) : _surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _isOffline
+                                ? const Color(0xFFFECACA)
+                                : const Color(0xFFE2E8F0),
                           ),
-                          const SizedBox(width: 5),
-                          Text(
-                            _isOffline
-                                ? (isAr ? 'بدون أنترنت' : 'Hors-ligne')
-                                : (isAr ? 'متصل' : 'En ligne'),
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: _isOffline ? _red : const Color(0xFF475569),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isOffline
+                                  ? CupertinoIcons.wifi_slash
+                                  : CupertinoIcons.wifi,
+                              size: 13,
+                              color:
+                                  _isOffline ? _red : const Color(0xFF475569),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 5),
+                            Text(
+                              _isOffline
+                                  ? (isAr ? 'بدون أنترنت' : 'Hors-ligne')
+                                  : (isAr ? 'متصل' : 'En ligne'),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color:
+                                    _isOffline ? _red : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (!_isOffline && _state.isLoggedIn && _items.any((e) => e['unread'] == true))
+                if (!_isOffline &&
+                    _state.isLoggedIn &&
+                    _items.any((e) => e['unread'] == true))
                   IconButton(
-                    tooltip: isAr ? 'تحديد الكل كمقروء' : 'Tout marquer comme lu',
+                    tooltip:
+                        isAr ? 'تحديد الكل كمقروء' : 'Tout marquer comme lu',
                     onPressed: _markAllRead,
                     icon: const Icon(
                       CupertinoIcons.checkmark_circle,
@@ -315,12 +335,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   bottom: 14,
                 ),
                 title: Text(
-                  isAr ? 'الإشعارات والتنبيهات' : 'Notifications',
-                  style: const TextStyle(
+                  _state.s.tr(
+                      'الإشعارات والتنبيهات', 'Notifications', 'Notifications'),
+                  style: TextStyle(
                     color: _ink,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
+                    letterSpacing:
+                        AppTypography.trackingForContext(context, -0.4),
                   ),
                 ),
               ),
@@ -454,13 +476,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             direction: DismissDirection.endToStart,
                             onDismissed: (_) {
                               setState(() {
-                                _items.removeWhere((e) => e['id'] == item['id']);
+                                _items
+                                    .removeWhere((e) => e['id'] == item['id']);
                               });
                               _updateUnreadBadge();
                             },
                             background: Container(
                               alignment: AlignmentDirectional.centerEnd,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEF2F2),
                                 borderRadius: BorderRadius.circular(16),
@@ -508,7 +532,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       child: Image.asset(
                                         item['asset'] as String,
                                         fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => const Icon(
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(
                                           CupertinoIcons.bell_fill,
                                           color: _red,
                                           size: 22,
@@ -518,7 +543,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
@@ -531,7 +557,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                                         ? FontWeight.w800
                                                         : FontWeight.w600,
                                                     color: _ink,
-                                                    letterSpacing: -0.2,
+                                                    letterSpacing: AppTypography
+                                                        .trackingForContext(
+                                                            context, -0.2),
                                                   ),
                                                 ),
                                               ),
@@ -539,14 +567,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                                 Container(
                                                   width: 8,
                                                   height: 8,
-                                                  decoration: const BoxDecoration(
+                                                  decoration:
+                                                      const BoxDecoration(
                                                     color: _red,
                                                     shape: BoxShape.circle,
                                                   ),
                                                 ),
                                             ],
                                           ),
-                                          if ((item['body'] as String).isNotEmpty) ...[
+                                          if ((item['body'] as String)
+                                              .isNotEmpty) ...[
                                             const SizedBox(height: 4),
                                             Text(
                                               item['body'] as String,

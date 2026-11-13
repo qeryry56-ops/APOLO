@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'call_screen.dart';
 import 'seller_profile_screen.dart';
 import 'widgets/chat_utils.dart';
@@ -50,6 +51,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   bool _loadingRequest = false;
   String? _loadError;
   Timer? _pollTimer;
+  Timer? _focusScrollTimer;
   Object? _accountId;
 
   static const Color _bg = Color(0xFFFFFFFF);
@@ -75,7 +77,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     _focus.addListener(() {
       if (_focus.hasFocus) {
-        Future.delayed(const Duration(milliseconds: 300), _scrollToEnd);
+        _focusScrollTimer?.cancel();
+        _focusScrollTimer =
+            Timer(const Duration(milliseconds: 300), _scrollToEnd);
       }
     });
 
@@ -118,6 +122,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _focusScrollTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _state.removeListener(_onAccountChanged);
     _msgCtrl.dispose();
@@ -360,9 +365,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
           // Floating Call Dropdown Menu Popup (Matching Reference)
           if (_showCallMenu)
-            Positioned(
+            PositionedDirectional(
               top: MediaQuery.of(context).padding.top + 48,
-              right: 16,
+              end: 16,
               child: _buildCallDropdownCard(),
             ),
         ],
@@ -467,8 +472,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Widget _buildHeader() {
     final topInset = MediaQuery.of(context).padding.top;
     return Container(
-      color: Colors.white,
-      padding: EdgeInsets.fromLTRB(8, topInset + 4, 16, 10),
+      padding: EdgeInsetsDirectional.fromSTEB(8, topInset + 4, 16, 10),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
@@ -526,11 +530,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     widget.peerName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: _textBlack,
-                      letterSpacing: -0.2,
+                      letterSpacing:
+                          AppTypography.trackingForContext(context, -0.2),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -608,14 +613,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           children: [
             ListTile(
               leading: const Icon(CupertinoIcons.phone, color: _apoloRed),
-              title: Text(_state.s.tr('مكالمة صوتية — غير متاحة',
-                  'Appel vocal — indisponible')),
+              title: Text(_state.s.tr(
+                  'مكالمة صوتية — غير متاحة', 'Appel vocal — indisponible')),
               onTap: () => _startCall(isVideo: false),
             ),
             ListTile(
-              leading: const Icon(CupertinoIcons.videocam_fill, color: _apoloRed),
-              title: Text(_state.s.tr('مكالمة فيديو — غير متاحة',
-                  'Appel vidéo — indisponible')),
+              leading:
+                  const Icon(CupertinoIcons.videocam_fill, color: _apoloRed),
+              title: Text(_state.s.tr(
+                  'مكالمة فيديو — غير متاحة', 'Appel vidéo — indisponible')),
               onTap: () => _startCall(isVideo: true),
             ),
           ],

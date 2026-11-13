@@ -32,7 +32,8 @@ class AppImage extends StatelessWidget {
           height: height,
           color: const Color(0xFFF1F5F9),
           alignment: Alignment.center,
-          child: const Icon(Icons.image_outlined, size: 28, color: Color(0xFF94A3B8)),
+          child: const Icon(Icons.image_outlined,
+              size: 28, color: Color(0xFF94A3B8)),
         );
 
     if (url == null || url!.trim().isEmpty) {
@@ -52,9 +53,13 @@ class AppImage extends StatelessWidget {
 
     // Auto-calculate memory cache dimensions to cap raster footprint
     final int? targetMemWidth = memCacheWidth ??
-        (width != null && width!.isFinite && width! > 0 ? (width! * 2).round() : null);
+        (width != null && width!.isFinite && width! > 0
+            ? (width! * 2).round()
+            : null);
     final int? targetMemHeight = memCacheHeight ??
-        (height != null && height!.isFinite && height! > 0 ? (height! * 2).round() : null);
+        (height != null && height!.isFinite && height! > 0
+            ? (height! * 2).round()
+            : null);
 
     if (kIsWeb) {
       return Image.network(
@@ -76,7 +81,8 @@ class AppImage extends StatelessWidget {
             child: const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE31B23)),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Color(0xFFE31B23)),
             ),
           );
         },
@@ -98,7 +104,8 @@ class AppImage extends StatelessWidget {
         child: const SizedBox(
           width: 18,
           height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE31B23)),
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: Color(0xFFE31B23)),
         ),
       ),
       errorWidget: (_, __, ___) => defaultFallback,
@@ -140,7 +147,8 @@ class AppAvatar extends StatelessWidget {
               fit: BoxFit.cover,
               memCacheWidth: (size * 2).round(),
               memCacheHeight: (size * 2).round(),
-              fallback: Icon(fallbackIcon, color: iconColor, size: radius * 0.95),
+              fallback:
+                  Icon(fallbackIcon, color: iconColor, size: radius * 0.95),
             )
           : Icon(fallbackIcon, color: iconColor, size: radius * 0.95),
     );

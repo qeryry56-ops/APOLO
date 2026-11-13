@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'ad_detail_screen.dart';
 import 'notifications_screen.dart';
 import 'post_ad_screen.dart';
@@ -256,10 +257,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                             : 'Bonjour, $_userName'),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 27,
                                       fontWeight: FontWeight.w900,
-                                      letterSpacing: -0.6,
+                                      letterSpacing:
+                                          AppTypography.trackingForContext(
+                                              context, -0.6),
                                       color: _ink,
                                       height: 1.15,
                                     ),
@@ -525,10 +528,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? 'بيع واشري بأمان وبلا وسيط'
                             : 'Achetez et vendez en toute sécurité',
                         maxLines: 2,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -0.4,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.4),
                           color: Colors.white,
                           height: 1.25,
                         ),
@@ -658,11 +662,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     isAr ? 'تصفح حسب الفئات' : 'Catégories',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18.5,
                       fontWeight: FontWeight.w900,
                       color: _ink,
-                      letterSpacing: -0.4,
+                      letterSpacing:
+                          AppTypography.trackingForContext(context, -0.4),
                     ),
                   ),
                   GestureDetector(
@@ -797,11 +802,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 6),
                       Text(
                         isAr ? 'عروض حصرية مميزة' : 'Offres exclusives',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18.5,
                           fontWeight: FontWeight.w900,
                           color: _ink,
-                          letterSpacing: -0.4,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.4),
                         ),
                       ),
                     ],
@@ -943,11 +949,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                       title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w800,
                                         fontSize: 16,
-                                        letterSpacing: -0.3,
+                                        letterSpacing:
+                                            AppTypography.trackingForContext(
+                                                context, -0.3),
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -1025,11 +1033,11 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             isAr ? 'علاش تختار Apolo؟' : 'Pourquoi choisir Apolo ?',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18.5,
               fontWeight: FontWeight.w900,
               color: _ink,
-              letterSpacing: -0.4,
+              letterSpacing: AppTypography.trackingForContext(context, -0.4),
             ),
           ),
           const SizedBox(height: 12),
@@ -1059,7 +1067,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 _buildOverviewRow(
                   icon: CupertinoIcons.chat_bubble_2_fill,
-                  iconColor: const Color(0xFF2563EB),
+                  iconColor: _ink,
                   title: isAr ? 'شات واتصال مباشر' : 'Discussion directe',
                   subtitle: isAr
                       ? 'تواصل فالحين مع البائع وقدم عرض سعر بضغطة وحدة.'
@@ -1271,11 +1279,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : 'Boutiques Pro Vérifiées',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: _ink,
                               fontWeight: FontWeight.w800,
                               fontSize: 14,
-                              letterSpacing: -0.2,
+                              letterSpacing: AppTypography.trackingForContext(
+                                  context, -0.2),
                             ),
                           ),
                         ),

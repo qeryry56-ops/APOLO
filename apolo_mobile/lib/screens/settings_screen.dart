@@ -53,8 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _state.toggleLanguage();
     } catch (_) {
       if (mounted) {
-        setState(() => _error = _state.s.tr(
-            'تعذر حفظ اللغة. أعد المحاولة.',
+        setState(() => _error = _state.s.tr('تعذر حفظ اللغة. أعد المحاولة.',
             'Impossible d’enregistrer la langue. Réessayez.'));
       }
     } finally {
@@ -95,8 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _state.logout();
     } catch (_) {
       if (mounted) {
-        setState(() => _error = s.tr(
-            'تعذر إغلاق الجلسة المحلية. أعد المحاولة.',
+        setState(() => _error = s.tr('تعذر إغلاق الجلسة المحلية. أعد المحاولة.',
             'Impossible de fermer la session locale. Réessayez.'));
       }
     } finally {
@@ -127,19 +125,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               titleSpacing: 0,
               leading: IconButton(
                 icon: Icon(
-                  isAr ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new_rounded,
+                  isAr
+                      ? Icons.arrow_forward_ios_rounded
+                      : Icons.arrow_back_ios_new_rounded,
                   color: _textDark,
                   size: 20,
                 ),
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
               title: Text(
-                s.tr('الإعدادات', 'Setting'),
-                style: const TextStyle(
+                s.tr('الإعدادات', 'Paramètres', 'Settings'),
+                style: TextStyle(
                   color: _textDark,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: -0.4,
+                  letterSpacing:
+                      Localizations.maybeLocaleOf(context)?.languageCode == 'ar'
+                          ? 0.0
+                          : -0.4,
                 ),
               ),
             ),
@@ -148,7 +151,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 480),
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     children: [
                       // Section 1: ACCOUNT
                       _buildSectionHeader(s.tr('الحساب', 'ACCOUNT')),
@@ -188,7 +192,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         _buildRow(
                           icon: Icons.notifications_none_rounded,
-                          title: s.tr('إعدادات الإشعارات', 'Notification settings'),
+                          title: s.tr(
+                              'إعدادات الإشعارات', 'Notification settings'),
                           onTap: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -211,17 +216,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Section 2: OTHER SETTING
-                      _buildSectionHeader(s.tr('إعدادات أخرى', 'OTHER SETTING')),
+                      _buildSectionHeader(
+                          s.tr('إعدادات أخرى', 'OTHER SETTING')),
                       _buildCard([
                         _buildRow(
                           icon: Icons.article_outlined,
                           title: s.tr('الشروط والأحكام', 'Terms & conditions'),
-                          onTap: () => _open(const PrivacyComplianceScreen(initialTab: 0)),
+                          onTap: () => _open(
+                              const PrivacyComplianceScreen(initialTab: 0)),
                         ),
                         _buildRow(
                           icon: Icons.folder_outlined,
                           title: s.tr('سياسة الخصوصية', 'Privacy policy'),
-                          onTap: () => _open(const PrivacyComplianceScreen(initialTab: 0)),
+                          onTap: () => _open(
+                              const PrivacyComplianceScreen(initialTab: 0)),
                         ),
                         _buildRow(
                           icon: Icons.help_outline,
@@ -230,8 +238,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         _buildRow(
                           icon: Icons.language_rounded,
-                          title: s.tr('لغة التطبيق', 'Language'),
-                          trailingLabel: s.isAr ? 'العربية' : 'Français',
+                          title: s.tr('لغة التطبيق', 'Langue', 'Language'),
+                          trailingLabel: s.isAr
+                              ? 'العربية'
+                              : (s.isEn ? 'English' : 'Français'),
                           onTap: _busy ? null : _language,
                         ),
                         if (_state.isLoggedIn)
@@ -240,7 +250,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             title: s.tr('تعطيل الحساب', 'Deactivate account'),
                             isDanger: true,
                             showChevron: false,
-                            onTap: () => _open(const PrivacyComplianceScreen(initialTab: 1)),
+                            onTap: () => _open(
+                                const PrivacyComplianceScreen(initialTab: 1)),
                           ),
                       ]),
 
@@ -252,7 +263,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         height: 54,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         child: TextButton(
-                          key: ValueKey(_state.isLoggedIn ? 'settings-logout' : 'settings-login'),
+                          key: ValueKey(_state.isLoggedIn
+                              ? 'settings-logout'
+                              : 'settings-login'),
                           onPressed: _busy
                               ? null
                               : (_state.isLoggedIn
@@ -265,12 +278,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             elevation: 0,
                           ),
                           child: Text(
-                            _state.isLoggedIn ? s.logout.toUpperCase() : 'LOGIN',
-                            style: const TextStyle(
+                            (_state.isLoggedIn ? s.logout : s.login)
+                                .toUpperCase(),
+                            style: TextStyle(
                               color: _red,
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
+                              letterSpacing:
+                                  Localizations.maybeLocaleOf(context)
+                                              ?.languageCode ==
+                                          'ar'
+                                      ? 0.0
+                                      : 0.8,
                             ),
                           ),
                         ),
@@ -321,11 +340,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.only(left: 6, right: 6, bottom: 10, top: 6),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           color: _sectionLabel,
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.8,
+          letterSpacing:
+              Localizations.maybeLocaleOf(context)?.languageCode == 'ar'
+                  ? 0.0
+                  : 0.8,
         ),
       ),
     );
@@ -338,7 +360,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (i < children.length - 1) {
         list.add(
           const Padding(
-            padding: EdgeInsets.only(left: 52, right: 16),
+            padding: EdgeInsetsDirectional.only(start: 52, end: 16),
             child: Divider(height: 1, thickness: 1, color: _divider),
           ),
         );

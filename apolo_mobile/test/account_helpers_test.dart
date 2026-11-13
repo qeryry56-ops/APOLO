@@ -222,5 +222,28 @@ void main() {
       await expectLater(auth.login('test@example.ma', 'password'),
           throwsA(isA<DioException>()));
     });
+
+    test('login accepts email_verified boolean without triggering OTP',
+        () async {
+      setup((options) => json(
+          '{"token":"ok","user":{"id":10,"name":"Ali","email":"ali@apolo.ma","email_verified":true}}'));
+      final session = await auth.login('ali@apolo.ma', 'password');
+      expect(session.requiresOtp, isFalse);
+      expect(session.otpSent, isFalse);
+    });
+
+    test('login propagates otp_sent true/false accurately', () async {
+      setup((options) => json(
+          '{"token":"pending","requires_otp":true,"otp_sent":false,"user":{"id":11,"email":"b@apolo.ma","email_verified_at":null}}'));
+      final failedDispatch = await auth.login('b@apolo.ma', 'password');
+      expect(failedDispatch.requiresOtp, isTrue);
+      expect(failedDispatch.otpSent, isFalse);
+
+      setup((options) => json(
+          '{"token":"pending","requires_otp":true,"otp_sent":true,"user":{"id":11,"email":"b@apolo.ma","email_verified_at":null}}'));
+      final okDispatch = await auth.login('b@apolo.ma', 'password');
+      expect(okDispatch.requiresOtp, isTrue);
+      expect(okDispatch.otpSent, isTrue);
+    });
   });
 }

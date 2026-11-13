@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
+import '../theme/app_typography.dart';
 
 /// Compact 58px rounded input card with an inner animated floating label.
 ///
@@ -45,7 +46,7 @@ class CustomAuthInputField extends StatefulWidget {
     this.onChanged,
     this.readOnly = false,
     this.onTap,
-    this.focusColor = const Color(0xFF0052FF),
+    this.focusColor = AppConfig.primary,
     this.textInputAction = TextInputAction.next,
     this.onFieldSubmitted,
   });
@@ -137,17 +138,16 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                         duration: animDuration,
                         curve: Curves.easeOut,
                         style: TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
                           fontSize: _shouldFloat ? 11.5 : 15,
-                          fontWeight: _shouldFloat
-                              ? FontWeight.w500
-                              : FontWeight.w400,
+                          fontWeight:
+                              _shouldFloat ? FontWeight.w500 : FontWeight.w400,
                           color: hasError
                               ? const Color(0xFFEF4444)
                               : (_isFocused
                                   ? widget.focusColor
                                   : const Color(0xFF6B7280)),
-                          letterSpacing: -0.1,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.1),
                         ),
                         child: Text(
                           widget.label,
@@ -199,16 +199,17 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                               textInputAction: widget.textInputAction,
                               onFieldSubmitted: (_) =>
                                   widget.onFieldSubmitted?.call(),
-                              style: const TextStyle(
-                                fontFamily: AppConfig.fontPrimary,
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF111827),
-                                letterSpacing: -0.2,
+                                color: const Color(0xFF111827),
+                                letterSpacing: AppTypography.trackingForContext(
+                                    context, -0.2),
                               ),
                               cursorColor: widget.focusColor,
                               cursorHeight: 18,
-                              inputFormatters: widget.type == TextInputType.number
+                              inputFormatters: widget.type ==
+                                      TextInputType.number
                                   ? [
                                       TextInputFormatter.withFunction(
                                         (oldValue, newValue) =>
@@ -271,7 +272,8 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                             },
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
                               child: Icon(
                                 _obscure
                                     ? Icons.visibility_outlined

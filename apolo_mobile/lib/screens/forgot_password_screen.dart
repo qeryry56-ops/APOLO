@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import '../widgets/custom_auth_input_field.dart';
 import 'support_screen.dart';
 
@@ -15,7 +16,7 @@ import 'support_screen.dart';
 /// - Centered header navigation title.
 /// - Bold 28px headline with subtle negative letter spacing.
 /// - Crisp, rounded input card with no grey fill artifacts.
-/// - Interactive purple focus border (#5E48E8).
+/// - Interactive brand crimson focus border (#E31B23).
 /// - 54px solid black stadium action button.
 /// - Clear, reassuring success state feedback.
 class ForgotPasswordScreen extends StatefulWidget {
@@ -192,13 +193,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         child: _buildBackButton(),
                       ),
                       Text(
-                        s.tr('استعادة الحساب', 'Forgot password'),
-                        style: const TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
+                        s.tr('استعادة الحساب', 'Mot de passe oublié',
+                            'Forgot password'),
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
-                          letterSpacing: -0.2,
+                          color: const Color(0xFF111827),
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.2),
                         ),
                       ),
                     ],
@@ -220,13 +222,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                         // Large Headline
                         Text(
-                          s.tr('نسيت كلمة المرور؟', 'Forgot password'),
-                          style: const TextStyle(
-                            fontFamily: AppConfig.fontPrimary,
+                          s.tr('نسيت كلمة المرور؟', 'Mot de passe oublié ?',
+                              'Forgot password'),
+                          style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                            letterSpacing: -0.4,
+                            color: const Color(0xFF111827),
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.4),
                             height: 1.15,
                           ),
                         ),
@@ -238,19 +241,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           _sent
                               ? s.tr(
                                   'تم إرسال التعليمات إلى بريدك الإلكتروني. يمكنك التحقق منه وإعادة التعيين، أو استخدام الرمز أدناه إذا وصلك في الرسالة.',
+                                  'Les instructions ont été envoyées à votre e-mail. Réinitialisez votre mot de passe ou saisissez le code ci-dessous.',
                                   'Instructions have been sent to your email. You can reset your password via the link, or enter the code below if provided.',
                                 )
                               : s.tr(
                                   'أدخل عنوان البريد الإلكتروني المرتبط بحسابك وسنرسل لك تعليمات إعادة تعيين كلمة المرور.',
+                                  'Saisissez l’adresse e-mail associée à votre compte pour recevoir les instructions de réinitialisation.',
                                   'Enter the email associated with your account and we\'ll send you instructions to reset your password.',
                                 ),
-                          style: const TextStyle(
-                            fontFamily: AppConfig.fontPrimary,
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w400,
-                            color: Color(0xFF6B7280),
+                            color: const Color(0xFF6B7280),
                             height: 1.45,
-                            letterSpacing: -0.1,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.1),
                           ),
                         ),
 
@@ -283,7 +288,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   child: Text(
                                     _error!,
                                     style: const TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w500,
                                       color: Color(0xFFB91C1C),
@@ -340,7 +344,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           'Check your email',
                                         ),
                                         style: const TextStyle(
-                                          fontFamily: AppConfig.fontPrimary,
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF14532D),
@@ -350,7 +353,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       Text(
                                         _successMessage!,
                                         style: const TextStyle(
-                                          fontFamily: AppConfig.fontPrimary,
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w400,
                                           color: Color(0xFF166534),
@@ -373,13 +375,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           type: TextInputType.emailAddress,
                           autofill: const [AutofillHints.email],
                           enabled: !_busy && !_hasCodeStep,
-                          validator: (v) =>
-                              AccountValidation.email(v ?? '')
-                                  ? null
-                                  : s.tr(
-                                      'أدخل بريداً إلكترونياً صحيحاً',
-                                      'Enter a valid email address',
-                                    ),
+                          validator: (v) => AccountValidation.email(v ?? '')
+                              ? null
+                              : s.tr(
+                                  'أدخل بريداً إلكترونياً صحيحاً',
+                                  'Enter a valid email address',
+                                ),
                         ),
 
                         // Code step inputs if user toggles to enter code directly
@@ -390,13 +391,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             label: s.tr('رمز التحقق', 'Reset code'),
                             type: TextInputType.number,
                             enabled: !_busy,
-                            validator: (v) =>
-                                AccountValidation.otp(v ?? '')
-                                    ? null
-                                    : s.tr(
-                                        'أدخل رمزاً مكوناً من 6 أرقام',
-                                        'Enter a 6-digit code',
-                                      ),
+                            validator: (v) => AccountValidation.otp(v ?? '')
+                                ? null
+                                : s.tr(
+                                    'أدخل رمزاً مكوناً من 6 أرقام',
+                                    'Enter a 6-digit code',
+                                  ),
                           ),
                           CustomAuthInputField(
                             keyName: 'forgot-password',
@@ -421,13 +421,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                             secret: true,
                             enabled: !_busy,
-                            validator: (v) => (v ?? '').isNotEmpty &&
-                                    v == _password.text
-                                ? null
-                                : s.tr(
-                                    'كلمتا المرور غير متطابقتين',
-                                    'Passwords do not match',
-                                  ),
+                            validator: (v) =>
+                                (v ?? '').isNotEmpty && v == _password.text
+                                    ? null
+                                    : s.tr(
+                                        'كلمتا المرور غير متطابقتين',
+                                        'Passwords do not match',
+                                      ),
                           ),
                         ],
 
@@ -477,12 +477,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                                 'إرسال التعليمات',
                                                 'Send instructions',
                                               )),
-                                    style: const TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
+                                    style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
-                                      letterSpacing: -0.2,
+                                      letterSpacing:
+                                          AppTypography.trackingForContext(
+                                              context, -0.2),
                                     ),
                                   ),
                           ),
@@ -496,10 +497,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 ? Text(
                                     s.tr(
                                       'يمكنك إعادة المحاولة بعد $_cooldownRemaining ثانية',
+                                      'Réessayez dans $_cooldownRemaining s',
                                       'You can retry in ${_cooldownRemaining}s',
                                     ),
                                     style: const TextStyle(
-                                      fontFamily: AppConfig.fontPrimary,
                                       fontSize: 13.5,
                                       color: Color(0xFF6B7280),
                                     ),
@@ -509,13 +510,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     child: Text(
                                       s.tr(
                                         'لم تصلك الرسالة؟ إرسال مرة أخرى',
+                                        'Renvoyer l’e-mail',
                                         'Didn\'t receive it? Send again',
                                       ),
                                       style: const TextStyle(
-                                        fontFamily: AppConfig.fontPrimary,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF5E48E8),
+                                        color: AppConfig.primary,
                                       ),
                                     ),
                                   ),
@@ -535,10 +536,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               child: Text(
                                 s.tr(
                                   'وصلك رمز في الرسالة؟ أدخله هنا',
+                                  'Vous avez reçu un code ? Saisissez-le ici',
                                   'Have a reset code? Enter it here',
                                 ),
                                 style: const TextStyle(
-                                  fontFamily: AppConfig.fontPrimary,
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w500,
                                   color: Color(0xFF4B5563),
@@ -564,13 +565,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 textAlign: TextAlign.center,
                                 text: TextSpan(
                                   style: const TextStyle(
-                                    fontFamily: AppConfig.fontPrimary,
                                     fontSize: 14.5,
                                   ),
                                   children: [
                                     TextSpan(
                                       text: s.tr(
                                         'تذكرت كلمة المرور؟ ',
+                                        'Mot de passe retrouvé ? ',
                                         'Remember your password? ',
                                       ),
                                       style: const TextStyle(
@@ -581,11 +582,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     TextSpan(
                                       text: s.tr(
                                         'تسجيل الدخول',
+                                        'Se connecter',
                                         'Sign in',
                                       ),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF5E48E8),
+                                        color: AppConfig.primary,
                                       ),
                                     ),
                                   ],
@@ -606,9 +608,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               );
                             },
                             child: Text(
-                              s.tr('واجهت صعوبة؟ تواصل مع الدعم', 'Having trouble? Contact support'),
+                              s.tr(
+                                'واجهت صعوبة؟ تواصل مع الدعم',
+                                'Besoin d’aide ? Contacter le support',
+                                'Having trouble? Contact support',
+                              ),
                               style: const TextStyle(
-                                fontFamily: AppConfig.fontPrimary,
                                 fontSize: 13,
                                 color: Color(0xFF9CA3AF),
                               ),

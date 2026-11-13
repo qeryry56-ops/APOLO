@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'post_ad_screen.dart';
@@ -183,7 +184,9 @@ class _MainShellState extends State<MainShell> {
                                               ? FontWeight.w700
                                               : FontWeight.w600,
                                           color: selected ? _blue : _ink,
-                                          letterSpacing: -0.1,
+                                          letterSpacing:
+                                              AppTypography.trackingForContext(
+                                                  context, -0.1),
                                         ),
                                       ),
                                     ],

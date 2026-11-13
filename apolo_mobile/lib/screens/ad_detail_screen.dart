@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/app_typography.dart';
 import 'widgets/price_text.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
@@ -174,12 +175,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 const SizedBox(height: 6),
                 Text(
                   phone,
-                  style: const TextStyle(
+                  textDirection: TextDirection.ltr,
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                     color: _red,
-                    letterSpacing: 0.8,
-                    fontFeatures: [FontFeature.tabularFigures()],
+                    letterSpacing:
+                        AppTypography.trackingForContext(context, 0.8),
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(height: 22),
@@ -832,11 +835,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           children: [
                             PriceText(
                               priceFormatted,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 31,
                                 fontWeight: FontWeight.w900,
                                 color: _red,
-                                letterSpacing: -0.8,
+                                letterSpacing: AppTypography.trackingForContext(
+                                    context, -0.8),
                                 fontFeatures: [FontFeature.tabularFigures()],
                               ),
                             ),
@@ -875,12 +879,13 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         const SizedBox(height: 8),
                         Text(
                           (ad['title'] ?? '').toString(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: _ink,
                             height: 1.3,
-                            letterSpacing: -0.4,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.4),
                           ),
                         ),
                       ],
@@ -913,7 +918,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       Expanded(
                         child: _QuickSummaryCard(
                           icon: CupertinoIcons.eye_fill,
-                          iconColor: const Color(0xFF3B82F6),
+                          iconColor: _ink,
                           label: s.tr('المشاهدات', 'Vues'),
                           value:
                               ad['views_count'] == null && ad['views'] == null
@@ -1528,11 +1533,11 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16.5,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
-            letterSpacing: -0.3,
+            color: const Color(0xFF0F172A),
+            letterSpacing: AppTypography.trackingForContext(context, -0.3),
           ),
         ),
       ],

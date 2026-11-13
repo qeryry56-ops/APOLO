@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
+import '../../theme/app_typography.dart';
 
 class BoostSheet extends StatefulWidget {
   final int adId;
@@ -228,11 +229,12 @@ class _BoostSheetState extends State<BoostSheet> {
                           Text(
                             s.tr('ميّز إعلانك وضاعف مبيعاتك',
                                 'Boostez votre annonce'),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
                                 color: _ink,
-                                letterSpacing: -0.4),
+                                letterSpacing: AppTypography.trackingForContext(
+                                    context, -0.4)),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -290,11 +292,13 @@ class _BoostSheetState extends State<BoostSheet> {
                               Expanded(
                                 child: Text(
                                   name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 15.5,
                                       color: _ink,
-                                      letterSpacing: -0.2),
+                                      letterSpacing:
+                                          AppTypography.trackingForContext(
+                                              context, -0.2)),
                                 ),
                               ),
                               Container(
