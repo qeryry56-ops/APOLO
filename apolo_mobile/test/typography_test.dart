@@ -1,9 +1,33 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:apolo_mobile/core/config/app_config.dart';
+import 'package:apolo_mobile/core/state/app_state.dart';
+import 'package:apolo_mobile/screens/widgets/price_text.dart';
 import 'package:apolo_mobile/theme/app_theme.dart';
 import 'package:apolo_mobile/theme/app_typography.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _OfflineTaxonomyAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async =>
+      ResponseBody.fromString(
+        '{"status":"success","categories":[],"cities":[]}',
+        200,
+        headers: {
+          Headers.contentTypeHeader: ['application/json']
+        },
+      );
+
+  @override
+  void close({bool force = false}) {}
+}
 
 void main() {
   group('AppTypography Resolution Matrix', () {
@@ -275,5 +299,236 @@ void main() {
       expect(tracked, equals(-0.4));
       expect(resolvedDir, equals(TextDirection.ltr));
     });
+
+    test('lineHeight preserves Arabic glyphs while keeping Latin metrics', () {
+      expect(
+        AppTypography.lineHeight(const Locale('ar'), 1.15, arabicMin: 1.32),
+        equals(1.32),
+      );
+      expect(
+        AppTypography.lineHeight(const Locale('ar'), 1.55, arabicMin: 1.32),
+        equals(1.55),
+      );
+      expect(
+        AppTypography.lineHeight(const Locale('fr'), 1.15, arabicMin: 1.32),
+        equals(1.15),
+      );
+      expect(
+        AppTypography.lineHeight(const Locale('en'), 1.15, arabicMin: 1.32),
+        equals(1.15),
+      );
+    });
+
+    test('Component themes apply target font across light and dark modes', () {
+      for (final isDark in [false, true]) {
+        for (final entry in [
+          (TargetPlatform.iOS, const Locale('ar'), null),
+          (TargetPlatform.iOS, const Locale('en'), null),
+          (TargetPlatform.iOS, const Locale('fr'), null),
+          (TargetPlatform.android, const Locale('ar'), 'Tajawal'),
+          (TargetPlatform.android, const Locale('en'), 'Inter'),
+          (TargetPlatform.android, const Locale('fr'), 'Inter'),
+        ]) {
+          final theme = isDark
+              ? AppTheme.dark(entry.$2, platform: entry.$1)
+              : AppTheme.light(entry.$2, platform: entry.$1);
+
+          String? resolveFamily(TextStyle? style) =>
+              style?.fontFamily == 'CupertinoSystemText'
+                  ? null
+                  : style?.fontFamily;
+
+          expect(resolveFamily(theme.appBarTheme.titleTextStyle), entry.$3);
+          expect(resolveFamily(theme.dialogTheme.titleTextStyle), entry.$3);
+          expect(resolveFamily(theme.dialogTheme.contentTextStyle), entry.$3);
+          expect(resolveFamily(theme.snackBarTheme.contentTextStyle), entry.$3);
+          expect(resolveFamily(theme.tabBarTheme.labelStyle), entry.$3);
+          expect(resolveFamily(theme.listTileTheme.titleTextStyle), entry.$3);
+          expect(resolveFamily(theme.popupMenuTheme.textStyle), entry.$3);
+          expect(resolveFamily(theme.dropdownMenuTheme.textStyle), entry.$3);
+          expect(
+            resolveFamily(theme.inputDecorationTheme.errorStyle),
+            entry.$3,
+          );
+          expect(
+            resolveFamily(theme.textButtonTheme.style?.textStyle?.resolve({})),
+            entry.$3,
+          );
+          expect(
+            resolveFamily(
+                theme.filledButtonTheme.style?.textStyle?.resolve({})),
+            entry.$3,
+          );
+          expect(
+            resolveFamily(theme.navigationBarTheme.labelTextStyle?.resolve({})),
+            entry.$3,
+          );
+        }
+      }
+    });
+
+    testWidgets('PriceText enforces tabular figures', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const Locale('ar'),
+              platform: TargetPlatform.android),
+          home: const Scaffold(
+            body: PriceText(
+              '125 000 DH',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+      );
+      final text = tester.widget<Text>(find.text('125 000 DH'));
+      expect(text.style?.fontFeatures,
+          contains(const FontFeature.tabularFigures()));
+    });
+
+    testWidgets(
+      'Offline Android Tajawal & Inter fonts load without bundled SF fonts',
+      (tester) async {
+        const bundledFonts = [
+          'assets/fonts/Tajawal-Regular.ttf',
+          'assets/fonts/Tajawal-Medium.ttf',
+          'assets/fonts/Tajawal-Bold.ttf',
+          'assets/fonts/Tajawal-ExtraBold.ttf',
+          'assets/fonts/Inter-Regular.ttf',
+          'assets/fonts/Inter-Medium.ttf',
+          'assets/fonts/Inter-SemiBold.ttf',
+          'assets/fonts/Inter-Bold.ttf',
+        ];
+        for (final path in bundledFonts) {
+          final bytes = await rootBundle.load(path);
+          expect(bytes.lengthInBytes, greaterThan(1024), reason: path);
+        }
+
+        final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+        final sfAssets = manifest
+            .listAssets()
+            .where((a) =>
+                a.toLowerCase().contains('sfpro') ||
+                a.toLowerCase().contains('sf-pro') ||
+                a.toLowerCase().contains('sfarabic') ||
+                a.toLowerCase().contains('sf-arabic'))
+            .toList();
+        expect(sfAssets, isEmpty);
+      },
+    );
+
+    test('AppState persists ar, fr, en locales and normalizes unknown codes',
+        () async {
+      SharedPreferences.setMockInitialValues({'app_locale': 'es'});
+      final state = AppState();
+      final originalAdapter = state.api.dio.httpClientAdapter;
+      state.api.dio.httpClientAdapter = _OfflineTaxonomyAdapter();
+      try {
+        await state.initialize(loadRemote: false);
+        expect(state.locale.languageCode, 'ar');
+
+        await state.toggleLanguage();
+        expect(state.locale.languageCode, 'fr');
+
+        await state.toggleLanguage();
+        expect(state.locale.languageCode, 'en');
+
+        await state.initialize(loadRemote: false);
+        expect(state.locale.languageCode, 'en');
+
+        await state.toggleLanguage();
+        expect(state.locale.languageCode, 'ar');
+      } finally {
+        SharedPreferences.setMockInitialValues({});
+        await state.setLocale(const Locale('ar'));
+        state.api.dio.httpClientAdapter = originalAdapter;
+      }
+    });
+
+    testWidgets(
+      'Language toggle updates locale, typography, RTL/LTR, persists preference, and keeps route state',
+      (tester) async {
+        final state = AppState();
+        final originalAdapter = state.api.dio.httpClientAdapter;
+        await tester.runAsync(() async {
+          SharedPreferences.setMockInitialValues({});
+          state.api.dio.httpClientAdapter = _OfflineTaxonomyAdapter();
+          await state.initialize(loadRemote: false);
+        });
+        addTearDown(() async {
+          await tester.runAsync(() async {
+            SharedPreferences.setMockInitialValues({});
+            await state.setLocale(const Locale('ar'));
+            state.api.dio.httpClientAdapter = originalAdapter;
+          });
+        });
+
+        final navKey = GlobalKey<NavigatorState>();
+        await tester.pumpWidget(
+          AnimatedBuilder(
+            animation: state,
+            builder: (context, _) => MaterialApp(
+              navigatorKey: navKey,
+              locale: state.locale,
+              supportedLocales: const [
+                Locale('ar'),
+                Locale('fr'),
+                Locale('en')
+              ],
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              theme: AppTheme.light(state.locale,
+                  platform: TargetPlatform.android),
+              home: const Scaffold(body: Text('RootScreen')),
+            ),
+          ),
+        );
+
+        navKey.currentState!.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('PushedRouteIntact')),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('PushedRouteIntact'), findsOneWidget);
+        BuildContext pushedCtx = tester.element(find.text('PushedRouteIntact'));
+        expect(Directionality.of(pushedCtx), TextDirection.rtl);
+        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Tajawal');
+
+        // Toggle ar -> fr
+        await tester.runAsync(() => state.toggleLanguage());
+        await tester.pumpAndSettle();
+        expect(find.text('PushedRouteIntact'), findsOneWidget);
+        pushedCtx = tester.element(find.text('PushedRouteIntact'));
+        expect(Directionality.of(pushedCtx), TextDirection.ltr);
+        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Inter');
+
+        // Toggle fr -> en
+        await tester.runAsync(() => state.toggleLanguage());
+        await tester.pumpAndSettle();
+        expect(find.text('PushedRouteIntact'), findsOneWidget);
+        pushedCtx = tester.element(find.text('PushedRouteIntact'));
+        expect(Directionality.of(pushedCtx), TextDirection.ltr);
+        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Inter');
+
+        // Verify persistence across fresh initialization
+        await tester.runAsync(() => state.initialize(loadRemote: false));
+        await tester.pumpAndSettle();
+        expect(state.locale.languageCode, 'en');
+
+        // Toggle en -> ar
+        await tester.runAsync(() => state.toggleLanguage());
+        await tester.pumpAndSettle();
+        pushedCtx = tester.element(find.text('PushedRouteIntact'));
+        expect(Directionality.of(pushedCtx), TextDirection.rtl);
+        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Tajawal');
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
   });
 }

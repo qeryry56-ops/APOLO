@@ -1584,9 +1584,8 @@ class _AuthScreenState extends State<AuthScreen>
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12,
                                 ),
-                                child: RichText(
-                                  textAlign: TextAlign.center,
-                                  text: TextSpan(
+                                child: Text.rich(
+                                  TextSpan(
                                     style: const TextStyle(
                                       fontSize: 14.5,
                                     ),
@@ -1623,6 +1622,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       ),
                                     ],
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),

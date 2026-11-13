@@ -31,9 +31,14 @@ class AppState extends ChangeNotifier {
 
   bool get hasPersonalizedInterests => categoryInterestWeights.isNotEmpty;
 
+  static const Set<String> supportedLanguageCodes = {'ar', 'fr', 'en'};
+
+  static String _normalizeLanguageCode(String code) =>
+      supportedLanguageCodes.contains(code) ? code : 'ar';
+
   Future<void> initialize({bool loadRemote = true}) async {
     await api.init();
-    _locale = Locale(api.locale);
+    _locale = Locale(_normalizeLanguageCode(api.locale));
     await _loadPersonalizationPrefs();
     if (loadRemote) await refreshRemote();
     isInitialized = true;
@@ -398,8 +403,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setLocale(Locale newLocale) async {
-    _locale = newLocale;
-    await api.setLocale(newLocale.languageCode);
+    final normalized = _normalizeLanguageCode(newLocale.languageCode);
+    _locale = Locale(normalized);
+    await api.setLocale(normalized);
     notifyListeners();
     await fetchTaxonomy();
   }

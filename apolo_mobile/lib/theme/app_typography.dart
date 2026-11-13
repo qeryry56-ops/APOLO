@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -278,4 +280,26 @@ class AppTypography {
   /// Context-aware wrapper around [tracking].
   static double trackingForContext(BuildContext context, double latinValue) =>
       tracking(Localizations.maybeLocaleOf(context), latinValue);
+
+  /// Returns a comfortable minimum line-height for Arabic text (preserving
+  /// diacritics and ascenders without vertical clipping) while keeping
+  /// [latinValue] for English/French.
+  static double lineHeight(
+    Locale? locale,
+    double latinValue, {
+    double arabicMin = 1.4,
+  }) =>
+      isArabicLocale(locale) ? math.max(latinValue, arabicMin) : latinValue;
+
+  /// Context-aware wrapper around [lineHeight].
+  static double lineHeightForContext(
+    BuildContext context,
+    double latinValue, {
+    double arabicMin = 1.4,
+  }) =>
+      lineHeight(
+        Localizations.maybeLocaleOf(context),
+        latinValue,
+        arabicMin: arabicMin,
+      );
 }

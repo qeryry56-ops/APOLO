@@ -21,6 +21,13 @@ class PriceText extends StatelessWidget {
     final alignment = AlignmentDirectional.centerStart.resolve(direction);
     final priceDirection =
         RegExp(r'[0-9٠-٩۰-۹]').hasMatch(price) ? TextDirection.ltr : direction;
+    final baseStyle = style ?? DefaultTextStyle.of(context).style;
+    final resolvedStyle =
+        (baseStyle.fontFeatures == null || baseStyle.fontFeatures!.isEmpty)
+            ? baseStyle.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              )
+            : baseStyle;
     return Align(
       alignment: alignment,
       widthFactor: 1,
@@ -33,7 +40,7 @@ class PriceText extends StatelessWidget {
           maxLines: maxLines,
           overflow: overflow,
           softWrap: false,
-          style: style,
+          style: resolvedStyle,
         ),
       ),
     );

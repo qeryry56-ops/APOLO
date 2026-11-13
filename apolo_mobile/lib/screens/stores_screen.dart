@@ -160,7 +160,11 @@ class _StoresScreenState extends State<StoresScreen> {
                         color: _ink,
                         letterSpacing:
                             AppTypography.trackingForContext(context, -0.6),
-                        height: 1.1,
+                        height: AppTypography.lineHeightForContext(
+                          context,
+                          1.1,
+                          arabicMin: 1.32,
+                        ),
                       ),
                     ),
                   ),

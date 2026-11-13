@@ -230,7 +230,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             color: const Color(0xFF111827),
                             letterSpacing:
                                 AppTypography.trackingForContext(context, -0.4),
-                            height: 1.15,
+                            height: AppTypography.lineHeightForContext(
+                              context,
+                              1.15,
+                              arabicMin: 1.32,
+                            ),
                           ),
                         ),
 
@@ -561,9 +565,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
+                              child: Text.rich(
+                                TextSpan(
                                   style: const TextStyle(
                                     fontSize: 14.5,
                                   ),
@@ -592,6 +595,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     ),
                                   ],
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           ),

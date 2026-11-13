@@ -264,7 +264,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                           AppTypography.trackingForContext(
                                               context, -0.6),
                                       color: _ink,
-                                      height: 1.15,
+                                      height:
+                                          AppTypography.lineHeightForContext(
+                                        context,
+                                        1.15,
+                                        arabicMin: 1.32,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -754,11 +759,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               textAlign: TextAlign.center,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 color: _ink,
-                                height: 1.15,
+                                height: AppTypography.lineHeightForContext(
+                                  context,
+                                  1.15,
+                                  arabicMin: 1.28,
+                                ),
                               ),
                             ),
                           ],
