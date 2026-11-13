@@ -1,4 +1,6 @@
 ﻿import 'dart:async';
+import 'dart:math' as math;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,6 +11,15 @@ import '../widgets/custom_auth_input_field.dart';
 import '../widgets/interests_survey_sheet.dart';
 import 'forgot_password_screen.dart';
 import 'support_screen.dart';
+
+enum _OtpPhase {
+  idle,
+  sendingInitial,
+  verifying,
+  resending,
+  verified,
+  error,
+}
 
 /// Premium 2026 APOLO Authentication & Multi-Step Registration Screen.
 ///
@@ -43,7 +54,8 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen>
+    with SingleTickerProviderStateMixin {
   final _state = AppState();
   final _form = GlobalKey<FormState>();
 
@@ -52,6 +64,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
   final _code = TextEditingController();
+  final FocusNode _codeFocus = FocusNode();
 
   // Multi-step Registration controllers & states
   final _firstName = TextEditingController();
@@ -75,7 +88,11 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _notice;
   AccountSession? _pending;
   Timer? _timer;
+  Timer? _autoSubmitTimer;
   int _remaining = 0;
+  _OtpPhase _otpPhase = _OtpPhase.idle;
+  int _resendFailures = 0;
+  late final AnimationController _shakeCtrl;
 
   static const List<Map<String, dynamic>> _fallbackCities = [
     {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
@@ -100,6 +117,13 @@ class _AuthScreenState extends State<AuthScreen> {
     _cities = _fallbackCities;
     _cityId = 1;
     _cityName = _cityLabel(_cities.first);
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _codeFocus.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     if (!_login) {
       _loadCities();
@@ -153,6 +177,9 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _autoSubmitTimer?.cancel();
+    _shakeCtrl.dispose();
+    _codeFocus.dispose();
     _auth.close();
     for (final controller in [
       _email,
@@ -329,18 +356,121 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
+  void _triggerOtpErrorShake() {
+    HapticFeedback.heavyImpact();
+    final disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (!disableAnimations) {
+      _shakeCtrl.forward(from: 0);
+    }
+  }
+
+  void _onOtpChanged(String raw) {
+    final normalized = AccountValidation.normalizeDigits(raw)
+        .replaceAll(RegExp(r'[^0-9]'), '');
+    if (normalized != raw) {
+      _code.value = TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    }
+    if (_otpPhase == _OtpPhase.error || _error != null) {
+      setState(() {
+        _error = null;
+        if (_otpPhase == _OtpPhase.error) _otpPhase = _OtpPhase.idle;
+      });
+    } else {
+      setState(() {});
+    }
+
+    _autoSubmitTimer?.cancel();
+    if (normalized.length == 6 &&
+        _pending != null &&
+        !_busy &&
+        _otpPhase != _OtpPhase.verifying &&
+        _otpPhase != _OtpPhase.verified) {
+      _autoSubmitTimer = Timer(const Duration(milliseconds: 180), () {
+        if (mounted &&
+            _pending != null &&
+            !_busy &&
+            _code.text.length == 6 &&
+            _otpPhase != _OtpPhase.verifying) {
+          _submit();
+        }
+      });
+    }
+  }
+
+  Future<void> _sendInitialLoginOtp(AccountSession session) async {
+    final email = (session.user['email'] ?? '').toString().trim();
+    if (email.isEmpty) {
+      if (!mounted || _pending?.token != session.token) return;
+      setState(() {
+        _otpPhase = _OtpPhase.error;
+        _error = _state.s.tr(
+          'لا يوجد بريد إلكتروني مسجل في هذا الحساب لاستلام رمز التحقق. يرجى استخدام الموقع أو الدعم.',
+          'Aucune adresse e-mail n’est associée à ce compte pour recevoir le code.',
+          'No email address is linked to this account to receive the code.',
+        );
+      });
+      return;
+    }
+
+    try {
+      await _auth.resend(session);
+      if (!mounted || _pending?.token != session.token) return;
+      final masked = AccountValidation.maskEmail(email) ?? email;
+      setState(() {
+        _otpPhase = _OtpPhase.idle;
+        _notice = _state.s.tr(
+          'تم إرسال رمز التحقق إلى بريدك الإلكتروني ($masked).',
+          'Un code de vérification a été envoyé à $masked.',
+          'A verification code was sent to $masked.',
+        );
+      });
+      _cooldown();
+    } catch (error) {
+      if (!mounted || _pending?.token != session.token) return;
+      setState(() {
+        _otpPhase = _OtpPhase.error;
+        _error = accountError(error, _state.s.isAr);
+      });
+    }
+  }
+
   Future<void> _submit() async {
-    if (_busy || _finished || !_form.currentState!.validate()) return;
+    _autoSubmitTimer?.cancel();
+    if (_busy || _finished) return;
+
+    if (_pending != null) {
+      if (!AccountValidation.otp(_code.text)) {
+        setState(() {
+          _otpPhase = _OtpPhase.error;
+          _error = _state.s.tr(
+            'أدخل رمز التحقق المكون من 6 أرقام.',
+            'Entrez le code de vérification à 6 chiffres.',
+            'Enter the 6-digit verification code.',
+          );
+        });
+        _triggerOtpErrorShake();
+        return;
+      }
+    } else if (!_form.currentState!.validate()) {
+      return;
+    }
+
     FocusScope.of(context).unfocus();
+    final isVerifyingOtp = _pending != null;
     setState(() {
       _busy = true;
       _error = null;
       _notice = null;
+      if (isVerifyingOtp) _otpPhase = _OtpPhase.verifying;
     });
 
     try {
       final AccountSession result;
-      if (_pending != null) {
+      if (isVerifyingOtp) {
         // Step 4 verification (or OTP in login)
         result = await _auth.verify(_pending!, _code.text);
       } else if (_login) {
@@ -367,16 +497,38 @@ class _AuthScreenState extends State<AuthScreen> {
         setState(() {
           _pending = result;
           _code.clear();
+          _resendFailures = 0;
+          _otpPhase =
+              result.otpSent ? _OtpPhase.idle : _OtpPhase.sendingInitial;
           if (!_login) _registerStep = 4;
         });
         _password.clear();
         _confirmation.clear();
-        _cooldown();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _codeFocus.requestFocus();
+        });
+        if (result.otpSent) {
+          _cooldown();
+        } else {
+          await _sendInitialLoginOtp(result);
+        }
       } else {
+        if (isVerifyingOtp) {
+          HapticFeedback.mediumImpact();
+          setState(() => _otpPhase = _OtpPhase.verified);
+        }
         await _finish(result);
       }
     } catch (error) {
-      if (mounted) setState(() => _error = accountError(error, _state.s.isAr));
+      if (mounted) {
+        setState(() {
+          _error = accountError(error, _state.s.isAr);
+          if (isVerifyingOtp) _otpPhase = _OtpPhase.error;
+        });
+        if (isVerifyingOtp) {
+          _triggerOtpErrorShake();
+        }
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -419,9 +571,17 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _resend() async {
-    if (_busy || _remaining > 0 || _pending == null) return;
+    if (_busy ||
+        _remaining > 0 ||
+        _pending == null ||
+        _otpPhase == _OtpPhase.sendingInitial ||
+        _otpPhase == _OtpPhase.resending ||
+        _otpPhase == _OtpPhase.verifying) {
+      return;
+    }
+    HapticFeedback.lightImpact();
     setState(() {
-      _busy = true;
+      _otpPhase = _OtpPhase.resending;
       _error = null;
       _notice = null;
     });
@@ -429,25 +589,55 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await _auth.resend(_pending!);
       if (!mounted) return;
-      setState(() => _notice = _state.s.tr(
-            'تم تأكيد إرسال رمز جديد. تحقق من بريدك.',
-            'A new verification code was sent. Please check your email inbox.',
-          ));
+      final masked = AccountValidation.maskEmail(
+        _pending?.user['email']?.toString(),
+      );
+      setState(() {
+        _otpPhase = _OtpPhase.idle;
+        _resendFailures = 0;
+        _notice = masked != null
+            ? _state.s.tr(
+                'تم إرسال رمز جديد إلى $masked. تحقق من البريد الوارد أو الرسائل غير المرغوب فيها.',
+                'Un nouveau code a été envoyé à $masked. Vérifiez votre boîte ou les spams.',
+                'A new verification code was sent to $masked. Check your inbox or spam.',
+              )
+            : _state.s.tr(
+                'تم تأكيد إرسال رمز جديد. تحقق من بريدك.',
+                'Un nouveau code a été envoyé. Vérifiez votre boîte e-mail.',
+                'A new verification code was sent. Please check your email inbox.',
+              );
+      });
       _cooldown();
     } catch (error) {
       if (!mounted) return;
-      setState(() => _error = accountError(error, _state.s.isAr));
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      _resendFailures++;
+      final now = DateTime.now();
+      final hh = now.hour.toString().padLeft(2, '0');
+      final mm = now.minute.toString().padLeft(2, '0');
+      final base = accountError(error, _state.s.isAr);
+      HapticFeedback.heavyImpact();
+      setState(() {
+        _otpPhase = _OtpPhase.error;
+        _error = _resendFailures >= 2
+            ? _state.s.tr(
+                '$base (آخر محاولة: $hh:$mm)',
+                '$base (Dernière tentative : $hh:$mm)',
+                '$base (Tried at $hh:$mm)',
+              )
+            : base;
+      });
     }
   }
 
   void _reset() {
     _timer?.cancel();
+    _autoSubmitTimer?.cancel();
     setState(() {
       _pending = null;
       _code.clear();
       _remaining = 0;
+      _otpPhase = _OtpPhase.idle;
+      _resendFailures = 0;
       _error = null;
       _notice = null;
       if (!_login) _registerStep = 1;
@@ -477,27 +667,28 @@ class _AuthScreenState extends State<AuthScreen> {
                     children: [
                       Align(
                         alignment: AlignmentDirectional.centerStart,
-                        child: _buildBackButton(),
+                        child: _buildBackButton(isOtp: otp),
                       ),
-                      Text(
-                        _login
-                            ? s.tr('تسجيل الدخول', 'Sign in')
-                            : s.tr('إنشاء حساب', 'Sign up'),
-                        style: const TextStyle(
-                          fontFamily: AppConfig.fontPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
-                          letterSpacing: -0.2,
+                      if (!otp)
+                        Text(
+                          _login
+                              ? s.tr('تسجيل الدخول', 'Sign in')
+                              : s.tr('إنشاء حساب', 'Sign up'),
+                          style: const TextStyle(
+                            fontFamily: AppConfig.fontPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF111827),
+                            letterSpacing: -0.2,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
               ),
 
-              // Progress Bar (when registering)
-              if (!_login) ...[
+              // Progress Bar (when registering, hidden on OTP step)
+              if (!_login && !otp) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -579,49 +770,85 @@ class _AuthScreenState extends State<AuthScreen> {
 
                         // Main Headline
                         Text(
-                          _login
-                              ? s.tr('مرحباً بك مجدداً', 'Welcome back')
-                              : _registerStep == 1
-                                  ? s.tr('لنبدأ باسمك', 'Let\'s start with your name')
-                                  : _registerStep == 2
-                                      ? s.tr('أخبرنا عنك', 'Tell us about yourself')
-                                      : _registerStep == 3
-                                          ? s.tr('حسابك وأمانك', 'Account & Security')
-                                          : s.tr('تأكيد الرمز', 'Verify your email'),
-                          style: const TextStyle(
+                          otp
+                              ? s.tr(
+                                  'لنتأكد من هويتك',
+                                  'Confirmons votre identité',
+                                  "Let's confirm it's you",
+                                )
+                              : _login
+                                  ? s.tr('مرحباً بك مجدداً', 'Welcome back')
+                                  : _registerStep == 1
+                                      ? s.tr('لنبدأ باسمك',
+                                          'Let\'s start with your name')
+                                      : _registerStep == 2
+                                          ? s.tr('أخبرنا عنك',
+                                              'Tell us about yourself')
+                                          : s.tr('حسابك وأمانك',
+                                              'Account & Security'),
+                          style: TextStyle(
                             fontFamily: AppConfig.fontPrimary,
-                            fontSize: 27,
+                            fontSize: otp ? 26 : 27,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                            letterSpacing: -0.4,
+                            color: const Color(0xFF0A0B0D),
+                            letterSpacing: -0.5,
                             height: 1.2,
                           ),
                         ),
 
                         const SizedBox(height: 8),
 
-                        Text(
-                          _login
-                              ? s.tr(
-                                  'أدخل بريدك الإلكتروني أو رقم هاتفك للمتابعة',
-                                  'Enter your email or phone number to continue',
-                                )
-                              : _registerStep == 1
-                                  ? s.tr('أدخل اسمك الشخصي والعائلي وحدد الجنس', 'Enter your name and select your gender')
-                                  : _registerStep == 2
-                                      ? s.tr('حدد تاريخ ميلادك ومدينتك وكيف ستستخدم أبولو', 'Set your birth date, city, and role')
-                                      : _registerStep == 3
-                                          ? s.tr('أدخل بريدك الإلكتروني وكلمة مرور قوية', 'Enter your email and a strong password')
-                                          : s.tr('أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك', 'Enter the 6-digit code sent to your email'),
-                          style: const TextStyle(
-                            fontFamily: AppConfig.fontPrimary,
-                            fontSize: 14.5,
-                            color: Color(0xFF6B7280),
-                            height: 1.4,
-                          ),
+                        Builder(
+                          builder: (_) {
+                            final maskedEmail = AccountValidation.maskEmail(
+                              _pending?.user['email']?.toString(),
+                            );
+                            final subtitle = otp
+                                ? (maskedEmail != null
+                                    ? s.tr(
+                                        'أدخل الرمز المكون من 6 أرقام المرسل إلى $maskedEmail',
+                                        'Entrez le code à 6 chiffres envoyé à $maskedEmail',
+                                        'Enter the 6-digit code sent to $maskedEmail',
+                                      )
+                                    : s.tr(
+                                        'أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني',
+                                        'Entrez le code à 6 chiffres envoyé à votre e-mail',
+                                        'Enter the 6-digit code sent to your email',
+                                      ))
+                                : _login
+                                    ? s.tr(
+                                        'أدخل بريدك الإلكتروني أو رقم هاتفك للمتابعة',
+                                        'Enter your email or phone number to continue',
+                                      )
+                                    : _registerStep == 1
+                                        ? s.tr(
+                                            'أدخل اسمك الشخصي والعائلي وحدد الجنس',
+                                            'Enter your name and select your gender',
+                                          )
+                                        : _registerStep == 2
+                                            ? s.tr(
+                                                'حدد تاريخ ميلادك ومدينتك وكيف ستستخدم أبولو',
+                                                'Set your birth date, city, and role',
+                                              )
+                                            : s.tr(
+                                                'أدخل بريدك الإلكتروني وكلمة مرور قوية',
+                                                'Enter your email and a strong password',
+                                              );
+                            return Text(
+                              subtitle,
+                              style: TextStyle(
+                                fontFamily: AppConfig.fontPrimary,
+                                fontSize: 15,
+                                color: otp
+                                    ? const Color(0xFF5B616E)
+                                    : const Color(0xFF6B7280),
+                                height: 1.4,
+                              ),
+                            );
+                          },
                         ),
 
-                        const SizedBox(height: 24),
+                        SizedBox(height: otp ? 32 : 24),
 
                         // Error Banner
                         if (_error != null)
@@ -701,24 +928,16 @@ class _AuthScreenState extends State<AuthScreen> {
                         // MODE 1: LOGIN (EMAIL OR PHONE + PASSWORD)
                         // ============================================
                         if (_login && !otp) ...[
-                          _SpecLoginField(
-                            fieldKey: const Key('auth-email'),
+                          CustomAuthInputField(
                             controller: _email,
-                            placeholder: 'Username, email or mobile number',
-                            width: 868.0,
-                            height: 146.0,
-                            borderRadius: 40.0,
-                            borderColor: const Color(0xFF48484A),
-                            borderWidth: 2.0,
-                            backgroundColor: Colors.transparent,
-                            leftPadding: 39.0,
-                            fontSize: 36.0,
-                            fontWeight: FontWeight.w400,
-                            placeholderColor: const Color(0xFFA5A5AA),
-                            textAlign: TextAlign.left,
-                            textAlignVertical: TextAlignVertical.center,
-                            keyboardType: TextInputType.text,
-                            autofillHints: const [
+                            label: s.tr(
+                              'البريد الإلكتروني أو رقم الهاتف',
+                              'E-mail ou numéro de téléphone',
+                              'Email or mobile number',
+                            ),
+                            keyName: 'auth-email',
+                            type: TextInputType.emailAddress,
+                            autofill: const [
                               AutofillHints.email,
                               AutofillHints.telephoneNumber,
                             ],
@@ -744,26 +963,18 @@ class _AuthScreenState extends State<AuthScreen> {
                             },
                           ),
 
-                          const SizedBox(height: 30),
-
-                          _SpecLoginField(
-                            fieldKey: const Key('auth-password'),
+                          CustomAuthInputField(
                             controller: _password,
-                            placeholder: 'Password',
-                            width: 868.0,
-                            height: 145.0,
-                            borderRadius: 40.0,
-                            borderColor: const Color(0xFF48484A),
-                            borderWidth: 2.0,
-                            backgroundColor: Colors.transparent,
-                            leftPadding: 39.0,
-                            fontSize: 36.0,
-                            fontWeight: FontWeight.w400,
-                            placeholderColor: const Color(0xFFA5A5AA),
-                            textAlign: TextAlign.left,
-                            textAlignVertical: TextAlignVertical.center,
-                            isPassword: true,
-                            autofillHints: const [AutofillHints.password],
+                            label: s.tr(
+                              'كلمة المرور',
+                              'Mot de passe',
+                              'Password',
+                            ),
+                            keyName: 'auth-password',
+                            secret: true,
+                            autofill: const [AutofillHints.password],
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: _busy ? null : _submit,
                             enabled: !_busy,
                             validator: (v) => (v ?? '').isNotEmpty
                                 ? null
@@ -773,7 +984,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                           ),
 
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 2),
 
                           // Forgot password link
                           Align(
@@ -1317,93 +1528,65 @@ class _AuthScreenState extends State<AuthScreen> {
                         // MODE 3: OTP VERIFICATION (STEP 4 / 2FA)
                         // ============================================
                         if (otp) ...[
-                          CustomAuthInputField(
-                            controller: _code,
-                            label: s.tr('رمز التحقق (6 أرقام)', 'Verification code'),
-                            keyName: 'auth-code',
-                            type: TextInputType.number,
-                            autofill: const [AutofillHints.oneTimeCode],
-                            hint: '123456',
-                            enabled: !_busy,
-                            validator: (v) => AccountValidation.otp(v ?? '')
-                                ? null
-                                : s.tr(
-                                    'أدخل رمزاً مكوناً من 6 أرقام',
-                                    'Enter a valid 6-digit code',
-                                  ),
-                          ),
+                          _buildOtpBoxesSection(s),
 
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 36),
+
+                          _buildOtpResendRow(s),
+
+                          const SizedBox(height: 24),
+
+                          _buildOtpSecurityBanner(s),
+
+                          const SizedBox(height: 24),
 
                           SizedBox(
                             width: double.infinity,
-                            height: 54,
+                            height: 52,
                             child: ElevatedButton(
                               key: const Key('auth-submit'),
                               onPressed: _busy ? null : _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0A0A0A),
-                                foregroundColor: Colors.white,
+                                backgroundColor:
+                                    _code.text.trim().length == 6
+                                        ? const Color(0xFF0A0B0D)
+                                        : const Color(0xFFF3F5F8),
+                                foregroundColor:
+                                    _code.text.trim().length == 6
+                                        ? Colors.white
+                                        : const Color(0xFF8A94A6),
                                 shape: const StadiumBorder(),
                                 elevation: 0,
                               ),
-                              child: _busy
-                                  ? const SizedBox(
+                              child: _busy || _otpPhase == _OtpPhase.verifying
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white,
+                                        color: _code.text.trim().length == 6
+                                            ? Colors.white
+                                            : const Color(0xFF0A0B0D),
                                       ),
                                     )
-                                  : Text(
-                                      s.tr('تأكيد الرمز', 'Verify code'),
-                                      style: const TextStyle(
-                                        fontFamily: AppConfig.fontPrimary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          Center(
-                            child: TextButton(
-                              onPressed: _busy || _remaining > 0 ? null : _resend,
-                              child: Text(
-                                _remaining > 0
-                                    ? s.tr(
-                                        'إعادة الإرسال بعد $_remaining ثانية',
-                                        'Resend code in ${_remaining}s',
-                                      )
-                                    : s.tr(
-                                        'إرسال رمز جديد',
-                                        'Resend code',
-                                      ),
-                                style: const TextStyle(
-                                  fontFamily: AppConfig.fontPrimary,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF5E48E8),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          Center(
-                            child: TextButton(
-                              onPressed: _busy ? null : _reset,
-                              child: Text(
-                                s.tr(
-                                  'العودة للبداية',
-                                  'Back to start',
-                                ),
-                                style: const TextStyle(
-                                  fontFamily: AppConfig.fontPrimary,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
+                                  : _otpPhase == _OtpPhase.verified
+                                      ? const Icon(
+                                          Icons.check_rounded,
+                                          size: 22,
+                                          color: Colors.white,
+                                        )
+                                      : Text(
+                                          s.tr(
+                                            'تأكيد الرمز',
+                                            'Confirmer le code',
+                                            'Verify code',
+                                          ),
+                                          style: const TextStyle(
+                                            fontFamily: AppConfig.fontPrimary,
+                                            fontSize: 15.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                             ),
                           ),
                         ],
@@ -1479,27 +1662,28 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
 
                         // Support link
-                        Center(
-                          child: TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const SupportScreen(),
-                                      ),
-                                    );
-                                  },
-                            child: Text(
-                              s.tr('المساعدة والدعم', 'Need help?'),
-                              style: const TextStyle(
-                                fontFamily: AppConfig.fontPrimary,
-                                fontSize: 13,
-                                color: Color(0xFF9CA3AF),
+                        if (!otp)
+                          Center(
+                            child: TextButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const SupportScreen(),
+                                        ),
+                                      );
+                                    },
+                              child: Text(
+                                s.tr('المساعدة والدعم', 'Need help?'),
+                                style: const TextStyle(
+                                  fontFamily: AppConfig.fontPrimary,
+                                  fontSize: 13,
+                                  color: Color(0xFF9CA3AF),
+                                ),
                               ),
                             ),
                           ),
-                        ),
 
                         const SizedBox(height: 20),
                       ],
@@ -1514,11 +1698,260 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildBackButton() {
+  Widget _buildOtpBoxesSection(AppStrings s) {
+    final digits = AccountValidation.normalizeDigits(_code.text)
+        .replaceAll(RegExp(r'[^0-9]'), '');
+    final isError = _otpPhase == _OtpPhase.error;
+    final activeIndex = digits.length < 6 ? digits.length : -1;
+
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: AnimatedBuilder(
+        animation: _shakeCtrl,
+        builder: (context, child) {
+          final dx = _shakeCtrl.isAnimating
+              ? math.sin(_shakeCtrl.value * math.pi * 6) * 6.0
+              : 0.0;
+          return Transform.translate(offset: Offset(dx, 0), child: child);
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (!_busy) _codeFocus.requestFocus();
+          },
+          child: SizedBox(
+            height: 60,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Row(
+                  children: List.generate(6, (index) {
+                    final hasDigit = index < digits.length;
+                    final digit = hasDigit ? digits[index] : '';
+                    final isActive = index == activeIndex &&
+                        (_codeFocus.hasFocus || digits.isEmpty);
+
+                    final Color bgColor;
+                    final Color borderColor;
+                    final double borderWidth;
+                    if (isError) {
+                      bgColor = const Color(0xFFFEF2F2);
+                      borderColor = const Color(0xFFDC2626);
+                      borderWidth = 1.5;
+                    } else if (isActive) {
+                      bgColor = Colors.white;
+                      borderColor = const Color(0xFF0052FF);
+                      borderWidth = 1.8;
+                    } else {
+                      bgColor = const Color(0xFFF3F5F8);
+                      borderColor = Colors.transparent;
+                      borderWidth = 1.5;
+                    }
+
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: index == 0 ? 0 : 4,
+                          right: index == 5 ? 0 : 4,
+                        ),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 140),
+                          curve: Curves.easeOutCubic,
+                          height: 56,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: borderColor,
+                              width: borderWidth,
+                            ),
+                          ),
+                          child: Text(
+                            digit,
+                            style: const TextStyle(
+                              fontFamily: AppConfig.fontPrimary,
+                              fontSize: 23,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0A0B0D),
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                Positioned.fill(
+                  child: TextField(
+                    key: const Key('auth-code'),
+                    controller: _code,
+                    focusNode: _codeFocus,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    maxLength: 6,
+                    enabled: !_busy,
+                    showCursor: false,
+                    enableInteractiveSelection: true,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]'),
+                      ),
+                    ],
+                    style: const TextStyle(
+                      color: Colors.transparent,
+                      fontSize: 1,
+                    ),
+                    cursorColor: Colors.transparent,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      filled: false,
+                      counterText: '',
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: _onOtpChanged,
+                    onSubmitted: (_) => _submit(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOtpResendRow(AppStrings s) {
+    final isSending = _otpPhase == _OtpPhase.sendingInitial ||
+        _otpPhase == _OtpPhase.resending;
+    final canTapResend = !isSending && !_busy && _remaining == 0;
+
+    return Center(
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 6,
+        children: [
+          Text(
+            s.tr(
+              'لم يصلك الرمز؟',
+              'Code non reçu ?',
+              "Didn't get a code?",
+            ),
+            style: const TextStyle(
+              fontFamily: AppConfig.fontPrimary,
+              fontSize: 14.5,
+              color: Color(0xFF5B616E),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          if (isSending)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CupertinoActivityIndicator(radius: 7),
+                const SizedBox(width: 6),
+                Text(
+                  s.tr('جاري الإرسال...', 'Envoi...', 'Sending...'),
+                  style: const TextStyle(
+                    fontFamily: AppConfig.fontPrimary,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF5B616E),
+                  ),
+                ),
+              ],
+            )
+          else
+            GestureDetector(
+              key: const Key('otp-resend'),
+              onTap: canTapResend ? _resend : null,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                child: Text(
+                  _remaining > 0
+                      ? s.tr(
+                          'إعادة الإرسال ($_remaining ث)',
+                          'Renvoyer (${_remaining}s)',
+                          'Resend (${_remaining}s)',
+                        )
+                      : s.tr(
+                          'إعادة الإرسال',
+                          'Renvoyer',
+                          'Resend',
+                        ),
+                  style: TextStyle(
+                    fontFamily: AppConfig.fontPrimary,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: canTapResend
+                        ? const Color(0xFF0052FF)
+                        : const Color(0xFFC4C8D0),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOtpSecurityBanner(AppStrings s) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F5F8),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.info,
+              size: 20,
+              color: Color(0xFF717885),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              s.tr(
+                'لن يطلب منك أبولو أبداً إنشاء حساب جديد أو تحويل أموال. لا تدخل أبداً أي رمز يعطيه لك شخص آخر.',
+                'Apolo ne vous demandera jamais de créer un nouveau compte ou de transférer des fonds. N’entrez jamais un code fourni par un tiers.',
+                'Apolo will never ask you to set up a new account or transfer funds. Never enter a code given to you by someone else.',
+              ),
+              style: const TextStyle(
+                fontFamily: AppConfig.fontPrimary,
+                fontSize: 13.5,
+                color: Color(0xFF5B616E),
+                height: 1.45,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackButton({bool isOtp = false}) {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        if (!_login && _registerStep > 1 && _pending == null) {
+        if (_pending != null || isOtp) {
+          _reset();
+          return;
+        }
+        if (!_login && _registerStep > 1) {
           _prevRegisterStep();
           return;
         }
@@ -1528,29 +1961,42 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       },
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+      child: isOtp
+          ? const SizedBox(
+              width: 40,
+              height: 40,
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 20,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            )
+          : Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back,
+                  size: 19,
+                  color: Color(0xFF111827),
+                ),
+              ),
             ),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.arrow_back,
-            size: 19,
-            color: Color(0xFF111827),
-          ),
-        ),
-      ),
     );
   }
 
@@ -1844,196 +2290,5 @@ class _GoogleIconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Dedicated login input field matching exact specifications:
-/// - Width: 868px (scaled responsively to fit container without overflow)
-/// - Height: 146px (Field 1) / 145px (Field 2)
-/// - Border radius: 40px
-/// - Border: 2px solid #48484A
-/// - Background: transparent
-/// - Left padding: 39px
-/// - Font size: 36px, Font weight: 400
-/// - Placeholder color: #A5A5AA
-/// - Text alignment: left and vertically centered
-class _SpecLoginField extends StatefulWidget {
-  final Key fieldKey;
-  final TextEditingController controller;
-  final String placeholder;
-  final double width;
-  final double height;
-  final double borderRadius;
-  final Color borderColor;
-  final double borderWidth;
-  final Color backgroundColor;
-  final double leftPadding;
-  final double fontSize;
-  final FontWeight fontWeight;
-  final Color placeholderColor;
-  final TextAlign textAlign;
-  final TextAlignVertical textAlignVertical;
-  final bool isPassword;
-  final bool enabled;
-  final TextInputType keyboardType;
-  final Iterable<String>? autofillHints;
-  final FormFieldValidator<String>? validator;
-
-  const _SpecLoginField({
-    super.key,
-    required this.fieldKey,
-    required this.controller,
-    required this.placeholder,
-    this.width = 868.0,
-    required this.height,
-    this.borderRadius = 40.0,
-    this.borderColor = const Color(0xFF48484A),
-    this.borderWidth = 2.0,
-    this.backgroundColor = Colors.transparent,
-    this.leftPadding = 39.0,
-    this.fontSize = 36.0,
-    this.fontWeight = FontWeight.w400,
-    this.placeholderColor = const Color(0xFFA5A5AA),
-    this.textAlign = TextAlign.left,
-    this.textAlignVertical = TextAlignVertical.center,
-    this.isPassword = false,
-    this.enabled = true,
-    this.keyboardType = TextInputType.text,
-    this.autofillHints,
-    this.validator,
-  });
-
-  @override
-  State<_SpecLoginField> createState() => _SpecLoginFieldState();
-}
-
-class _SpecLoginFieldState extends State<_SpecLoginField> {
-  bool _obscure = true;
-  String? _error;
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF111827);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-            width: double.infinity,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Container(
-                width: widget.width,
-                height: widget.height,
-                decoration: BoxDecoration(
-                  color: widget.backgroundColor,
-                  borderRadius: BorderRadius.circular(widget.borderRadius),
-                  border: Border.all(
-                    color: _error != null && _error!.isNotEmpty
-                        ? const Color(0xFFDC2626)
-                        : widget.borderColor,
-                    width: widget.borderWidth,
-                  ),
-                ),
-                padding: EdgeInsets.only(
-                  left: widget.leftPadding,
-                  right: widget.isPassword ? 24.0 : widget.leftPadding,
-                ),
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        key: widget.fieldKey,
-                        controller: widget.controller,
-                        enabled: widget.enabled,
-                        obscureText: widget.isPassword ? _obscure : false,
-                        keyboardType: widget.keyboardType,
-                        autofillHints: widget.autofillHints,
-                        textAlign: widget.textAlign,
-                        textAlignVertical: widget.textAlignVertical,
-                        textDirection: TextDirection.ltr,
-                        style: TextStyle(
-                          fontSize: widget.fontSize,
-                          fontWeight: widget.fontWeight,
-                          color: textColor,
-                        ),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          focusedErrorBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          isDense: true,
-                          hintText: widget.placeholder,
-                          hintStyle: TextStyle(
-                            fontSize: widget.fontSize,
-                            fontWeight: widget.fontWeight,
-                            color: widget.placeholderColor,
-                          ),
-                          errorStyle: const TextStyle(height: 0, fontSize: 0),
-                        ),
-                        validator: (val) {
-                          final err = widget.validator?.call(val);
-                          if (mounted && _error != err) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (mounted) setState(() => _error = err);
-                            });
-                          }
-                          return err;
-                        },
-                        onChanged: (val) {
-                          if (_error != null) {
-                            setState(() => _error = null);
-                          }
-                        },
-                      ),
-                    ),
-                    if (widget.isPassword)
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _obscure = !_obscure);
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 12, right: 4),
-                          child: Icon(
-                            _obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            size: 36,
-                            color: widget.placeholderColor,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (_error != null && _error!.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 16),
-            child: Text(
-              _error!,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFFDC2626),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
 }
 

@@ -7,6 +7,8 @@ import 'package:apolo_mobile/account/account_helpers.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/auth_screen.dart';
 import 'package:apolo_mobile/screens/settings_screen.dart';
+import 'package:apolo_mobile/theme/app_theme.dart';
+import 'package:apolo_mobile/widgets/custom_auth_input_field.dart';
 import 'account_helpers_test.dart' show MockAccountAdapter, json;
 
 class DeferredAuth extends AccountAuth {
@@ -146,5 +148,41 @@ void main() {
     expect(find.text('Amine'), findsNothing);
     expect(find.byIcon(Icons.help_outline), findsOneWidget);
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+  });
+
+  testWidgets('login fields have no grey inner fill and float label on focus',
+      (tester) async {
+    final adapter = MockAccountAdapter((_) => json('{}'));
+    final client = Dio()..httpClientAdapter = adapter;
+    await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(const Locale('en')),
+        home: AuthScreen(auth: AccountAuth(client: client))));
+
+    final emailField = tester.widget<TextField>(find.descendant(
+        of: find.byKey(const Key('auth-email')),
+        matching: find.byType(TextField)));
+    final passwordField = tester.widget<TextField>(find.descendant(
+        of: find.byKey(const Key('auth-password')),
+        matching: find.byType(TextField)));
+    expect(emailField.decoration?.filled, isFalse);
+    expect(passwordField.decoration?.filled, isFalse);
+
+    final emailWrapper = find.ancestor(
+        of: find.byKey(const Key('auth-email')),
+        matching: find.byType(CustomAuthInputField));
+    final initialLabelPos = tester.widget<AnimatedPositionedDirectional>(
+        find.descendant(
+            of: emailWrapper,
+            matching: find.byType(AnimatedPositionedDirectional)));
+    expect(initialLabelPos.top, 18.0);
+
+    await tester.tap(find.byKey(const Key('auth-email')));
+    await tester.pumpAndSettle();
+
+    final focusedLabelPos = tester.widget<AnimatedPositionedDirectional>(
+        find.descendant(
+            of: emailWrapper,
+            matching: find.byType(AnimatedPositionedDirectional)));
+    expect(focusedLabelPos.top, 8.0);
   });
 }

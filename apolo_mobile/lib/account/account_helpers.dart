@@ -48,18 +48,36 @@ class AccountValidation {
       value.length >= 8 && value.trim().isNotEmpty;
   static bool otp(String value) =>
       RegExp(r'^[0-9]{6}$').hasMatch(normalizeDigits(value).trim());
+
+  /// Masks an email address for safe display on OTP screens (e.g. `am***@gmail.com`).
+  static String? maskEmail(String? raw) {
+    final text = (raw ?? '').trim();
+    final at = text.indexOf('@');
+    if (at <= 0 || at >= text.length - 1) return null;
+    final local = text.substring(0, at);
+    final domain = text.substring(at);
+    if (local.length <= 2) return '${local[0]}***$domain';
+    return '${local.substring(0, 2)}***$domain';
+  }
 }
 
 class AccountFailure implements Exception {
   final String kind;
-  const AccountFailure(this.kind);
+  final String? message;
+  const AccountFailure(this.kind, [this.message]);
 }
 
 class AccountSession {
   final String token;
   final Map<String, dynamic> user;
   final bool requiresOtp;
-  const AccountSession(this.token, this.user, {required this.requiresOtp});
+  final bool otpSent;
+  const AccountSession(
+    this.token,
+    this.user, {
+    required this.requiresOtp,
+    this.otpSent = false,
+  });
 }
 
 /// Only routes already referenced by the local application. Pending tokens stay
@@ -83,9 +101,14 @@ class AccountAuth {
     if (root['success'] == false ||
         root['status'] == 'error' ||
         root['status'] == 'failed') {
-      throw const AccountFailure('rejected');
+      throw AccountFailure('rejected', root['message']?.toString());
     }
     return root;
+  }
+
+  bool _isSuccess(Map<String, dynamic> root) {
+    final status = root['status']?.toString().toLowerCase();
+    return status == 'success' || status == 'ok' || root['success'] == true;
   }
 
   AccountSession _session(Response<dynamic> response,
@@ -105,11 +128,19 @@ class AccountAuth {
         user['id'] == null) {
       throw const AccountFailure('response');
     }
-    return AccountSession(token, Map<String, dynamic>.from(user),
-        requiresOtp: registration ||
-            root['requires_otp'] == true ||
-            data['requires_otp'] == true ||
-            user['email_verified_at'] == null);
+    final requiresOtp = registration ||
+        root['requires_otp'] == true ||
+        data['requires_otp'] == true ||
+        user['email_verified_at'] == null;
+    final otpSent = registration ||
+        root['otp_sent'] == true ||
+        data['otp_sent'] == true;
+    return AccountSession(
+      token,
+      Map<String, dynamic>.from(user),
+      requiresOtp: requiresOtp,
+      otpSent: otpSent,
+    );
   }
 
   Future<AccountSession> login(String login, String password) async {
@@ -159,7 +190,9 @@ class AccountAuth {
         data: {'code': AccountValidation.normalizeDigits(code).trim()},
         options:
             Options(headers: {'Authorization': 'Bearer ${pending.token}'})));
-    if (root['status'] != 'success') throw const AccountFailure('verification');
+    if (!_isSuccess(root)) {
+      throw AccountFailure('verification', root['message']?.toString());
+    }
     final data = root['data'] is Map ? root['data'] as Map : root;
     final user = data['user'];
     return AccountSession(
@@ -171,10 +204,14 @@ class AccountAuth {
   }
 
   Future<void> resend(AccountSession pending) async {
+    final email = (pending.user['email'] ?? '').toString().trim();
     final root = _payload(await dio.post('/auth/otp/resend',
+        data: email.isNotEmpty ? {'email': email} : null,
         options:
             Options(headers: {'Authorization': 'Bearer ${pending.token}'})));
-    if (root['status'] != 'success') throw const AccountFailure('verification');
+    if (!_isSuccess(root)) {
+      throw AccountFailure('verification', root['message']?.toString());
+    }
   }
 
   Future<Map<String, dynamic>> taxonomy() async {
@@ -261,7 +298,18 @@ class AccountAuth {
 }
 
 String accountError(Object error, bool ar) {
+  if (error is AccountFailure) {
+    final msg = error.message?.trim();
+    if (msg != null && msg.isNotEmpty) return msg;
+    if (error.kind == 'verification') {
+      return ar
+          ? 'رمز التحقق غير صحيح أو انتهت صلاحيته.'
+          : 'Code de vérification invalide ou expiré.';
+    }
+  }
   if (error is DioException) {
+    final data = error.response?.data;
+    final serverMsg = data is Map ? data['message']?.toString().trim() : null;
     final status = error.response?.statusCode;
     if (status == 429) {
       return ar
@@ -274,6 +322,7 @@ String accountError(Object error, bool ar) {
           : 'Identifiants ou code de vérification refusés.';
     }
     if (status == 422) {
+      if (serverMsg != null && serverMsg.isNotEmpty) return serverMsg;
       return ar
           ? 'تحقق من البيانات المدخلة. قد يكون البريد مستخدماً بالفعل.'
           : 'Vérifiez les informations. Cette adresse est peut-être déjà utilisée.';

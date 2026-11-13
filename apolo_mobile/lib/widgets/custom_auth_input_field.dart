@@ -4,14 +4,13 @@ import 'package:flutter/services.dart';
 import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 
-/// Compact, premium 54px rounded input card with an animated floating label.
+/// Compact 58px rounded input card with an inner animated floating label.
 ///
 /// Features:
-/// - Compact 54px height to avoid overly tall inputs.
-/// - Smooth floating label animation: centered as placeholder when empty/unfocused,
-///   floats gracefully to top when active or filled.
+/// - Smooth floating label animation: centered when empty/unfocused,
+///   floats inside the top of the box when focused or filled.
 /// - Zero grey background or underline artifacts.
-/// - Vibrant interactive purple (#5E48E8) border and soft glow on focus.
+/// - Crisp interactive focus border and label highlight.
 /// - Secret text visibility toggle.
 class CustomAuthInputField extends StatefulWidget {
   final TextEditingController controller;
@@ -27,6 +26,9 @@ class CustomAuthInputField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final bool readOnly;
   final VoidCallback? onTap;
+  final Color focusColor;
+  final TextInputAction textInputAction;
+  final VoidCallback? onFieldSubmitted;
 
   const CustomAuthInputField({
     super.key,
@@ -43,6 +45,9 @@ class CustomAuthInputField extends StatefulWidget {
     this.onChanged,
     this.readOnly = false,
     this.onTap,
+    this.focusColor = const Color(0xFF0052FF),
+    this.textInputAction = TextInputAction.next,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -81,6 +86,9 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
   @override
   Widget build(BuildContext context) {
     final hasError = _error != null && _error!.isNotEmpty;
+    final animDuration = MediaQuery.of(context).disableAnimations
+        ? Duration.zero
+        : const Duration(milliseconds: 180);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -98,64 +106,47 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
             },
             behavior: HitTestBehavior.opaque,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+              duration: animDuration,
               curve: Curves.easeOut,
-              height: 54,
+              height: 58,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: hasError
                       ? const Color(0xFFEF4444)
                       : (_isFocused
-                          ? const Color(0xFF5E48E8)
-                          : const Color(0xFFE5E7EB)),
-                  width: _isFocused ? 1.8 : 1.2,
+                          ? widget.focusColor
+                          : const Color(0xFFD1D5DB)),
+                  width: _isFocused || hasError ? 1.8 : 1.2,
                 ),
-                boxShadow: _isFocused
-                    ? [
-                        BoxShadow(
-                          color:
-                              const Color(0xFF5E48E8).withValues(alpha: 0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.015),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Stack(
                 alignment: AlignmentDirectional.centerStart,
                 children: [
-                  // Animated Floating Label
+                  // Animated Floating Label inside top of container
                   AnimatedPositionedDirectional(
-                    duration: const Duration(milliseconds: 180),
+                    duration: animDuration,
                     curve: Curves.easeOut,
-                    top: _shouldFloat ? 7 : 17,
+                    top: _shouldFloat ? 8 : 18,
                     start: 0,
                     end: widget.secret ? 36 : 0,
                     child: IgnorePointer(
                       child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 180),
+                        duration: animDuration,
                         curve: Curves.easeOut,
                         style: TextStyle(
-                          fontSize: _shouldFloat ? 10.5 : 14.5,
+                          fontFamily: AppConfig.fontPrimary,
+                          fontSize: _shouldFloat ? 11.5 : 15,
                           fontWeight: _shouldFloat
-                              ? FontWeight.w600
+                              ? FontWeight.w500
                               : FontWeight.w400,
                           color: hasError
                               ? const Color(0xFFEF4444)
                               : (_isFocused
-                                  ? const Color(0xFF5E48E8)
-                                  : (_hasContent
-                                      ? const Color(0xFF6B7280)
-                                      : const Color(0xFF9CA3AF))),
+                                  ? widget.focusColor
+                                  : const Color(0xFF6B7280)),
                           letterSpacing: -0.1,
                         ),
                         child: Text(
@@ -169,7 +160,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
 
                   // Input Text Field & Secret Toggle
                   Positioned(
-                    top: _shouldFloat ? 16 : 0,
+                    top: _shouldFloat ? 19 : 0,
                     bottom: 0,
                     left: 0,
                     right: 0,
@@ -205,14 +196,17 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                               obscureText: widget.secret && _obscure,
                               autocorrect: false,
                               enableSuggestions: !widget.secret,
-                              textInputAction: TextInputAction.next,
+                              textInputAction: widget.textInputAction,
+                              onFieldSubmitted: (_) =>
+                                  widget.onFieldSubmitted?.call(),
                               style: const TextStyle(
+                                fontFamily: AppConfig.fontPrimary,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF111827),
                                 letterSpacing: -0.2,
                               ),
-                              cursorColor: const Color(0xFF5E48E8),
+                              cursorColor: widget.focusColor,
                               cursorHeight: 18,
                               inputFormatters: widget.type == TextInputType.number
                                   ? [
