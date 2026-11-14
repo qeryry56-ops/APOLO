@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apolo.ma — سوق المغرب للإعلانات (Test Web Shell)</title>
+  <style>
+    :root {
+      --primary: #E31B23;
+      --ink: #0F172A;
+      --muted: #64748B;
+      --surface: #F5F6F8;
+      --border: #E2E8F0;
+      --success: #10B981;
+      --gold: #F59E0B;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    body { margin: 0; background: #fff; color: var(--ink); }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; border-bottom: 1px solid var(--border); background: #fff; position: sticky; top: 0; z-index: 10;
+    }
+    .brand { font-size: 22px; font-weight: 900; color: var(--primary); }
+    .nav-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    button {
+      border: none; border-radius: 999px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 14px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-dark { background: var(--ink); color: #fff; }
+    .btn-ghost { background: var(--surface); color: var(--ink); }
+    .btn-gold { background: var(--gold); color: #fff; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+    .card {
+      background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .field { margin-bottom: 12px; }
+    label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 4px; color: var(--muted); }
+    input, select, textarea {
+      width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); font-size: 14px;
+    }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .badge-vip { background: #FEF3C7; color: #B45309; }
+    .badge-city { background: var(--surface); color: var(--ink); }
+    .error-box { background: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px 14px; border-radius: 12px; margin-bottom: 12px; font-weight: 600; }
+    .success-box { background: #ECFDF5; border: 1px solid #6EE7B7; color: #065F46; padding: 10px 14px; border-radius: 12px; margin-bottom: 12px; font-weight: 600; }
+    .hidden { display: none !important; }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+    }
+    .modal-box { background: #fff; border-radius: 20px; padding: 22px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; }
+    .msg-list { max-height: 240px; overflow-y: auto; background: var(--surface); padding: 12px; border-radius: 12px; margin-bottom: 12px; }
+    .msg-item { background: #fff; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Apolo.ma</div>
+    <div class="nav-actions">
+      <span id="user-greeting" data-testid="user-greeting" class="hidden"></span>
+      <span class="badge badge-city">المفضلة: <strong id="favorites-count" data-testid="favorites-count">0</strong></span>
+      <button id="open-post-btn" data-testid="open-post-btn" class="btn-primary">+ أضف إعلان</button>
+      <button id="open-login-btn" data-testid="open-login-btn" class="btn-dark">تسجيل الدخول</button>
+      <button id="open-register-btn" data-testid="open-register-btn" class="btn-ghost">إنشاء حساب</button>
+      <button id="logout-btn" data-testid="logout-btn" class="btn-ghost hidden">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="global-alert" data-testid="global-alert" class="hidden"></div>
+
+    <!-- Search & Filter Bar -->
+    <section class="card">
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+        <div style="flex:2; min-width:180px;">
+          <label for="search-query">ابحث عن منتج أو سيارة...</label>
+          <input id="search-query" data-testid="search-query" type="text" placeholder="مثال: Mercedes أو iPhone" />
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label for="filter-category">القسم</label>
+          <select id="filter-category" data-testid="filter-category"><option value="">جميع الأقسام</option></select>
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label for="filter-city">المدينة</label>
+          <select id="filter-city" data-testid="filter-city"><option value="">كل المدن</option></select>
+        </div>
+        <button id="search-btn" data-testid="search-btn" class="btn-dark">بحث</button>
+      </div>
+    </section>
+
+    <!-- Ads Feed -->
+    <section>
+      <h2 style="margin-bottom:12px;">أحدث الإعلانات المختارة</h2>
+      <div id="ads-list" data-testid="ads-list" class="grid"></div>
+    </section>
+
+    <!-- Post Ad View -->
+    <section id="post-ad-view" data-testid="post-ad-view" class="card hidden" style="margin-top:24px;">
+      <h3>نشر إعلان جديد</h3>
+      <div id="post-error" data-testid="post-error" class="error-box hidden"></div>
+      <div class="field"><label>عنوان الإعلان</label><input id="post-title" data-testid="post-title" type="text" /></div>
+      <div class="field"><label>الوصف</label><textarea id="post-desc" data-testid="post-desc" rows="2"></textarea></div>
+      <div class="grid" style="grid-template-columns:1fr 1fr;">
+        <div class="field"><label>الثمن (DH)</label><input id="post-price" data-testid="post-price" type="number" /></div>
+        <div class="field"><label>الهاتف</label><input id="post-phone" data-testid="post-phone" type="text" value="0612345678" /></div>
+        <div class="field"><label>القسم</label><select id="post-category" data-testid="post-category"></select></div>
+        <div class="field"><label>المدينة</label><select id="post-city" data-testid="post-city"></select></div>
+      </div>
+      <label style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+        <input id="post-negotiable" data-testid="post-negotiable" type="checkbox" style="width:auto;" /> قابل للتفاوض
+      </label>
+      <div style="display:flex; gap:10px;">
+        <button id="post-submit" data-testid="post-submit" class="btn-primary">نشر الإعلان</button>
+        <button id="post-cancel" data-testid="post-cancel" class="btn-ghost">إلغاء</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Auth Modal (Login / Register / OTP / Onboarding) -->
+  <div id="auth-modal" data-testid="auth-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 id="auth-modal-title" style="margin:0;">الحساب</h3>
+        <button id="close-auth-btn" data-testid="close-auth-btn" class="btn-ghost">✕</button>
+      </div>
+      <div id="auth-error" data-testid="auth-error" class="error-box hidden"></div>
+
+      <!-- Login View -->
+      <div id="login-view" data-testid="login-view" class="hidden">
+        <div class="field"><label>البريد الإلكتروني أو الهاتف</label><input id="login-identifier" data-testid="login-identifier" type="text" /></div>
+        <div class="field"><label>كلمة المرور</label><input id="login-password" data-testid="login-password" type="password" /></div>
+        <button id="login-submit" data-testid="login-submit" class="btn-primary" style="width:100%;">دخول</button>
+      </div>
+
+      <!-- Register View -->
+      <div id="register-view" data-testid="register-view" class="hidden">
+        <div class="field"><label>الاسم الكامل</label><input id="reg-name" data-testid="reg-name" type="text" /></div>
+        <div class="field"><label>البريد الإلكتروني</label><input id="reg-email" data-testid="reg-email" type="email" /></div>
+        <div class="field"><label>رقم الهاتف المغربي</label><input id="reg-phone" data-testid="reg-phone" type="text" /></div>
+        <div class="field"><label>كلمة المرور</label><input id="reg-password" data-testid="reg-password" type="password" /></div>
+        <div class="field"><label>تأكيد كلمة المرور</label><input id="reg-confirmation" data-testid="reg-confirmation" type="password" /></div>
+        <button id="reg-submit" data-testid="reg-submit" class="btn-primary" style="width:100%;">إنشاء حساب ومتابعة</button>
+      </div>
+
+      <!-- OTP View -->
+      <div id="otp-view" data-testid="otp-view" class="hidden">
+        <p id="otp-masked-email" data-testid="otp-masked-email"></p>
+        <div class="field"><label>رمز التحقق (6 أرقام)</label><input id="otp-code" data-testid="otp-code" type="text" maxlength="6" /></div>
+        <button id="otp-verify-btn" data-testid="otp-verify-btn" class="btn-primary" style="width:100%;">تأكيد الرمز</button>
+      </div>
+
+      <!-- Onboarding View -->
+      <div id="onboarding-view" data-testid="onboarding-view" class="hidden">
+        <div class="field">
+          <label>نوع الحساب</label>
+          <select id="onboard-type" data-testid="onboard-type">
+            <option value="individual">فرد (مشتري/بائع)</option>
+            <option value="pro">مهني / متجر</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>المدينة المفضلة</label>
+          <select id="onboard-city" data-testid="onboard-city"></select>
+        </div>
+        <div class="field">
+          <label>الاهتمامات</label>
+          <div id="onboard-categories" data-testid="onboard-categories"></div>
+        </div>
+        <button id="onboard-submit" data-testid="onboard-submit" class="btn-primary" style="width:100%;">حفظ وإكمال التسجيل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIP Boost Checkout Modal -->
+  <div id="boost-modal" data-testid="boost-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">ترقية الإعلان إلى VIP</h3>
+        <button id="close-boost-btn" data-testid="close-boost-btn" class="btn-ghost">✕</button>
+      </div>
+      <p id="boost-ad-title" style="color:var(--muted); font-weight:700;"></p>
+      <div id="boost-plans-list" data-testid="boost-plans-list"></div>
+      <button id="boost-confirm-btn" data-testid="boost-confirm-btn" class="btn-gold" style="width:100%; margin-top:12px;">تأكيد الدفع وتفعيل VIP</button>
+    </div>
+  </div>
+
+  <!-- Chat Modal -->
+  <div id="chat-modal" data-testid="chat-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 id="chat-peer-title" style="margin:0;">المحادثة الفورية</h3>
+        <button id="close-chat-btn" data-testid="close-chat-btn" class="btn-ghost">✕</button>
+      </div>
+      <div id="chat-messages" data-testid="chat-messages" class="msg-list"></div>
+      <div style="display:flex; gap:8px;">
+        <input id="chat-input" data-testid="chat-input" type="text" placeholder="اكتب رسالتك للبائع..." />
+        <button id="chat-send-btn" data-testid="chat-send-btn" class="btn-primary">إرسال</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      token: localStorage.getItem('apolo_token') || null,
+      user: null,
+      pendingToken: null,
+      categories: [],
+      cities: [],
+      ads: [],
+      favoriteIds: new Set(),
+      boostAdId: null,
+      selectedPlanId: 'vip_7d',
+      activeConvId: null,
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    async function api(path, options = {}) {
+      const headers = { 'Accept': 'application/json', ...(options.headers || {}) };
+      const authToken = options.token || state.token;
+      if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+      if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(options.body);
+      }
+      const res = await fetch('/api/v1' + path, { ...options, headers });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    function showGlobal(msg, isError = false) {
+      const el = $('global-alert');
+      el.textContent = msg;
+      el.className = isError ? 'error-box' : 'success-box';
+    }
+
+    function showAuthError(msg) {
+      const el = $('auth-error');
+      if (!msg) { el.classList.add('hidden'); return; }
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function openAuthModal(view) {
+      showAuthError(null);
+      $('auth-modal').classList.remove('hidden');
+      for (const v of ['login-view', 'register-view', 'otp-view', 'onboarding-view']) {
+        $(v).classList.toggle('hidden', v !== view);
+      }
+    }
+
+    function updateAuthHeader() {
+      const loggedIn = Boolean(state.token && state.user);
+      $('user-greeting').classList.toggle('hidden', !loggedIn);
+      $('logout-btn').classList.toggle('hidden', !loggedIn);
+      $('open-login-btn').classList.toggle('hidden', loggedIn);
+      $('open-register-btn').classList.toggle('hidden', loggedIn);
+      if (loggedIn) {
+        $('user-greeting').textContent = 'مرحباً، ' + state.user.name;
+      }
+      $('favorites-count').textContent = String(state.favoriteIds.size);
+    }
+
+    async function loadTaxonomy() {
+      const res = await api('/taxonomy');
+      if (res.ok && res.data.status === 'success') {
+        state.categories = res.data.categories || [];
+        state.cities = res.data.cities || [];
+        const fillSelect = (sel, items, defaultLabel) => {
+          sel.innerHTML = defaultLabel ? `<option value="">${defaultLabel}</option>` : '';
+          for (const item of items) {
+            const opt = document.createElement('option');
+            opt.value = String(item.id);
+            opt.textContent = item.name_ar || item.name_fr || item.name;
+            sel.appendChild(opt);
+          }
+        };
+        fillSelect($('filter-category'), state.categories, 'جميع الأقسام');
+        fillSelect($('filter-city'), state.cities, 'كل المدن');
+        fillSelect($('post-category'), state.categories);
+        fillSelect($('post-city'), state.cities);
+        fillSelect($('onboard-city'), state.cities);
+
+        const obCats = $('onboard-categories');
+        obCats.innerHTML = '';
+        for (const c of state.categories) {
+          const lbl = document.createElement('label');
+          lbl.style.display = 'inline-flex';
+          lbl.style.alignItems = 'center';
+          lbl.style.gap = '6px';
+          lbl.style.marginInlineEnd = '12px';
+          lbl.innerHTML = `<input type="checkbox" data-testid="onboard-cat-${c.id}" value="${c.id}" style="width:auto;" /> ${c.name_ar || c.name}`;
+          obCats.appendChild(lbl);
+        }
+      }
+    }
+
+    async function loadFavorites() {
+      if (!state.token) {
+        state.favoriteIds.clear();
+        updateAuthHeader();
+        return;
+      }
+      const res = await api('/favorites');
+      if (res.ok && res.data.status === 'success') {
+        state.favoriteIds = new Set((res.data.data || []).map((a) => Number(a.id)));
+        updateAuthHeader();
+      }
+    }
+
+    async function loadAds() {
+      const params = new URLSearchParams();
+      const q = $('search-query').value.trim();
+      const cat = $('filter-category').value;
+      const city = $('filter-city').value;
+      if (q) params.set('query', q);
+      if (cat) params.set('category_id', cat);
+      if (city) params.set('city_id', city);
+      const res = await api('/ads?' + params.toString());
+      if (res.ok && res.data.status === 'success') {
+        state.ads = res.data.data || [];
+        renderAds();
+      }
+    }
+
+    function renderAds() {
+      const container = $('ads-list');
+      container.innerHTML = '';
+      if (state.ads.length === 0) {
+        container.innerHTML = '<div class="card">لا توجد إعلانات مطابقة لبحثك</div>';
+        return;
+      }
+      for (const ad of state.ads) {
+        const isFav = state.favoriteIds.has(Number(ad.id));
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.setAttribute('data-testid', `ad-card-${ad.id}`);
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span class="badge badge-city">${ad.city_name || 'المغرب'}</span>
+            ${ad.is_vip ? `<span class="badge badge-vip" data-testid="vip-badge-${ad.id}">VIP مميز</span>` : ''}
+          </div>
+          <h3 style="margin:4px 0 8px;">${ad.title}</h3>
+          <div style="color:var(--primary); font-weight:900; font-size:18px; margin-bottom:10px;">${ad.price} DH</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button data-testid="fav-btn-${ad.id}" class="btn-ghost">${isFav ? '♥ محفوظ' : '♡ حفظ'}</button>
+            <button data-testid="boost-btn-${ad.id}" class="btn-gold">تمييز VIP</button>
+            <button data-testid="chat-btn-${ad.id}" class="btn-dark">دردشة</button>
+          </div>
+        `;
+        card.querySelector(`[data-testid="fav-btn-${ad.id}"]`).onclick = () => toggleFavorite(ad.id);
+        card.querySelector(`[data-testid="boost-btn-${ad.id}"]`).onclick = () => openBoostModal(ad);
+        card.querySelector(`[data-testid="chat-btn-${ad.id}"]`).onclick = () => openChat(ad);
+        container.appendChild(card);
+      }
+    }
+
+    async function toggleFavorite(adId) {
+      if (!state.token) {
+        openAuthModal('login-view');
+        showAuthError('سجّل الدخول أولاً لحفظ الإعلانات');
+        return;
+      }
+      const res = await api(`/favorites/${adId}/toggle`, { method: 'POST' });
+      if (res.ok && res.data.status === 'success') {
+        if (res.data.is_favorite) state.favoriteIds.add(Number(adId));
+        else state.favoriteIds.delete(Number(adId));
+        updateAuthHeader();
+        renderAds();
+      }
+    }
+
+    async function openBoostModal(ad) {
+      if (!state.token) {
+        openAuthModal('login-view');
+        return;
+      }
+      state.boostAdId = ad.id;
+      $('boost-ad-title').textContent = ad.title;
+      const res = await api('/boost/plans');
+      const list = $('boost-plans-list');
+      list.innerHTML = '';
+      if (res.ok && Array.isArray(res.data.plans)) {
+        state.selectedPlanId = res.data.plans[0]?.id || 'vip_7d';
+        for (const p of res.data.plans) {
+          const item = document.createElement('label');
+          item.className = 'card';
+          item.style.display = 'flex';
+          item.style.justifyContent = 'space-between';
+          item.style.cursor = 'pointer';
+          item.innerHTML = `
+            <span><input type="radio" name="boostPlan" value="${p.id}" data-testid="boost-plan-${p.id}" ${p.id === state.selectedPlanId ? 'checked' : ''} style="width:auto;" /> ${p.name_ar}</span>
+            <strong>${p.price_mad} MAD</strong>
+          `;
+          item.querySelector('input').onchange = () => { state.selectedPlanId = p.id; };
+          list.appendChild(item);
+        }
+      }
+      $('boost-modal').classList.remove('hidden');
+    }
+
+    async function confirmBoostCheckout() {
+      const res = await api(`/ads/${state.boostAdId}/boost/verify-iap`, {
+        method: 'POST',
+        body: {
+          plan: state.selectedPlanId,
+          platform: 'web',
+          transaction_id: 'TXN-' + Date.now(),
+          receipt_data: 'verified-test-receipt',
+        },
+      });
+      if (res.ok && res.data.status === 'success') {
+        $('boost-modal').classList.add('hidden');
+        showGlobal('تم تفعيل باقة VIP للإعلان بنجاح');
+        await loadAds();
+      }
+    }
+
+    async function openChat(ad) {
+      if (!state.token) {
+        openAuthModal('login-view');
+        return;
+      }
+      const res = await api('/chat/start', { method: 'POST', body: { ad_id: ad.id } });
+      if (res.ok && res.data.status === 'success') {
+        state.activeConvId = res.data.conversation.id;
+        $('chat-peer-title').textContent = 'محادثة حول: ' + ad.title;
+        await loadChatMessages();
+        $('chat-modal').classList.remove('hidden');
+      }
+    }
+
+    async function loadChatMessages() {
+      if (!state.activeConvId) return;
+      const res = await api(`/chat/conversations/${state.activeConvId}/messages`);
+      if (res.ok && res.data.status === 'success') {
+        const box = $('chat-messages');
+        box.innerHTML = '';
+        for (const m of res.data.messages || []) {
+          const div = document.createElement('div');
+          div.className = 'msg-item';
+          div.textContent = m.body;
+          box.appendChild(div);
+        }
+      }
+    }
+
+    $('open-login-btn').onclick = () => openAuthModal('login-view');
+    $('open-register-btn').onclick = () => openAuthModal('register-view');
+    $('close-auth-btn').onclick = () => $('auth-modal').classList.add('hidden');
+    $('close-boost-btn').onclick = () => $('boost-modal').classList.add('hidden');
+    $('close-chat-btn').onclick = () => $('chat-modal').classList.add('hidden');
+    $('boost-confirm-btn').onclick = confirmBoostCheckout;
+    $('search-btn').onclick = loadAds;
+
+    $('open-post-btn').onclick = () => {
+      if (!state.token) {
+        openAuthModal('login-view');
+        showAuthError('يجب تسجيل الدخول لنشر إعلان');
+        return;
+      }
+      $('post-ad-view').classList.remove('hidden');
+    };
+    $('post-cancel').onclick = () => $('post-ad-view').classList.add('hidden');
+
+    $('post-submit').onclick = async () => {
+      $('post-error').classList.add('hidden');
+      const res = await api('/ads', {
+        method: 'POST',
+        body: {
+          title: $('post-title').value,
+          description: $('post-desc').value,
+          price: Number($('post-price').value),
+          category_id: Number($('post-category').value),
+          city_id: Number($('post-city').value),
+          phone_call: $('post-phone').value,
+          negotiable: $('post-negotiable').checked ? 1 : 0,
+        },
+      });
+      if (!res.ok) {
+        $('post-error').textContent = res.data.message || 'بيانات الإعلان غير صالحة';
+        $('post-error').classList.remove('hidden');
+        return;
+      }
+      $('post-ad-view').classList.add('hidden');
+      showGlobal('تم نشر الإعلان بنجاح');
+      await loadAds();
+    };
+
+    $('reg-submit').onclick = async () => {
+      showAuthError(null);
+      const res = await api('/auth/register', {
+        method: 'POST',
+        body: {
+          name: $('reg-name').value,
+          email: $('reg-email').value,
+          phone: $('reg-phone').value,
+          password: $('reg-password').value,
+          password_confirmation: $('reg-confirmation').value,
+        },
+      });
+      if (!res.ok) {
+        showAuthError(res.data.message || 'تعذر إنشاء الحساب');
+        return;
+      }
+      state.pendingToken = res.data.token;
+      $('otp-masked-email').textContent = 'تم إرسال الرمز إلى ' + res.data.user.email;
+      openAuthModal('otp-view');
+    };
+
+    $('otp-verify-btn').onclick = async () => {
+      showAuthError(null);
+      const res = await api('/auth/otp/verify', {
+        method: 'POST',
+        token: state.pendingToken,
+        body: { code: $('otp-code').value },
+      });
+      if (!res.ok) {
+        showAuthError(res.data.message || 'رمز التحقق غير صحيح');
+        return;
+      }
+      openAuthModal('onboarding-view');
+    };
+
+    $('onboard-submit').onclick = async () => {
+      showAuthError(null);
+      const checked = Array.from(document.querySelectorAll('#onboard-categories input:checked')).map((i) => Number(i.value));
+      const res = await api('/auth/onboarding', {
+        method: 'POST',
+        token: state.pendingToken,
+        body: {
+          account_type: $('onboard-type').value,
+          preferred_city_id: Number($('onboard-city').value),
+          category_interests: checked.length ? checked : [1],
+        },
+      });
+      if (!res.ok) {
+        showAuthError(res.data.message || 'تعذر حفظ التفضيلات');
+        return;
+      }
+      state.token = state.pendingToken;
+      localStorage.setItem('apolo_token', state.token);
+      const me = await api('/auth/profile');
+      state.user = me.data.user;
+      $('auth-modal').classList.add('hidden');
+      updateAuthHeader();
+      showGlobal('تم تفعيل الحساب وتسجيل الدخول بنجاح');
+      await loadFavorites();
+      await loadAds();
+    };
+
+    $('login-submit').onclick = async () => {
+      showAuthError(null);
+      const res = await api('/auth/login', {
+        method: 'POST',
+        body: {
+          login: $('login-identifier').value,
+          password: $('login-password').value,
+        },
+      });
+      if (!res.ok) {
+        showAuthError(res.data.message || 'بيانات الدخول غير صحيحة');
+        return;
+      }
+      if (res.data.requires_otp) {
+        state.pendingToken = res.data.token;
+        openAuthModal('otp-view');
+        return;
+      }
+      state.token = res.data.token;
+      localStorage.setItem('apolo_token', state.token);
+      state.user = res.data.user;
+      $('auth-modal').classList.add('hidden');
+      updateAuthHeader();
+      showGlobal('تم تسجيل الدخول بنجاح');
+      await loadFavorites();
+      await loadAds();
+    };
+
+    $('logout-btn').onclick = async () => {
+      await api('/auth/logout', { method: 'POST' });
+      state.token = null;
+      state.user = null;
+      state.favoriteIds.clear();
+      localStorage.removeItem('apolo_token');
+      updateAuthHeader();
+      renderAds();
+      showGlobal('تم تسجيل الخروج بنجاح');
+    };
+
+    $('chat-send-btn').onclick = async () => {
+      const body = $('chat-input').value.trim();
+      if (!body || !state.activeConvId) return;
+      const res = await api(`/chat/conversations/${state.activeConvId}/messages`, {
+        method: 'POST',
+        body: { body, message: body },
+      });
+      if (res.ok) {
+        $('chat-input').value = '';
+        await loadChatMessages();
+      }
+    };
+
+    (async function boot() {
+      await loadTaxonomy();
+      if (state.token) {
+        const me = await api('/auth/profile');
+        if (me.ok && me.data.user) {
+          state.user = me.data.user;
+          await loadFavorites();
+        } else {
+          state.token = null;
+          localStorage.removeItem('apolo_token');
+        }
+      }
+      updateAuthHeader();
+      await loadAds();
+    })();
+  </script>
+</body>
+</html>

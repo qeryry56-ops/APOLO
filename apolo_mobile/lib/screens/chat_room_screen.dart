@@ -496,8 +496,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ? _openPeerProfile
                 : null,
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: _surfaceGrey,
@@ -752,8 +752,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           GestureDetector(
             onTap: _mediaUnavailable,
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: const BoxDecoration(
                 color: _surfaceGrey,
                 shape: BoxShape.circle,
@@ -837,8 +837,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               key: const Key('chat-send'),
               onTap: _sending ? null : () => _sendText(),
               child: Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: const BoxDecoration(
                   color: _apoloRed,
                   shape: BoxShape.circle,

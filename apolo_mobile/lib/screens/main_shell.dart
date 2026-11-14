@@ -8,6 +8,7 @@ import 'search_screen.dart';
 import 'post_ad_screen.dart';
 import 'chat_list_screen.dart';
 import 'profile_screen.dart';
+import 'widgets/kinetic_widgets.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -149,49 +150,63 @@ class _MainShellState extends State<MainShell> {
                         final item = items[idx];
                         final selected = _currentIndex == idx;
                         return Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => setState(() => _currentIndex = idx),
-                            child: Semantics(
-                                button: true,
-                                selected: selected,
-                                label: item.label,
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  curve: Curves.easeOutCubic,
-                                  decoration: BoxDecoration(
-                                    color: selected
-                                        ? const Color(0xFFFEECEE)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        selected ? item.activeIcon : item.icon,
-                                        size: 24,
-                                        color: selected ? _blue : _ink,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        item.label,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: selected
-                                              ? FontWeight.w700
-                                              : FontWeight.w600,
+                          child: PressableScale(
+                            onTap: () {
+                              if (_currentIndex == idx) {
+                                _state.notifyTabReselected();
+                              } else {
+                                setState(() => _currentIndex = idx);
+                              }
+                            },
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                minWidth: 44,
+                                minHeight: 44,
+                              ),
+                              child: Semantics(
+                                  button: true,
+                                  selected: selected,
+                                  label: item.label,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    curve: Curves.easeOutCubic,
+                                    decoration: BoxDecoration(
+                                      color: selected
+                                          ? const Color(0xFFFEECEE)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          selected
+                                              ? item.activeIcon
+                                              : item.icon,
+                                          size: 24,
                                           color: selected ? _blue : _ink,
-                                          letterSpacing:
-                                              AppTypography.trackingForContext(
-                                                  context, -0.1),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                )),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: selected
+                                                ? FontWeight.w700
+                                                : FontWeight.w600,
+                                            color: selected ? _blue : _ink,
+                                            letterSpacing: AppTypography
+                                                .trackingForContext(
+                                                    context, -0.1),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                            ),
                           ),
                         );
                       }),

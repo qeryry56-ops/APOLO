@@ -625,8 +625,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                     PressableScale(
                       onTap: _prevStep,
                       child: Container(
-                        width: 40,
-                        height: 40,
+                        width: 44,
+                        height: 44,
                         decoration: const BoxDecoration(
                           color: _surface,
                           shape: BoxShape.circle,
@@ -641,7 +641,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                       ),
                     )
                   else
-                    const SizedBox(width: 40),
+                    const SizedBox(width: 44),
 
                   // 4-Segment Interactive Apple Progress Pills
                   Row(
@@ -1149,22 +1149,27 @@ class _PostAdScreenState extends State<PostAdScreen>
                     ),
                   if (_pickedImages.isNotEmpty)
                     PositionedDirectional(
-                      top: 6,
-                      end: 6,
-                      child: GestureDetector(
+                      top: 0,
+                      end: 0,
+                      child: PressableScale(
                         onTap: () =>
                             setState(() => _pickedImages.removeAt(idx)),
                         child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.xmark,
-                            size: 12,
-                            color: Colors.white,
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.xmark,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),

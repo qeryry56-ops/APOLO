@@ -1621,8 +1621,8 @@ class _SoftCircleButton extends StatelessWidget {
     return PressableScale(
       onTap: onTap,
       child: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: const BoxDecoration(
           color: Color(0xFFF5F6F8),
           shape: BoxShape.circle,

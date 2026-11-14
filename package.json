@@ -1,0 +1,18 @@
+{
+  "name": "apolo-app-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Comprehensive Unit, Integration, Playwright E2E, k6 Performance, and CI/CD test suite for Apolo.ma",
+  "type": "module",
+  "scripts": {
+    "test:unit": "node tests/runners/run_vitest_or_node.mjs tests/unit",
+    "test:integration": "node tests/runners/run_vitest_or_node.mjs tests/integration",
+    "test:e2e": "node tests/runners/run_playwright_or_cdp.mjs",
+    "test:perf": "node tests/performance/run_k6.mjs",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:perf"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "vitest": "^3.0.5"
+  }
+}

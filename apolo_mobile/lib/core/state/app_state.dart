@@ -19,6 +19,11 @@ class AppState extends ChangeNotifier {
   Set<int> favoriteAdIds = {};
   int unreadNotificationsCount = 0;
   bool isInitialized = false;
+  final ValueNotifier<int> tabReselectCounter = ValueNotifier<int>(0);
+
+  void notifyTabReselected() {
+    tabReselectCounter.value++;
+  }
 
   // Smart Personalization & Recommendation State (2026 Feed Engine)
   Map<int, int> categoryInterestWeights = {};
@@ -572,6 +577,7 @@ class AppState extends ChangeNotifier {
     await api.setToken(null);
     currentUser = null;
     favoriteAdIds.clear();
+    unreadNotificationsCount = 0;
     notifyListeners();
   }
 }

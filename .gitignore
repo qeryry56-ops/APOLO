@@ -18,3 +18,10 @@ GoogleService-Info.plist
 *.log
 *.bak
 *.tmp
+
+# Test dependencies & artifacts
+node_modules/
+tests/bin/
+tests/performance/k6_summary.json
+test-results/
+playwright-report/

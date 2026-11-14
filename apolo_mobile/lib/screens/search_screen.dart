@@ -52,11 +52,23 @@ class _SearchScreenState extends State<SearchScreen> {
       _state.recordCategoryInterest(_categoryId, weight: 3);
     }
     _scrollCtrl.addListener(_onScroll);
+    _state.tabReselectCounter.addListener(_scrollToTop);
     _searchAds();
+  }
+
+  void _scrollToTop() {
+    if (_scrollCtrl.hasClients) {
+      _scrollCtrl.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override
   void dispose() {
+    _state.tabReselectCounter.removeListener(_scrollToTop);
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     _queryCtrl.dispose();
@@ -1105,8 +1117,8 @@ class _SoftIconBtn extends StatelessWidget {
     return PressableScale(
       onTap: onTap,
       child: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: const BoxDecoration(
           color: Color(0xFFF5F6F8),
           shape: BoxShape.circle,
@@ -1131,24 +1143,29 @@ class _SortMiniPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PressableScale(
       onTap: () {
         HapticFeedback.selectionClick();
         onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF0F172A) : const Color(0xFFF5F6F8),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-            color: active ? Colors.white : const Color(0xFF64748B),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFF0F172A) : const Color(0xFFF5F6F8),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: active ? Colors.white : const Color(0xFF64748B),
+              ),
+            ),
           ),
         ),
       ),
@@ -1169,24 +1186,29 @@ class _ModalFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PressableScale(
       onTap: () {
         HapticFeedback.selectionClick();
         onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFFE31B23) : const Color(0xFFF5F6F8),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: active ? Colors.white : const Color(0xFF0F172A),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFFE31B23) : const Color(0xFFF5F6F8),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: active ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
           ),
         ),
       ),

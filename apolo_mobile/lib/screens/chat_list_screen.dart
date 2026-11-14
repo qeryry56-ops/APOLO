@@ -582,8 +582,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
               PressableScale(
                 onTap: () {},
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   decoration: const BoxDecoration(
                     color: _surfaceGrey,
                     shape: BoxShape.circle,
@@ -603,8 +603,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   PressableScale(
                     onTap: () {},
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       alignment: Alignment.center,
                       child: const Icon(
                         CupertinoIcons.camera,
@@ -618,8 +618,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   PressableScale(
                     onTap: _openPostAd,
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: _apoloRed,
                         shape: BoxShape.circle,

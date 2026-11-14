@@ -4,6 +4,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
+import 'widgets/kinetic_widgets.dart';
 
 class StoreDetailScreen extends StatefulWidget {
   final String subdomain;
@@ -255,11 +256,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
                 child: Row(
                   children: [
-                    GestureDetector(
+                    PressableScale(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 42,
-                        height: 42,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           color: _pillBg,
                           shape: BoxShape.circle,

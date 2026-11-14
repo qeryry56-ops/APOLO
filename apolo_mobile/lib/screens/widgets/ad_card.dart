@@ -5,6 +5,7 @@ import '../../core/state/app_state.dart';
 import '../../theme/app_typography.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
+import 'kinetic_widgets.dart';
 import 'price_text.dart';
 import '../auth_screen.dart';
 
@@ -53,9 +54,8 @@ class AdCard extends StatelessWidget {
     final String categoryAsset = state.assetForCategory(catMap, categoryName);
     final bool isFav = state.favoriteAdIds.contains(id);
 
-    return GestureDetector(
+    return PressableScale(
       onTap: () {
-        HapticFeedback.selectionClick();
         final catId = state.extractAdCategoryId(ad);
         if (catId != null) {
           state.recordCategoryInterest(catId, weight: 2);
@@ -248,15 +248,15 @@ class AdCard extends StatelessWidget {
               ),
             ),
           ),
-        // Favorite Heart at top-end
+        // Favorite Heart at top-end (44x44 pt HIG touch target)
         PositionedDirectional(
-          top: 8,
-          end: 8,
+          top: 2,
+          end: 2,
           child: AnimatedBuilder(
             animation: state,
             builder: (context, __) {
               final bool currentFav = state.favoriteAdIds.contains(id);
-              return GestureDetector(
+              return PressableScale(
                 onTap: () async {
                   if (!state.isLoggedIn) {
                     await Navigator.push(context,
@@ -270,18 +270,23 @@ class AdCard extends StatelessWidget {
                   );
                 },
                 child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.94),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    currentFav
-                        ? CupertinoIcons.heart_fill
-                        : CupertinoIcons.heart,
-                    size: 15,
-                    color: currentFav ? _red : _ink,
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      currentFav
+                          ? CupertinoIcons.heart_fill
+                          : CupertinoIcons.heart,
+                      size: 15,
+                      color: currentFav ? _red : _ink,
+                    ),
                   ),
                 ),
               );

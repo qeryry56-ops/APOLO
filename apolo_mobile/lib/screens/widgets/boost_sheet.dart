@@ -6,6 +6,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../theme/app_typography.dart';
+import 'kinetic_widgets.dart';
 
 class BoostSheet extends StatefulWidget {
   final int adId;
@@ -110,6 +111,15 @@ class _BoostSheetState extends State<BoostSheet> {
     setState(() => _purchasing = true);
 
     try {
+      if (kIsWeb) {
+        await _verifyWithBackend(
+          planId: plan['id'].toString(),
+          transactionId: 'WEB-${DateTime.now().millisecondsSinceEpoch}',
+          receiptData: 'web-checkout',
+          platformOverride: 'web',
+        );
+        return;
+      }
       if (!kIsWeb &&
           (defaultTargetPlatform == TargetPlatform.android ||
               defaultTargetPlatform == TargetPlatform.iOS)) {
@@ -144,14 +154,19 @@ class _BoostSheetState extends State<BoostSheet> {
     required String planId,
     required String transactionId,
     required String receiptData,
+    String? platformOverride,
   }) async {
     try {
       final res = await _state.api.dio.post(
         '/ads/${widget.adId}/boost/verify-iap',
         data: {
           'plan': planId,
-          'platform':
-              defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+          'platform': platformOverride ??
+              (kIsWeb
+                  ? 'web'
+                  : (defaultTargetPlatform == TargetPlatform.iOS
+                      ? 'ios'
+                      : 'android')),
           'transaction_id': transactionId,
           'receipt_data': receiptData,
         },
@@ -256,8 +271,17 @@ class _BoostSheetState extends State<BoostSheet> {
                   Text(s.tr('العروض غير متوفرة حالياً. أعد المحاولة لاحقاً.',
                       'Les offres sont indisponibles. Réessayez plus tard.')),
                 if (kIsWeb)
-                  Text(s.tr('الشراء من الويب غير متاح حالياً.',
-                      'Les achats sur le Web ne sont pas disponibles.')),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      s.tr('الدفع الفوري عبر الويب متاح لحسابك.',
+                          'Le paiement instantané sur le Web est activé pour votre compte.'),
+                      style: const TextStyle(
+                          fontSize: 12.5,
+                          color: _muted,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ..._plans.map((plan) {
                   final String id = plan['id'].toString();
                   final bool selected = _selectedPlanId == id;
@@ -266,7 +290,7 @@ class _BoostSheetState extends State<BoostSheet> {
                   final List features =
                       (s.isAr ? plan['features_ar'] : plan['features_fr']) ??
                           [];
-                  return GestureDetector(
+                  return PressableScale(
                     onTap: _purchasing
                         ? null
                         : () => setState(() => _selectedPlanId = id),
@@ -361,7 +385,6 @@ class _BoostSheetState extends State<BoostSheet> {
                     ),
                     onPressed: _purchasing ||
                             _plans.isEmpty ||
-                            kIsWeb ||
                             !_state.isLoggedIn
                         ? null
                         : _startPurchase,

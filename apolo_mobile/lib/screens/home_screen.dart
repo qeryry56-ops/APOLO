@@ -59,12 +59,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _state.tabReselectCounter.addListener(_scrollToTop);
     _loadData();
     _startAutoSlide();
   }
 
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   void dispose() {
+    _state.tabReselectCounter.removeListener(_scrollToTop);
     _autoSlideTimer?.cancel();
     _scrollController.dispose();
     _trendingController.dispose();

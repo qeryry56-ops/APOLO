@@ -4,6 +4,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'store_detail_screen.dart';
 import 'widgets/app_image.dart';
+import 'widgets/kinetic_widgets.dart';
 
 class StoresScreen extends StatefulWidget {
   const StoresScreen({super.key});
@@ -135,11 +136,11 @@ class _StoresScreenState extends State<StoresScreen> {
               child: Row(
                 children: [
                   if (canPop) ...[
-                    GestureDetector(
+                    PressableScale(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 42,
-                        height: 42,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           color: _pillBg,
                           shape: BoxShape.circle,
@@ -237,11 +238,11 @@ class _StoresScreenState extends State<StoresScreen> {
                         ),
                       ),
                     ),
-                    GestureDetector(
+                    PressableScale(
                       onTap: _fetchStores,
                       child: Container(
-                        width: 34,
-                        height: 34,
+                        width: 44,
+                        height: 44,
                         decoration: const BoxDecoration(
                           color: _red,
                           shape: BoxShape.circle,

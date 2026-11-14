@@ -30,8 +30,9 @@ class AccountValidation {
   }
 
   static String? phone(String value) {
-    final text =
-        normalizeDigits(value).trim().replaceAll(RegExp(r'[\s().-]'), '');
+    final raw = normalizeDigits(value).trim();
+    if (raw.startsWith('-')) return null;
+    final text = raw.replaceAll(RegExp(r'[\s().-]'), '');
     if (RegExp(r'^0[5-7][0-9]{8}$').hasMatch(text)) {
       return '+212${text.substring(1)}';
     }
@@ -293,6 +294,52 @@ class AccountAuth {
       'password_confirmation': confirmation,
     });
     _payload(res);
+  }
+
+  Future<void> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmation,
+  }) async {
+    if (!AccountValidation.password(currentPassword) ||
+        !AccountValidation.password(newPassword) ||
+        newPassword != confirmation) {
+      throw const AccountFailure('validation');
+    }
+    final res = await dio.put('/auth/password', data: {
+      'current_password': currentPassword,
+      'password': newPassword,
+      'password_confirmation': confirmation,
+    });
+    _payload(res);
+  }
+
+  Future<Map<String, dynamic>> updateSecurityProfile({
+    required String name,
+    required String email,
+    required String phone,
+  }) async {
+    final normalizedPhone = AccountValidation.phone(phone);
+    if (name.trim().length < 2 ||
+        !AccountValidation.email(email) ||
+        normalizedPhone == null) {
+      throw const AccountFailure('validation');
+    }
+    final res = await dio.put('/auth/profile', data: {
+      'name': name.trim(),
+      'email': email.trim(),
+      'phone': normalizedPhone,
+    });
+    final payload = _payload(res);
+    final user = payload['user'];
+    if (user is Map) {
+      return Map<String, dynamic>.from(user);
+    }
+    return {
+      'name': name.trim(),
+      'email': email.trim(),
+      'phone': normalizedPhone,
+    };
   }
 
   void close() => dio.close(force: true);
