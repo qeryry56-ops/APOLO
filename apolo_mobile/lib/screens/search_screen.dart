@@ -5,6 +5,7 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'widgets/ad_card.dart';
+import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
@@ -30,7 +31,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   List<Map<String, dynamic>> _ads = [];
   bool _loading = true;
-  bool _gridView = true;
+  bool _gridView = false;
 
   int _currentPage = 1;
   int _lastPage = 1;
@@ -194,6 +195,84 @@ class _SearchScreenState extends State<SearchScreen> {
     return filtered;
   }
 
+  static const List<Map<String, dynamic>> _fallbackExploreListings = [
+    {
+      'id': 9101,
+      'title': 'Casa Oliva Villa',
+      'badge_label': 'Villa',
+      'highlight_label': 'Guest favorite',
+      'is_guest_favorite': true,
+      'rating': '4.8',
+      'reviews_count': 126,
+      'specs_display': 'Cascais, 14 km · 3 bedrooms · Pool',
+      'free_cancellation': true,
+      'price': 233,
+      'total_price_display': '\$933',
+      'total_unit_label': 'total',
+      'nightly_price_display': '\$233 / night · taxes incl.',
+      'main_image':
+          'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1000&q=80',
+      'images': [
+        'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1000&q=80',
+      ],
+    },
+    {
+      'id': 9102,
+      'title': 'Dar Sol Palmeraie',
+      'badge_label': 'Riad',
+      'highlight_label': 'Guest favorite',
+      'is_guest_favorite': true,
+      'rating': '4.9',
+      'reviews_count': 84,
+      'specs_display': 'Marrakech, 8 km · 4 bedrooms · Heated pool',
+      'free_cancellation': true,
+      'price': 195,
+      'total_price_display': '\$780',
+      'total_unit_label': 'total',
+      'nightly_price_display': '\$195 / night · taxes incl.',
+      'main_image':
+          'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
+      'images': [
+        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80',
+      ],
+    },
+    {
+      'id': 9103,
+      'title': 'Oceanview Cedar Villa',
+      'badge_label': 'Villa',
+      'highlight_label': 'Guest favorite',
+      'is_guest_favorite': true,
+      'rating': '4.7',
+      'reviews_count': 92,
+      'specs_display': 'Taghazout, 3 km · 2 bedrooms · Terrace',
+      'free_cancellation': true,
+      'price': 168,
+      'total_price_display': '\$672',
+      'total_unit_label': 'total',
+      'nightly_price_display': '\$168 / night · taxes incl.',
+      'main_image':
+          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
+      'images': [
+        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80',
+      ],
+    },
+  ];
+
+  bool get _hasActiveQueryOrFilters =>
+      _categoryId != null ||
+      _cityId != null ||
+      _minPrice != null ||
+      _maxPrice != null ||
+      _onlyNegotiable ||
+      _queryCtrl.text.trim().isNotEmpty;
+
   Future<void> _searchAds() async {
     setState(() {
       _loading = true;
@@ -226,7 +305,9 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (_) {}
     if (mounted) {
       setState(() {
-        _ads = _filterAndSortAds(const []);
+        _ads = _filterAndSortAds(
+          _hasActiveQueryOrFilters ? const [] : _fallbackExploreListings,
+        );
         _loading = false;
       });
     }
@@ -1058,37 +1139,100 @@ class _SearchScreenState extends State<SearchScreen> {
                                     );
                                   },
                                 )
-                              : ListView.separated(
-                                  controller: _scrollCtrl,
-                                  physics: const BouncingScrollPhysics(
-                                    parent: AlwaysScrollableScrollPhysics(),
-                                  ),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    20,
-                                    6,
-                                    20,
-                                    120,
-                                  ),
-                                  itemCount:
-                                      _ads.length + (_loadingMore ? 1 : 0),
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, idx) {
-                                    if (idx >= _ads.length) {
-                                      return const Padding(
-                                        padding:
-                                            EdgeInsets.symmetric(vertical: 16),
-                                        child: Center(
-                                          child: CircularProgressIndicator(
-                                            color: _red,
-                                            strokeWidth: 2.5,
-                                          ),
+                              : LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final isWide = constraints.maxWidth >= 680;
+                                    if (isWide) {
+                                      return GridView.builder(
+                                        controller: _scrollCtrl,
+                                        physics: const BouncingScrollPhysics(
+                                          parent:
+                                              AlwaysScrollableScrollPhysics(),
                                         ),
+                                        padding: const EdgeInsets.fromLTRB(
+                                          20,
+                                          8,
+                                          20,
+                                          120,
+                                        ),
+                                        gridDelegate:
+                                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                                          maxCrossAxisExtent: 400,
+                                          mainAxisExtent: 374,
+                                          mainAxisSpacing: 18,
+                                          crossAxisSpacing: 18,
+                                        ),
+                                        itemCount: _ads.length +
+                                            (_loadingMore ? 2 : 0),
+                                        itemBuilder: (context, idx) {
+                                          if (idx >= _ads.length) {
+                                            return const Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                  vertical: 16),
+                                              child: Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  color: _red,
+                                                  strokeWidth: 2.5,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          final ad = _ads[idx];
+                                          return ScrollReveal(
+                                            key: ValueKey(
+                                              'search_explore_${ad['id']}_$_sortBy',
+                                            ),
+                                            delay: Duration(
+                                              milliseconds: (idx % 6) * 45,
+                                            ),
+                                            beginOffset: const Offset(0, 18),
+                                            child: ExploreListingCard(ad: ad),
+                                          );
+                                        },
                                       );
                                     }
-                                    return AdCard(
-                                      ad: _ads[idx],
-                                      horizontal: true,
+
+                                    return ListView.separated(
+                                      controller: _scrollCtrl,
+                                      physics: const BouncingScrollPhysics(
+                                        parent: AlwaysScrollableScrollPhysics(),
+                                      ),
+                                      padding: const EdgeInsets.fromLTRB(
+                                        20,
+                                        8,
+                                        20,
+                                        120,
+                                      ),
+                                      itemCount:
+                                          _ads.length + (_loadingMore ? 1 : 0),
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(height: 16),
+                                      itemBuilder: (context, idx) {
+                                        if (idx >= _ads.length) {
+                                          return const Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                vertical: 16),
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                color: _red,
+                                                strokeWidth: 2.5,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        final ad = _ads[idx];
+                                        return ScrollReveal(
+                                          key: ValueKey(
+                                            'search_explore_${ad['id']}_$_sortBy',
+                                          ),
+                                          delay: Duration(
+                                            milliseconds: (idx % 5) * 45,
+                                          ),
+                                          beginOffset: const Offset(0, 18),
+                                          child: ExploreListingCard(ad: ad),
+                                        );
+                                      },
                                     );
                                   },
                                 ),

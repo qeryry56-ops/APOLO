@@ -149,31 +149,52 @@ class SearchGridSkeleton extends StatelessWidget {
     if (!isGrid) {
       return ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-        itemCount: 5,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemCount: 4,
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
         itemBuilder: (_, __) => Container(
-          height: 114,
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(color: const Color(0xFFEDEFF3)),
           ),
-          child: const Row(
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ShimmerBox(width: 110, height: 94, borderRadius: 14),
-              SizedBox(width: 12),
-              Expanded(
+              ShimmerBox(
+                width: double.infinity,
+                height: 218,
+                borderRadius: 18,
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(6, 16, 6, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ShimmerBox(width: 90, height: 16, borderRadius: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ShimmerBox(width: 150, height: 18, borderRadius: 6),
+                        ShimmerBox(width: 72, height: 15, borderRadius: 6),
+                      ],
+                    ),
                     SizedBox(height: 8),
-                    ShimmerBox(
-                        width: double.infinity, height: 14, borderRadius: 6),
-                    SizedBox(height: 8),
-                    ShimmerBox(width: 100, height: 12, borderRadius: 6),
+                    ShimmerBox(width: 210, height: 13, borderRadius: 6),
+                    SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ShimmerBox(width: 110, height: 14, borderRadius: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            ShimmerBox(width: 76, height: 18, borderRadius: 6),
+                            SizedBox(height: 5),
+                            ShimmerBox(width: 112, height: 11, borderRadius: 6),
+                          ],
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

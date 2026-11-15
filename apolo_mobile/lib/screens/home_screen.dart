@@ -10,6 +10,7 @@ import 'notifications_screen.dart';
 import 'post_ad_screen.dart';
 import 'search_screen.dart';
 import 'stores_screen.dart';
+import 'widgets/accommodation_card.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
 import 'widgets/kinetic_widgets.dart';
@@ -181,6 +182,93 @@ class _HomeScreenState extends State<HomeScreen> {
     return sorted.take(6).toList();
   }
 
+  List<Map<String, dynamic>> get _nearbyStayAds {
+    final stayKeywords = [
+      'cabin',
+      'villa',
+      'chalet',
+      'riad',
+      'appartement',
+      'studio',
+      'immobilier',
+      'location',
+      'vacances',
+      'house',
+      'stay',
+      'شقة',
+      'فيلا',
+      'كابين',
+      'شاليه',
+      'عقارات',
+      'كراء',
+    ];
+
+    final realStays = _ads.where((ad) {
+      final title = (ad['title'] ?? '').toString().toLowerCase();
+      final catMap = ad['category'] is Map ? ad['category'] as Map : const {};
+      final catName =
+          '${catMap['name'] ?? ''} ${catMap['name_fr'] ?? ''} ${catMap['name_ar'] ?? ''} ${ad['category_name'] ?? ''}'
+              .toLowerCase();
+      return stayKeywords.any((k) => title.contains(k) || catName.contains(k));
+    }).toList();
+
+    final curatedReferenceStays = <Map<String, dynamic>>[
+      {
+        'id': 901,
+        'title': 'Lakeside Cabin',
+        'badge_label': 'Cabin',
+        'rating': '4.9',
+        'price': 148,
+        'nightly_price_display': '\$148',
+        'price_unit': '/night',
+        'location_display': 'Sintra, Portugal',
+        'total_summary': '\$651 total · 4 nights',
+        'main_image':
+            'https://images.unsplash.com/photo-1587061949409-02df41d5e562?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        'id': 902,
+        'title': 'Atlas Pine Chalet',
+        'badge_label': 'Cabin',
+        'rating': '4.8',
+        'price': 165,
+        'nightly_price_display': '\$165',
+        'price_unit': '/night',
+        'location_display': 'Ifrane, Morocco',
+        'total_summary': '\$660 total · 4 nights',
+        'main_image':
+            'https://images.unsplash.com/photo-1542718610-a1d656d1884c?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        'id': 903,
+        'title': 'Oceanfront Villa',
+        'badge_label': 'Villa',
+        'rating': '4.9',
+        'price': 210,
+        'nightly_price_display': '\$210',
+        'price_unit': '/night',
+        'location_display': 'Essaouira, Morocco',
+        'total_summary': '\$840 total · 4 nights',
+        'main_image':
+            'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1000&q=80',
+      },
+    ];
+
+    if (realStays.isNotEmpty) {
+      return [
+        curatedReferenceStays.first,
+        ...realStays.take(5),
+      ];
+    }
+    if (_ads.isNotEmpty) {
+      return [
+        curatedReferenceStays.first,
+        ..._ads.take(4),
+      ];
+    }
+    return curatedReferenceStays;
+  }
+
   String get _userName {
     final full = _state.currentUser?['name']?.toString().trim();
     if (full != null && full.isNotEmpty) {
@@ -349,6 +437,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         // 3. Clean Categories Bento Strip (Direct Deep Link to Search Screen)
                         SliverToBoxAdapter(
                           child: _buildCategoriesBento(s, isAr),
+                        ),
+
+                        // 3.5 Nearby Stays Horizontal Carousel (AccommodationCard)
+                        SliverToBoxAdapter(
+                          child: _buildNearbyStaysSection(_nearbyStayAds),
                         ),
 
                         // 4. Featured / Exclusive Deals Showcase Carousel
@@ -793,6 +886,89 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Nearby Stays Horizontal Carousel (AccommodationCard)
+  /// - Card width: 78% of available horizontal carousel width
+  /// - Portrait aspect ratio: 0.84:1 (width : height)
+  /// - Shows the next card partially on the right with a consistent 14px gap
+  Widget _buildNearbyStaysSection(List<Map<String, dynamic>> stays) {
+    if (stays.isEmpty) return const SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth.isFinite &&
+                constraints.maxWidth > 0
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final cardWidth = availableWidth * 0.78;
+        final cardHeight = cardWidth / 0.84;
+
+        return Directionality(
+          textDirection: TextDirection.ltr,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Nearby stays',
+                        style: TextStyle(
+                          fontSize: 18.5,
+                          fontWeight: FontWeight.w900,
+                          color: _ink,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.4),
+                        ),
+                      ),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openSearchScreen(null),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'See all',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF71717A),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: cardHeight,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: stays.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 14),
+                    itemBuilder: (context, index) {
+                      final stayAd = stays[index];
+                      return SizedBox(
+                        width: cardWidth,
+                        height: cardHeight,
+                        child: AccommodationCard(ad: stayAd),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
