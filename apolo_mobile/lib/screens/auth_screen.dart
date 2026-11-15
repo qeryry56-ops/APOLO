@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
@@ -131,10 +132,37 @@ class _AuthScreenState extends State<AuthScreen>
     }
 
     if (widget.autoTriggerGoogle) {
-      _notice = _state.s.tr(
-        'الدخول عبر Google غير متاح داخل التطبيق حالياً. استخدم بريدك وكلمة المرور أو الموقع.',
-        'Google sign-in is currently unavailable in-app. Please use email and password or the website.',
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _launchGoogleSignIn();
+      });
+    }
+  }
+
+  Future<void> _launchGoogleSignIn() async {
+    HapticFeedback.lightImpact();
+    final googleAuthUri = Uri.parse('${AppConfig.prodBaseUrl}/auth/google');
+    try {
+      final launched = await launchUrl(
+        googleAuthUri,
+        mode: LaunchMode.externalApplication,
       );
+      if (!launched && mounted) {
+        setState(() {
+          _notice = _state.s.tr(
+            'تعذر فتح صفحة الدخول عبر Google. افتح الموقع apolo.ma.',
+            'Impossible d’ouvrir Google sign-in. Ouvrez apolo.ma.',
+          );
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _notice = _state.s.tr(
+            'تعذر بدء تسجيل الدخول عبر Google حالياً.',
+            'Impossible de démarrer la connexion Google.',
+          );
+        });
+      }
     }
   }
 
@@ -1096,15 +1124,7 @@ class _AuthScreenState extends State<AuthScreen>
                               'المتابعة باستخدام Google',
                               'Continue With Google',
                             ),
-                            onPressed: () {
-                              HapticFeedback.lightImpact();
-                              setState(() {
-                                _notice = s.tr(
-                                  'الدخول عبر Google غير متاح حالياً داخل التطبيق. استخدم البريد أو الهاتف.',
-                                  'Google sign-in is not available yet. Please use email or phone.',
-                                );
-                              });
-                            },
+                            onPressed: _launchGoogleSignIn,
                           ),
 
                           const SizedBox(height: 12),
