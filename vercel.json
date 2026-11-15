@@ -42,6 +42,10 @@
   ],
   "rewrites": [
     {
+      "source": "/apolo-media/:path*",
+      "destination": "https://apolo.ma/storage/:path*"
+    },
+    {
       "source": "/privacy",
       "destination": "/privacy.html"
     },

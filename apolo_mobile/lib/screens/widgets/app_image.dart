@@ -24,6 +24,46 @@ class AppImage extends StatelessWidget {
     this.memCacheHeight,
   });
 
+  /// Rewrites Apolo storage image URLs on Vercel Web to the same-origin
+  /// `/apolo-media/*` rewrite in `vercel.json` so CanvasKit avoids CORS blocks.
+  static String resolveWebUrl(
+    String rawUrl, {
+    bool? isWebOverride,
+    String? hostOverride,
+  }) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty || trimmed.startsWith('assets/')) return trimmed;
+
+    const apoloStoragePrefix = 'https://apolo.ma/storage/';
+    var normalized = trimmed;
+    if (normalized.startsWith('/storage/')) {
+      normalized = 'https://apolo.ma$normalized';
+    } else if (normalized.startsWith('storage/')) {
+      normalized = 'https://apolo.ma/$normalized';
+    } else if (normalized.startsWith('http://apolo.ma/storage/')) {
+      normalized = normalized.replaceFirst('http://', 'https://');
+    } else if (normalized.startsWith('https://www.apolo.ma/storage/')) {
+      normalized = normalized.replaceFirst(
+        'https://www.apolo.ma/',
+        'https://apolo.ma/',
+      );
+    } else if (normalized.startsWith('http://www.apolo.ma/storage/')) {
+      normalized = normalized.replaceFirst(
+        'http://www.apolo.ma/',
+        'https://apolo.ma/',
+      );
+    }
+
+    final useWeb = isWebOverride ?? kIsWeb;
+    if (useWeb && normalized.startsWith(apoloStoragePrefix)) {
+      final host = (hostOverride ?? Uri.base.host).toLowerCase();
+      if (host.endsWith('vercel.app')) {
+        return '/apolo-media/${normalized.substring(apoloStoragePrefix.length)}';
+      }
+    }
+    return normalized;
+  }
+
   @override
   Widget build(BuildContext context) {
     final defaultFallback = fallback ??
@@ -61,9 +101,11 @@ class AppImage extends StatelessWidget {
             ? (height! * 2).round()
             : null);
 
+    final resolvedUrl = resolveWebUrl(url!);
+
     if (kIsWeb) {
       return Image.network(
-        url!,
+        resolvedUrl,
         width: width,
         height: height,
         fit: fit,
@@ -90,7 +132,7 @@ class AppImage extends StatelessWidget {
     }
 
     return CachedNetworkImage(
-      imageUrl: url!,
+      imageUrl: resolvedUrl,
       width: width,
       height: height,
       fit: fit,

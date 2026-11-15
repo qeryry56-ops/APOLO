@@ -1017,11 +1017,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
             // 4. Quick Sort Strip & Live Results Count
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                runSpacing: 8,
-                spacing: 8,
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
+              child: Row(
                 children: [
                   Text(
                     '${_ads.length} ${s.tr('إعلان متوفر', 'annonces')}',
@@ -1032,37 +1029,45 @@ class _SearchScreenState extends State<SearchScreen> {
                       fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _SortMiniPill(
-                        label: s.tr('الذكي ✨', 'Pour vous ✨'),
-                        active: _sortBy == 'smart',
-                        onTap: () => setState(() {
-                          _sortBy = 'smart';
-                          _ads = _filterAndSortAds(_ads);
-                        }),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _SortMiniPill(
+                              label: s.tr('الذكي ✨', 'Pour vous ✨'),
+                              active: _sortBy == 'smart',
+                              onTap: () => setState(() {
+                                _sortBy = 'smart';
+                                _ads = _filterAndSortAds(_ads);
+                              }),
+                            ),
+                            const SizedBox(width: 6),
+                            _SortMiniPill(
+                              label: s.tr('الأرخص', 'Prix ↑'),
+                              active: _sortBy == 'price_asc',
+                              onTap: () => setState(() {
+                                _sortBy = 'price_asc';
+                                _ads = _filterAndSortAds(_ads);
+                              }),
+                            ),
+                            const SizedBox(width: 6),
+                            _SortMiniPill(
+                              label: s.tr('الأكثر طلباً', 'Populaire'),
+                              active: _sortBy == 'popular',
+                              onTap: () => setState(() {
+                                _sortBy = 'popular';
+                                _ads = _filterAndSortAds(_ads);
+                              }),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 6),
-                      _SortMiniPill(
-                        label: s.tr('الأرخص', 'Prix ↑'),
-                        active: _sortBy == 'price_asc',
-                        onTap: () => setState(() {
-                          _sortBy = 'price_asc';
-                          _ads = _filterAndSortAds(_ads);
-                        }),
-                      ),
-                      const SizedBox(width: 6),
-                      _SortMiniPill(
-                        label: s.tr('الأكثر طلباً', 'Populaire'),
-                        active: _sortBy == 'popular',
-                        onTap: () => setState(() {
-                          _sortBy = 'popular';
-                          _ads = _filterAndSortAds(_ads);
-                        }),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -1295,6 +1300,8 @@ class _SortMiniPill extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
         child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1338,6 +1345,8 @@ class _ModalFilterChip extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
         child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),

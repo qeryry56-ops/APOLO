@@ -5,14 +5,11 @@ import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
-import 'ad_detail_screen.dart';
 import 'notifications_screen.dart';
 import 'post_ad_screen.dart';
 import 'search_screen.dart';
 import 'stores_screen.dart';
 import 'widgets/accommodation_card.dart';
-import 'widgets/app_image.dart';
-import 'widgets/price_text.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
@@ -40,8 +37,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AppState _state = AppState();
-  final PageController _trendingController =
-      PageController(viewportFraction: 0.89);
+  final ScrollController _trendingScrollController = ScrollController();
   final ScrollController _scrollController = ScrollController();
 
   List<Map<String, dynamic>> _ads = [];
@@ -49,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   bool _networkError = false;
   int _activeTrendingPage = 0;
+  double _trendingStride = 318.0;
   Timer? _autoSlideTimer;
 
   static const Color _primary = Color(0xFFE31B23);
@@ -80,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _state.tabReselectCounter.removeListener(_scrollToTop);
     _autoSlideTimer?.cancel();
     _scrollController.dispose();
-    _trendingController.dispose();
+    _trendingScrollController.dispose();
     super.dispose();
   }
 
@@ -88,12 +85,18 @@ class _HomeScreenState extends State<HomeScreen> {
     _autoSlideTimer?.cancel();
     _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final trending = _trendingAds;
-      if (!mounted || trending.length <= 1 || !_trendingController.hasClients) {
+      if (!mounted ||
+          trending.length <= 1 ||
+          !_trendingScrollController.hasClients) {
         return;
       }
       final next = (_activeTrendingPage + 1) % trending.length;
-      _trendingController.animateToPage(
-        next,
+      final targetOffset = (next * _trendingStride).clamp(
+        0.0,
+        _trendingScrollController.position.maxScrollExtent,
+      );
+      _trendingScrollController.animateTo(
+        targetOffset,
         duration: const Duration(milliseconds: 650),
         curve: const Cubic(0.22, 1.0, 0.36, 1.0),
       );
@@ -180,93 +183,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return scoreB.compareTo(scoreA);
     });
     return sorted.take(6).toList();
-  }
-
-  List<Map<String, dynamic>> get _nearbyStayAds {
-    final stayKeywords = [
-      'cabin',
-      'villa',
-      'chalet',
-      'riad',
-      'appartement',
-      'studio',
-      'immobilier',
-      'location',
-      'vacances',
-      'house',
-      'stay',
-      'شقة',
-      'فيلا',
-      'كابين',
-      'شاليه',
-      'عقارات',
-      'كراء',
-    ];
-
-    final realStays = _ads.where((ad) {
-      final title = (ad['title'] ?? '').toString().toLowerCase();
-      final catMap = ad['category'] is Map ? ad['category'] as Map : const {};
-      final catName =
-          '${catMap['name'] ?? ''} ${catMap['name_fr'] ?? ''} ${catMap['name_ar'] ?? ''} ${ad['category_name'] ?? ''}'
-              .toLowerCase();
-      return stayKeywords.any((k) => title.contains(k) || catName.contains(k));
-    }).toList();
-
-    final curatedReferenceStays = <Map<String, dynamic>>[
-      {
-        'id': 901,
-        'title': 'Lakeside Cabin',
-        'badge_label': 'Cabin',
-        'rating': '4.9',
-        'price': 148,
-        'nightly_price_display': '\$148',
-        'price_unit': '/night',
-        'location_display': 'Sintra, Portugal',
-        'total_summary': '\$651 total · 4 nights',
-        'main_image':
-            'https://images.unsplash.com/photo-1587061949409-02df41d5e562?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        'id': 902,
-        'title': 'Atlas Pine Chalet',
-        'badge_label': 'Cabin',
-        'rating': '4.8',
-        'price': 165,
-        'nightly_price_display': '\$165',
-        'price_unit': '/night',
-        'location_display': 'Ifrane, Morocco',
-        'total_summary': '\$660 total · 4 nights',
-        'main_image':
-            'https://images.unsplash.com/photo-1542718610-a1d656d1884c?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        'id': 903,
-        'title': 'Oceanfront Villa',
-        'badge_label': 'Villa',
-        'rating': '4.9',
-        'price': 210,
-        'nightly_price_display': '\$210',
-        'price_unit': '/night',
-        'location_display': 'Essaouira, Morocco',
-        'total_summary': '\$840 total · 4 nights',
-        'main_image':
-            'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=1000&q=80',
-      },
-    ];
-
-    if (realStays.isNotEmpty) {
-      return [
-        curatedReferenceStays.first,
-        ...realStays.take(5),
-      ];
-    }
-    if (_ads.isNotEmpty) {
-      return [
-        curatedReferenceStays.first,
-        ..._ads.take(4),
-      ];
-    }
-    return curatedReferenceStays;
   }
 
   String get _userName {
@@ -439,11 +355,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: _buildCategoriesBento(s, isAr),
                         ),
 
-                        // 3.5 Nearby Stays Horizontal Carousel (AccommodationCard)
-                        SliverToBoxAdapter(
-                          child: _buildNearbyStaysSection(_nearbyStayAds),
-                        ),
-
                         // 4. Featured / Exclusive Deals Showcase Carousel
                         if (trending.isNotEmpty)
                           SliverToBoxAdapter(
@@ -469,6 +380,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ],
                                 ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -478,14 +391,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       size: 19,
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      isAr
-                                          ? 'تصفح الإعلانات في المغرب'
-                                          : 'Explorer toutes les annonces au Maroc',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w800,
+                                    Flexible(
+                                      child: Text(
+                                        isAr
+                                            ? 'تصفح الإعلانات في المغرب'
+                                            : 'Explorer toutes les annonces au Maroc',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 6),
@@ -619,14 +536,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              isAr
-                                  ? 'سوقك الأول فالمغرب 🇲🇦'
-                                  : 'Marketplace #1 au Maroc 🇲🇦',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                            Flexible(
+                              child: Text(
+                                isAr
+                                    ? 'سوقك الأول فالمغرب 🇲🇦'
+                                    : 'Marketplace #1 au Maroc 🇲🇦',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ],
@@ -681,14 +602,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                isAr
-                                    ? 'استكشف الإعلانات'
-                                    : 'Explorer les annonces',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  color: _primary,
+                              Flexible(
+                                child: Text(
+                                  isAr
+                                      ? 'استكشف الإعلانات'
+                                      : 'Explorer les annonces',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                    color: _primary,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 5),
@@ -893,86 +818,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// - Card width: 78% of available horizontal carousel width
   /// - Portrait aspect ratio: 0.84:1 (width : height)
   /// - Shows the next card partially on the right with a consistent 14px gap
-  Widget _buildNearbyStaysSection(List<Map<String, dynamic>> stays) {
-    if (stays.isEmpty) return const SizedBox.shrink();
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth.isFinite &&
-                constraints.maxWidth > 0
-            ? constraints.maxWidth
-            : MediaQuery.sizeOf(context).width;
-        final cardWidth = availableWidth * 0.78;
-        final cardHeight = cardWidth / 0.84;
-
-        return Directionality(
-          textDirection: TextDirection.ltr,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Nearby stays',
-                        style: TextStyle(
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.w900,
-                          color: _ink,
-                          letterSpacing:
-                              AppTypography.trackingForContext(context, -0.4),
-                        ),
-                      ),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => _openSearchScreen(null),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            'See all',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF71717A),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: cardHeight,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: stays.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 14),
-                    itemBuilder: (context, index) {
-                      final stayAd = stays[index];
-                      return SizedBox(
-                        width: cardWidth,
-                        height: cardHeight,
-                        child: AccommodationCard(ad: stayAd),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// Featured & Trending Deals Carousel
+  /// Featured & Trending Deals Carousel using AccommodationCard
   Widget _buildTrendingSection(
     List<Map<String, dynamic>> trending,
     bool isAr,
@@ -1028,192 +874,52 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 216,
-              child: PageView.builder(
-                controller: _trendingController,
-                itemCount: trending.length,
-                onPageChanged: (idx) =>
-                    setState(() => _activeTrendingPage = idx),
-                itemBuilder: (context, idx) {
-                  final ad = trending[idx];
-                  final adId =
-                      int.tryParse((ad['id'] ?? idx).toString()) ?? idx;
-                  final title = (ad['title'] ?? '').toString();
-                  final imgUrl = (ad['main_image'] ?? ad['primary_image'] ?? '')
-                      .toString();
-                  final cityMap =
-                      ad['city'] is Map ? ad['city'] as Map : const {};
-                  final cityName = (isAr
-                          ? (cityMap['name_ar'] ?? cityMap['name'] ?? 'المغرب')
-                          : (cityMap['name_fr'] ?? cityMap['name'] ?? 'Maroc'))
-                      .toString();
-                  final priceStr = (ad['price_formatted'] ??
-                          (ad['price'] != null
-                              ? '${ad['price']} ${isAr ? 'د.م' : 'DH'}'
-                              : ''))
-                      .toString();
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth.isFinite &&
+                        constraints.maxWidth > 0
+                    ? constraints.maxWidth
+                    : MediaQuery.sizeOf(context).width;
+                final cardWidth = (availableWidth * 0.78).clamp(240.0, 360.0);
+                final cardHeight = cardWidth / 0.84;
+                const gap = 14.0;
+                _trendingStride = cardWidth + gap;
 
-                  return Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 12),
-                    child: PressableScale(
-                      onTap: () {
-                        final catId = _state.extractAdCategoryId(ad);
-                        if (catId != null) {
-                          _state.recordCategoryInterest(catId, weight: 3);
+                return SizedBox(
+                  height: cardHeight,
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification is ScrollUpdateNotification &&
+                          _trendingStride > 0 &&
+                          _trendingScrollController.hasClients) {
+                        final nextPage = (_trendingScrollController.offset /
+                                _trendingStride)
+                            .round()
+                            .clamp(0, trending.length - 1);
+                        if (nextPage != _activeTrendingPage && mounted) {
+                          setState(() => _activeTrendingPage = nextPage);
                         }
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                AdDetailScreen(adId: adId, initialAd: ad),
-                          ),
+                      }
+                      return false;
+                    },
+                    child: ListView.separated(
+                      controller: _trendingScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: trending.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: gap),
+                      itemBuilder: (context, idx) {
+                        return SizedBox(
+                          width: cardWidth,
+                          height: cardHeight,
+                          child: AccommodationCard(ad: trending[idx]),
                         );
                       },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          color: _ink,
-                          boxShadow: [
-                            BoxShadow(
-                              color: _ink.withValues(alpha: 0.08),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              AppImage(url: imgUrl, fit: BoxFit.cover),
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.black.withValues(alpha: 0.12),
-                                      Colors.transparent,
-                                      Colors.black.withValues(alpha: 0.84),
-                                    ],
-                                    stops: const [0.0, 0.42, 1.0],
-                                  ),
-                                ),
-                              ),
-                              PositionedDirectional(
-                                top: 12,
-                                start: 12,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _primary,
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        CupertinoIcons.checkmark_seal_fill,
-                                        color: Colors.white,
-                                        size: 11,
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        isAr ? 'مميز VIP' : 'VIP',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: 16,
-                                right: 16,
-                                bottom: 14,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 16,
-                                        letterSpacing:
-                                            AppTypography.trackingForContext(
-                                                context, -0.3),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            const Icon(
-                                              CupertinoIcons.location_solid,
-                                              color: Colors.white70,
-                                              size: 13,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                                child: Text(
-                                              cityName,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 12.5,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            )),
-                                          ],
-                                        ),
-                                        if (priceStr.isNotEmpty)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                            child: PriceText(
-                                              priceStr,
-                                              style: const TextStyle(
-                                                color: _primary,
-                                                fontWeight: FontWeight.w900,
-                                                fontSize: 12.5,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ],
         ),

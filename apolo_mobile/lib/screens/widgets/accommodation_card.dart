@@ -62,11 +62,14 @@ class _AccommodationCardState extends State<AccommodationCard> {
     });
     widget.onFavoriteChanged?.call(nextState);
 
-    if (_adId > 0 && _state.currentUser != null) {
-      await _state.toggleFavorite(_adId);
+    if (_adId > 0 && _state.isLoggedIn) {
+      final result = await _state.toggleFavorite(
+        _adId,
+        categoryId: _state.extractAdCategoryId(widget.ad),
+      );
       if (mounted) {
         setState(() {
-          _localFavoriteOverride = _state.favoriteAdIds.contains(_adId);
+          _localFavoriteOverride = result;
         });
       }
     }
@@ -115,7 +118,23 @@ class _AccommodationCardState extends State<AccommodationCard> {
         if (url.isNotEmpty) return url;
       }
     }
-    return 'assets/images/hero_3d_house.png';
+    return _resolveCategoryAsset();
+  }
+
+  String _resolveCategoryAsset() {
+    final ad = widget.ad;
+    final catMap = ad['category'] is Map
+        ? Map<String, dynamic>.from(ad['category'] as Map)
+        : null;
+    final catLabel = (ad['category_name'] ??
+            ad['category_ar'] ??
+            ad['badge_label'] ??
+            catMap?['name_fr'] ??
+            catMap?['name'] ??
+            catMap?['name_ar'] ??
+            '')
+        .toString();
+    return _state.assetForCategory(catMap, catLabel);
   }
 
   String _resolveBadgeLabel() {
@@ -127,7 +146,9 @@ class _AccommodationCardState extends State<AccommodationCard> {
     if (explicitBadge.isNotEmpty) return explicitBadge;
 
     if (ad['category'] is Map) {
-      final catMap = ad['category'] as Map;
+      final catMap = Map<String, dynamic>.from(ad['category'] as Map);
+      final formatted = _state.formatCategoryLabel(catMap).trim();
+      if (formatted.isNotEmpty) return formatted;
       final name = (catMap['name'] ??
               catMap['name_en'] ??
               catMap['name_fr'] ??
@@ -160,6 +181,16 @@ class _AccommodationCardState extends State<AccommodationCard> {
     return 'Lakeside Cabin';
   }
 
+  bool get _hasStayMetadata {
+    final ad = widget.ad;
+    return ad.containsKey('nightly_price_display') ||
+        ad.containsKey('price_display') ||
+        ad.containsKey('price_unit') ||
+        ad.containsKey('nights') ||
+        ad.containsKey('total_summary') ||
+        ad.containsKey('stay_summary');
+  }
+
   String _resolveNightlyPrice() {
     final ad = widget.ad;
     final explicitNightly =
@@ -168,23 +199,35 @@ class _AccommodationCardState extends State<AccommodationCard> {
             .trim();
     if (explicitNightly.isNotEmpty) return explicitNightly;
 
+    final priceFormatted = (ad['price_formatted'] ?? '').toString().trim();
+    if (priceFormatted.isNotEmpty) return priceFormatted;
+
+    if (ad['is_free'] == true) {
+      return _state.s.tr('مجاني', 'Gratuit', 'Free');
+    }
+
     final rawPrice = ad['price'];
     if (rawPrice != null) {
       final numVal = double.tryParse(rawPrice.toString());
       if (numVal != null && numVal > 0) {
         final intVal = numVal.round();
-        final currency = (ad['currency_symbol'] ?? '\$').toString();
+        final currency =
+            (ad['currency_symbol'] ?? (_hasStayMetadata ? '\$' : 'DH'))
+                .toString()
+                .trim();
         return currency == '\$' ? '\$$intVal' : '$intVal $currency';
       }
     }
-    return '\$148';
+    return _hasStayMetadata
+        ? '\$148'
+        : _state.s.tr('عند الطلب', 'Sur demande', 'On request');
   }
 
   String _resolvePriceUnit() {
     final ad = widget.ad;
     final unit = (ad['price_unit'] ?? '').toString().trim();
     if (unit.isNotEmpty) return unit;
-    return '/night';
+    return _hasStayMetadata ? '/night' : '';
   }
 
   String _resolveLocation() {
@@ -196,22 +239,22 @@ class _AccommodationCardState extends State<AccommodationCard> {
 
     if (ad['city'] is Map) {
       final cityMap = ad['city'] as Map;
-      final cityName = (cityMap['name'] ??
-              cityMap['name_fr'] ??
-              cityMap['name_ar'] ??
-              '')
+      final cityName = (_state.s.isAr
+              ? (cityMap['name_ar'] ?? cityMap['name'] ?? cityMap['name_fr'])
+              : (cityMap['name_fr'] ?? cityMap['name'] ?? cityMap['name_ar']))
           .toString()
           .trim();
       if (cityName.isNotEmpty) return cityName;
     }
 
-    final cityStr =
-        (ad['city_name'] ?? ad['city_fr'] ?? ad['city_ar'] ?? '')
-            .toString()
-            .trim();
+    final cityStr = (_state.s.isAr
+            ? (ad['city_ar'] ?? ad['city_name'] ?? ad['city_fr'])
+            : (ad['city_fr'] ?? ad['city_name'] ?? ad['city_ar']))
+        .toString()
+        .trim();
     if (cityStr.isNotEmpty) return cityStr;
 
-    return 'Sintra, Portugal';
+    return _state.s.tr('المغرب', 'Maroc', 'Sintra, Portugal');
   }
 
   String _resolveTotalSummary() {
@@ -220,24 +263,38 @@ class _AccommodationCardState extends State<AccommodationCard> {
         (ad['total_summary'] ?? ad['stay_summary'] ?? '').toString().trim();
     if (explicitSummary.isNotEmpty) return explicitSummary;
 
-    final rawPrice = ad['price'];
-    if (rawPrice != null) {
-      final numVal = double.tryParse(rawPrice.toString());
-      if (numVal != null && numVal > 0) {
-        final nights = int.tryParse((ad['nights'] ?? 4).toString()) ?? 4;
-        final total = (numVal * nights).round();
-        final currency = (ad['currency_symbol'] ?? '\$').toString();
-        final formattedTotal =
-            currency == '\$' ? '\$$total' : '$total $currency';
-        return '$formattedTotal total · $nights nights';
+    if (_hasStayMetadata) {
+      final rawPrice = ad['price'];
+      if (rawPrice != null) {
+        final numVal = double.tryParse(rawPrice.toString());
+        if (numVal != null && numVal > 0) {
+          final nights = int.tryParse((ad['nights'] ?? 4).toString()) ?? 4;
+          final total = (numVal * nights).round();
+          final currency = (ad['currency_symbol'] ?? '\$').toString();
+          final formattedTotal =
+              currency == '\$' ? '\$$total' : '$total $currency';
+          return '$formattedTotal total · $nights nights';
+        }
       }
+      return '\$651 total · 4 nights';
     }
 
-    return '\$651 total · 4 nights';
+    if (ad['is_negotiable'] == true || ad['negotiable'] == true) {
+      return _state.s.tr('قابل للتفاوض', 'Négociable', 'Negotiable');
+    }
+    final views =
+        int.tryParse((ad['views_count'] ?? ad['views'] ?? '').toString()) ?? 0;
+    if (views > 0) {
+      return '$views ${_state.s.tr('مشاهدة', 'vues', 'views')}';
+    }
+    return _state.s.tr('عرض حصري', 'Offre exclusive', 'Exclusive deal');
   }
 
   Widget _buildBackgroundImage(String imageUrl) {
     if (imageUrl.startsWith('assets/')) {
+      if (imageUrl.contains('/cat_')) {
+        return _buildFallbackPhoto(assetOverride: imageUrl);
+      }
       return Image.asset(
         imageUrl,
         fit: BoxFit.cover,
@@ -255,28 +312,28 @@ class _AccommodationCardState extends State<AccommodationCard> {
     );
   }
 
-  Widget _buildFallbackPhoto() {
+  Widget _buildFallbackPhoto({String? assetOverride}) {
+    final assetPath = assetOverride ?? _resolveCategoryAsset();
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFFD99B82),
-            Color(0xFF4A5D4E),
-            Color(0xFF1F2D24),
+            Color(0xFFF1F5F9),
+            Color(0xFFE2E8F0),
           ],
         ),
       ),
-      alignment: Alignment.center,
+      alignment: const Alignment(0, -0.25),
       child: Image.asset(
-        'assets/images/hero_3d_house.png',
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
+        assetPath,
+        fit: BoxFit.contain,
+        width: 156,
+        height: 156,
         errorBuilder: (_, __, ___) => const Icon(
-          CupertinoIcons.house_fill,
-          color: Colors.white54,
+          CupertinoIcons.photo,
+          color: Color(0xFF94A3B8),
           size: 48,
         ),
       ),
@@ -316,75 +373,96 @@ class _AccommodationCardState extends State<AccommodationCard> {
     final totalSummary = _resolveTotalSummary();
     final isFav = _isFavorited;
 
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: AspectRatio(
-        aspectRatio: 0.84,
-        child: PressableScale(
-          onTap: _handleCardTap,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.10),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+    return AspectRatio(
+      aspectRatio: 0.84,
+      child: PressableScale(
+        onTap: _handleCardTap,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.10),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. Main Edge-to-Edge Accommodation Photo (object-fit: cover)
+                Positioned.fill(
+                  child: _buildBackgroundImage(imageUrl),
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 1. Main Edge-to-Edge Accommodation Photo (object-fit: cover)
-                  Positioned.fill(
-                    child: _buildBackgroundImage(imageUrl),
-                  ),
 
-                  // Subtle top vignette for badge legibility over bright skies
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 84,
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.16),
-                              Colors.transparent,
-                            ],
-                          ),
+                // Subtle top vignette for badge legibility over bright skies
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 84,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.16),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),
                   ),
+                ),
 
-                  // 2. Top Overlay Elements (Category badge + Rating badge on left, Heart button on right)
-                  Positioned(
-                    top: 14,
-                    left: 14,
-                    right: 14,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Top-left badges
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: _buildGlassPill(
-                                  child: Text(
-                                    badgeLabel,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                // 2. Top Overlay Elements (Category badge + Rating badge on start, Heart button on end)
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  right: 14,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Top-start badges
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: _buildGlassPill(
+                                child: Text(
+                                  badgeLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: -0.1,
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildGlassPill(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    rating,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 13.5,
@@ -393,125 +471,102 @@ class _AccommodationCardState extends State<AccommodationCard> {
                                       height: 1.1,
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              _buildGlassPill(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.star_rounded,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      rating,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: -0.1,
-                                        height: 1.1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                      ),
 
-                        // Top-right circular translucent favorite button (44x44pt touch target)
-                        Semantics(
-                          button: true,
-                          label: 'Favorite accommodation',
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _handleFavoriteTap,
-                            child: ClipOval(
-                              child: BackdropFilter(
-                                filter:
-                                    ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.24),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.22),
-                                      width: 0.8,
-                                    ),
+                      // Top-end circular translucent favorite button (44x44pt touch target)
+                      Semantics(
+                        button: true,
+                        label: 'Favorite accommodation',
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _handleFavoriteTap,
+                          child: ClipOval(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.24),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.22),
+                                    width: 0.8,
                                   ),
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    isFav
-                                        ? CupertinoIcons.heart_fill
-                                        : CupertinoIcons.heart,
-                                    color: isFav
-                                        ? const Color(0xFFFF3B5C)
-                                        : Colors.white,
-                                    size: 21,
-                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  isFav
+                                      ? CupertinoIcons.heart_fill
+                                      : CupertinoIcons.heart,
+                                  color: isFav
+                                      ? const Color(0xFFFF3B5C)
+                                      : Colors.white,
+                                  size: 21,
                                 ),
                               ),
                             ),
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 3. Bottom Overlapping Off-White Information Panel
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F4).withValues(alpha: 0.96),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
-                  ),
-
-                  // 3. Bottom Overlapping Off-White Information Panel
-                  Positioned(
-                    left: 10,
-                    right: 10,
-                    bottom: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F4).withValues(alpha: 0.96),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // First Row: Property name on left, Price on right
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFF18181B),
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.3,
-                                    height: 1.2,
-                                  ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // First Row: Property name on start, Price on end
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF18181B),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                  height: 1.2,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              RichText(
+                            ),
+                            const SizedBox(width: 8),
+                            Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: RichText(
                                 text: TextSpan(
                                   children: [
                                     TextSpan(
@@ -523,73 +578,74 @@ class _AccommodationCardState extends State<AccommodationCard> {
                                         letterSpacing: -0.3,
                                       ),
                                     ),
-                                    TextSpan(
-                                      text: ' $priceUnit',
-                                      style: const TextStyle(
-                                        color: Color(0xFF71717A),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
+                                    if (priceUnit.isNotEmpty)
+                                      TextSpan(
+                                        text: ' $priceUnit',
+                                        style: const TextStyle(
+                                          color: Color(0xFF71717A),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
 
-                          // Second Row: Location pin + location text | total price · nights
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_rounded,
-                                size: 15,
-                                color: Color(0xFF71717A),
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  location,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFF71717A),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.2,
-                                  ),
+                        // Second Row: Location pin + location text | secondary summary
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on_rounded,
+                              size: 15,
+                              color: Color(0xFF71717A),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                location,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF71717A),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.2,
                                 ),
                               ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                child: Container(
-                                  width: 1,
-                                  height: 12,
-                                  color: const Color(0xFFD4D4D8),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              child: Container(
+                                width: 1,
+                                height: 12,
+                                color: const Color(0xFFD4D4D8),
+                              ),
+                            ),
+                            Flexible(
+                              child: Text(
+                                totalSummary,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF71717A),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.2,
                                 ),
                               ),
-                              Flexible(
-                                child: Text(
-                                  totalSummary,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFF71717A),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.2,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

@@ -2,9 +2,45 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:apolo_mobile/screens/search_screen.dart';
+import 'package:apolo_mobile/screens/widgets/app_image.dart';
 import 'package:apolo_mobile/screens/widgets/explore_listing_card.dart';
 
 void main() {
+  test('AppImage.resolveWebUrl proxies Apolo storage URLs on Vercel Web', () {
+    expect(
+      AppImage.resolveWebUrl(
+        'https://apolo.ma/storage/ads/1_abc.jpg',
+        isWebOverride: true,
+        hostOverride: 'apolo-amber.vercel.app',
+      ),
+      '/apolo-media/ads/1_abc.jpg',
+    );
+    expect(
+      AppImage.resolveWebUrl(
+        '/storage/ads/1_abc.jpg',
+        isWebOverride: true,
+        hostOverride: 'apolo-amber.vercel.app',
+      ),
+      '/apolo-media/ads/1_abc.jpg',
+    );
+    expect(
+      AppImage.resolveWebUrl(
+        '/storage/ads/1_abc.jpg',
+        isWebOverride: false,
+        hostOverride: '',
+      ),
+      'https://apolo.ma/storage/ads/1_abc.jpg',
+    );
+    expect(
+      AppImage.resolveWebUrl(
+        'https://images.unsplash.com/photo-1.jpg',
+        isWebOverride: true,
+        hostOverride: 'apolo-amber.vercel.app',
+      ),
+      'https://images.unsplash.com/photo-1.jpg',
+    );
+  });
+
   testWidgets(
       'ExploreListingCard matches Casa Oliva Villa reference dimensions, tokens, carousel dots, and favorite toggle',
       (WidgetTester tester) async {
@@ -24,11 +60,11 @@ void main() {
       'total_unit_label': 'total',
       'nightly_price_display': '\$233 / night · taxes incl.',
       'images': [
-        'assets/images/hero_3d_house.png',
         'assets/images/cat_realestate.png',
-        'assets/images/hero_3d_house.png',
+        'assets/images/cat_home.png',
         'assets/images/cat_realestate.png',
-        'assets/images/hero_3d_house.png',
+        'assets/images/cat_home.png',
+        'assets/images/cat_realestate.png',
       ],
     };
 
@@ -114,13 +150,51 @@ void main() {
     await tester.pump();
 
     expect(find.text('Appartement Moderne Maarif 110m²'), findsOneWidget);
-    expect(find.text('Guest favorite'), findsOneWidget);
+    expect(find.text('موصى به'), findsOneWidget);
     expect(find.text('(95)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-      'SearchScreen Explore view renders ExploreListingCard full-width on 390x844 mobile without overflow',
+      'ExploreListingCard aligns Arabic RTL content cleanly and uses valid category fallback when images are empty',
+      (WidgetTester tester) async {
+    final rtlAd = <String, dynamic>{
+      'id': 88,
+      'title': 'حامل الهاتف',
+      'price': 99,
+      'price_formatted': '99 MAD',
+      'views_count': 167,
+      'category': {'id': 15, 'name_ar': 'أقسام أخرى', 'name_fr': 'Autres'},
+      'city': {'id': 4, 'name_ar': 'سلا', 'name_fr': 'Salé'},
+      'images': const [],
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 350,
+                child: ExploreListingCard(ad: rtlAd),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // In RTL, title is on the trailing-left/leading-right side -> title.dx > rating.dx
+    final titleCenter = tester.getCenter(find.text('حامل الهاتف'));
+    final ratingCenter = tester.getCenter(find.text('4.8'));
+    expect(titleCenter.dx, greaterThan(ratingCenter.dx));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'SearchScreen Explore view renders single-row sort pills and ExploreListingCard on 390x844 Arabic RTL mobile without overflow',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -129,7 +203,10 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: SearchScreen(),
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: SearchScreen(),
+        ),
       ),
     );
     // Allow network call failure & ScrollReveal stagger timers to complete
@@ -138,6 +215,13 @@ void main() {
 
     expect(find.byType(ExploreListingCard), findsWidgets);
     expect(find.text('Casa Oliva Villa'), findsOneWidget);
+
+    // Verify quick sort pills sit side-by-side on one single horizontal row
+    final smartDy = tester.getCenter(find.text('الذكي ✨')).dy;
+    final cheapDy = tester.getCenter(find.text('الأرخص')).dy;
+    final popularDy = tester.getCenter(find.text('الأكثر طلباً')).dy;
+    expect((smartDy - cheapDy).abs(), lessThan(2.0));
+    expect((cheapDy - popularDy).abs(), lessThan(2.0));
 
     final firstCardSize = tester.getSize(find.byType(ExploreListingCard).first);
     expect(firstCardSize.width, inInclusiveRange(342, 355));

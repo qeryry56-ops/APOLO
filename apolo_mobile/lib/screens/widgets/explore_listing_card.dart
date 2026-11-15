@@ -139,10 +139,23 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
       }
     }
 
-    if (urls.isEmpty) {
-      urls.add('assets/images/hero_3d_house.png');
-    }
     return urls;
+  }
+
+  String _resolveCategoryAsset() {
+    final ad = widget.ad;
+    final catMap = ad['category'] is Map
+        ? Map<String, dynamic>.from(ad['category'] as Map)
+        : null;
+    final catLabel = (ad['category_name'] ??
+            ad['category_ar'] ??
+            ad['badge_label'] ??
+            catMap?['name_fr'] ??
+            catMap?['name'] ??
+            catMap?['name_ar'] ??
+            '')
+        .toString();
+    return _state.assetForCategory(catMap, catLabel);
   }
 
   String _resolveTypeBadge() {
@@ -190,7 +203,7 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
         int.tryParse((ad['views_count'] ?? ad['views'] ?? 0).toString()) ?? 0;
 
     if (isFeatured || views >= 100) {
-      return 'Guest favorite';
+      return _state.s.tr('موصى به', 'Coup de cœur', 'Guest favorite');
     }
     return null;
   }
@@ -363,6 +376,10 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
 
   Widget _buildMediaSlide(String src) {
     if (src.startsWith('assets/')) {
+      final isCategoryCutout = src.contains('/cat_');
+      if (isCategoryCutout) {
+        return _buildFallbackBackdrop(assetOverride: src);
+      }
       return Image.asset(
         src,
         fit: BoxFit.cover,
@@ -380,29 +397,29 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
     );
   }
 
-  Widget _buildFallbackBackdrop() {
+  Widget _buildFallbackBackdrop({String? assetOverride}) {
+    final assetPath = assetOverride ?? _resolveCategoryAsset();
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF8C7A6B),
-            Color(0xFF475569),
-            Color(0xFF1E293B),
+            Color(0xFFF1F5F9),
+            Color(0xFFE2E8F0),
           ],
         ),
       ),
       alignment: Alignment.center,
       child: Image.asset(
-        'assets/images/hero_3d_house.png',
+        assetPath,
         fit: BoxFit.contain,
-        width: 140,
-        height: 140,
+        width: 132,
+        height: 132,
         errorBuilder: (_, __, ___) => const Icon(
-          CupertinoIcons.house_fill,
-          color: Colors.white54,
-          size: 46,
+          CupertinoIcons.photo,
+          color: Color(0xFF94A3B8),
+          size: 42,
         ),
       ),
     );
@@ -485,56 +502,57 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
     final int dotCount = images.length > 1 ? images.length.clamp(2, 6) : 5;
     final int activeDotIndex = _activePage.clamp(0, dotCount - 1);
 
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: PressableScale(
-        onTap: _handleCardTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 24,
-                spreadRadius: -4,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Top Media Section (218px height, 18px rounded corners)
-              SizedBox(
-                height: 218,
-                width: double.infinity,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Swipeable Image Carousel
-                      if (images.length > 1)
-                        PageView.builder(
-                          controller: _pageController,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: images.length,
-                          onPageChanged: (idx) =>
-                              setState(() => _activePage = idx),
-                          itemBuilder: (_, idx) => _buildMediaSlide(images[idx]),
-                        )
-                      else
-                        _buildMediaSlide(images.first),
+    return PressableScale(
+      onTap: _handleCardTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 24,
+              spreadRadius: -4,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Top Media Section (218px height, 18px rounded corners)
+            SizedBox(
+              height: 218,
+              width: double.infinity,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Swipeable Image Carousel
+                    if (images.length > 1)
+                      PageView.builder(
+                        controller: _pageController,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: images.length,
+                        onPageChanged: (idx) =>
+                            setState(() => _activePage = idx),
+                        itemBuilder: (_, idx) => _buildMediaSlide(images[idx]),
+                      )
+                    else if (images.length == 1)
+                      _buildMediaSlide(images.first)
+                    else
+                      _buildFallbackBackdrop(),
 
-                      // Subtle bottom gradient for crisp dot contrast over water/bright photos
+                    // Subtle bottom gradient for crisp dot contrast over water/bright photos
+                    if (images.isNotEmpty)
                       Positioned(
                         left: 0,
                         right: 0,
@@ -556,68 +574,67 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
                         ),
                       ),
 
-                      // Top-left Floating Pill Badges
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        right: 56,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(child: _buildTypePill(typeBadge)),
-                            if (highlightBadge != null) ...[
-                              const SizedBox(width: 7),
-                              Flexible(
-                                child: _buildHighlightPill(highlightBadge),
-                              ),
-                            ],
+                    // Top-start Floating Pill Badges
+                    PositionedDirectional(
+                      top: 12,
+                      start: 12,
+                      end: 56,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(child: _buildTypePill(typeBadge)),
+                          if (highlightBadge != null) ...[
+                            const SizedBox(width: 7),
+                            Flexible(
+                              child: _buildHighlightPill(highlightBadge),
+                            ),
                           ],
-                        ),
+                        ],
                       ),
+                    ),
 
-                      // Top-right 32x32 Favorite Button inside 44x44 HIG touch target
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Semantics(
-                          button: true,
-                          label: 'Favorite listing',
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _handleFavoriteTap,
-                            child: SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: Center(
-                                child: ClipOval(
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: 8,
-                                      sigmaY: 8,
-                                    ),
-                                    child: Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: Colors.black
+                    // Top-end 32x32 Favorite Button inside 44x44 HIG touch target
+                    PositionedDirectional(
+                      top: 6,
+                      end: 6,
+                      child: Semantics(
+                        button: true,
+                        label: 'Favorite listing',
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _handleFavoriteTap,
+                          child: SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Center(
+                              child: ClipOval(
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(
+                                    sigmaX: 8,
+                                    sigmaY: 8,
+                                  ),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.25),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white
                                             .withValues(alpha: 0.25),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.25),
-                                          width: 0.7,
-                                        ),
+                                        width: 0.7,
                                       ),
-                                      alignment: Alignment.center,
-                                      child: Icon(
-                                        isFav
-                                            ? CupertinoIcons.heart_fill
-                                            : CupertinoIcons.heart,
-                                        size: 16.5,
-                                        color: isFav
-                                            ? const Color(0xFFFF3B5C)
-                                            : Colors.white,
-                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      isFav
+                                          ? CupertinoIcons.heart_fill
+                                          : CupertinoIcons.heart,
+                                      size: 16.5,
+                                      color: isFav
+                                          ? const Color(0xFFFF3B5C)
+                                          : Colors.white,
                                     ),
                                   ),
                                 ),
@@ -626,8 +643,10 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
                           ),
                         ),
                       ),
+                    ),
 
-                      // Bottom-center Carousel Dots Indicator
+                    // Bottom-center Carousel Dots Indicator
+                    if (images.isNotEmpty)
                       Positioned(
                         left: 0,
                         right: 0,
@@ -654,135 +673,137 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
+            ),
 
-              // 2. Content & Details Section
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 16, 6, 0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Row 1: Property Title + Rating (★ 4.8 (126))
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _ink,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.25,
-                              height: 1.25,
-                            ),
+            // 2. Content & Details Section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 16, 6, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row 1: Property Title + Rating (★ 4.8 (126))
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.25,
+                            height: 1.25,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: _starAmber,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              rating,
-                              style: const TextStyle(
-                                color: _ink,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              reviewsCount,
-                              style: const TextStyle(
-                                color: _muted,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-
-                    // Row 2: Specs Line
-                    Text(
-                      specsLine,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _muted,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w400,
-                        height: 1.3,
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 16,
+                            color: _starAmber,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            rating,
+                            style: const TextStyle(
+                              color: _ink,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            reviewsCount,
+                            style: const TextStyle(
+                              color: _muted,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
 
-                    // Subtle Separator
-                    const SizedBox(height: 12),
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFF1F5F9),
+                  // Row 2: Specs Line
+                  Text(
+                    specsLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _muted,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w400,
+                      height: 1.3,
                     ),
-                    const SizedBox(height: 12),
+                  ),
 
-                    // Bottom Row: Feature (✓ Free cancellation) on Left + Pricing on Right
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final maxRightWidth =
-                            (constraints.maxWidth * 0.56).clamp(110.0, 220.0);
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.check_rounded,
-                                      size: 15,
-                                      color: _emerald,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Expanded(
-                                      child: Text(
-                                        featureLabel,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: _emerald,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                  // Subtle Separator
+                  const SizedBox(height: 12),
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xFFF1F5F9),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Bottom Row: Feature (✓ Free cancellation) on Start + Pricing on End
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxRightWidth =
+                          (constraints.maxWidth * 0.56).clamp(110.0, 220.0);
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_rounded,
+                                    size: 15,
+                                    color: _emerald,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      featureLabel,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _emerald,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            ConstrainedBox(
-                              constraints:
-                                  BoxConstraints(maxWidth: maxRightWidth),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  RichText(
+                          ),
+                          const SizedBox(width: 10),
+                          ConstrainedBox(
+                            constraints:
+                                BoxConstraints(maxWidth: maxRightWidth),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: RichText(
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     text: TextSpan(
@@ -811,32 +832,32 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    pricing.subLine,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: _muted,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w400,
-                                      fontFeatures: [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  pricing.subLine,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: _muted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
