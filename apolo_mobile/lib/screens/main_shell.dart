@@ -143,11 +143,12 @@ class _MainShellState extends State<MainShell> {
             child: IgnorePointer(
               ignoring: !showBottomBar,
               child: AnimatedSlide(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
+                duration: const Duration(milliseconds: 300),
+                curve: const Cubic(0.22, 1.0, 0.36, 1.0),
                 offset: showBottomBar ? Offset.zero : const Offset(0, 1.8),
                 child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 180),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
                   opacity: showBottomBar ? 1.0 : 0.0,
                   child: Container(
                     height: 68,

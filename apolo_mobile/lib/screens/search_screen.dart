@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
-import 'widgets/ad_card.dart';
 import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
@@ -23,9 +23,11 @@ class SearchScreen extends StatefulWidget {
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchScreenState extends State<SearchScreen>
+    with TickerProviderStateMixin {
   final AppState _state = AppState();
   final TextEditingController _queryCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   final ScrollController _scrollCtrl = ScrollController();
 
   int? _categoryId;
@@ -33,14 +35,12 @@ class _SearchScreenState extends State<SearchScreen> {
   double? _minPrice;
   double? _maxPrice;
   bool _onlyNegotiable = false;
-  String _sortBy = 'smart'; // 'smart' | 'newest' | 'price_asc' | 'popular'
+  final String _sortBy = 'smart';
 
   List<Map<String, dynamic>> _ads = [];
   bool _loading = true;
-  bool _gridView = false;
   bool _chromeVisible = true;
   double _accumulatedScrollDelta = 0.0;
-  double? _lastViewportDimension;
 
   int _currentPage = 1;
   int _lastPage = 1;
@@ -48,7 +48,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // Apple Whitespace & Brand Tokens
   static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
   static const Color _red = Color(0xFFE31B23);
   static const Color _redSoft = Color(0xFFFEECEE);
   static const Color _surface = Color(0xFFF5F6F8);
@@ -69,21 +68,13 @@ class _SearchScreenState extends State<SearchScreen> {
   void _setChromeVisible(bool visible) {
     _accumulatedScrollDelta = 0.0;
     if (_chromeVisible == visible) return;
-    setState(() => _chromeVisible = visible);
+    _chromeVisible = visible;
     widget.onChromeVisibilityChanged?.call(visible);
   }
 
   bool _handleVerticalScrollNotification(ScrollNotification notification) {
     if (notification.metrics.axis != Axis.vertical) return false;
     final metrics = notification.metrics;
-    final prevViewport = _lastViewportDimension;
-    _lastViewportDimension = metrics.viewportDimension;
-
-    if (prevViewport != null &&
-        (metrics.viewportDimension - prevViewport).abs() > 0.5) {
-      return false;
-    }
-
     final pixels = metrics.pixels;
     final maxExtent = metrics.maxScrollExtent;
 
@@ -103,14 +94,14 @@ class _SearchScreenState extends State<SearchScreen> {
         if (_chromeVisible &&
             pixels > 24 &&
             pixels < maxExtent - 12 &&
-            _accumulatedScrollDelta >= 18) {
+            _accumulatedScrollDelta >= 14) {
           _setChromeVisible(false);
         }
       } else {
         if (pixels < maxExtent - 4) {
           if (_accumulatedScrollDelta > 0) _accumulatedScrollDelta = 0.0;
           _accumulatedScrollDelta += delta;
-          if (!_chromeVisible && _accumulatedScrollDelta <= -14) {
+          if (!_chromeVisible && _accumulatedScrollDelta <= -10) {
             _setChromeVisible(true);
           }
         }
@@ -124,8 +115,8 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_scrollCtrl.hasClients) {
       _scrollCtrl.animateTo(
         0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 340),
+        curve: const Cubic(0.22, 1.0, 0.36, 1.0),
       );
     }
   }
@@ -135,6 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _state.tabReselectCounter.removeListener(_scrollToTop);
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
+    _searchFocus.dispose();
     _queryCtrl.dispose();
     super.dispose();
   }
@@ -415,46 +407,6 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     } catch (_) {}
     if (mounted) setState(() => _loadingMore = false);
-  }
-
-  bool _savingSearch = false;
-
-  Future<void> _saveCurrentSearch() async {
-    if (_savingSearch) return;
-    if (!_state.isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_state.s.tr('سجّل الدخول لحفظ البحث.',
-              'Connectez-vous pour enregistrer une recherche.'))));
-      return;
-    }
-    setState(() => _savingSearch = true);
-    try {
-      final response = await _state.api.dio.post('/saved-searches', data: {
-        'title': _queryCtrl.text.trim().isNotEmpty
-            ? _queryCtrl.text.trim()
-            : _state.s.tr('بحث محفوظ', 'Recherche sauvegardée'),
-        'query': _queryCtrl.text.trim(),
-        'category_id': _categoryId,
-        'city_id': _cityId,
-        'price_min': _minPrice,
-        'price_max': _maxPrice,
-      });
-      if (response.data is! Map || response.data['status'] != 'success') {
-        throw StateError('Save not confirmed');
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:
-              Text(_state.s.tr('تم حفظ البحث.', 'Recherche enregistrée.'))));
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(_state.s.tr('تعذر حفظ البحث. أعد المحاولة.',
-                'Impossible d’enregistrer la recherche. Réessayez.'))));
-      }
-    } finally {
-      if (mounted) setState(() => _savingSearch = false);
-    }
   }
 
   Map<String, dynamic>? _activeCategoryObj() {
@@ -792,39 +744,27 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final s = _state.s;
-    final canPop = Navigator.of(context).canPop();
-    final activeCat = _activeCategoryObj();
-    final activeCity = _activeCityName(s);
-    final filterCount = _activeFilterCount;
+  Widget _buildHeaderContent(
+    BuildContext context, {
+    required AppStrings s,
+    required bool canPop,
+    required Map<String, dynamic>? activeCat,
+    required String? activeCity,
+    required int filterCount,
+  }) {
+    final double titleHeight = activeCity != null ? 54.0 : 42.0;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRect(
-              child: AnimatedAlign(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.bottomCenter,
-                heightFactor: _chromeVisible ? 1.0 : 0.0,
-                child: IgnorePointer(
-                  ignoring: !_chromeVisible,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 180),
-                    opacity: _chromeVisible ? 1.0 : 0.0,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 1. Minimalist Apple Top Header + Back + Alert Bell + Grid/List Toggle
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+    return Container(
+      color: Colors.white,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Minimal Title Header (no bookmark or grid/list toggle)
+          SizedBox(
+            height: titleHeight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
               child: Row(
                 children: [
                   if (canPop) ...[
@@ -838,6 +778,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ],
                   Expanded(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -848,7 +789,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
                             letterSpacing:
                                 AppTypography.trackingForContext(context, -0.5),
@@ -858,8 +799,10 @@ class _SearchScreenState extends State<SearchScreen> {
                         if (activeCity != null)
                           Text(
                             '📍 $activeCity',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               color: _red,
                             ),
@@ -867,304 +810,325 @@ class _SearchScreenState extends State<SearchScreen> {
                       ],
                     ),
                   ),
-                  _SoftIconBtn(
-                    icon: CupertinoIcons.bookmark,
-                    iconColor: _red,
-                    onTap: _saveCurrentSearch,
-                  ),
-                  const SizedBox(width: 8),
-                  _SoftIconBtn(
-                    icon: _gridView
-                        ? CupertinoIcons.list_bullet
-                        : CupertinoIcons.square_grid_2x2,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _gridView = !_gridView);
-                    },
-                  ),
                 ],
               ),
             ),
+          ),
 
-            // 2. Soft Borderless Search Bar + Filter Button with Badge
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+          // 2. Pill Search Bar matching attached design (coral search + mic)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF6F5),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: const Color(0xFFFADBD8),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _red.withValues(alpha: 0.06),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
+                  const Icon(
+                    CupertinoIcons.search,
+                    size: 20,
+                    color: Color(0xFFD94A38),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _surface,
-                        borderRadius: BorderRadius.circular(16),
+                    child: TextField(
+                      controller: _queryCtrl,
+                      focusNode: _searchFocus,
+                      cursorColor: const Color(0xFFD94A38),
+                      onChanged: (_) {
+                        setState(() {
+                          _ads = _filterAndSortAds(_ads);
+                        });
+                      },
+                      onSubmitted: (_) => _searchAds(),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: _ink,
+                        fontWeight: FontWeight.w600,
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            CupertinoIcons.search,
-                            size: 18,
-                            color: _muted,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: _queryCtrl,
-                              onChanged: (_) {
-                                setState(() {
-                                  _ads = _filterAndSortAds(_ads);
-                                });
-                              },
-                              onSubmitted: (_) => _searchAds(),
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                color: _ink,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: s.searchHint,
-                                hintStyle: const TextStyle(
-                                  color: _muted,
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                          if (_queryCtrl.text.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                _queryCtrl.clear();
-                                _searchAds();
-                              },
-                              child: const Icon(
-                                CupertinoIcons.clear_circled_solid,
-                                size: 17,
-                                color: _muted,
-                              ),
-                            ),
-                        ],
+                      decoration: InputDecoration(
+                        hintText: s.tr('بحث...', 'Rechercher...', 'Search'),
+                        hintStyle: TextStyle(
+                          color: const Color(0xFFD94A38).withValues(alpha: 0.78),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  PressableScale(
-                    onTap: _openFilterModal,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: filterCount > 0 ? _red : _ink,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.slider_horizontal_3,
-                            color: Colors.white,
-                            size: 19,
+                  if (_queryCtrl.text.isNotEmpty) ...[
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        _queryCtrl.clear();
+                        _searchAds();
+                      },
+                      child: const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: Center(
+                          child: Icon(
+                            CupertinoIcons.clear_circled_solid,
+                            size: 18,
+                            color: Color(0xFF94A3B8),
                           ),
                         ),
-                        if (filterCount > 0)
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: _ink,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                '$filterCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      _searchFocus.requestFocus();
+                    },
+                    child: const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: Center(
+                        child: Icon(
+                          CupertinoIcons.mic_fill,
+                          size: 19,
+                          color: Color(0xFFD94A38),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+          ),
 
-            // 3. Harmonious Horizontal 3D Category Pills
-            SizedBox(
-              height: 42,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _effectiveCategories.length + 1,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    final active = _categoryId == null;
-                    return PressableScale(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _categoryId = null);
-                        _searchAds();
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 15),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: active ? _ink : _surface,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          s.tr('جميع الأقسام', 'Toutes'),
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            color: active ? Colors.white : _ink,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  final cat = _effectiveCategories[index - 1];
-                  final int? id = int.tryParse(cat['id']?.toString() ?? '');
-                  final active = _categoryId == id;
-                  final label = _state.formatCategoryLabel(cat);
-                  final asset = _state.assetForCategory(cat, label);
-
-                  return PressableScale(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      if (id != null) {
-                        _state.recordCategoryInterest(id, weight: 3);
-                      }
-                      setState(() => _categoryId = active ? null : id);
-                      _searchAds();
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 13),
-                      decoration: BoxDecoration(
-                        color: active ? _redSoft : _surface,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: active ? _red : Colors.transparent,
-                          width: 1.4,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+          // 3. Icon-Only Category Strip (no text pills, no sort/count strip)
+          SizedBox(
+            height: 54,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 2, 20, 6),
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _effectiveCategories.length + 2,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Semantics(
+                    button: true,
+                    label: s.tr('تصفية', 'Filtrer', 'Filter'),
+                    child: PressableScale(
+                      onTap: _openFilterModal,
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: Image.asset(asset, fit: BoxFit.contain),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: active ? _red : _ink,
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: filterCount > 0 ? _red : _surface,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              CupertinoIcons.slider_horizontal_3,
+                              size: 19,
+                              color: filterCount > 0 ? Colors.white : _ink,
                             ),
                           ),
+                          if (filterCount > 0)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: _ink,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$filterCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
                   );
-                },
-              ),
-            ),
+                }
 
-            // 4. Quick Sort Strip & Live Results Count
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
-              child: Row(
-                children: [
-                  Text(
-                    '${_ads.length} ${s.tr('إعلان متوفر', 'annonces')}',
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: _muted,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _SortMiniPill(
-                              label: s.tr('الذكي ✨', 'Pour vous ✨'),
-                              active: _sortBy == 'smart',
-                              onTap: () => setState(() {
-                                _sortBy = 'smart';
-                                _ads = _filterAndSortAds(_ads);
-                              }),
-                            ),
-                            const SizedBox(width: 6),
-                            _SortMiniPill(
-                              label: s.tr('الأرخص', 'Prix ↑'),
-                              active: _sortBy == 'price_asc',
-                              onTap: () => setState(() {
-                                _sortBy = 'price_asc';
-                                _ads = _filterAndSortAds(_ads);
-                              }),
-                            ),
-                            const SizedBox(width: 6),
-                            _SortMiniPill(
-                              label: s.tr('الأكثر طلباً', 'Populaire'),
-                              active: _sortBy == 'popular',
-                              onTap: () => setState(() {
-                                _sortBy = 'popular';
-                                _ads = _filterAndSortAds(_ads);
-                              }),
-                            ),
-                          ],
+                if (index == 1) {
+                  final active = _categoryId == null;
+                  return Semantics(
+                    button: true,
+                    selected: active,
+                    label: s.tr('جميع الأقسام', 'Toutes', 'All categories'),
+                    child: Tooltip(
+                      message: s.tr('جميع الأقسام', 'Toutes'),
+                      child: PressableScale(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _categoryId = null);
+                          _searchAds();
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: active ? _ink : _surface,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            CupertinoIcons.square_grid_2x2_fill,
+                            size: 20,
+                            color: active ? Colors.white : _ink,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-                      ],
+                  );
+                }
+
+                final cat = _effectiveCategories[index - 2];
+                final int? id = int.tryParse(cat['id']?.toString() ?? '');
+                final active = _categoryId == id;
+                final label = _state.formatCategoryLabel(cat);
+                final asset = _state.assetForCategory(cat, label);
+
+                return Semantics(
+                  button: true,
+                  selected: active,
+                  label: label,
+                  child: Tooltip(
+                    message: label,
+                    child: PressableScale(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        if (id != null) {
+                          _state.recordCategoryInterest(id, weight: 3);
+                        }
+                        setState(() => _categoryId = active ? null : id);
+                        _searchAds();
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 46,
+                        height: 46,
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: active ? _redSoft : _surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: active ? _red : Colors.transparent,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Image.asset(asset, fit: BoxFit.contain),
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // 5. Results Grid / List with 3D Empty State
-            Expanded(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _handleVerticalScrollNotification,
-                child: _loading
-                  ? SearchGridSkeleton(isGrid: _gridView)
-                  : _ads.isEmpty
-                      ? IllustratedStateView(
+  @override
+  Widget build(BuildContext context) {
+    final s = _state.s;
+    final canPop = Navigator.of(context).canPop();
+    final activeCat = _activeCategoryObj();
+    final activeCity = _activeCityName(s);
+    final filterCount = _activeFilterCount;
+    final double headerExtent = (activeCity != null ? 54.0 : 42.0) + 62.0 + 54.0;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _handleVerticalScrollNotification,
+          child: RefreshIndicator(
+            color: _red,
+            backgroundColor: Colors.white,
+            onRefresh: _searchAds,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 680;
+                return CustomScrollView(
+                  controller: _scrollCtrl,
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(700),
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  slivers: [
+                    SliverPersistentHeader(
+                      floating: true,
+                      pinned: false,
+                      delegate: _ExploreFloatingHeaderDelegate(
+                        extent: headerExtent,
+                        vsyncProvider: this,
+                        rebuildKey: Object.hash(
+                          s.lang,
+                          canPop,
+                          _categoryId,
+                          activeCity,
+                          filterCount,
+                          _queryCtrl.text,
+                          _effectiveCategories.length,
+                        ),
+                        child: _buildHeaderContent(
+                          context,
+                          s: s,
+                          canPop: canPop,
+                          activeCat: activeCat,
+                          activeCity: activeCity,
+                          filterCount: filterCount,
+                        ),
+                      ),
+                    ),
+                    if (_loading)
+                      const SliverFillRemaining(
+                        hasScrollBody: true,
+                        child: SearchGridSkeleton(isGrid: false),
+                      )
+                    else if (_ads.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: IllustratedStateView(
                           assetPath: 'assets/images/state_empty_ads.png',
                           imageSize: 156,
                           title: s.noAdsFound,
@@ -1177,6 +1141,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             'Réinitialiser les filtres',
                           ),
                           onAction: () {
+                            _setChromeVisible(true);
                             setState(() {
                               _categoryId = null;
                               _cityId = null;
@@ -1187,164 +1152,146 @@ class _SearchScreenState extends State<SearchScreen> {
                             });
                             _searchAds();
                           },
-                        )
-                      : RefreshIndicator(
-                          color: _red,
-                          backgroundColor: Colors.white,
-                          onRefresh: _searchAds,
-                          child: _gridView
-                              ? GridView.builder(
-                                  controller: _scrollCtrl,
-                                  physics: const BouncingScrollPhysics(
-                                    parent: AlwaysScrollableScrollPhysics(),
-                                  ),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    20,
-                                    6,
-                                    20,
-                                    120,
-                                  ),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    mainAxisSpacing: 14,
-                                    crossAxisSpacing: 14,
-                                    childAspectRatio: 0.69,
-                                  ),
-                                  itemCount:
-                                      _ads.length + (_loadingMore ? 2 : 0),
-                                  itemBuilder: (context, idx) {
-                                    if (idx >= _ads.length) {
-                                      return const AdGridCardSkeleton();
-                                    }
-                                    final ad = _ads[idx];
-                                    return ScrollReveal(
-                                      key: ValueKey(
-                                        'search_grid_${ad['id']}_$_sortBy',
-                                      ),
-                                      delay: Duration(
-                                        milliseconds: (idx % 6) * 45,
-                                      ),
-                                      beginOffset: const Offset(0, 18),
-                                      child: AdCard(ad: ad),
-                                    );
-                                  },
-                                )
-                              : LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final isWide = constraints.maxWidth >= 680;
-                                    if (isWide) {
-                                      return GridView.builder(
-                                        controller: _scrollCtrl,
-                                        physics: const BouncingScrollPhysics(
-                                          parent:
-                                              AlwaysScrollableScrollPhysics(),
-                                        ),
-                                        padding: const EdgeInsets.fromLTRB(
-                                          20,
-                                          8,
-                                          20,
-                                          120,
-                                        ),
-                                        gridDelegate:
-                                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                                          maxCrossAxisExtent: 400,
-                                          mainAxisExtent: 374,
-                                          mainAxisSpacing: 18,
-                                          crossAxisSpacing: 18,
-                                        ),
-                                        itemCount: _ads.length +
-                                            (_loadingMore ? 2 : 0),
-                                        itemBuilder: (context, idx) {
-                                          if (idx >= _ads.length) {
-                                            return const Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                  vertical: 16),
-                                              child: Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  color: _red,
-                                                  strokeWidth: 2.5,
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                          final ad = _ads[idx];
-                                          return ScrollReveal(
-                                            key: ValueKey(
-                                              'search_explore_${ad['id']}_$_sortBy',
-                                            ),
-                                            delay: Duration(
-                                              milliseconds: (idx % 6) * 45,
-                                            ),
-                                            beginOffset: const Offset(0, 18),
-                                            child: ExploreListingCard(ad: ad),
-                                          );
-                                        },
-                                      );
-                                    }
-
-                                    return ListView.separated(
-                                      controller: _scrollCtrl,
-                                      physics: const BouncingScrollPhysics(
-                                        parent: AlwaysScrollableScrollPhysics(),
-                                      ),
-                                      padding: const EdgeInsets.fromLTRB(
-                                        20,
-                                        8,
-                                        20,
-                                        120,
-                                      ),
-                                      itemCount:
-                                          _ads.length + (_loadingMore ? 1 : 0),
-                                      separatorBuilder: (_, __) =>
-                                          const SizedBox(height: 16),
-                                      itemBuilder: (context, idx) {
-                                        if (idx >= _ads.length) {
-                                          return const Padding(
-                                            padding: EdgeInsets.symmetric(
-                                                vertical: 16),
-                                            child: Center(
-                                              child: CircularProgressIndicator(
-                                                color: _red,
-                                                strokeWidth: 2.5,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                        final ad = _ads[idx];
-                                        return ScrollReveal(
-                                          key: ValueKey(
-                                            'search_explore_${ad['id']}_$_sortBy',
-                                          ),
-                                          delay: Duration(
-                                            milliseconds: (idx % 5) * 45,
-                                          ),
-                                          beginOffset: const Offset(0, 18),
-                                          child: ExploreListingCard(ad: ad),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
                         ),
-              ),
+                      )
+                    else if (isWide)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                        sliver: SliverGrid.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 400,
+                            mainAxisExtent: 374,
+                            mainAxisSpacing: 18,
+                            crossAxisSpacing: 18,
+                          ),
+                          itemCount: _ads.length + (_loadingMore ? 2 : 0),
+                          itemBuilder: (context, idx) {
+                            if (idx >= _ads.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: _red,
+                                    strokeWidth: 2.5,
+                                  ),
+                                ),
+                              );
+                            }
+                            final ad = _ads[idx];
+                            return RepaintBoundary(
+                              key: ValueKey('search_wide_${ad['id']}_$_sortBy'),
+                              child: ExploreListingCard(ad: ad),
+                            );
+                          },
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                        sliver: SliverList.separated(
+                          itemCount: _ads.length + (_loadingMore ? 1 : 0),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, idx) {
+                            if (idx >= _ads.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: _red,
+                                    strokeWidth: 2.5,
+                                  ),
+                                ),
+                              );
+                            }
+                            final ad = _ads[idx];
+                            return RepaintBoundary(
+                              key: ValueKey(
+                                'search_explore_${ad['id']}_$_sortBy',
+                              ),
+                              child: ExploreListingCard(ad: ad),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+class _ExploreFloatingHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double extent;
+  final TickerProvider vsyncProvider;
+  final int rebuildKey;
+  final Widget child;
+
+  const _ExploreFloatingHeaderDelegate({
+    required this.extent,
+    required this.vsyncProvider,
+    required this.rebuildKey,
+    required this.child,
+  });
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  double get minExtent => 0.0;
+
+  @override
+  TickerProvider? get vsync => vsyncProvider;
+
+  @override
+  FloatingHeaderSnapConfiguration? get snapConfiguration =>
+      FloatingHeaderSnapConfiguration(
+        curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+        duration: const Duration(milliseconds: 240),
+      );
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final visibleFraction =
+        ((extent - shrinkOffset) / extent).clamp(0.0, 1.0);
+    return Material(
+      color: Colors.white,
+      child: ClipRect(
+        child: OverflowBox(
+          minHeight: extent,
+          maxHeight: extent,
+          alignment: Alignment.bottomCenter,
+          child: Opacity(
+            opacity: Curves.easeOut.transform(visibleFraction),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _ExploreFloatingHeaderDelegate oldDelegate) {
+    return oldDelegate.extent != extent ||
+        oldDelegate.rebuildKey != rebuildKey;
+  }
+}
+
 class _SoftIconBtn extends StatelessWidget {
   final IconData icon;
-  final Color iconColor;
   final VoidCallback onTap;
 
   const _SoftIconBtn({
     required this.icon,
-    this.iconColor = const Color(0xFF0F172A),
     required this.onTap,
   });
 
@@ -1360,52 +1307,7 @@ class _SoftIconBtn extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: 18, color: iconColor),
-      ),
-    );
-  }
-}
-
-class _SortMiniPill extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _SortMiniPill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-        child: Center(
-          widthFactor: 1,
-          heightFactor: 1,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: active ? const Color(0xFF0F172A) : const Color(0xFFF5F6F8),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: active ? Colors.white : const Color(0xFF64748B),
-              ),
-            ),
-          ),
-        ),
+        child: Icon(icon, size: 18, color: const Color(0xFF0F172A)),
       ),
     );
   }
