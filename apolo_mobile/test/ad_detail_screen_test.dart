@@ -1,0 +1,216 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:apolo_mobile/core/state/app_state.dart';
+import 'package:apolo_mobile/screens/ad_detail_screen.dart';
+
+class _StubDetailHttpAdapter implements HttpClientAdapter {
+  final Map<String, dynamic> adPayload;
+
+  _StubDetailHttpAdapter(this.adPayload);
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final payload = options.path.contains('/ads/')
+        ? {
+            'status': 'success',
+            'ad': adPayload,
+            'related_ads': const [],
+          }
+        : {
+            'status': 'success',
+            'categories': const [],
+            'cities': const [],
+            'data': const [],
+          };
+    return ResponseBody.fromString(
+      jsonEncode(payload),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await AppState().initialize(loadRemote: false);
+    AppState().currentUser = null;
+    AppState().favoriteAdIds.clear();
+  });
+
+  testWidgets(
+      'AdDetailScreen reproduces Casa Oliva Villa reference specs, hero height, 4 spec cards, host card, and sticky bottom bar',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final sampleAd = <String, dynamic>{
+      'id': 9101,
+      'title': 'Casa Oliva Villa',
+      'badge_label': 'Villa',
+      'rating': '4.8',
+      'reviews_count': 128,
+      'highlight_label': 'Guest favourite',
+      'photo_count_total': 24,
+      'video_duration': '0:45',
+      'has_video': true,
+      'location_display': 'Quinta da Marinha, Cascais, Portugal',
+      'price': 212,
+      'nightly_price_display': '\$212',
+      'price_frequency': 'per night',
+      'guests': 6,
+      'bedrooms': 3,
+      'beds': 4,
+      'baths': 2,
+      'host_title': 'Hosted by Marta',
+      'host_subtitle': 'Superhost · 4 years hosting · replies in 1 h',
+      'host_initials': 'MR',
+      'total_price_display': '\$933',
+      'total_unit_label': 'total',
+      'total_subtitle': 'May 20–24 · taxes incl.',
+      'cta_label': 'Book now',
+      'seller': {
+        'id': 77,
+        'name': 'Marta Ribeiro',
+        'is_verified': true,
+      },
+      'images': [
+        'assets/images/cat_realestate.png',
+        'assets/images/cat_home.png',
+      ],
+    };
+
+    final state = AppState();
+    final previousAdapter = state.api.dio.httpClientAdapter;
+    final previousLocale = state.locale;
+    state.api.dio.httpClientAdapter = _StubDetailHttpAdapter(sampleAd);
+    await tester.runAsync(() => state.setLocale(const Locale('en')));
+    addTearDown(() async {
+      await tester.runAsync(() => state.setLocale(previousLocale));
+      state.api.dio.httpClientAdapter = previousAdapter;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.ltr,
+          child: AdDetailScreen(adId: 9101, initialAd: sampleAd),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Hero tags & video tour pill
+    expect(find.text('Video tour'), findsOneWidget);
+    expect(find.text('0:45'), findsOneWidget);
+    expect(find.text('Villa'), findsWidgets);
+    expect(find.text('4.8 · 128'), findsOneWidget);
+    expect(find.text('Guest favourite'), findsOneWidget);
+    expect(find.text('1/24'), findsOneWidget);
+
+    // Title & pricing row
+    expect(find.text('Casa Oliva Villa'), findsOneWidget);
+    expect(find.text('Quinta da Marinha, Cascais, Portugal'), findsOneWidget);
+    expect(find.text('\$212'), findsOneWidget);
+    expect(find.text('per night'), findsOneWidget);
+
+    // 4 horizontal spec cards
+    expect(find.text('6'), findsOneWidget);
+    expect(find.text('Guests'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('Bedrooms'), findsOneWidget);
+    expect(find.text('4'), findsOneWidget);
+    expect(find.text('Beds'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('Baths'), findsOneWidget);
+
+    // Host card & Message button
+    expect(find.text('MR'), findsOneWidget);
+    expect(find.text('Hosted by Marta'), findsOneWidget);
+    expect(
+      find.text('Superhost · 4 years hosting · replies in 1 h'),
+      findsOneWidget,
+    );
+    expect(find.text('Message'), findsOneWidget);
+
+    // Sticky bottom bar
+    expect(find.text('May 20–24 · taxes incl.'), findsOneWidget);
+    expect(find.text('Book now'), findsOneWidget);
+    expect(find.byIcon(CupertinoIcons.heart), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'AdDetailScreen renders real Apolo Arabic classified ad with preserved specs, phone, and safety actions cleanly',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final realAd = <String, dynamic>{
+      'id': 108,
+      'title': 'حامل الهاتف المغناطيسي للسيارة',
+      'price': 99,
+      'price_formatted': '99 MAD',
+      'negotiable': true,
+      'is_vip': true,
+      'views_count': 167,
+      'condition': 'جديد',
+      'phone_call': '0612345678',
+      'description': 'حامل هاتف مغناطيسي قوي ومناسب لجميع السيارات في المغرب.',
+      'category': {'id': 15, 'name_ar': 'أقسام أخرى', 'name_fr': 'Autres'},
+      'city': {'id': 4, 'name_ar': 'سلا', 'name_fr': 'Salé'},
+      'seller': {'id': 12, 'name': 'Amine K', 'is_verified': true},
+      'images': ['assets/images/cat_other.png'],
+    };
+
+    final state = AppState();
+    final previousAdapter = state.api.dio.httpClientAdapter;
+    final previousLocale = state.locale;
+    state.api.dio.httpClientAdapter = _StubDetailHttpAdapter(realAd);
+    await tester.runAsync(() => state.setLocale(const Locale('ar')));
+    addTearDown(() async {
+      await tester.runAsync(() => state.setLocale(previousLocale));
+      state.api.dio.httpClientAdapter = previousAdapter;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: AdDetailScreen(adId: 108, initialAd: realAd),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('حامل الهاتف المغناطيسي للسيارة'), findsOneWidget);
+    expect(find.text('99 MAD'), findsWidgets);
+    expect(find.text('رسالة'), findsOneWidget);
+    expect(find.text('167'), findsOneWidget);
+    // Fake Video Tour should not appear when listing has no video
+    expect(find.text('Video tour'), findsNothing);
+    expect(find.text('فيديو الإعلان'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+}
