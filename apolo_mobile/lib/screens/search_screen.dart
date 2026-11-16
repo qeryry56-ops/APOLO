@@ -815,23 +815,23 @@ class _SearchScreenState extends State<SearchScreen>
             ),
           ),
 
-          // 2. Pill Search Bar matching attached design (coral search + mic)
+          // 2. Apple iOS Pill Search Bar (clean systemGray6 fill + systemGray icons)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF6F5),
+                color: const Color(0xFFF2F2F7),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                  color: const Color(0xFFFADBD8),
-                  width: 1,
+                  color: const Color(0xFFE5E5EA),
+                  width: 0.8,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _red.withValues(alpha: 0.06),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -841,14 +841,14 @@ class _SearchScreenState extends State<SearchScreen>
                   const Icon(
                     CupertinoIcons.search,
                     size: 20,
-                    color: Color(0xFFD94A38),
+                    color: Color(0xFF8E8E93),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       controller: _queryCtrl,
                       focusNode: _searchFocus,
-                      cursorColor: const Color(0xFFD94A38),
+                      cursorColor: _ink,
                       onChanged: (_) {
                         setState(() {
                           _ads = _filterAndSortAds(_ads);
@@ -858,14 +858,14 @@ class _SearchScreenState extends State<SearchScreen>
                       style: const TextStyle(
                         fontSize: 15,
                         color: _ink,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                       ),
                       decoration: InputDecoration(
                         hintText: s.tr('بحث...', 'Rechercher...', 'Search'),
-                        hintStyle: TextStyle(
-                          color: const Color(0xFFD94A38).withValues(alpha: 0.78),
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF8E8E93),
                           fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w400,
                         ),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -890,7 +890,7 @@ class _SearchScreenState extends State<SearchScreen>
                           child: Icon(
                             CupertinoIcons.clear_circled_solid,
                             size: 18,
-                            color: Color(0xFF94A3B8),
+                            color: Color(0xFF8E8E93),
                           ),
                         ),
                       ),
@@ -910,7 +910,7 @@ class _SearchScreenState extends State<SearchScreen>
                         child: Icon(
                           CupertinoIcons.mic_fill,
                           size: 19,
-                          color: Color(0xFFD94A38),
+                          color: Color(0xFF8E8E93),
                         ),
                       ),
                     ),
