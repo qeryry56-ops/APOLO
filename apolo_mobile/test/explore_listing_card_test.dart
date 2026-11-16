@@ -1,9 +1,57 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:apolo_mobile/core/state/app_state.dart';
+import 'package:apolo_mobile/screens/main_shell.dart';
 import 'package:apolo_mobile/screens/search_screen.dart';
 import 'package:apolo_mobile/screens/widgets/app_image.dart';
 import 'package:apolo_mobile/screens/widgets/explore_listing_card.dart';
+
+class _StubExploreHttpAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final sampleAds = List.generate(
+      6,
+      (i) => {
+        'id': 100 + i,
+        'title': 'إعلان تجريبي رقم $i',
+        'price': 100 + i * 50,
+        'price_formatted': '${100 + i * 50} MAD',
+        'views_count': 50 + i,
+        'category': {'id': 15, 'name_ar': 'أقسام أخرى', 'name_fr': 'Autres'},
+        'city': {'id': 4, 'name_ar': 'سلا', 'name_fr': 'Salé'},
+        'images': ['assets/images/cat_other.png'],
+      },
+    );
+    return ResponseBody.fromString(
+      jsonEncode({
+        'status': 'success',
+        'data': sampleAds,
+        'categories': const [],
+        'cities': const [],
+        'vip_ads': sampleAds,
+        'featured_ads': const [],
+        'latest_ads': sampleAds,
+      }),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
 
 void main() {
   test('AppImage.resolveWebUrl proxies Apolo storage URLs on Vercel Web', () {
@@ -226,6 +274,150 @@ void main() {
     final firstCardSize = tester.getSize(find.byType(ExploreListingCard).first);
     expect(firstCardSize.width, inInclusiveRange(342, 355));
     expect(firstCardSize.height, inInclusiveRange(360, 380));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'SearchScreen hides top header chrome and notifies callback when scrolling down, ignores horizontal swipes, and restores on scroll up',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({});
+    await AppState().initialize(loadRemote: false);
+    final state = AppState();
+    final prevAdapter = state.api.dio.httpClientAdapter;
+    state.api.dio.httpClientAdapter = _StubExploreHttpAdapter();
+    addTearDown(() => state.api.dio.httpClientAdapter = prevAdapter);
+
+    bool chromeVisible = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: SearchScreen(
+            onChromeVisibilityChanged: (v) => chromeVisible = v,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    final initialAlign = tester.widget<AnimatedAlign>(
+      find.byType(AnimatedAlign).first,
+    );
+    expect(initialAlign.heightFactor, 1.0);
+    expect(chromeVisible, isTrue);
+
+    // Drag vertically downward through the Explore results list
+    final verticalList = find.byWidgetPredicate(
+      (w) => w is ListView && w.scrollDirection == Axis.vertical,
+    );
+    await tester.drag(verticalList.first, const Offset(0, -320));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
+
+    expect(chromeVisible, isFalse);
+    final collapsedAlign = tester.widget<AnimatedAlign>(
+      find.byType(AnimatedAlign).first,
+    );
+    expect(collapsedAlign.heightFactor, 0.0);
+    expect(tester.getSize(find.byType(AnimatedAlign).first).height, 0.0);
+
+    // Horizontal swipe on photo carousel must not bring chrome back
+    if (find.byType(PageView).evaluate().isNotEmpty) {
+      await tester.drag(find.byType(PageView).first, const Offset(-180, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(chromeVisible, isFalse);
+    }
+
+    // Drag back up -> chrome restores
+    await tester.drag(verticalList.first, const Offset(0, 260));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
+
+    expect(chromeVisible, isTrue);
+    final restoredAlign = tester.widget<AnimatedAlign>(
+      find.byType(AnimatedAlign).first,
+    );
+    expect(restoredAlign.heightFactor, 1.0);
+    expect(
+      tester.getSize(find.byType(AnimatedAlign).first).height,
+      greaterThan(150.0),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'MainShell hides floating bottom TabBar while scrolling Explore Ads and brings it back on upward scroll',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({});
+    await AppState().initialize(loadRemote: false);
+    final state = AppState();
+    final prevAdapter = state.api.dio.httpClientAdapter;
+    state.api.dio.httpClientAdapter = _StubExploreHttpAdapter();
+    addTearDown(() => state.api.dio.httpClientAdapter = prevAdapter);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: MainShell(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 700));
+
+    // Switch to Explore Ads tab
+    await tester.tap(find.text(state.s.tr('إعلانات', 'Annonces')));
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 800));
+
+    final initialSlide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
+    expect(initialSlide.offset, Offset.zero);
+    expect(
+      tester.getTopLeft(find.byType(AnimatedOpacity).last).dy,
+      lessThan(844.0),
+    );
+
+    // Scroll down in Explore Ads
+    final verticalList = find.descendant(
+      of: find.byType(SearchScreen),
+      matching: find.byWidgetPredicate(
+        (w) => w is ListView && w.scrollDirection == Axis.vertical,
+      ),
+    );
+    await tester.drag(verticalList.first, const Offset(0, -320));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
+
+    final hiddenSlide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
+    expect(hiddenSlide.offset, const Offset(0, 1.8));
+    expect(
+      tester.getTopLeft(find.byType(AnimatedOpacity).last).dy,
+      greaterThan(844.0),
+    );
+
+    // Scroll back up -> bottom TabBar returns smoothly
+    await tester.drag(verticalList.first, const Offset(0, 260));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
+
+    final shownSlide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
+    expect(shownSlide.offset, Offset.zero);
+    expect(
+      tester.getTopLeft(find.byType(AnimatedOpacity).last).dy,
+      lessThan(844.0),
+    );
     expect(tester.takeException(), isNull);
   });
 }

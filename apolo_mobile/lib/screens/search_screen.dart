@@ -11,7 +11,13 @@ import 'widgets/skeleton_loader.dart';
 
 class SearchScreen extends StatefulWidget {
   final int? initialCategoryId;
-  const SearchScreen({super.key, this.initialCategoryId});
+  final ValueChanged<bool>? onChromeVisibilityChanged;
+
+  const SearchScreen({
+    super.key,
+    this.initialCategoryId,
+    this.onChromeVisibilityChanged,
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -32,6 +38,9 @@ class _SearchScreenState extends State<SearchScreen> {
   List<Map<String, dynamic>> _ads = [];
   bool _loading = true;
   bool _gridView = false;
+  bool _chromeVisible = true;
+  double _accumulatedScrollDelta = 0.0;
+  double? _lastViewportDimension;
 
   int _currentPage = 1;
   int _lastPage = 1;
@@ -57,7 +66,61 @@ class _SearchScreenState extends State<SearchScreen> {
     _searchAds();
   }
 
+  void _setChromeVisible(bool visible) {
+    _accumulatedScrollDelta = 0.0;
+    if (_chromeVisible == visible) return;
+    setState(() => _chromeVisible = visible);
+    widget.onChromeVisibilityChanged?.call(visible);
+  }
+
+  bool _handleVerticalScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final metrics = notification.metrics;
+    final prevViewport = _lastViewportDimension;
+    _lastViewportDimension = metrics.viewportDimension;
+
+    if (prevViewport != null &&
+        (metrics.viewportDimension - prevViewport).abs() > 0.5) {
+      return false;
+    }
+
+    final pixels = metrics.pixels;
+    final maxExtent = metrics.maxScrollExtent;
+
+    if (pixels <= 8 || maxExtent <= 80) {
+      if (!_chromeVisible) _setChromeVisible(true);
+      _accumulatedScrollDelta = 0.0;
+      return false;
+    }
+
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0.0;
+      if (delta == 0.0) return false;
+
+      if (delta > 0) {
+        if (_accumulatedScrollDelta < 0) _accumulatedScrollDelta = 0.0;
+        _accumulatedScrollDelta += delta;
+        if (_chromeVisible &&
+            pixels > 24 &&
+            pixels < maxExtent - 12 &&
+            _accumulatedScrollDelta >= 18) {
+          _setChromeVisible(false);
+        }
+      } else {
+        if (pixels < maxExtent - 4) {
+          if (_accumulatedScrollDelta > 0) _accumulatedScrollDelta = 0.0;
+          _accumulatedScrollDelta += delta;
+          if (!_chromeVisible && _accumulatedScrollDelta <= -14) {
+            _setChromeVisible(true);
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   void _scrollToTop() {
+    _setChromeVisible(true);
     if (_scrollCtrl.hasClients) {
       _scrollCtrl.animateTo(
         0,
@@ -744,7 +807,22 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Minimalist Apple Top Header + Back + Alert Bell + Grid/List Toggle
+            ClipRect(
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.bottomCenter,
+                heightFactor: _chromeVisible ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !_chromeVisible,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: _chromeVisible ? 1.0 : 0.0,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 1. Minimalist Apple Top Header + Back + Alert Bell + Grid/List Toggle
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
               child: Row(
@@ -1072,10 +1150,18 @@ class _SearchScreenState extends State<SearchScreen> {
                 ],
               ),
             ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
             // 5. Results Grid / List with 3D Empty State
             Expanded(
-              child: _loading
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _handleVerticalScrollNotification,
+                child: _loading
                   ? SearchGridSkeleton(isGrid: _gridView)
                   : _ads.isEmpty
                       ? IllustratedStateView(
@@ -1242,6 +1328,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                   },
                                 ),
                         ),
+              ),
             ),
           ],
         ),
