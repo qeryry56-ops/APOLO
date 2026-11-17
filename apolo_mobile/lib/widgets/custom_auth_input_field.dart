@@ -112,6 +112,9 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
         isDark ? const Color(0xFFF9FAFB) : const Color(0xFF111827);
     final Color hintColor =
         isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF);
+    final bool isRtl = Directionality.of(context) == TextDirection.rtl;
+    final TextAlign effectiveTextAlign =
+        (isRtl && widget.prefixBadge == null) ? TextAlign.right : TextAlign.start;
 
     final Widget textFormField = Theme(
       data: Theme.of(context).copyWith(
@@ -136,6 +139,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
         enabled: widget.enabled,
         readOnly: widget.readOnly,
         textDirection: widget.ltr ? TextDirection.ltr : null,
+        textAlign: effectiveTextAlign,
         keyboardType: widget.type,
         autofillHints: widget.autofill,
         obscureText: widget.secret && _obscure,
@@ -145,12 +149,15 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
         onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
         style: TextStyle(
           fontSize: 15.5,
+          height: 1.25,
           fontWeight: FontWeight.w500,
           color: textColor,
           letterSpacing: AppTypography.trackingForContext(context, -0.2),
         ),
-        cursorColor: widget.focusColor,
+        cursorColor: textColor,
+        cursorWidth: 1.8,
         cursorHeight: 19,
+        cursorOpacityAnimates: false,
         inputFormatters: widget.type == TextInputType.number
             ? [
                 TextInputFormatter.withFunction(
@@ -227,7 +234,10 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                   width: _isFocused || hasError ? 2.0 : 1.0,
                 ),
               ),
-              padding: const EdgeInsetsDirectional.only(start: 16, end: 12),
+              padding: EdgeInsetsDirectional.only(
+                start: 16,
+                end: widget.secret ? 4 : 16,
+              ),
               child: Stack(
                 alignment: AlignmentDirectional.centerStart,
                 children: [
@@ -237,7 +247,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                     curve: Curves.easeOut,
                     top: _shouldFloat ? 8.0 : 18.0,
                     start: 0,
-                    end: widget.secret ? 44 : 4,
+                    end: widget.secret ? 48 : 0,
                     child: IgnorePointer(
                       child: AnimatedDefaultTextStyle(
                         duration: animDuration,
@@ -267,7 +277,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                     top: _shouldFloat ? 21 : 0,
                     bottom: 0,
                     start: 0,
-                    end: widget.secret ? 44 : 4,
+                    end: widget.secret ? 48 : 0,
                     child: widget.prefixBadge != null
                         ? Directionality(
                             textDirection: widget.ltr
@@ -288,7 +298,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                   // Trailing Show/Hide Password Toggle (44x44px hit target, vertically centered)
                   if (widget.secret)
                     PositionedDirectional(
-                      end: -4,
+                      end: 0,
                       top: 0,
                       bottom: 0,
                       child: Center(

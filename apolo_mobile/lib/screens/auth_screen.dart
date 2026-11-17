@@ -2142,9 +2142,8 @@ class _AuthScreenState extends State<AuthScreen>
     bool isAr = true,
   }) {
     final bool isRootLogin = _login && !isOtp;
-    final Color surface = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color border =
-        isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE5E7EB);
+    final Color softFill =
+        isDark ? const Color(0xFF262629) : const Color(0xFFF3F4F6);
     final Color ink =
         isDark ? const Color(0xFFF9FAFB) : const Color(0xFF111827);
 
@@ -2171,25 +2170,32 @@ class _AuthScreenState extends State<AuthScreen>
         label: isRootLogin
             ? _state.s.tr('إغلاق', 'Fermer', 'Close')
             : _state.s.tr('رجوع', 'Retour', 'Back'),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isOtp ? Colors.transparent : surface,
-            shape: BoxShape.circle,
-            border: isOtp ? null : Border.all(color: border, width: 1.0),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            isRootLogin
-                ? CupertinoIcons.xmark
-                : (isAr
-                    ? CupertinoIcons.chevron_right
-                    : CupertinoIcons.chevron_left),
-            size: isRootLogin ? 18 : 19,
-            color: isOtp
-                ? (isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280))
-                : ink,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: isOtp ? Colors.transparent : softFill,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                isRootLogin
+                    ? CupertinoIcons.xmark
+                    : (isAr
+                        ? CupertinoIcons.chevron_right
+                        : CupertinoIcons.chevron_left),
+                size: isRootLogin ? 18 : 19,
+                color: isOtp
+                    ? (isDark
+                        ? const Color(0xFF9CA3AF)
+                        : const Color(0xFF6B7280))
+                    : ink,
+              ),
+            ),
           ),
         ),
       ),

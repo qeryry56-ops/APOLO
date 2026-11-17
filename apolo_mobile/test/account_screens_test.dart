@@ -302,6 +302,47 @@ void main() {
       // 8. Footer: 'أول مرة هنا؟ ' muted + 'إنشاء حساب'
       expect(find.textContaining('أول مرة هنا؟'), findsOneWidget);
       expect(find.textContaining('إنشاء حساب'), findsOneWidget);
+
+      // 9. Password EditableText aligns right under Arabic RTL label while preserving LTR input order
+      final pwdEditable = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('auth-password')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(pwdEditable.textDirection, TextDirection.ltr);
+      expect(pwdEditable.textAlign, TextAlign.right);
+      expect(pwdEditable.cursorOpacityAnimates, isFalse);
+    });
+
+    testWidgets('Dark mode renders #121212 scaffold and #1E1E1E Meta inputs cleanly',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final adapter = MockAccountAdapter((_) => json('{}'));
+      final client = Dio()..httpClientAdapter = adapter;
+
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.dark(const Locale('ar')),
+        home: AuthScreen(auth: AccountAuth(client: client)),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, const Color(0xFF121212));
+
+      final emailContainer = tester.widget<AnimatedContainer>(
+        find.ancestor(
+          of: find.byKey(const Key('auth-email')),
+          matching: find.byType(AnimatedContainer),
+        ),
+      );
+      final dec = emailContainer.decoration as BoxDecoration;
+      expect(dec.color, const Color(0xFF1E1E1E));
     });
   });
 }
