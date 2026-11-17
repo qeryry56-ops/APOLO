@@ -5,8 +5,11 @@ import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import 'ad_detail_screen.dart';
+import 'widgets/app_image.dart';
 import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/price_text.dart';
 import 'widgets/skeleton_loader.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -409,29 +412,6 @@ class _SearchScreenState extends State<SearchScreen>
     if (mounted) setState(() => _loadingMore = false);
   }
 
-  Map<String, dynamic>? _activeCategoryObj() {
-    if (_categoryId == null) return null;
-    for (final c in _effectiveCategories) {
-      if (int.tryParse((c['id'] ?? '').toString()) == _categoryId) {
-        return c;
-      }
-    }
-    return null;
-  }
-
-  String? _activeCityName(AppStrings s) {
-    if (_cityId == null) return null;
-    for (final c in _effectiveCities) {
-      if (int.tryParse((c['id'] ?? '').toString()) == _cityId) {
-        return (s.isAr
-                ? (c['name_ar'] ?? c['name'])
-                : (c['name_fr'] ?? c['name']))
-            .toString();
-      }
-    }
-    return null;
-  }
-
   void _openFilterModal() {
     HapticFeedback.selectionClick();
     final s = _state.s;
@@ -744,82 +724,412 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
+  Future<void> _saveCurrentSearch(AppStrings s) async {
+    if (!_state.api.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            s.tr(
+              'سجّل الدخول لحفظ البحث والإعلانات',
+              'Connectez-vous pour enregistrer',
+              'Sign in to save searches & listings',
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final res = await _state.api.dio.post('/saved-searches', data: {
+        'query': _queryCtrl.text.trim(),
+        if (_categoryId != null) 'category_id': _categoryId,
+        if (_cityId != null) 'city_id': _cityId,
+        if (_minPrice != null) 'price_min': _minPrice,
+        if (_maxPrice != null) 'price_max': _maxPrice,
+      });
+      if (!mounted) return;
+      final ok = res.data is Map && res.data['status'] == 'success';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? s.tr(
+                    'تم حفظ البحث بنجاح',
+                    'Recherche enregistrée',
+                    'Search saved',
+                  )
+                : s.tr(
+                    'تعذر حفظ البحث حالياً',
+                    'Impossible d’enregistrer pour le moment',
+                    'Unable to save search right now',
+                  ),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            s.tr(
+              'تعذر حفظ البحث حالياً',
+              'Impossible d’enregistrer pour le moment',
+              'Unable to save search right now',
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _openSavedSheet(AppStrings s) async {
+    HapticFeedback.selectionClick();
+    final List<Map<String, dynamic>> cachedFavs = _ads
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((ad) {
+      final id = int.tryParse(ad['id']?.toString() ?? '') ?? -1;
+      return id > 0 && _state.favoriteAdIds.contains(id);
+    }).toList();
+
+    List<Map<String, dynamic>> remoteFavs = cachedFavs;
+    bool loadingRemote = _state.api.isAuthenticated;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        bool started = false;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            if (!started && loadingRemote) {
+              started = true;
+              _state.api.dio.get('/favorites').then((res) {
+                if (!ctx.mounted) return;
+                if (res.data is Map && res.data['status'] == 'success') {
+                  final list = (res.data['data'] as List? ?? [])
+                      .whereType<Map>()
+                      .map((e) => Map<String, dynamic>.from(e))
+                      .toList();
+                  setSheetState(() {
+                    remoteFavs = list;
+                    loadingRemote = false;
+                  });
+                } else {
+                  setSheetState(() => loadingRemote = false);
+                }
+              }).catchError((_) {
+                if (ctx.mounted) {
+                  setSheetState(() => loadingRemote = false);
+                }
+              });
+            }
+
+            final hasActiveQuery = _queryCtrl.text.trim().isNotEmpty ||
+                _categoryId != null ||
+                _cityId != null ||
+                _minPrice != null ||
+                _maxPrice != null;
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                MediaQuery.of(ctx).padding.bottom + 18,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5E7EB),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      const Icon(
+                        CupertinoIcons.bookmark_fill,
+                        size: 19,
+                        color: _ink,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          s.tr('الإعلانات المحفوظة', 'Enregistrés', 'Saved'),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: _ink,
+                          ),
+                        ),
+                      ),
+                      if (hasActiveQuery)
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _saveCurrentSearch(s);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Text(
+                              s.tr(
+                                'حفظ البحث',
+                                'Sauver recherche',
+                                'Save search',
+                              ),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: _ink,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  if (loadingRemote)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 28),
+                      child: Center(child: CupertinoActivityIndicator()),
+                    )
+                  else if (remoteFavs.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.bookmark,
+                              size: 34,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              s.tr(
+                                'لا توجد إعلانات محفوظة بعد',
+                                'Aucune annonce enregistrée',
+                                'No saved listings yet',
+                              ),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: _ink,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              s.tr(
+                                'اضغط على القلب في أي إعلان لحفظه هنا',
+                                'Appuyez sur le cœur d’une annonce pour la sauvegarder',
+                                'Tap the heart on any listing to save it here',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: remoteFavs.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                        itemBuilder: (_, i) {
+                          final ad = remoteFavs[i];
+                          final id =
+                              int.tryParse(ad['id']?.toString() ?? '') ?? 0;
+                          final title = (ad['title'] ?? '').toString();
+                          final city = (ad['city'] ?? '').toString();
+                          final priceRaw = double.tryParse(
+                              ad['price']?.toString() ?? '');
+                          final formatted =
+                              (ad['price_formatted'] ?? '').toString().trim();
+                          final priceLabel = formatted.isNotEmpty
+                              ? formatted
+                              : (priceRaw != null
+                                  ? '${priceRaw.toInt()} ${s.tr('د.م', 'MAD', 'MAD')}'
+                                  : '');
+                          String imgUrl = '';
+                          if (ad['images'] is List &&
+                              (ad['images'] as List).isNotEmpty) {
+                            final first = (ad['images'] as List).first;
+                            imgUrl = first is Map
+                                ? (first['url'] ?? first['image_path'] ?? '')
+                                    .toString()
+                                : first.toString();
+                          } else {
+                            imgUrl = (ad['primary_image'] ??
+                                    ad['image'] ??
+                                    ad['thumbnail'] ??
+                                    '')
+                                .toString();
+                          }
+                          return InkWell(
+                            onTap: id > 0
+                                ? () {
+                                    Navigator.pop(ctx);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AdDetailScreen(
+                                          adId: id,
+                                          initialAd: ad,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                : null,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: SizedBox(
+                                      width: 54,
+                                      height: 54,
+                                      child: imgUrl.isNotEmpty
+                                          ? AppImage(
+                                              url: imgUrl,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Container(
+                                              color: const Color(0xFFF3F4F6),
+                                              child: const Icon(
+                                                CupertinoIcons.photo,
+                                                color: Color(0xFF9CA3AF),
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: _ink,
+                                          ),
+                                        ),
+                                        if (city.isNotEmpty)
+                                          Text(
+                                            city,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF6B7280),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (priceLabel.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    PriceText(
+                                      priceLabel,
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: _ink,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildHeaderContent(
     BuildContext context, {
     required AppStrings s,
     required bool canPop,
-    required Map<String, dynamic>? activeCat,
-    required String? activeCity,
     required int filterCount,
   }) {
-    final double titleHeight = activeCity != null ? 54.0 : 42.0;
-
     return Container(
       color: Colors.white,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Minimal Title Header (no bookmark or grid/list toggle)
-          SizedBox(
-            height: titleHeight,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
-              child: Row(
-                children: [
-                  if (canPop) ...[
-                    _SoftIconBtn(
-                      icon: s.isAr
-                          ? CupertinoIcons.chevron_right
-                          : CupertinoIcons.chevron_left,
-                      onTap: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activeCat != null
-                              ? _state.formatCategoryLabel(activeCat)
-                              : s.tr('استكشف الإعلانات',
-                                  'Explorer les annonces', 'Explore Ads'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, -0.5),
-                            color: _ink,
-                          ),
+          // 1. Apple iOS Pill Search Bar + bare Saved Bookmark on the same row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 16, 8),
+            child: Row(
+              children: [
+                if (canPop)
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 34,
+                      height: 44,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Icon(
+                          s.isAr
+                              ? CupertinoIcons.chevron_right
+                              : CupertinoIcons.chevron_left,
+                          size: 20,
+                          color: _ink,
                         ),
-                        if (activeCity != null)
-                          Text(
-                            '📍 $activeCity',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: _red,
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // 2. Apple iOS Pill Search Bar (clean systemGray6 fill + systemGray icons)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
-            child: Container(
-              height: 48,
+                Expanded(
+                  child: Container(
+                    height: 46,
               decoration: BoxDecoration(
                 color: const Color(0xFFF2F2F7),
                 borderRadius: BorderRadius.circular(999),
@@ -916,7 +1226,30 @@ class _SearchScreenState extends State<SearchScreen>
                     ),
                   ),
                 ],
-              ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => _openSavedSheet(s),
+                  behavior: HitTestBehavior.opaque,
+                  child: Semantics(
+                    button: true,
+                    label: s.tr('المحفوظات', 'Enregistrés', 'Saved'),
+                    child: const SizedBox(
+                      width: 38,
+                      height: 44,
+                      child: Center(
+                        child: Icon(
+                          CupertinoIcons.bookmark,
+                          size: 21,
+                          color: _ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -1070,10 +1403,8 @@ class _SearchScreenState extends State<SearchScreen>
   Widget build(BuildContext context) {
     final s = _state.s;
     final canPop = Navigator.of(context).canPop();
-    final activeCat = _activeCategoryObj();
-    final activeCity = _activeCityName(s);
     final filterCount = _activeFilterCount;
-    final double headerExtent = (activeCity != null ? 54.0 : 42.0) + 62.0 + 54.0;
+    const double headerExtent = 64.0 + 54.0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -1105,7 +1436,6 @@ class _SearchScreenState extends State<SearchScreen>
                           s.lang,
                           canPop,
                           _categoryId,
-                          activeCity,
                           filterCount,
                           _queryCtrl.text,
                           _effectiveCategories.length,
@@ -1114,8 +1444,6 @@ class _SearchScreenState extends State<SearchScreen>
                           context,
                           s: s,
                           canPop: canPop,
-                          activeCat: activeCat,
-                          activeCity: activeCity,
                           filterCount: filterCount,
                         ),
                       ),
@@ -1283,33 +1611,6 @@ class _ExploreFloatingHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _ExploreFloatingHeaderDelegate oldDelegate) {
     return oldDelegate.extent != extent ||
         oldDelegate.rebuildKey != rebuildKey;
-  }
-}
-
-class _SoftIconBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SoftIconBtn({
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF5F6F8),
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Icon(icon, size: 18, color: const Color(0xFF0F172A)),
-      ),
-    );
   }
 }
 

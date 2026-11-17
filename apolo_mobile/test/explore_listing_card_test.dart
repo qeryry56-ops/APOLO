@@ -243,7 +243,7 @@ void main() {
   });
 
   testWidgets(
-      'SearchScreen Explore view renders pill SearchBar, icon-only categories, no sort/bookmark chrome, and ExploreListingCard on 390x844 Arabic RTL mobile',
+      'SearchScreen Explore view renders top SearchBar with bare Saved bookmark on same row, icon-only categories, no title/sort chrome, and ExploreListingCard on 390x844 Arabic RTL mobile',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -261,8 +261,8 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pump(const Duration(milliseconds: 600));
 
-    // Removed controls must stay absent
-    expect(find.byIcon(CupertinoIcons.bookmark), findsNothing);
+    // Removed title & old chrome must stay absent
+    expect(find.text('استكشف الإعلانات'), findsNothing);
     expect(find.byIcon(CupertinoIcons.square_grid_2x2), findsNothing);
     expect(find.text('جميع الأقسام'), findsNothing);
     expect(find.text('الذكي ✨'), findsNothing);
@@ -270,8 +270,27 @@ void main() {
     expect(find.text('الأكثر طلباً'), findsNothing);
     expect(find.textContaining('إعلان متوفر'), findsNothing);
 
-    // Pill SearchBar + Mic + Icon-only categories + ExploreListingCard
+    // Saved bookmark icon sits on the same row as SearchBar without a circular background halo
+    expect(find.byIcon(CupertinoIcons.bookmark), findsOneWidget);
     expect(find.byIcon(CupertinoIcons.mic_fill), findsOneWidget);
+    final bookmarkCenter =
+        tester.getCenter(find.byIcon(CupertinoIcons.bookmark));
+    final micCenter = tester.getCenter(find.byIcon(CupertinoIcons.mic_fill));
+    expect((bookmarkCenter.dy - micCenter.dy).abs(), lessThan(4.0));
+    expect(
+      find.ancestor(
+        of: find.byIcon(CupertinoIcons.bookmark),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).shape == BoxShape.circle,
+        ),
+      ),
+      findsNothing,
+    );
+
+    // Icon-only categories + ExploreListingCard
     expect(find.byIcon(CupertinoIcons.square_grid_2x2_fill), findsOneWidget);
     expect(find.byType(ExploreListingCard), findsWidgets);
     expect(find.text('Casa Oliva Villa'), findsOneWidget);
@@ -315,10 +334,11 @@ void main() {
       SliverPersistentHeader,
       skipOffstage: false,
     );
-    expect(find.text('استكشف الإعلانات'), findsOneWidget);
+    expect(find.text('استكشف الإعلانات'), findsNothing);
+    expect(find.byIcon(CupertinoIcons.bookmark), findsOneWidget);
     expect(
       tester.renderObject<RenderSliver>(headerSliver).geometry!.paintExtent,
-      greaterThan(140.0),
+      greaterThan(100.0),
     );
     expect(chromeVisible, isTrue);
 
@@ -329,7 +349,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(chromeVisible, isFalse);
-    expect(find.text('استكشف الإعلانات'), findsNothing);
     expect(
       tester.renderObject<RenderSliver>(headerSliver).geometry!.paintExtent,
       0.0,
@@ -349,10 +368,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(chromeVisible, isTrue);
-    expect(find.text('استكشف الإعلانات'), findsOneWidget);
+    expect(find.byIcon(CupertinoIcons.bookmark), findsOneWidget);
     expect(
       tester.renderObject<RenderSliver>(headerSliver).geometry!.paintExtent,
-      greaterThan(140.0),
+      greaterThan(100.0),
     );
     expect(tester.takeException(), isNull);
   });

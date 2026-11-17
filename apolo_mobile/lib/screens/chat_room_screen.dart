@@ -7,6 +7,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'call_screen.dart';
 import 'seller_profile_screen.dart';
+import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
 
 /// Text messaging; unsupported media actions are explicitly unavailable.
@@ -55,7 +56,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Object? _accountId;
 
   static const Color _bg = Color(0xFFFFFFFF);
-  static const Color _apoloRed = Color(0xFFE31B23);
+  static const Color _chatBlue = Color(0xFF288AF2);
+  static const Color _chatBlueSoft = Color(0xFFE3F1FE);
   static const Color _surfaceGrey = Color(0xFFF3F4F6);
   static const Color _textBlack = Color(0xFF0F172A);
   static const Color _textMuted = Color(0xFF6B7280);
@@ -330,6 +332,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           Column(
             children: [
               _buildHeader(),
+              if (widget.adTitle.trim().isNotEmpty) _buildAdContextBar(),
               if (_loadError != null)
                 TextButton(
                     onPressed: () => _loadMessages(), child: Text(_loadError!)),
@@ -390,13 +393,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               height: 68,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFEECEE),
+                color: _chatBlueSoft,
                 border: Border.all(
-                    color: _apoloRed.withValues(alpha: 0.15), width: 2),
+                    color: _chatBlue.withValues(alpha: 0.18), width: 2),
               ),
               child: const Center(
                 child: Icon(CupertinoIcons.chat_bubble_2_fill,
-                    color: _apoloRed, size: 32),
+                    color: _chatBlue, size: 32),
               ),
             ),
             const SizedBox(height: 14),
@@ -469,10 +472,68 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
+  Widget _buildAdContextBar() {
+    final title = widget.adTitle.trim();
+    final price = (widget.adPrice ?? '').trim();
+    final img = (widget.adImage ?? '').trim();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: _surfaceGrey,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          if (img.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 34,
+                height: 34,
+                child: AppImage(
+                  url: img,
+                  width: 34,
+                  height: 34,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _textBlack,
+              ),
+            ),
+          ),
+          if (price.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Text(
+              price,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _chatBlue,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     final topInset = MediaQuery.of(context).padding.top;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return Container(
-      padding: EdgeInsetsDirectional.fromSTEB(8, topInset + 4, 16, 10),
+      padding: EdgeInsetsDirectional.fromSTEB(6, topInset + 4, 14, 10),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
@@ -485,10 +546,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 Navigator.pop(context);
               }
             },
-            icon: const Icon(
-              CupertinoIcons.arrow_left,
+            icon: Icon(
+              isRtl
+                  ? CupertinoIcons.chevron_right
+                  : CupertinoIcons.chevron_left,
               color: _textBlack,
-              size: 22,
+              size: 21,
             ),
           ),
           GestureDetector(
@@ -496,20 +559,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ? _openPeerProfile
                 : null,
             child: Container(
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: _surfaceGrey,
+                color: _chatBlueSoft,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(999),
                 child:
                     widget.peerAvatar != null && widget.peerAvatar!.isNotEmpty
-                        ? Image.network(
-                            widget.peerAvatar!,
+                        ? AppImage(
+                            url: widget.peerAvatar!,
+                            width: 38,
+                            height: 38,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            fallback:
                                 _buildAvatarFallback(widget.peerName),
                           )
                         : _buildAvatarFallback(widget.peerName),
@@ -531,32 +596,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
                       color: _textBlack,
                       letterSpacing:
                           AppTypography.trackingForContext(context, -0.2),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1.5),
                   Row(
                     children: [
                       Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
+                        width: 6.5,
+                        height: 6.5,
+                        decoration: const BoxDecoration(
                           color: _textSubtle,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 5),
-                      Text(
-                        _state.s.tr(
-                            'حالة الاتصال غير متاحة', 'Statut indisponible'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _textMuted,
-                          fontWeight: FontWeight.w500,
+                      Flexible(
+                        child: Text(
+                          _state.s.tr(
+                              'حالة الاتصال غير متاحة', 'Statut indisponible'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: _textMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -575,22 +644,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: _showCallMenu ? _surfaceGrey : Colors.transparent,
+                color: _showCallMenu ? _chatBlueSoft : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     CupertinoIcons.phone,
-                    color: _textBlack,
-                    size: 20,
+                    color: _showCallMenu ? _chatBlue : _textBlack,
+                    size: 19,
                   ),
-                  SizedBox(width: 3),
+                  const SizedBox(width: 3),
                   Icon(
                     CupertinoIcons.chevron_down,
-                    color: _textBlack,
-                    size: 13,
+                    color: _showCallMenu ? _chatBlue : _textBlack,
+                    size: 11.5,
                   ),
                 ],
               ),
@@ -612,14 +681,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(CupertinoIcons.phone, color: _apoloRed),
+              leading: const Icon(CupertinoIcons.phone, color: _chatBlue),
               title: Text(_state.s.tr(
                   'مكالمة صوتية — غير متاحة', 'Appel vocal — indisponible')),
               onTap: () => _startCall(isVideo: false),
             ),
             ListTile(
               leading:
-                  const Icon(CupertinoIcons.videocam_fill, color: _apoloRed),
+                  const Icon(CupertinoIcons.videocam_fill, color: _chatBlue),
               title: Text(_state.s.tr(
                   'مكالمة فيديو — غير متاحة', 'Appel vidéo — indisponible')),
               onTap: () => _startCall(isVideo: true),
@@ -638,15 +707,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final bool isAudio = m['type'] == 'audio';
     final String audioDuration = (m['audio_duration'] ?? '').toString();
 
-    final borderRadius = BorderRadius.only(
-      topLeft: const Radius.circular(18),
-      topRight: const Radius.circular(18),
-      bottomLeft: Radius.circular(isMine ? 18 : 4),
-      bottomRight: Radius.circular(isMine ? 4 : 18),
+    final borderRadius = BorderRadiusDirectional.only(
+      topStart: const Radius.circular(18),
+      topEnd: const Radius.circular(18),
+      bottomStart: Radius.circular(isMine ? 18 : 4),
+      bottomEnd: Radius.circular(isMine ? 4 : 18),
     );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         mainAxisAlignment:
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -656,11 +725,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.76,
             ),
-            padding: const EdgeInsets.fromLTRB(14, 11, 14, 9),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
             decoration: BoxDecoration(
               gradient: isMine
                   ? const LinearGradient(
-                      colors: [_apoloRed, Color(0xFFC80E16)],
+                      colors: [Color(0xFF3A98F7), _chatBlue],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     )
@@ -670,7 +739,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               boxShadow: [
                 BoxShadow(
                   color: isMine
-                      ? _apoloRed.withValues(alpha: 0.22)
+                      ? _chatBlue.withValues(alpha: 0.20)
                       : Colors.black.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
@@ -693,12 +762,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Spacer(),
                     Text(
                       timeStr,
                       style: TextStyle(
@@ -748,12 +815,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ),
       child: Row(
         children: [
-          // Left `+` button in circular soft grey container
+          // Start `+` button in circular soft grey container
           GestureDetector(
             onTap: _mediaUnavailable,
             child: Container(
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               decoration: const BoxDecoration(
                 color: _surfaceGrey,
                 shape: BoxShape.circle,
@@ -762,7 +829,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               child: const Icon(
                 CupertinoIcons.plus,
                 color: _textBlack,
-                size: 20,
+                size: 19,
               ),
             ),
           ),
@@ -775,7 +842,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: _surfaceGrey,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(22),
               ),
               child: Row(
                 children: [
@@ -792,16 +859,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         color: _textBlack,
                         fontWeight: FontWeight.w500,
                       ),
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(
+                      decoration: InputDecoration(
+                        hintText: _state.s.tr('اكتب رسالة...',
+                            'Écrire un message...', 'Type a message...'),
+                        hintStyle: const TextStyle(
                           color: _textSubtle,
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
                         ),
                         border: InputBorder.none,
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
                       ),
                     ),
                   ),
@@ -811,7 +880,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       child: const Icon(
                         CupertinoIcons.camera,
                         color: _textMuted,
-                        size: 20,
+                        size: 19,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -820,8 +889,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       onTap: _mediaUnavailable,
                       child: const Icon(
                         CupertinoIcons.mic_fill,
-                        color: _apoloRed,
-                        size: 20,
+                        color: _chatBlue,
+                        size: 19,
                       ),
                     ),
                   ],
@@ -830,24 +899,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ),
           ),
 
-          // Apolo Crimson Send Button
+          // Sky-Blue Send Button
           if (canSend) ...[
             const SizedBox(width: 8),
             GestureDetector(
               key: const Key('chat-send'),
               onTap: _sending ? null : () => _sendText(),
               child: Container(
-                width: 44,
-                height: 44,
+                width: 38,
+                height: 38,
                 decoration: const BoxDecoration(
-                  color: _apoloRed,
+                  color: _chatBlue,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: const Icon(
                   CupertinoIcons.arrow_up,
                   color: Colors.white,
-                  size: 20,
+                  size: 19,
                 ),
               ),
             ),
@@ -859,14 +928,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Widget _buildAvatarFallback(String name) {
     return Container(
-      color: const Color(0xFFE2E8F0),
+      color: _chatBlueSoft,
       alignment: Alignment.center,
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : 'R',
         style: const TextStyle(
-          color: _textBlack,
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
+          color: _chatBlue,
+          fontSize: 15.5,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

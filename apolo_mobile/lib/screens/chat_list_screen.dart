@@ -8,6 +8,7 @@ import '../theme/app_typography.dart';
 import 'chat_room_screen.dart';
 import 'post_ad_screen.dart';
 import 'auth_screen.dart';
+import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
 /// 2026 Production Chats Screen with Apolo Brand Styling & Desktop/Web Split-View:
@@ -32,16 +33,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   static const Color _bgWhite = Color(0xFFFFFFFF);
   static const Color _surfaceGrey = Color(0xFFF3F4F6);
-  static const Color _textBlack = Color(0xFF0F172A);
+  static const Color _textBlack = Color(0xFF111827);
   static const Color _textMuted = Color(0xFF6B7280);
   static const Color _textSubtle = Color(0xFF9CA3AF);
-  static const Color _apoloRed = Color(0xFFE31B23);
-  static const Color _redPillBg = Color(0xFFFEECEE);
+  static const Color _chatBlue = Color(0xFF288AF2);
+  static const Color _chatBlueSoft = Color(0xFFE3F1FE);
 
   List<Map<String, dynamic>> _conversations = [];
   final Set<int> _pinnedIds = {};
   final Set<int> _mutedIds = {};
   bool _isLoading = true;
+  bool _unreadFirst = false;
   String _searchQuery = '';
   int _selectedFilterIndex = 0; // 0: All, 1: Unread
   final TextEditingController _searchController = TextEditingController();
@@ -170,12 +172,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return true;
     }).toList();
 
-    // Sort: pinned conversations first
+    // Sort: pinned conversations first (and optionally unread conversations first)
     list.sort((a, b) {
       final aPinned = _pinnedIds.contains(a['id']);
       final bPinned = _pinnedIds.contains(b['id']);
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
+      if (aPinned != bPinned) return aPinned ? -1 : 1;
+      if (_unreadFirst) {
+        final aUnread = (int.tryParse('${a['unread_count'] ?? 0}') ?? 0) > 0;
+        final bUnread = (int.tryParse('${b['unread_count'] ?? 0}') ?? 0) > 0;
+        if (aUnread != bUnread) return aUnread ? -1 : 1;
+      }
       return 0;
     });
 
@@ -375,10 +381,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   borderRadius: BorderRadius.circular(999),
                                   child: avatarUrl != null &&
                                           avatarUrl.isNotEmpty
-                                      ? Image.network(
-                                          avatarUrl,
+                                      ? AppImage(
+                                          url: avatarUrl,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) =>
+                                          fallback:
                                               _buildAvatarFallback(peerName),
                                         )
                                       : _buildAvatarFallback(peerName),
@@ -566,24 +572,106 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
+  void _openMoreSheet() {
+    HapticFeedback.selectionClick();
+    final s = _state.s;
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _selectedFilterIndex = 0;
+                _unreadFirst = false;
+              });
+            },
+            child: Text(
+              s.tr('عرض كل المحادثات', 'Toutes les discussions',
+                  'Show all chats'),
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _unreadFirst = !_unreadFirst);
+            },
+            child: Text(
+              _unreadFirst
+                  ? s.tr('الترتيب الافتراضي', 'Tri par défaut', 'Default order')
+                  : s.tr('غير المقروءة أولاً', 'Non lus en premier',
+                      'Unread first'),
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _loadConversations();
+            },
+            child: Text(s.tr('تحديث المحادثات', 'Actualiser', 'Refresh chats')),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(s.tr('إلغاء', 'Annuler', 'Cancel')),
+        ),
+      ),
+    );
+  }
+
+  void _openCameraSheet() {
+    HapticFeedback.selectionClick();
+    final s = _state.s;
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: Text(s.tr('مشاركة صور', 'Partager des photos', 'Share photos')),
+        message: Text(
+          s.tr(
+            'أنشئ إعلاناً جديداً بالصور أو افتح أي محادثة للمراسلة.',
+            'Publiez une annonce avec photos ou ouvrez une discussion.',
+            'Create a listing with photos or open a chat to message.',
+          ),
+        ),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _openPostAd();
+            },
+            child: Text(s.tr('نشر إعلان بالصور', 'Publier avec photo',
+                'Post listing with photos')),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(s.tr('إلغاء', 'Annuler', 'Cancel')),
+        ),
+      ),
+    );
+  }
+
   Widget _buildChatsListPane({required bool isDesktop}) {
     final filtered = _filteredConversations;
+    final s = _state.s;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Top Action Bar: `...` button on Left, Camera & Apolo Red `+` (Add Ad) on Right
+        // 1. Top Action Bar: `...` pill on start, bare Camera & Sky-Blue `+` on end
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left `...` button
               PressableScale(
-                onTap: () {},
+                onTap: _openMoreSheet,
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 36,
+                  height: 36,
                   decoration: const BoxDecoration(
                     color: _surfaceGrey,
                     shape: BoxShape.circle,
@@ -592,42 +680,41 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   child: const Icon(
                     CupertinoIcons.ellipsis,
                     color: _textBlack,
-                    size: 20,
+                    size: 18,
                   ),
                 ),
               ),
-
-              // Right Actions: Camera & Apolo Red `+` Button (Add Ad)
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   PressableScale(
-                    onTap: () {},
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        CupertinoIcons.camera,
-                        color: _textBlack,
-                        size: 24,
+                    onTap: _openCameraSheet,
+                    child: const SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Center(
+                        child: Icon(
+                          CupertinoIcons.camera,
+                          color: _textBlack,
+                          size: 21,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // The `+` button now opens PostAdScreen ("نشر إعلان جديد")
                   PressableScale(
                     onTap: _openPostAd,
                     child: Container(
-                      width: 44,
-                      height: 44,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: _apoloRed,
+                        color: _chatBlue,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: _apoloRed.withValues(alpha: 0.35),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
+                            color: _chatBlue.withValues(alpha: 0.28),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -635,7 +722,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       child: const Icon(
                         CupertinoIcons.plus,
                         color: Colors.white,
-                        size: 22,
+                        size: 19,
                       ),
                     ),
                   ),
@@ -645,55 +732,60 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ),
 
-        // 2. Large Bold Title
+        // 2. Bold Chats Title
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
           child: Text(
-            _state.s.tr('المحادثات', 'Messages', 'Chats'),
+            s.tr('المحادثات', 'Messages', 'Chats'),
             style: TextStyle(
               color: _textBlack,
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
               letterSpacing: AppTypography.trackingForContext(context, -0.6),
             ),
           ),
         ),
 
-        // 3. Rounded Search Bar (`Search chat`)
+        // 3. Compact Rounded Search Bar (`Search chat`)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Container(
-            height: 46,
+            height: 40,
             decoration: BoxDecoration(
               color: _surfaceGrey,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _searchQuery = v),
+              textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(
                 color: _textBlack,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
-                hintText: 'Search chat',
+                hintText: s.tr('ابحث في المحادثات', 'Rechercher', 'Search chat'),
                 hintStyle: const TextStyle(
                   color: _textSubtle,
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
                 ),
                 prefixIcon: const Icon(
                   CupertinoIcons.search,
                   color: _textSubtle,
-                  size: 20,
+                  size: 18,
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(
                           CupertinoIcons.xmark_circle_fill,
                           color: _textSubtle,
-                          size: 18,
+                          size: 17,
                         ),
                         onPressed: () {
                           _searchController.clear();
@@ -702,36 +794,46 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
-        // 4. Filter Pills (`All` with Apolo Red Pill & `Unread`)
+        // 4. Filter Pills (`All` / `Unread`) + trailing sort icon
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              _buildTabPill(0, 'All'),
+              _buildTabPill(0, s.tr('الكل', 'Tous', 'All')),
               const SizedBox(width: 8),
-              _buildTabPill(1, 'Unread'),
+              _buildTabPill(1, s.tr('غير مقروءة', 'Non lus', 'Unread')),
               const Spacer(),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  CupertinoIcons.slider_horizontal_3,
-                  color: _textMuted,
-                  size: 20,
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _unreadFirst = !_unreadFirst);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 32,
+                  height: 28,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: Icon(
+                      Icons.filter_list_rounded,
+                      color: _unreadFirst ? _chatBlue : _textMuted,
+                      size: 20,
+                    ),
+                  ),
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
         // 5. Borderless Chat Items List
         Expanded(
@@ -750,12 +852,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               width: 72,
                               height: 72,
                               decoration: const BoxDecoration(
-                                color: _redPillBg,
+                                color: _chatBlueSoft,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 CupertinoIcons.chat_bubble_2_fill,
-                                color: _apoloRed,
+                                color: _chatBlue,
                                 size: 34,
                               ),
                             ),
@@ -794,12 +896,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _apoloRed,
+                                  color: _chatBlue,
                                   borderRadius: BorderRadius.circular(999),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: _apoloRed.withValues(alpha: 0.35),
-                                      blurRadius: 14,
+                                      color: _chatBlue.withValues(alpha: 0.30),
+                                      blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
                                   ],
@@ -864,12 +966,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     icon: const Icon(
                                       CupertinoIcons.compass,
                                       size: 16,
-                                      color: _apoloRed,
+                                      color: _chatBlue,
                                     ),
                                     label: const Text(
                                       'تصفح الإعلانات',
                                       style: TextStyle(
-                                        color: _apoloRed,
+                                        color: _chatBlue,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -881,7 +983,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         )
                       : ListView.builder(
                           physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
                             final conv = filtered[index];
@@ -904,17 +1006,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? _redPillBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          color: active ? _chatBlueSoft : _surfaceGrey,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? _apoloRed : _textMuted,
-            fontSize: 14,
-            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            color: active ? _chatBlue : _textMuted,
+            fontSize: 12.5,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),
@@ -960,14 +1064,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
       onLongPress: () => _showAppleContextMenu(conv),
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        color: isSelected ? const Color(0xFFF1F5F9) : Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        color: isSelected ? _chatBlueSoft.withValues(alpha: 0.45) : Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
         child: Row(
           children: [
-            // Avatar (50x50)
+            // Avatar (46x46)
             Container(
-              width: 50,
-              height: 50,
+              width: 46,
+              height: 46,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: _surfaceGrey,
@@ -975,18 +1079,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(999),
                 child: avatarUrl != null && avatarUrl.isNotEmpty
-                    ? Image.network(
-                        avatarUrl,
-                        width: 50,
-                        height: 50,
+                    ? AppImage(
+                        url: avatarUrl,
+                        width: 46,
+                        height: 46,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _buildAvatarFallback(peerName),
+                        fallback: _buildAvatarFallback(peerName),
                       )
                     : _buildAvatarFallback(peerName),
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
 
             // Middle Column: Name, Pinned/Muted icons, and Last Message
             Expanded(
@@ -1002,8 +1105,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: _textBlack,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                             letterSpacing:
                                 AppTypography.trackingForContext(context, -0.2),
                           ),
@@ -1013,8 +1116,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         const SizedBox(width: 5),
                         const Icon(
                           CupertinoIcons.pin_fill,
-                          color: _apoloRed,
-                          size: 13,
+                          color: _chatBlue,
+                          size: 12.5,
                         ),
                       ],
                       if (isMuted) ...[
@@ -1022,21 +1125,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         const Icon(
                           CupertinoIcons.bell_slash_fill,
                           color: _textSubtle,
-                          size: 13,
+                          size: 12.5,
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     lastMsg,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: unread > 0 ? _textBlack : _textMuted,
-                      fontSize: 13.5,
+                      fontSize: 13,
                       fontWeight:
-                          unread > 0 ? FontWeight.w700 : FontWeight.w500,
+                          unread > 0 ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
                 ],
@@ -1044,39 +1147,41 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             const SizedBox(width: 10),
 
-            // Right Column: Timestamp & Apolo Red Unread Badge
+            // Right Column: Timestamp & Sky-Blue Unread Badge
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   lastTime,
                   style: const TextStyle(
-                    color: _textSubtle,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    color: _textMuted,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 if (unread > 0)
                   Container(
-                    width: 20,
-                    height: 20,
-                    decoration: const BoxDecoration(
-                      color: _apoloRed,
-                      shape: BoxShape.circle,
+                    constraints: const BoxConstraints(minWidth: 18),
+                    height: 18,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: _chatBlue,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      '$unread',
+                      unread > 99 ? '99+' : '$unread',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   )
                 else
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
               ],
             ),
           ],
@@ -1087,13 +1192,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   Widget _buildAvatarFallback(String name) {
     return Container(
-      color: const Color(0xFFE2E8F0),
+      color: _chatBlueSoft,
       alignment: Alignment.center,
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : 'A',
         style: const TextStyle(
-          color: _textBlack,
-          fontSize: 18,
+          color: _chatBlue,
+          fontSize: 16.5,
           fontWeight: FontWeight.w800,
         ),
       ),
