@@ -94,6 +94,8 @@ class _AuthScreenState extends State<AuthScreen>
   int _remaining = 0;
   _OtpPhase _otpPhase = _OtpPhase.idle;
   int _resendFailures = 0;
+  bool _isPhoneMode = false;
+  String _countryCode = '+212';
   late final AnimationController _shakeCtrl;
 
   static const List<Map<String, dynamic>> _fallbackCities = [
@@ -126,6 +128,7 @@ class _AuthScreenState extends State<AuthScreen>
     _codeFocus.addListener(() {
       if (mounted) setState(() {});
     });
+    _email.addListener(_onIdentifierChanged);
 
     if (!_login) {
       _loadCities();
@@ -203,8 +206,151 @@ class _AuthScreenState extends State<AuthScreen>
         .toString();
   }
 
+  bool _detectPhoneMode(String raw) {
+    final normalized = AccountValidation.normalizeDigits(raw).trim();
+    if (normalized.isEmpty || normalized.contains('@')) return false;
+    return RegExp(r'^\+?[0-9\s\-().]+$').hasMatch(normalized);
+  }
+
+  void _onIdentifierChanged() {
+    if (!mounted || !_login) return;
+    final nextPhone = _detectPhoneMode(_email.text);
+    if (nextPhone != _isPhoneMode) {
+      setState(() => _isPhoneMode = nextPhone);
+    }
+  }
+
+  Future<void> _showCountryCodeSheet() async {
+    HapticFeedback.selectionClick();
+    final s = _state.s;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final ink = isDark ? const Color(0xFFF9FAFB) : const Color(0xFF111827);
+    final muted = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final normalizedPhone = AccountValidation.phone(_email.text);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF333333)
+                          : const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  s.tr('رمز الدولة', 'Indicatif pays', 'Country code'),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: ink,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Text('🇲🇦', style: TextStyle(fontSize: 22)),
+                  title: Text(
+                    s.tr('المغرب (Morocco)', 'Maroc', 'Morocco'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: ink,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '+212 (05 / 06 / 07)',
+                    style: TextStyle(color: muted, fontSize: 12.5),
+                  ),
+                  trailing: const Icon(
+                    Icons.check_circle,
+                    color: AppConfig.primary,
+                    size: 20,
+                  ),
+                  onTap: () {
+                    setState(() => _countryCode = '+212');
+                    if (normalizedPhone != null &&
+                        !_email.text.trim().startsWith('+212')) {
+                      _email.text = normalizedPhone;
+                      _email.selection = TextSelection.collapsed(
+                        offset: normalizedPhone.length,
+                      );
+                    }
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPhonePrefixBadge(bool isDark) {
+    return GestureDetector(
+      key: const Key('auth-phone-prefix'),
+      onTap: _busy ? null : _showCountryCodeSheet,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+            color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFE5E7EB),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🇲🇦', style: TextStyle(fontSize: 12)),
+            const SizedBox(width: 4),
+            Text(
+              _countryCode,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? const Color(0xFFF9FAFB)
+                    : const Color(0xFF111827),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 14,
+              color: isDark
+                  ? const Color(0xFF9CA3AF)
+                  : const Color(0xFF6B7280),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _email.removeListener(_onIdentifierChanged);
     _timer?.cancel();
     _autoSubmitTimer?.cancel();
     _shakeCtrl.dispose();
@@ -677,35 +823,46 @@ class _AuthScreenState extends State<AuthScreen>
     final s = _state.s;
     final isAr = s.isAr;
     final otp = _pending != null || (!_login && _registerStep == 4);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color bgColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final Color surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final Color inkColor =
+        isDark ? const Color(0xFFF9FAFB) : const Color(0xFF111827);
+    final Color mutedColor =
+        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final Color borderColor =
+        isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE5E7EB);
 
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: bgColor,
         body: SafeArea(
           child: Column(
             children: [
-              // Top Bar
+              // Top Bar: Single RTL-anchored dismiss/back control (no repetitive login title)
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
                 child: SizedBox(
-                  height: 48,
+                  height: 44,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       Align(
                         alignment: AlignmentDirectional.centerStart,
-                        child: _buildBackButton(isOtp: otp),
+                        child: _buildBackButton(
+                          isOtp: otp,
+                          isDark: isDark,
+                          isAr: isAr,
+                        ),
                       ),
-                      if (!otp)
+                      if (!otp && !_login)
                         Text(
-                          _login
-                              ? s.tr('تسجيل الدخول', 'Sign in')
-                              : s.tr('إنشاء حساب', 'Sign up'),
+                          s.tr('إنشاء حساب', 'Sign up'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF111827),
+                            color: inkColor,
                             letterSpacing:
                                 AppTypography.trackingForContext(context, -0.2),
                           ),
@@ -747,9 +904,9 @@ class _AuthScreenState extends State<AuthScreen>
                                     : _registerStep == 3
                                         ? s.tr('بيانات الدخول', 'Credentials')
                                         : s.tr('التحقق', 'Verification'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
-                              color: Color(0xFF6B7280),
+                              color: mutedColor,
                             ),
                           ),
                         ],
@@ -770,7 +927,7 @@ class _AuthScreenState extends State<AuthScreen>
                               decoration: BoxDecoration(
                                 color: isPassed
                                     ? AppConfig.primary
-                                    : const Color(0xFFE5E7EB),
+                                    : borderColor,
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -782,375 +939,420 @@ class _AuthScreenState extends State<AuthScreen>
                 ),
               ],
 
-              // Scrollable Content
+              // Scrollable Content + Anchored Footer
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  physics: const BouncingScrollPhysics(),
-                  child: Form(
-                    key: _form,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
+                child: Form(
+                  key: _form,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
 
-                        // Main Headline
-                        Text(
-                          otp
-                              ? s.tr(
-                                  'لنتأكد من هويتك',
-                                  'Confirmons votre identité',
-                                  "Let's confirm it's you",
-                                )
-                              : _login
-                                  ? s.tr('مرحباً بك مجدداً', 'Welcome back')
-                                  : _registerStep == 1
-                                      ? s.tr('لنبدأ باسمك',
-                                          'Let\'s start with your name')
-                                      : _registerStep == 2
-                                          ? s.tr('أخبرنا عنك',
-                                              'Tell us about yourself')
-                                          : s.tr('حسابك وأمانك',
-                                              'Account & Security'),
-                          style: TextStyle(
-                            fontSize: otp ? 26 : 27,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0A0B0D),
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, -0.5),
-                            height: 1.2,
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Builder(
-                          builder: (_) {
-                            final maskedEmail = AccountValidation.maskEmail(
-                              _pending?.user['email']?.toString(),
-                            );
-                            final subtitle = otp
-                                ? (maskedEmail != null
+                              // Main Headline
+                              Text(
+                                otp
                                     ? s.tr(
-                                        'أدخل الرمز المكون من 6 أرقام المرسل إلى $maskedEmail',
-                                        'Entrez le code à 6 chiffres envoyé à $maskedEmail',
-                                        'Enter the 6-digit code sent to $maskedEmail',
+                                        'لنتأكد من هويتك',
+                                        'Confirmons votre identité',
+                                        "Let's confirm it's you",
                                       )
-                                    : s.tr(
-                                        'أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني',
-                                        'Entrez le code à 6 chiffres envoyé à votre e-mail',
-                                        'Enter the 6-digit code sent to your email',
-                                      ))
-                                : _login
-                                    ? s.tr(
-                                        'أدخل بريدك الإلكتروني أو رقم هاتفك للمتابعة',
-                                        'Enter your email or phone number to continue',
-                                      )
-                                    : _registerStep == 1
+                                    : _login
                                         ? s.tr(
-                                            'أدخل اسمك الشخصي والعائلي وحدد الجنس',
-                                            'Enter your name and select your gender',
+                                            'مرحباً بك مجدداً',
+                                            'Bon retour',
+                                            'Welcome back',
                                           )
-                                        : _registerStep == 2
-                                            ? s.tr(
-                                                'حدد تاريخ ميلادك ومدينتك وكيف ستستخدم أبولو',
-                                                'Set your birth date, city, and role',
-                                              )
-                                            : s.tr(
-                                                'أدخل بريدك الإلكتروني وكلمة مرور قوية',
-                                                'Enter your email and a strong password',
-                                              );
-                            return Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: otp
-                                    ? const Color(0xFF5B616E)
-                                    : const Color(0xFF6B7280),
-                                height: 1.4,
-                              ),
-                            );
-                          },
-                        ),
-
-                        SizedBox(height: otp ? 32 : 24),
-
-                        // Error Banner
-                        if (_error != null)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF2F2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFFCA5A5),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: Color(0xFFDC2626),
-                                  size: 19,
+                                        : _registerStep == 1
+                                            ? s.tr('لنبدأ باسمك',
+                                                'Let\'s start with your name')
+                                            : _registerStep == 2
+                                                ? s.tr('أخبرنا عنك',
+                                                    'Tell us about yourself')
+                                                : s.tr('حسابك وأمانك',
+                                                    'Account & Security'),
+                                style: TextStyle(
+                                  fontSize: otp ? 26 : 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: inkColor,
+                                  letterSpacing: AppTypography.trackingForContext(
+                                      context, -0.5),
+                                  height: 1.2,
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _error!,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFFB91C1C),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              Builder(
+                                builder: (_) {
+                                  final maskedEmail =
+                                      AccountValidation.maskEmail(
+                                    _pending?.user['email']?.toString(),
+                                  );
+                                  final subtitle = otp
+                                      ? (maskedEmail != null
+                                          ? s.tr(
+                                              'أدخل الرمز المكون من 6 أرقام المرسل إلى $maskedEmail',
+                                              'Entrez le code à 6 chiffres envoyé à $maskedEmail',
+                                              'Enter the 6-digit code sent to $maskedEmail',
+                                            )
+                                          : s.tr(
+                                              'أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني',
+                                              'Entrez le code à 6 chiffres envoyé à votre e-mail',
+                                              'Enter the 6-digit code sent to your email',
+                                            ))
+                                      : _login
+                                          ? s.tr(
+                                              'أدخل بريدك الإلكتروني أو رقم هاتفك للمتابعة',
+                                              'Entrez votre e-mail ou numéro de téléphone pour continuer',
+                                              'Enter your email or phone number to continue',
+                                            )
+                                          : _registerStep == 1
+                                              ? s.tr(
+                                                  'أدخل اسمك الشخصي والعائلي وحدد الجنس',
+                                                  'Enter your name and select your gender',
+                                                )
+                                              : _registerStep == 2
+                                                  ? s.tr(
+                                                      'حدد تاريخ ميلادك ومدينتك وكيف ستستخدم أبولو',
+                                                      'Set your birth date, city, and role',
+                                                    )
+                                                  : s.tr(
+                                                      'أدخل بريدك الإلكتروني وكلمة مرور قوية',
+                                                      'Enter your email and a strong password',
+                                                    );
+                                  return Text(
+                                    subtitle,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: otp
+                                          ? (isDark
+                                              ? const Color(0xFF9CA3AF)
+                                              : const Color(0xFF5B616E))
+                                          : mutedColor,
+                                      height: 1.45,
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              SizedBox(height: otp ? 32 : 24),
+
+                              // Error Banner
+                              if (_error != null)
+                                Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF2B1215)
+                                        : const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? const Color(0xFF7F1D1D)
+                                          : const Color(0xFFFCA5A5),
+                                      width: 1,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // Notice Banner
-                        if (_notice != null)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFCBD5E1),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.info_outline,
-                                  color: Color(0xFF475569),
-                                  size: 19,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _notice!,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF334155),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // ============================================
-                        // MODE 1: LOGIN (EMAIL OR PHONE + PASSWORD)
-                        // ============================================
-                        if (_login && !otp) ...[
-                          CustomAuthInputField(
-                            controller: _email,
-                            label: s.tr(
-                              'البريد الإلكتروني أو رقم الهاتف',
-                              'E-mail ou numéro de téléphone',
-                              'Email or mobile number',
-                            ),
-                            keyName: 'auth-email',
-                            type: TextInputType.emailAddress,
-                            autofill: const [
-                              AutofillHints.email,
-                              AutofillHints.telephoneNumber,
-                            ],
-                            enabled: !_busy,
-                            validator: (v) {
-                              final text = (v ?? '').trim();
-                              if (text.isEmpty) {
-                                return s.tr(
-                                  'أدخل البريد الإلكتروني أو رقم الهاتف',
-                                  'Enter email or phone number',
-                                );
-                              }
-                              final isEmail = AccountValidation.email(text);
-                              final isPhone =
-                                  AccountValidation.phone(text) != null;
-                              if (!isEmail && !isPhone) {
-                                return s.tr(
-                                  'أدخل بريداً صحيحاً أو رقماً يبدأ بـ 05/06/07/212+',
-                                  'Enter a valid email or phone (05/06/07/+212)',
-                                );
-                              }
-                              return null;
-                            },
-                          ),
-
-                          CustomAuthInputField(
-                            controller: _password,
-                            label: s.tr(
-                              'كلمة المرور',
-                              'Mot de passe',
-                              'Password',
-                            ),
-                            keyName: 'auth-password',
-                            secret: true,
-                            autofill: const [AutofillHints.password],
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: _busy ? null : _submit,
-                            enabled: !_busy,
-                            validator: (v) => (v ?? '').isNotEmpty
-                                ? null
-                                : s.tr(
-                                    'أدخل كلمة المرور',
-                                    'Please enter your password',
-                                  ),
-                          ),
-
-                          const SizedBox(height: 2),
-
-                          // Forgot password link
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: GestureDetector(
-                              onTap: _busy
-                                  ? null
-                                  : () {
-                                      HapticFeedback.lightImpact();
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => ForgotPasswordScreen(
-                                            initialEmail: _email.text.trim(),
-                                            auth: _auth,
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.error_outline,
+                                        color: Color(0xFFDC2626),
+                                        size: 19,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          _error!,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: isDark
+                                                ? const Color(0xFFFCA5A5)
+                                                : const Color(0xFFB91C1C),
                                           ),
                                         ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              // Notice Banner
+                              if (_notice != null)
+                                Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF1E293B)
+                                        : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? const Color(0xFF334155)
+                                          : const Color(0xFFCBD5E1),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        color: mutedColor,
+                                        size: 19,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          _notice!,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: inkColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              // ============================================
+                              // MODE 1: LOGIN (EMAIL OR PHONE + PASSWORD)
+                              // ============================================
+                              if (_login && !otp) ...[
+                                CustomAuthInputField(
+                                  controller: _email,
+                                  label: s.tr(
+                                    'البريد الإلكتروني أو رقم الهاتف',
+                                    'E-mail ou numéro de téléphone',
+                                    'Email or mobile number',
+                                  ),
+                                  keyName: 'auth-email',
+                                  type: TextInputType.emailAddress,
+                                  autofill: const [
+                                    AutofillHints.email,
+                                    AutofillHints.telephoneNumber,
+                                  ],
+                                  enabled: !_busy,
+                                  prefixBadge: _isPhoneMode
+                                      ? _buildPhonePrefixBadge(isDark)
+                                      : null,
+                                  validator: (v) {
+                                    final text = (v ?? '').trim();
+                                    if (text.isEmpty) {
+                                      return s.tr(
+                                        'أدخل البريد الإلكتروني أو رقم الهاتف',
+                                        'Enter email or phone number',
                                       );
-                                    },
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Text(
-                                  s.tr(
-                                    'نسيت كلمة المرور؟',
-                                    'Forgot your password?',
-                                  ),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppConfig.primary,
-                                  ),
+                                    }
+                                    final isEmail =
+                                        AccountValidation.email(text);
+                                    final isPhone =
+                                        AccountValidation.phone(text) != null;
+                                    if (!isEmail && !isPhone) {
+                                      return s.tr(
+                                        'أدخل بريداً صحيحاً أو رقماً يبدأ بـ 05/06/07/212+',
+                                        'Enter a valid email or phone (05/06/07/+212)',
+                                      );
+                                    }
+                                    return null;
+                                  },
                                 ),
-                              ),
-                            ),
-                          ),
 
-                          const SizedBox(height: 20),
+                                CustomAuthInputField(
+                                  controller: _password,
+                                  label: s.tr(
+                                    'كلمة المرور',
+                                    'Mot de passe',
+                                    'Password',
+                                  ),
+                                  keyName: 'auth-password',
+                                  secret: true,
+                                  autofill: const [AutofillHints.password],
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: _busy ? null : _submit,
+                                  enabled: !_busy,
+                                  validator: (v) => (v ?? '').isNotEmpty
+                                      ? null
+                                      : s.tr(
+                                          'أدخل كلمة المرور',
+                                          'Please enter your password',
+                                        ),
+                                ),
 
-                          // Primary Sign In Button
-                          SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: ElevatedButton(
-                              key: const Key('auth-submit'),
-                              onPressed: _busy ? null : _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0A0A0A),
-                                foregroundColor: Colors.white,
-                                shape: const StadiumBorder(),
-                                elevation: 0,
-                              ),
-                              child: _busy
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
+                                // Neutral RTL-aligned "Forgot Password?" link
+                                Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: GestureDetector(
+                                    onTap: _busy
+                                        ? null
+                                        : () {
+                                            HapticFeedback.lightImpact();
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    ForgotPasswordScreen(
+                                                  initialEmail:
+                                                      _email.text.trim(),
+                                                  auth: _auth,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                    behavior: HitTestBehavior.opaque,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 6,
                                       ),
-                                    )
-                                  : Text(
-                                      s.tr('تسجيل الدخول', 'Se connecter',
-                                          'Sign in'),
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                      child: Text(
+                                        s.tr(
+                                          'نسيت كلمة المرور؟',
+                                          'Mot de passe oublié ?',
+                                          'Forgot your password?',
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: mutedColor,
+                                        ),
                                       ),
                                     ),
-                            ),
-                          ),
-
-                          // "or" Divider
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: Row(
-                              children: [
-                                const Expanded(
-                                  child: Divider(
-                                    color: Color(0xFFF1F5F9),
-                                    thickness: 1,
-                                    height: 1,
                                   ),
                                 ),
+
+                                const SizedBox(height: 18),
+
+                                // Primary CTA Button (52px height, 12px radius, solid #E31B23)
+                                _TapPressScale(
+                                  enabled: !_busy,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    height: 52,
+                                    child: ElevatedButton(
+                                      key: const Key('auth-submit'),
+                                      onPressed: _busy ? null : _submit,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppConfig.primary,
+                                        disabledBackgroundColor: AppConfig
+                                            .primary
+                                            .withValues(alpha: 0.6),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: _busy
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : Text(
+                                              s.tr(
+                                                'تسجيل الدخول',
+                                                'Se connecter',
+                                                'Sign in',
+                                              ),
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ),
+
+                                // High-contrast WCAG AA "أو" Divider
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Text(
-                                    s.tr('أو', 'or'),
-                                    style: const TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w400,
-                                      color: Color(0xFF9CA3AF),
-                                    ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 20),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Divider(
+                                          color: borderColor,
+                                          thickness: 1,
+                                          height: 1,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        child: Text(
+                                          s.tr('أو', 'ou', 'or'),
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w500,
+                                            color: mutedColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Divider(
+                                          color: borderColor,
+                                          thickness: 1,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const Expanded(
-                                  child: Divider(
-                                    color: Color(0xFFF1F5F9),
-                                    thickness: 1,
-                                    height: 1,
+
+                                // Social Login Group (12px radius, authentic SVG vector logos)
+                                _buildSocialButton(
+                                  key: const Key('auth-google'),
+                                  icon: const _GoogleIcon(size: 20),
+                                  text: s.tr(
+                                    'المتابعة باستخدام Google',
+                                    'Continuer avec Google',
+                                    'Continue With Google',
                                   ),
+                                  surfaceColor: surfaceColor,
+                                  textColor: inkColor,
+                                  borderColor: borderColor,
+                                  onPressed: _launchGoogleSignIn,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                _buildSocialButton(
+                                  key: const Key('auth-apple'),
+                                  icon: _AppleIcon(size: 20, color: inkColor),
+                                  text: s.tr(
+                                    'المتابعة باستخدام Apple',
+                                    'Continuer avec Apple',
+                                    'Continue With Apple',
+                                  ),
+                                  surfaceColor: surfaceColor,
+                                  textColor: inkColor,
+                                  borderColor: borderColor,
+                                  onPressed: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() {
+                                      _notice = s.tr(
+                                        'الدخول عبر Apple غير متاح حالياً داخل التطبيق.',
+                                        'Apple sign-in is not available yet.',
+                                      );
+                                    });
+                                  },
                                 ),
                               ],
-                            ),
-                          ),
-
-                          // Social Login Buttons
-                          _buildSocialButton(
-                            key: const Key('auth-google'),
-                            icon: const _GoogleIcon(size: 20),
-                            text: s.tr(
-                              'المتابعة باستخدام Google',
-                              'Continue With Google',
-                            ),
-                            onPressed: _launchGoogleSignIn,
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          _buildSocialButton(
-                            key: const Key('auth-apple'),
-                            icon: const Icon(
-                              Icons.apple,
-                              size: 23,
-                              color: Color(0xFF111827),
-                            ),
-                            text: s.tr(
-                              'المتابعة باستخدام Apple',
-                              'Continue With Apple',
-                            ),
-                            onPressed: () {
-                              HapticFeedback.lightImpact();
-                              setState(() {
-                                _notice = s.tr(
-                                  'الدخول عبر Apple غير متاح حالياً داخل التطبيق.',
-                                  'Apple sign-in is not available yet.',
-                                );
-                              });
-                            },
-                          ),
-                        ],
 
                         // ============================================
                         // MODE 2: REGISTER STEP 1 (NAME & GENDER)
@@ -1578,13 +1780,21 @@ class _AuthScreenState extends State<AuthScreen>
                             ),
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                ),
 
-                        const SizedBox(height: 28),
-
-                        // Toggle between Sign in & Sign up
-                        if (!otp)
-                          Center(
-                            child: GestureDetector(
+                  // Anchored Bottom Footer (Register Toggle + Support Link)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (!otp)
+                            GestureDetector(
                               onTap: _busy
                                   ? null
                                   : () {
@@ -1600,9 +1810,10 @@ class _AuthScreenState extends State<AuthScreen>
                                         if (!_login) _loadCities();
                                       });
                                     },
+                              behavior: HitTestBehavior.opaque,
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                                  vertical: 10,
                                 ),
                                 child: Text.rich(
                                   TextSpan(
@@ -1614,29 +1825,33 @@ class _AuthScreenState extends State<AuthScreen>
                                         text: _login
                                             ? s.tr(
                                                 'أول مرة هنا؟ ',
+                                                'Nouveau ici ? ',
                                                 'First time here? ',
                                               )
                                             : s.tr(
                                                 'لديك حساب بالفعل؟ ',
+                                                'Déjà un compte ? ',
                                                 'Already have an account? ',
                                               ),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF111827),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w400,
+                                          color: mutedColor,
                                         ),
                                       ),
                                       TextSpan(
                                         text: _login
                                             ? s.tr(
                                                 'إنشاء حساب',
+                                                'Créer un compte',
                                                 'Create an account',
                                               )
                                             : s.tr(
                                                 'تسجيل الدخول',
+                                                'Se connecter',
                                                 'Sign in',
                                               ),
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w700,
                                           color: AppConfig.primary,
                                         ),
                                       ),
@@ -1646,12 +1861,8 @@ class _AuthScreenState extends State<AuthScreen>
                                 ),
                               ),
                             ),
-                          ),
-
-                        // Support link
-                        if (!otp)
-                          Center(
-                            child: TextButton(
+                          if (!otp)
+                            TextButton(
                               onPressed: _busy
                                   ? null
                                   : () {
@@ -1662,26 +1873,27 @@ class _AuthScreenState extends State<AuthScreen>
                                       );
                                     },
                               child: Text(
-                                s.tr('المساعدة والدعم', 'Need help?'),
-                                style: const TextStyle(
+                                s.tr('المساعدة والدعم', 'Aide et support',
+                                    'Need help?'),
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF9CA3AF),
+                                  color: mutedColor,
                                 ),
                               ),
                             ),
-                          ),
-
-                        const SizedBox(height: 20),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildOtpBoxesSection(AppStrings s) {
@@ -1924,8 +2136,20 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  Widget _buildBackButton({bool isOtp = false}) {
+  Widget _buildBackButton({
+    bool isOtp = false,
+    bool isDark = false,
+    bool isAr = true,
+  }) {
+    final bool isRootLogin = _login && !isOtp;
+    final Color surface = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final Color border =
+        isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE5E7EB);
+    final Color ink =
+        isDark ? const Color(0xFFF9FAFB) : const Color(0xFF111827);
+
     return GestureDetector(
+      key: const Key('auth-dismiss'),
       onTap: () {
         HapticFeedback.lightImpact();
         if (_pending != null || isOtp) {
@@ -1942,42 +2166,33 @@ class _AuthScreenState extends State<AuthScreen>
         }
       },
       behavior: HitTestBehavior.opaque,
-      child: isOtp
-          ? const SizedBox(
-              width: 40,
-              height: 40,
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 20,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            )
-          : Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back,
-                  size: 19,
-                  color: Color(0xFF111827),
-                ),
-              ),
-            ),
+      child: Semantics(
+        button: true,
+        label: isRootLogin
+            ? _state.s.tr('إغلاق', 'Fermer', 'Close')
+            : _state.s.tr('رجوع', 'Retour', 'Back'),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isOtp ? Colors.transparent : surface,
+            shape: BoxShape.circle,
+            border: isOtp ? null : Border.all(color: border, width: 1.0),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            isRootLogin
+                ? CupertinoIcons.xmark
+                : (isAr
+                    ? CupertinoIcons.chevron_right
+                    : CupertinoIcons.chevron_left),
+            size: isRootLogin ? 18 : 19,
+            color: isOtp
+                ? (isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280))
+                : ink,
+          ),
+        ),
+      ),
     );
   }
 
@@ -2111,49 +2326,95 @@ class _AuthScreenState extends State<AuthScreen>
     required Key key,
     required Widget icon,
     required String text,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color borderColor,
     required VoidCallback onPressed,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: OutlinedButton(
-        key: key,
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF111827),
-          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
-          shape: const StadiumBorder(),
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            icon,
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF111827),
-                  letterSpacing:
-                      AppTypography.trackingForContext(context, -0.2),
+    return _TapPressScale(
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: OutlinedButton(
+          key: key,
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: surfaceColor,
+            foregroundColor: textColor,
+            side: BorderSide(color: borderColor, width: 1.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              icon,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                    letterSpacing:
+                        AppTypography.trackingForContext(context, -0.2),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Vector-painted official Google "G" logo
+class _TapPressScale extends StatefulWidget {
+  final Widget child;
+  final bool enabled;
+
+  const _TapPressScale({
+    required this.child,
+    this.enabled = true,
+  });
+
+  @override
+  State<_TapPressScale> createState() => _TapPressScaleState();
+}
+
+class _TapPressScaleState extends State<_TapPressScale> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final disableAnimations = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return Listener(
+      onPointerDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+      onPointerUp: (_) {
+        if (_pressed) setState(() => _pressed = false);
+      },
+      onPointerCancel: (_) {
+        if (_pressed) setState(() => _pressed = false);
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.985 : 1.0,
+        duration: disableAnimations
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Vector-painted official Google "G" logo (transparent center works in light & dark modes)
 class _GoogleIcon extends StatelessWidget {
   final double size;
   const _GoogleIcon({this.size = 20});
@@ -2172,96 +2433,124 @@ class _GoogleIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final double cx = w / 2;
-    final double cy = h / 2;
-    final double r = w / 2;
+    final double r = size.width * 0.40;
+    final double strokeWidth = size.width * 0.19;
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final Rect arcRect = Rect.fromCircle(center: center, radius: r);
 
-    final paintBlue = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-    final paintGreen = Paint()
-      ..color = const Color(0xFF34A853)
-      ..style = PaintingStyle.fill;
-    final paintYellow = Paint()
-      ..color = const Color(0xFFFBBC05)
-      ..style = PaintingStyle.fill;
-    final paintRed = Paint()
-      ..color = const Color(0xFFEA4335)
-      ..style = PaintingStyle.fill;
+    final Paint base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
 
-    // Red arc (top)
-    final pathRed = Path()
-      ..moveTo(cx, cy)
-      ..lineTo(cx + r * 0.95, cy - r * 0.3)
-      ..arcTo(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r),
-        -0.35,
-        -2.5,
-        false,
-      )
-      ..close();
-    canvas.drawPath(pathRed, paintRed);
-
-    // Yellow arc (left)
-    final pathYellow = Path()
-      ..moveTo(cx, cy)
-      ..arcTo(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r),
-        -2.85,
-        -1.7,
-        false,
-      )
-      ..close();
-    canvas.drawPath(pathYellow, paintYellow);
-
-    // Green arc (bottom)
-    final pathGreen = Path()
-      ..moveTo(cx, cy)
-      ..arcTo(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r),
-        -4.55,
-        -2.0,
-        false,
-      )
-      ..close();
-    canvas.drawPath(pathGreen, paintGreen);
-
-    // Blue arc (right)
-    final pathBlue = Path()
-      ..moveTo(cx, cy)
-      ..arcTo(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r),
-        -0.35,
-        0.8,
-        false,
-      )
-      ..lineTo(cx + r, cy)
-      ..lineTo(cx, cy)
-      ..close();
-    canvas.drawPath(pathBlue, paintBlue);
-
-    // Horizontal bar
-    final barRect = Rect.fromLTWH(cx - 1, cy - r * 0.22, r * 1.02, r * 0.44);
-    canvas.drawRect(barRect, paintBlue);
-
-    // Inner cutout
-    final innerCutout = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(cx, cy), r * 0.58, innerCutout);
-
-    // Right cutout wedge for "G" gap
-    final gapPath = Path()
-      ..moveTo(cx, cy)
-      ..lineTo(cx + r, cy - r * 0.22)
-      ..lineTo(cx + r, cy)
-      ..lineTo(cx, cy)
-      ..close();
-    canvas.drawPath(gapPath, innerCutout);
+    // Red top arc
+    canvas.drawArc(
+      arcRect,
+      -2.55,
+      1.95,
+      false,
+      base..color = const Color(0xFFEA4335),
+    );
+    // Yellow left arc
+    canvas.drawArc(
+      arcRect,
+      2.45,
+      1.28,
+      false,
+      base..color = const Color(0xFFFBBC05),
+    );
+    // Green bottom arc
+    canvas.drawArc(
+      arcRect,
+      0.55,
+      1.92,
+      false,
+      base..color = const Color(0xFF34A853),
+    );
+    // Blue right arc
+    canvas.drawArc(
+      arcRect,
+      -0.12,
+      0.70,
+      false,
+      base..color = const Color(0xFF4285F4),
+    );
+    // Horizontal bar for G
+    canvas.drawLine(
+      Offset(center.dx, center.dy),
+      Offset(center.dx + r + strokeWidth * 0.45, center.dy),
+      Paint()
+        ..color = const Color(0xFF4285F4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.butt,
+    );
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Crisp SVG-faithful Apple brand logo
+class _AppleIcon extends StatelessWidget {
+  final double size;
+  final Color color;
+  const _AppleIcon({this.size = 20, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: _AppleIconPainter(color),
+    );
+  }
+}
+
+class _AppleIconPainter extends CustomPainter {
+  final Color color;
+  const _AppleIconPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double sx = size.width / 24.0;
+    final double sy = size.height / 24.0;
+    canvas.save();
+    canvas.scale(sx, sy);
+
+    final Paint paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    // Leaf
+    final Path leaf = Path()
+      ..moveTo(15.2, 2.2)
+      ..cubicTo(15.4, 3.8, 14.2, 5.4, 12.6, 5.8)
+      ..cubicTo(12.2, 4.3, 13.5, 2.7, 15.2, 2.2)
+      ..close();
+    canvas.drawPath(leaf, paint);
+
+    // Body
+    final Path body = Path()
+      ..moveTo(18.7, 12.7)
+      ..cubicTo(18.7, 10.1, 20.8, 8.8, 20.9, 8.7)
+      ..cubicTo(19.6, 6.9, 17.6, 6.7, 16.9, 6.6)
+      ..cubicTo(15.2, 6.4, 13.6, 7.6, 12.8, 7.6)
+      ..cubicTo(11.9, 7.6, 10.6, 6.6, 9.2, 6.7)
+      ..cubicTo(7.4, 6.7, 5.7, 7.7, 4.7, 9.4)
+      ..cubicTo(2.8, 12.7, 4.2, 17.7, 6.1, 20.4)
+      ..cubicTo(7.0, 21.7, 8.1, 23.1, 9.5, 23.1)
+      ..cubicTo(10.9, 23.0, 11.4, 22.2, 13.0, 22.2)
+      ..cubicTo(14.6, 22.2, 15.0, 23.1, 16.5, 23.0)
+      ..cubicTo(18.0, 23.0, 18.9, 21.7, 19.8, 20.4)
+      ..cubicTo(20.9, 18.8, 21.3, 17.3, 21.3, 17.2)
+      ..cubicTo(21.3, 17.2, 18.7, 16.2, 18.7, 12.7)
+      ..close();
+    canvas.drawPath(body, paint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _AppleIconPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
