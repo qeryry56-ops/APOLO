@@ -127,11 +127,19 @@ void main() {
     expect(find.text('Guest favourite'), findsOneWidget);
     expect(find.text('1/24'), findsOneWidget);
 
-    // Title & pricing row
+    // Title, pricing row, Message quick action, and sticky bottom bar
     expect(find.text('Casa Oliva Villa'), findsOneWidget);
     expect(find.text('Quinta da Marinha, Cascais, Portugal'), findsOneWidget);
     expect(find.text('\$212'), findsOneWidget);
     expect(find.text('per night'), findsOneWidget);
+    expect(find.text('Message'), findsOneWidget);
+    expect(find.text('May 20–24 · taxes incl.'), findsOneWidget);
+    expect(find.text('Book now'), findsOneWidget);
+    expect(find.byIcon(CupertinoIcons.heart), findsOneWidget);
+
+    // Scroll below Message Seller & 4 Actions to inspect 4 spec cards & Seller section
+    await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+    await tester.pump(const Duration(milliseconds: 250));
 
     // 4 horizontal spec cards
     expect(find.text('6'), findsOneWidget);
@@ -143,19 +151,13 @@ void main() {
     expect(find.text('2'), findsOneWidget);
     expect(find.text('Baths'), findsOneWidget);
 
-    // Host card & Message button
+    // Host card inside Seller section
     expect(find.text('MR'), findsOneWidget);
     expect(find.text('Hosted by Marta'), findsOneWidget);
     expect(
       find.text('Superhost · 4 years hosting · replies in 1 h'),
       findsOneWidget,
     );
-    expect(find.text('Message'), findsOneWidget);
-
-    // Sticky bottom bar
-    expect(find.text('May 20–24 · taxes incl.'), findsOneWidget);
-    expect(find.text('Book now'), findsOneWidget);
-    expect(find.byIcon(CupertinoIcons.heart), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -211,6 +213,122 @@ void main() {
     // Fake Video Tour should not appear when listing has no video
     expect(find.text('Video tour'), findsNothing);
     expect(find.text('فيديو الإعلان'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'AdDetailScreen renders Facebook Marketplace layout below Hero, opens All Reviews, and supports Follow & Related searches',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final mpAd = <String, dynamic>{
+      'id': 2026,
+      'title': 'iPhone 14 Pro piece',
+      'price': 450,
+      'price_formatted': '450 MAD',
+      'listed_label': 'Just listed · 19 hours ago',
+      'description': 'iPhone 14 Pro for parts iCloud.',
+      'city': {'id': 14, 'name_ar': 'بوزنيقة', 'name_fr': 'Bouznika'},
+      'category': {'id': 5, 'name_ar': 'هواتف', 'name_fr': 'Téléphones'},
+      'seller': {
+        'id': 55,
+        'name': 'Simo El Kadmiri',
+        'rating': 4.5,
+        'reviews_count': 2,
+        'joined_label': 'Joined Apolo in 2024',
+        'reviews': [
+          {
+            'author': 'Adam',
+            'date': 'Jul 6, 2025',
+            'rating': 5,
+            'comment': 'Great communication',
+          },
+          {
+            'author': 'Amina',
+            'date': 'Jun 15, 2026',
+            'rating': 4,
+            'comment': 'Fast pickup',
+          },
+        ],
+      },
+      'images': ['assets/images/cat_phones.png'],
+    };
+
+    final state = AppState();
+    final previousAdapter = state.api.dio.httpClientAdapter;
+    final previousLocale = state.locale;
+    state.api.dio.httpClientAdapter = _StubDetailHttpAdapter(mpAd);
+    await tester.runAsync(() => state.setLocale(const Locale('en')));
+    addTearDown(() async {
+      await tester.runAsync(() => state.setLocale(previousLocale));
+      state.api.dio.httpClientAdapter = previousAdapter;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.ltr,
+          child: AdDetailScreen(adId: 2026, initialAd: mpAd),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Marketplace Header + Inline Message Seller Card + 4 Action Circles
+    expect(find.text('iPhone 14 Pro piece'), findsOneWidget);
+    expect(find.text('450 MAD'), findsWidgets);
+    expect(find.text('Just listed · 19 hours ago'), findsOneWidget);
+    expect(find.text('Message seller'), findsOneWidget);
+    expect(find.byKey(const Key('detail-quick-msg')), findsOneWidget);
+    expect(find.byKey(const Key('detail-quick-send')), findsOneWidget);
+    expect(find.text('Send'), findsOneWidget);
+
+    expect(find.text('Alerts'), findsOneWidget);
+    expect(find.text('Message'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Description'), findsOneWidget);
+    expect(find.text('iPhone 14 Pro for parts iCloud.'), findsOneWidget);
+
+    // Scroll down to inspect Seller, Location map, Related searches & Hide listing
+    await tester.drag(find.byType(ListView), const Offset(0, -650));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Seller'), findsOneWidget);
+    expect(find.text('Simo El Kadmiri'), findsOneWidget);
+    expect(find.text('Joined Apolo in 2024'), findsOneWidget);
+    expect(find.byKey(const Key('detail-follow-seller')), findsOneWidget);
+    expect(find.text('Follow'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('detail-follow-seller')));
+    await tester.pump();
+    expect(find.text('Following'), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Location is approximate'), findsOneWidget);
+    expect(find.text('Related searches'), findsOneWidget);
+    expect(find.byKey(const Key('detail-hide-listing')), findsOneWidget);
+    expect(find.text('Hide listing'), findsOneWidget);
+
+    // Scroll back up to tap "See reviews" -> opens All Reviews page
+    await tester.drag(find.byType(ListView), const Offset(0, 500));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(find.byKey(const Key('detail-see-reviews')));
+    await tester.tap(find.byKey(const Key('detail-see-reviews')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('All Reviews'), findsOneWidget);
+    expect(find.text('Seller rating'), findsOneWidget);
+    expect(find.text('5 stars'), findsOneWidget);
+    expect(find.text('Filters'), findsOneWidget);
+    expect(find.text('Sort'), findsOneWidget);
+    expect(find.text('Adam'), findsOneWidget);
+    expect(find.text('Amina'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -14,11 +14,13 @@ import 'widgets/skeleton_loader.dart';
 
 class SearchScreen extends StatefulWidget {
   final int? initialCategoryId;
+  final String? initialQuery;
   final ValueChanged<bool>? onChromeVisibilityChanged;
 
   const SearchScreen({
     super.key,
     this.initialCategoryId,
+    this.initialQuery,
     this.onChromeVisibilityChanged,
   });
 
@@ -60,6 +62,9 @@ class _SearchScreenState extends State<SearchScreen>
   void initState() {
     super.initState();
     _categoryId = widget.initialCategoryId;
+    if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
+      _queryCtrl.text = widget.initialQuery!.trim();
+    }
     if (_categoryId != null) {
       _state.recordCategoryInterest(_categoryId, weight: 3);
     }

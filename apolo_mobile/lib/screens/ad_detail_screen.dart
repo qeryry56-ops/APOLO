@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -16,6 +17,7 @@ import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 import 'chat_room_screen.dart';
 import 'privacy_compliance_screen.dart';
+import 'search_screen.dart';
 import 'seller_profile_screen.dart';
 import 'store_detail_screen.dart';
 import 'auth_screen.dart';
@@ -41,6 +43,7 @@ class AdDetailScreen extends StatefulWidget {
 class _AdDetailScreenState extends State<AdDetailScreen> {
   final AppState _state = AppState();
   final PageController _pageCtrl = PageController();
+  final TextEditingController _quickMsgCtrl = TextEditingController();
   Map<String, dynamic>? _ad;
   List<dynamic> _relatedAds = [];
   bool _loading = true;
@@ -48,18 +51,30 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   bool _descExpanded = false;
   bool _openingChat = false;
   bool _savingFavorite = false;
+  bool _alertEnabled = false;
+  bool _followingSeller = false;
+  bool _hiddenListing = false;
 
-  // Calibrated Apple Whitespace & Brand Palette
-  static const Color _ink = Color(0xFF0F172A);
+  // Calibrated Apple / Marketplace Light Tokens
+  static const Color _ink = Color(0xFF050505);
   static const Color _red = Color(0xFFE31B23);
   static const Color _redSoft = Color(0xFFFEECEE);
-  static const Color _surface = Color(0xFFF5F6F8);
-  static const Color _emerald = Color(0xFF10B981);
+  static const Color _surface = Color(0xFFF0F2F5);
+  static const Color _pillGrey = Color(0xFFE4E6EB);
+  static const Color _fbBlue = Color(0xFF0866FF);
+  static const Color _fbBlueSoft = Color(0xFFE7F3FF);
+  static const Color _mutedText = Color(0xFF65676B);
+  static const Color _starOrange = Color(0xFFE87A24);
 
   @override
   void initState() {
     super.initState();
     _ad = widget.initialAd ?? widget.initialData;
+    _quickMsgCtrl.text = _state.s.tr(
+      'مرحباً، هل هذا الإعلان ما زال متوفراً؟',
+      'Cet article est-il toujours disponible ?',
+      'Hi, is this still available?',
+    );
     if (_ad != null) {
       final catId = _state.extractAdCategoryId(_ad!);
       _state.recordCategoryInterest(catId, weight: 2);
@@ -74,6 +89,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   void dispose() {
     _state.removeListener(_onStateChanged);
     _pageCtrl.dispose();
+    _quickMsgCtrl.dispose();
     super.dispose();
   }
 
@@ -733,14 +749,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(700),
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 120),
           children: [
-            // 1. Hero Image Card (380px, 12px margin, 32px radius)
+            // 1. Hero Image Card (UNTOUCHED per user instruction)
             _buildHeroImageCard(
               s: s,
               ad: ad,
@@ -754,19 +771,100 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               priceFormatted: priceFormatted,
             ),
 
-            // 2. Title & Pricing Row (Gap Y = 20px)
-            _buildTitleAndPricingRow(
+            // 2. Title, Price & "Just listed" Header
+            _buildMarketplaceHeader(
+              s: s,
+              ad: ad,
               title: (ad['title'] ?? '').toString(),
               locationSubtitle: locationSubtitle,
               priceFormatted: priceFormatted,
               priceFrequency: priceFrequency,
             ),
 
-            // 3. 4-Column Quick Spec Cards (Gap Y = 20px)
-            _buildQuickSpecGrid(quickSpecCards),
+            // Optional compact gallery thumbnails when multiple images exist
+            if (images.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                child: SizedBox(
+                  height: 52,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: images.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, idx) {
+                      final active = idx == _currentImgIndex;
+                      return PressableScale(
+                        onTap: () {
+                          _pageCtrl.animateToPage(
+                            idx,
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
+                          );
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: active ? _fbBlue : const Color(0xFFE5E7EB),
+                              width: active ? 2 : 1,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: images[idx].startsWith('assets/')
+                                ? Image.asset(images[idx], fit: BoxFit.cover)
+                                : AppImage(url: images[idx], fit: BoxFit.cover),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
 
-            // 4. Host / Seller Card (Gap Y = 20px)
-            _buildHostCard(
+            // 3. Inline "Message seller" Card (or Boost banner for Owner)
+            _buildMessageSellerCard(
+              s: s,
+              ad: ad,
+              isOwner: isOwner,
+            ),
+
+            // 4. 4 Circular Quick Action Buttons (Alerts, Message, Share, Save)
+            _buildQuickActionCircleRow(
+              s: s,
+              ad: ad,
+              isFav: isFav,
+              priceFormatted: priceFormatted,
+            ),
+
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+            ),
+
+            // 5. Description + Key Specs + Optional Direct Phone Row
+            _buildDescriptionSection(
+              s: s,
+              ad: ad,
+              quickSpecCards: quickSpecCards,
+              rawSpecs: rawSpecs,
+              structuredSpecs: structuredSpecs,
+              isOwner: isOwner,
+              phone: phone,
+              sellerDisplayName: sellerDisplayName,
+            ),
+
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 0),
+              child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+            ),
+
+            // 6. Seller Header ("Seller >" + "See reviews") + Profile + Follow
+            _buildSellerSection(
               s: s,
               ad: ad,
               seller: seller,
@@ -778,18 +876,61 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               isOwner: isOwner,
             ),
 
-            // 5. Core Apolo Details (Thumbnails, Boost, Specs, Description, Quick Chat, Call, Safety, Related)
-            _buildExtraDetailsSection(
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 0),
+              child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+            ),
+
+            // 7. Approximate Location Map Preview
+            _buildLocationSection(
+              s: s,
+              cityName: cityName,
+              locationSubtitle: locationSubtitle,
+            ),
+
+            // 8. Related Searches Chips
+            _buildRelatedSearchesSection(
+              s: s,
+              ad: ad,
+              categoryName: categoryName,
+              cityName: cityName,
+            ),
+
+            // 9. Hide Listing & Safety Footer Card
+            _buildHideListingCard(
               s: s,
               ad: ad,
               seller: seller,
-              images: images,
-              metadata: metadata,
-              structuredSpecs: structuredSpecs,
               isOwner: isOwner,
-              phone: phone,
-              sellerDisplayName: sellerDisplayName,
             ),
+
+            // 10. Related Ads Strip (when present)
+            if (_relatedAds.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 12),
+                child: _SectionHeader(
+                  icon: CupertinoIcons.square_grid_2x2_fill,
+                  title:
+                      s.tr('إعلانات مشابهة فـ نفس القسم', 'Annonces similaires'),
+                ),
+              ),
+              SizedBox(
+                height: 242,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _relatedAds.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  itemBuilder: (_, idx) => SizedBox(
+                    width: 185,
+                    child: AdCard(
+                      ad: Map<String, dynamic>.from(_relatedAds[idx]),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1209,87 +1350,139 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     );
   }
 
-  Widget _buildTitleAndPricingRow({
+  String _resolveListedTimeLabel(Map<String, dynamic> ad, AppStrings s) {
+    final explicit = (ad['listed_label'] ??
+            ad['created_at_human'] ??
+            ad['time_ago'] ??
+            ad['published_ago'] ??
+            '')
+        .toString()
+        .trim();
+    if (explicit.isNotEmpty) return explicit;
+
+    final rawDate = (ad['created_at'] ?? '').toString().trim();
+    if (rawDate.isNotEmpty) {
+      final parsed = DateTime.tryParse(rawDate);
+      if (parsed != null) {
+        final diff = DateTime.now().difference(parsed.toLocal());
+        if (diff.inMinutes < 60) {
+          final m = diff.inMinutes.clamp(1, 59);
+          return s.tr(
+            'نُشر للتو · منذ $m د',
+            'Publié · il y a $m min',
+            'Just listed · ${m}m ago',
+          );
+        }
+        if (diff.inHours < 24) {
+          final h = diff.inHours;
+          return s.tr(
+            'نُشر للتو · منذ $h ساعة',
+            'Publié · il y a ${h}h',
+            'Just listed · $h hours ago',
+          );
+        }
+        final d = diff.inDays;
+        return s.tr(
+          'منذ $d يوم',
+          'Il y a ${d}j',
+          '$d days ago',
+        );
+      }
+    }
+    return s.tr('نُشر للتو', 'Vient d’être publié', 'Just listed');
+  }
+
+  Widget _buildMarketplaceHeader({
+    required AppStrings s,
+    required Map<String, dynamic> ad,
     required String title,
     required String locationSubtitle,
     required String priceFormatted,
     required String priceFrequency,
   }) {
+    final String listedLabel = _resolveListedTimeLabel(ad, s);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1A1A1A),
-                    letterSpacing: AppTypography.trackingForContext(context, -0.5),
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_rounded,
-                      size: 14,
-                      color: Color(0xFF8E8E93),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        locationSubtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF8E8E93),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+              letterSpacing: AppTypography.trackingForContext(context, -0.35),
+              height: 1.25,
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(height: 5),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 2,
             children: [
               Directionality(
                 textDirection: TextDirection.ltr,
                 child: PriceText(
                   priceFormatted,
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
-                    letterSpacing: -0.4,
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w600,
+                    color: _ink,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
-              const SizedBox(height: 2),
+              if (priceFrequency.isNotEmpty)
+                Text(
+                  priceFrequency,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: _mutedText,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 2,
+            children: [
               Text(
-                priceFrequency,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                listedLabel,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF8E8E93),
+                  color: _mutedText,
                 ),
               ),
+              if (locationSubtitle.isNotEmpty) ...[
+                const Text(
+                  '·',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _mutedText,
+                  ),
+                ),
+                Text(
+                  locationSubtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: _mutedText,
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -1297,13 +1490,290 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     );
   }
 
-  Widget _buildQuickSpecGrid(List<({String value, String label})> cards) {
+  Widget _buildMessageSellerCard({
+    required AppStrings s,
+    required Map<String, dynamic> ad,
+    required bool isOwner,
+  }) {
+    if (isOwner) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        child: PressableScale(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => BoostSheet(
+                adId: widget.adId,
+                adTitle: (ad['title'] ?? '').toString(),
+              ),
+            ).then((boosted) {
+              if (boosted == true) _fetchDetails();
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  CupertinoIcons.bolt_fill,
+                  color: Color(0xFFD97706),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    s.tr(
+                      'ترقية الإعلان ومضاعفة المشاهدات (Boost ⚡)',
+                      'Booster cette annonce ⚡',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _ink,
+                    ),
+                  ),
+                ),
+                Icon(
+                  s.isAr
+                      ? CupertinoIcons.chevron_left
+                      : CupertinoIcons.chevron_right,
+                  size: 16,
+                  color: _ink,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    color: _fbBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    CupertinoIcons.chat_bubble_fill,
+                    size: 11,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  s.tr('راسل البائع', 'Contacter le vendeur', 'Message seller'),
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: _ink,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 42),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _surface,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextField(
+                      key: const Key('detail-quick-msg'),
+                      controller: _quickMsgCtrl,
+                      minLines: 1,
+                      maxLines: 2,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        color: _ink,
+                        height: 1.3,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 4),
+                        hintText: s.tr(
+                          'اكتب رسالتك هنا...',
+                          'Écrivez votre message...',
+                          'Write a message...',
+                        ),
+                        hintStyle: const TextStyle(
+                          fontSize: 13.5,
+                          color: _mutedText,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                PressableScale(
+                  key: const Key('detail-quick-send'),
+                  onTap: () {
+                    final draft = _quickMsgCtrl.text.trim();
+                    _openInAppChat(
+                      presetMessage: draft.isNotEmpty ? draft : null,
+                    );
+                  },
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: _fbBlue,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      s.tr('إرسال', 'Envoyer', 'Send'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAlertsTap(AppStrings s, Map<String, dynamic> ad) async {
+    HapticFeedback.selectionClick();
+    final next = !_alertEnabled;
+    setState(() => _alertEnabled = next);
+    if (next && _state.api.isAuthenticated) {
+      try {
+        await _state.api.dio.post('/saved-searches', data: {
+          'query': (ad['title'] ?? '').toString().trim(),
+        });
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          next
+              ? s.tr(
+                  'تم تفعيل تنبيهات الإعلانات المشابهة',
+                  'Alertes activées pour des annonces similaires',
+                  'Alerts enabled for similar listings',
+                )
+              : s.tr(
+                  'تم إيقاف التنبيهات لهذا البحث',
+                  'Alertes désactivées',
+                  'Alerts paused',
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionCircleRow({
+    required AppStrings s,
+    required Map<String, dynamic> ad,
+    required bool isFav,
+    required String priceFormatted,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _MarketplaceActionCircle(
+              icon: _alertEnabled
+                  ? CupertinoIcons.bell_fill
+                  : CupertinoIcons.bell,
+              label: s.tr('تنبيهات', 'Alertes', 'Alerts'),
+              active: _alertEnabled,
+              onTap: () => _handleAlertsTap(s, ad),
+            ),
+          ),
+          Expanded(
+            child: _MarketplaceActionCircle(
+              icon: CupertinoIcons.chat_bubble_fill,
+              label: s.tr('رسالة', 'Message', 'Message'),
+              onTap: () => _openInAppChat(),
+            ),
+          ),
+          Expanded(
+            child: _MarketplaceActionCircle(
+              icon: CupertinoIcons.arrowshape_turn_up_right_fill,
+              label: s.tr('مشاركة', 'Partager', 'Share'),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                final shareUrl = ad['share_url'] ?? 'https://apolo.ma';
+                Share.share(
+                  '${ad['title']} - $priceFormatted\n$shareUrl',
+                );
+              },
+            ),
+          ),
+          Expanded(
+            child: _MarketplaceActionCircle(
+              icon: isFav
+                  ? CupertinoIcons.bookmark_fill
+                  : CupertinoIcons.bookmark,
+              label: s.tr('حفظ', 'Enregistrer', 'Save'),
+              active: isFav,
+              onTap: _toggleFavorite,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickSpecGrid(
+    List<({String value, String label})> cards, {
+    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(20, 20, 20, 0),
+  }) {
+    return Padding(
+      padding: padding,
       child: Row(
         children: [
           for (int i = 0; i < cards.length; i++) ...[
-            if (i > 0) const SizedBox(width: 10),
+            if (i > 0) const SizedBox(width: 8),
             Expanded(
               child: _SpecStatCard(
                 value: cards[i].value,
@@ -1316,7 +1786,186 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     );
   }
 
-  Widget _buildHostCard({
+  Widget _buildDescriptionSection({
+    required AppStrings s,
+    required Map<String, dynamic> ad,
+    required List<({String value, String label})> quickSpecCards,
+    required List<MapEntry<String, String>> rawSpecs,
+    required List<MapEntry<String, String>> structuredSpecs,
+    required bool isOwner,
+    required String? phone,
+    required String sellerDisplayName,
+  }) {
+    final String rawDesc = (ad['description'] ?? '').toString().trim();
+    final String fullDescription = rawDesc.isEmpty
+        ? s.tr(
+            'لم يضف البائع وصفاً لهذا الإعلان. تواصل معه لمعرفة التفاصيل.',
+            'Le vendeur n’a pas ajouté de description. Contactez-le pour en savoir plus.',
+            'No description provided. Message the seller for details.',
+          )
+        : rawDesc;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            s.tr('الوصف', 'Description', 'Description'),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            fullDescription,
+            maxLines: _descExpanded ? 50 : 4,
+            overflow:
+                _descExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14.5,
+              height: 1.45,
+              color: _ink,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          if (fullDescription.length > 140) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: () => setState(() => _descExpanded = !_descExpanded),
+              child: Text(
+                _descExpanded
+                    ? s.tr('عرض أقل', 'Voir moins', 'See less')
+                    : s.tr('قراءة المزيد', 'Lire la suite', 'See more'),
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: _fbBlue,
+                ),
+              ),
+            ),
+          ],
+
+          // Compact 4-stat Specs row
+          _buildQuickSpecGrid(
+            quickSpecCards,
+            padding: const EdgeInsets.only(top: 14),
+          ),
+
+          // Additional specs when ad has rich metadata
+          if (rawSpecs.length > 2) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: structuredSpecs.skip(2).take(6).map((e) {
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${e.key}: ${e.value}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _ink,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+
+          if (!isOwner && phone != null && phone.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            PressableScale(
+              onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
+              child: Container(
+                width: double.infinity,
+                height: 42,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: _surface,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      CupertinoIcons.phone_fill,
+                      size: 16,
+                      color: _ink,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${s.tr('اتصال هاتفي بالبائع', 'Appeler le vendeur', 'Call seller')} · $phone',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: _ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _openSellerOrStore({
+    required Map<String, dynamic> ad,
+    required Map<String, dynamic>? seller,
+    required Map<String, dynamic>? store,
+    required int sellerId,
+    required String sellerDisplayName,
+    required String cityName,
+    required String? phone,
+    required String? avatarUrl,
+  }) {
+    if (store != null && store['subdomain'] != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StoreDetailScreen(
+            subdomain: store['subdomain'].toString(),
+          ),
+        ),
+      );
+      return;
+    }
+    if (sellerId > 0) {
+      HapticFeedback.lightImpact();
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SellerProfileScreen(
+            sellerId: sellerId,
+            sellerName: sellerDisplayName,
+            sellerAvatar: avatarUrl,
+            sellerPhone: phone,
+            sellerCity: cityName,
+            isVerified: seller?['is_verified'] == true,
+            isOnline: seller?['is_online'] == true,
+            initialAd: ad,
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildSellerSection({
     required AppStrings s,
     required Map<String, dynamic> ad,
     required Map<String, dynamic>? seller,
@@ -1329,23 +1978,19 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   }) {
     final String hostTitle = (ad['host_title'] ?? '').toString().trim().isNotEmpty
         ? ad['host_title'].toString().trim()
-        : (store != null
-            ? sellerDisplayName
-            : s.tr('بواسطة $sellerDisplayName', 'Par $sellerDisplayName',
-                'Hosted by $sellerDisplayName'));
+        : sellerDisplayName;
 
     final String hostSubtitle = (ad['host_subtitle'] ?? '')
             .toString()
             .trim()
             .isNotEmpty
         ? ad['host_subtitle'].toString().trim()
-        : (store != null
-            ? s.tr('متجر على Apolo · $cityName · يرد بسرعة',
-                'Boutique sur Apolo · $cityName')
-            : s.tr(
-                '${seller?['is_verified'] == true ? 'حساب موثق · ' : ''}بائع على Apolo · $cityName',
-                '${seller?['is_verified'] == true ? 'Vérifié · ' : ''}Vendeur sur Apolo · $cityName',
-              ));
+        : (seller?['joined_label']?.toString().trim().isNotEmpty == true
+            ? seller!['joined_label'].toString().trim()
+            : (store != null
+                ? s.tr('متجر على Apolo · $cityName', 'Boutique Apolo · $cityName')
+                : s.tr('بائع على Apolo · $cityName',
+                    'Vendeur Apolo · $cityName')));
 
     final String hostInitials =
         (ad['host_initials'] ?? _initialsFromName(sellerDisplayName))
@@ -1354,611 +1999,604 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final String? avatarUrl =
         (store?['logo_url'] ?? seller?['avatar_url'])?.toString().trim();
 
+    final double? ratingVal = double.tryParse(
+        (seller?['rating'] ?? seller?['avg_rating'] ?? ad['seller_rating'] ?? '')
+            .toString());
+    final int? reviewsCountVal = int.tryParse(
+        (seller?['reviews_count'] ?? ad['seller_reviews_count'] ?? '')
+            .toString());
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 64),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF0F0F0), width: 1),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: PressableScale(
-                onTap: () {
-                  if (store != null && store['subdomain'] != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => StoreDetailScreen(
-                          subdomain: store['subdomain'].toString(),
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-                  if (sellerId > 0) {
-                    HapticFeedback.lightImpact();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => SellerProfileScreen(
-                          sellerId: sellerId,
-                          sellerName: sellerDisplayName,
-                          sellerAvatar: avatarUrl,
-                          sellerPhone: phone,
-                          sellerCity: cityName,
-                          isVerified: seller?['is_verified'] == true,
-                          isOnline: seller?['is_online'] == true,
-                          initialAd: ad,
-                        ),
-                      ),
-                    );
-                  }
-                },
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () => _openSellerOrStore(
+                  ad: ad,
+                  seller: seller,
+                  store: store,
+                  sellerId: sellerId,
+                  sellerDisplayName: sellerDisplayName,
+                  cityName: cityName,
+                  phone: phone,
+                  avatarUrl: avatarUrl,
+                ),
+                behavior: HitTestBehavior.opaque,
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF39C12),
-                        shape: BoxShape.circle,
+                    Text(
+                      s.tr('البائع', 'Vendeur', 'Seller'),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      alignment: Alignment.center,
-                      child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                          ? AppImage(
-                              url: avatarUrl,
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.cover,
-                              fallback: _InitialsCircle(initials: hostInitials),
-                            )
-                          : _InitialsCircle(initials: hostInitials),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  hostTitle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1A1A1A),
-                                  ),
-                                ),
-                              ),
-                              if (seller?['is_verified'] == true) ...[
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  CupertinoIcons.checkmark_seal_fill,
-                                  size: 14,
-                                  color: Color(0xFF4A4EED),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            hostSubtitle,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF8E8E93),
-                              height: 1.25,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      s.isAr
+                          ? CupertinoIcons.chevron_left
+                          : CupertinoIcons.chevron_right,
+                      size: 15,
+                      color: _mutedText,
                     ),
                   ],
                 ),
               ),
-            ),
-            if (!isOwner) ...[
-              const SizedBox(width: 10),
-              PressableScale(
-                onTap: () => _openInAppChat(),
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFE5E5E5),
-                      width: 1,
+              GestureDetector(
+                key: const Key('detail-see-reviews'),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => _SellerReviewsScreen(
+                        s: s,
+                        sellerName: sellerDisplayName,
+                        rating: ratingVal,
+                        reviewsCount: reviewsCountVal ?? 0,
+                        rawReviews: (seller?['reviews'] ?? ad['reviews'])
+                            as List<dynamic>?,
+                      ),
                     ),
-                  ),
-                  alignment: Alignment.center,
+                  );
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text(
-                    s.tr('رسالة', 'Message', 'Message'),
+                    s.tr('عرض التقييمات', 'Voir les avis', 'See reviews'),
                     style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: _fbBlue,
                     ),
                   ),
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExtraDetailsSection({
-    required AppStrings s,
-    required Map<String, dynamic> ad,
-    required Map<String, dynamic>? seller,
-    required List<String> images,
-    required Map<String, dynamic> metadata,
-    required List<MapEntry<String, String>> structuredSpecs,
-    required bool isOwner,
-    required String? phone,
-    required String sellerDisplayName,
-  }) {
-    final String rawDesc = (ad['description'] ?? '').toString().trim();
-    final String fullDescription = rawDesc.isEmpty
-        ? s.tr(
-            'لم يضف البائع وصفاً لهذا الإعلان. تواصل معه لمعرفة التفاصيل.',
-            'Le vendeur n’a pas ajouté de description. Contactez-le pour en savoir plus.',
-          )
-        : rawDesc;
-
-    final quickQuestions = s.isAr
-        ? [
-            'واش باقي متوفر؟ 👋',
-            'شنو هو آخر ثمن؟ 💰',
-            'فين نقدر نشوف السلعة؟ 📍',
-            'واش ممكن صوره إضافية؟ 📸',
-          ]
-        : [
-            'Toujours disponible ? 👋',
-            'Quel est votre dernier prix ? 💰',
-            'Où peut-on voir l\'article ? 📍',
-            'Plus de photos SVP ? 📸',
-          ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (images.length > 1) ...[
-            SizedBox(
-              height: 56,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: images.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, idx) {
-                  final active = idx == _currentImgIndex;
-                  return PressableScale(
-                    onTap: () {
-                      _pageCtrl.animateToPage(
-                        idx,
-                        duration: const Duration(milliseconds: 260),
-                        curve: Curves.easeOutCubic,
-                      );
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 56,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: active ? const Color(0xFF4A4EED) : const Color(0xFFECECEC),
-                          width: active ? 2 : 1,
-                        ),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: images[idx].startsWith('assets/')
-                            ? Image.asset(images[idx], fit: BoxFit.cover)
-                            : AppImage(url: images[idx], fit: BoxFit.cover),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          if (isOwner) ...[
-            PressableScale(
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => BoostSheet(
-                    adId: widget.adId,
-                    adTitle: (ad['title'] ?? '').toString(),
-                  ),
-                ).then((boosted) {
-                  if (boosted == true) _fetchDetails();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      CupertinoIcons.bolt_fill,
-                      color: Color(0xFFD97706),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        s.tr(
-                          'ترقية الإعلان ومضاعفة المشاهدات (Boost ⚡)',
-                          'Booster cette annonce ⚡',
-                        ),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1A1A1A),
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      s.isAr
-                          ? CupertinoIcons.chevron_left
-                          : CupertinoIcons.chevron_right,
-                      size: 16,
-                      color: const Color(0xFF1A1A1A),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Description Card
-          _SectionHeader(
-            icon: CupertinoIcons.doc_text_fill,
-            title: s.tr('وصف وتفاصيل الإعلان', 'Description détaillée'),
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFECECEC), width: 1),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fullDescription,
-                  maxLines: _descExpanded ? 50 : 4,
-                  overflow: _descExpanded
-                      ? TextOverflow.visible
-                      : TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    height: 1.65,
-                    color: Color(0xFF1A1A1A),
-                    fontWeight: FontWeight.w400,
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _openSellerOrStore(
+                    ad: ad,
+                    seller: seller,
+                    store: store,
+                    sellerId: sellerId,
+                    sellerDisplayName: sellerDisplayName,
+                    cityName: cityName,
+                    phone: phone,
+                    avatarUrl: avatarUrl,
                   ),
-                ),
-                if (fullDescription.length > 140) ...[
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () => setState(() => _descExpanded = !_descExpanded),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _descExpanded
-                              ? s.tr('عرض أقل', 'Voir moins')
-                              : s.tr('قراءة الوصف كامل', 'Lire la suite'),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF4A4EED),
-                          ),
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF39C12),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          _descExpanded
-                              ? CupertinoIcons.chevron_up
-                              : CupertinoIcons.chevron_down,
-                          size: 13,
-                          color: const Color(0xFF4A4EED),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Detailed Specs Grid
-          _SectionHeader(
-            icon: CupertinoIcons.square_list_fill,
-            title: s.tr('معلومات ومواصفات الإعلان', 'Informations clés'),
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 2.55,
-            ),
-            itemCount: structuredSpecs.length,
-            itemBuilder: (context, idx) {
-              final item = structuredSpecs[idx];
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFECECEC), width: 1),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      item.key,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
+                        clipBehavior: Clip.antiAlias,
+                        alignment: Alignment.center,
+                        child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                            ? AppImage(
+                                url: avatarUrl,
+                                width: 46,
+                                height: 46,
+                                fit: BoxFit.cover,
+                                fallback:
+                                    _InitialsCircle(initials: hostInitials),
+                              )
+                            : _InitialsCircle(initials: hostInitials),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A1A),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          // Quick Chat Questions & Phone Call Option
-          if (!isOwner) ...[
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFECECEC), width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    s.tr(
-                      'صيفط سؤال سريع فـ شات التطبيق:',
-                      'Envoyer une question rapide dans le chat :',
-                    ),
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: quickQuestions.map((q) {
-                      return PressableScale(
-                        onTap: () => _openInAppChat(presetMessage: q),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FA),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: const Color(0xFFECECEC)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                CupertinoIcons.chat_bubble_2_fill,
-                                size: 13,
-                                color: Color(0xFF4A4EED),
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  q,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1A1A1A),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    hostTitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 15.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: _ink,
+                                    ),
                                   ),
                                 ),
+                                if (seller?['is_verified'] == true) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    CupertinoIcons.checkmark_seal_fill,
+                                    size: 14,
+                                    color: _fbBlue,
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (ratingVal != null && ratingVal > 0) ...[
+                              const SizedBox(height: 3),
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  ...List.generate(5, (i) {
+                                    final filled = i + 1 <= ratingVal.floor();
+                                    final half = !filled &&
+                                        (ratingVal - i) >= 0.4;
+                                    return Icon(
+                                      half
+                                          ? Icons.star_half_rounded
+                                          : (filled
+                                              ? Icons.star_rounded
+                                              : Icons.star_outline_rounded),
+                                      size: 14.5,
+                                      color: _starOrange,
+                                    );
+                                  }),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    ratingVal.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: _ink,
+                                    ),
+                                  ),
+                                  if (reviewsCountVal != null)
+                                    Text(
+                                      ' ($reviewsCountVal)',
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        color: _mutedText,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  if (phone != null && phone.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    PressableScale(
-                      onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 11,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _redSoft,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              CupertinoIcons.phone_fill,
-                              size: 16,
-                              color: _red,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                '${s.tr('اتصال هاتفي بالبائع', 'Appeler le vendeur')} · $phone',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: _red,
-                                ),
+                            const SizedBox(height: 2),
+                            Text(
+                              hostSubtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w400,
+                                color: _mutedText,
+                                height: 1.25,
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              if (!isOwner) ...[
+                const SizedBox(width: 10),
+                PressableScale(
+                  key: const Key('detail-follow-seller'),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _followingSeller = !_followingSeller);
+                  },
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: _followingSeller ? _fbBlueSoft : _pillGrey,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _followingSeller
+                          ? s.tr('متابَع', 'Suivi', 'Following')
+                          : s.tr('متابعة', 'Suivre', 'Follow'),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: _followingSeller ? _fbBlue : _ink,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSection({
+    required AppStrings s,
+    required String cityName,
+    required String locationSubtitle,
+  }) {
+    final mapDisplayCity = cityName;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            s.tr('موقع الإعلان', 'Localisation', 'Location'),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () async {
+              final q = Uri.encodeComponent('$locationSubtitle, Morocco');
+              final uri = Uri.parse('https://maps.google.com/?q=$q');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                height: 164,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const CustomPaint(painter: _ApproxMapPainter()),
+                    Center(
+                      child: Container(
+                        width: 78,
+                        height: 78,
+                        decoration: BoxDecoration(
+                          color: _fbBlue.withValues(alpha: 0.16),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _fbBlue.withValues(alpha: 0.45),
+                            width: 1.5,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Text(
+                            mapDisplayCity,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1E3A8A),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    PositionedDirectional(
+                      bottom: 10,
+                      end: 10,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          CupertinoIcons.info,
+                          color: Colors.white,
+                          size: 13,
+                        ),
+                      ),
                     ),
                   ],
-                ],
-              ),
-            ),
-          ],
-
-          // Safety & Report Row (keeps Trust/Report/Block accessible)
-          const SizedBox(height: 16),
-          PressableScale(
-            onTap: () => _showMoreActionsSheet(s, ad, seller, isOwner),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFDCFCE7)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    CupertinoIcons.shield_lefthalf_fill,
-                    size: 18,
-                    color: _emerald,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      s.tr(
-                        'نصيحة أمان: تواصل عبر شات Apolo وعاين السلعة قبل الدفع.',
-                        'Conseil sécurité : Discutez sur Apolo et vérifiez l\'article en personne.',
-                      ),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF166534),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      s.tr('إبلاغ', 'Signaler'),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: _ink,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
+          const SizedBox(height: 10),
+          Text(
+            cityName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w500,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            s.tr(
+              'الموقع تقريبي',
+              'La localisation est approximative',
+              'Location is approximate',
+            ),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: _mutedText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          // Related Ads Section
-          if (_relatedAds.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            _SectionHeader(
-              icon: CupertinoIcons.square_grid_2x2_fill,
-              title: s.tr('إعلانات مشابهة فـ نفس القسم', 'Annonces similaires'),
+  List<String> _buildRelatedSearchTerms(
+    Map<String, dynamic> ad,
+    String categoryName,
+    String cityName,
+  ) {
+    final terms = <String>[];
+    void addTerm(String candidate) {
+      final clean = candidate.trim();
+      if (clean.length >= 2 && !terms.contains(clean)) {
+        terms.add(clean);
+      }
+    }
+
+    final rawTitle = (ad['title'] ?? '').toString().trim();
+    if (rawTitle.isNotEmpty) {
+      final words = rawTitle.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+      addTerm(words.length > 4 ? words.take(4).join(' ') : rawTitle);
+      if (words.length >= 2) {
+        addTerm('${words.first} $cityName');
+      }
+    }
+    if (categoryName.isNotEmpty && cityName.isNotEmpty) {
+      addTerm('$categoryName $cityName');
+    }
+    addTerm(categoryName);
+    addTerm(cityName);
+    return terms.take(5).toList();
+  }
+
+  Widget _buildRelatedSearchesSection({
+    required AppStrings s,
+    required Map<String, dynamic> ad,
+    required String categoryName,
+    required String cityName,
+  }) {
+    final terms = _buildRelatedSearchTerms(ad, categoryName, cityName);
+    if (terms.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            s.tr('عمليات بحث ذات صلة', 'Recherches similaires', 'Related searches'),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: terms.map((term) {
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SearchScreen(initialQuery: term),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: _pillGrey,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        CupertinoIcons.search,
+                        size: 15,
+                        color: _ink,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          term,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: _ink,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHideListingCard({
+    required AppStrings s,
+    required Map<String, dynamic> ad,
+    required Map<String, dynamic>? seller,
+    required bool isOwner,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F8FA),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text.rich(
+              TextSpan(
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  color: _ink,
+                  height: 1.35,
+                ),
+                children: [
+                  TextSpan(
+                    text: s.tr(
+                      'إذا لم يعجبك هذا الإعلان، يمكنك ',
+                      'Si vous n’aimez pas ceci, vous pouvez ',
+                      "If you don't like this, you can ",
+                    ),
+                  ),
+                  TextSpan(
+                    text: s.tr(
+                      'إخفاء هذا الإعلان',
+                      'masquer cette annonce',
+                      'hide this listing',
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(
+                    text: s.tr(
+                      ' وسنعرض لك إعلانات أقل مشابهة له.',
+                      ' et nous vous en montrerons moins de ce type.',
+                      " and we'll show you fewer listings like this.",
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 242,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _relatedAds.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 14),
-                itemBuilder: (_, idx) => SizedBox(
-                  width: 185,
-                  child: AdCard(
-                    ad: Map<String, dynamic>.from(_relatedAds[idx]),
+            PressableScale(
+              key: const Key('detail-hide-listing'),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                setState(() => _hiddenListing = !_hiddenListing);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    behavior: SnackBarBehavior.floating,
+                    content: Text(
+                      _hiddenListing
+                          ? s.tr(
+                              'تم إخفاء الإعلان من توصياتك',
+                              'Annonce masquée de vos recommandations',
+                              'Listing hidden from your feed',
+                            )
+                          : s.tr(
+                              'تم إلغاء الإخفاء',
+                              'Affichage rétabli',
+                              'Listing restored',
+                            ),
+                    ),
+                  ),
+                );
+                if (_hiddenListing && Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _pillGrey,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  _hiddenListing
+                      ? s.tr('تم الإخفاء', 'Masquée', 'Hidden')
+                      : s.tr('إخفاء الإعلان', 'Masquer l’annonce',
+                          'Hide listing'),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _ink,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: GestureDetector(
+                onTap: () => _showMoreActionsSheet(s, ad, seller, isOwner),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        CupertinoIcons.shield_lefthalf_fill,
+                        size: 13,
+                        color: _mutedText,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        s.tr('الإبلاغ أو الأمان', 'Signaler / Sécurité',
+                            'Report & Safety'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: _mutedText,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -2501,6 +3139,538 @@ class _SheetActionRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MarketplaceActionCircle extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _MarketplaceActionCircle({
+    required this.icon,
+    required this.label,
+    this.active = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color:
+                  active ? const Color(0xFFE7F3FF) : const Color(0xFFE4E6EB),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              size: 20,
+              color: active ? const Color(0xFF0866FF) : const Color(0xFF050505),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: active ? const Color(0xFF0866FF) : const Color(0xFF050505),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApproxMapPainter extends CustomPainter {
+  const _ApproxMapPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Land base
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFFE8F1E1),
+    );
+
+    // Coastal sea strip (matches screenshot soft blue ocean edge)
+    final seaPath = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width * 0.72, 0)
+      ..quadraticBezierTo(
+        size.width * 0.34,
+        size.height * 0.25,
+        0,
+        size.height * 0.62,
+      )
+      ..close();
+    canvas.drawPath(
+      seaPath,
+      Paint()..color = const Color(0xFF9CD4FF),
+    );
+
+    // Park / terrain patch
+    final parkPath = Path()
+      ..moveTo(size.width * 0.56, size.height * 0.30)
+      ..quadraticBezierTo(
+        size.width * 0.85,
+        size.height * 0.36,
+        size.width,
+        size.height * 0.72,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width * 0.48, size.height)
+      ..close();
+    canvas.drawPath(
+      parkPath,
+      Paint()..color = const Color(0xFFD6ECC8),
+    );
+
+    // Subtle roads
+    final roadPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.90)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
+
+    final highway = Path()
+      ..moveTo(0, size.height * 0.82)
+      ..quadraticBezierTo(
+        size.width * 0.45,
+        size.height * 0.52,
+        size.width,
+        size.height * 0.14,
+      );
+    canvas.drawPath(highway, roadPaint);
+
+    final crossRoad = Path()
+      ..moveTo(size.width * 0.28, size.height)
+      ..quadraticBezierTo(
+        size.width * 0.48,
+        size.height * 0.48,
+        size.width * 0.56,
+        0,
+      );
+    canvas.drawPath(
+      crossRoad,
+      roadPaint..strokeWidth = 2.0,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _SellerReviewsScreen extends StatefulWidget {
+  final AppStrings s;
+  final String sellerName;
+  final double? rating;
+  final int reviewsCount;
+  final List<dynamic>? rawReviews;
+
+  const _SellerReviewsScreen({
+    required this.s,
+    required this.sellerName,
+    this.rating,
+    this.reviewsCount = 0,
+    this.rawReviews,
+  });
+
+  @override
+  State<_SellerReviewsScreen> createState() => _SellerReviewsScreenState();
+}
+
+class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
+  int _minStarsFilter = 0; // 0: All, 5: 5 stars, 4: 4+ stars
+  bool _highestFirst = false;
+
+  static const Color _ink = Color(0xFF050505);
+  static const Color _muted = Color(0xFF65676B);
+  static const Color _fbBlue = Color(0xFF0866FF);
+  static const Color _fbBlueSoft = Color(0xFFE7F3FF);
+  static const Color _starOrange = Color(0xFFE87A24);
+
+  List<Map<String, dynamic>> get _reviews {
+    final raw = (widget.rawReviews ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((r) {
+      if (_minStarsFilter == 0) return true;
+      final stars = int.tryParse((r['rating'] ?? 0).toString()) ?? 0;
+      return stars >= _minStarsFilter;
+    }).toList();
+    if (_highestFirst) {
+      raw.sort((a, b) {
+        final sa = int.tryParse((a['rating'] ?? 0).toString()) ?? 0;
+        final sb = int.tryParse((b['rating'] ?? 0).toString()) ?? 0;
+        return sb.compareTo(sa);
+      });
+    }
+    return raw;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.s;
+    final items = _reviews;
+    final double ratingValue = widget.rating ?? 0.0;
+    final int totalCount =
+        widget.reviewsCount > 0 ? widget.reviewsCount : items.length;
+
+    // Distribution counts (5 -> 1 stars) computed from real review items
+    final Map<int, int> counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+    for (final r in (widget.rawReviews ?? []).whereType<Map>()) {
+      final st = int.tryParse((r['rating'] ?? 0).toString()) ?? 0;
+      if (counts.containsKey(st)) counts[st] = counts[st]! + 1;
+    }
+    final int maxCount =
+        counts.values.fold<int>(1, (m, c) => c > m ? c : m);
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(
+            s.isAr
+                ? CupertinoIcons.chevron_right
+                : CupertinoIcons.chevron_left,
+            color: _ink,
+          ),
+        ),
+        centerTitle: true,
+        title: Text(
+          s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: _ink,
+          ),
+        ),
+      ),
+      body: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          Text(
+            s.tr('تقييم البائع', 'Note du vendeur', 'Seller rating'),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              ...List.generate(5, (i) {
+                final filled = i + 1 <= ratingValue.floor();
+                final half = !filled && (ratingValue - i) >= 0.4;
+                return Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 2),
+                  child: Icon(
+                    half
+                        ? Icons.star_half_rounded
+                        : (filled
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded),
+                    size: 20,
+                    color: _starOrange,
+                  ),
+                );
+              }),
+              const SizedBox(width: 8),
+              Text(
+                ratingValue > 0 ? ratingValue.toStringAsFixed(1) : '—',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _ink,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '($totalCount)',
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: _muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 5-to-1 Stars Horizontal Breakdown Bars
+          for (int star = 5; star >= 1; star--) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 58,
+                    child: Text(
+                      s.tr(
+                        '$star نجوم',
+                        '$star étoiles',
+                        star == 1 ? '1 star' : '$star stars',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        color: _ink,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (counts[star] ?? 0) / maxCount,
+                        minHeight: 7,
+                        backgroundColor: const Color(0xFFF0F2F5),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(_starOrange),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 24,
+                    child: Text(
+                      '${counts[star] ?? 0}',
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: _muted,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 22),
+          Text(
+            s.tr(
+              'تقييمات البائع ($totalCount)',
+              'Avis sur le vendeur ($totalCount)',
+              'Seller reviews ($totalCount)',
+            ),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Filters & Sort Soft Blue Pills (matching Screenshot 2)
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _minStarsFilter = _minStarsFilter == 0 ? 5 : 0;
+                  });
+                },
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: _fbBlueSoft,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tune_rounded, size: 17, color: _fbBlue),
+                      const SizedBox(width: 6),
+                      Text(
+                        _minStarsFilter == 5
+                            ? s.tr('5 نجوم فقط', '5 étoiles', '5 stars')
+                            : s.tr('تصفية', 'Filtres', 'Filters'),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _fbBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _highestFirst = !_highestFirst);
+                },
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: _fbBlueSoft,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.swap_vert_rounded,
+                        size: 17,
+                        color: _fbBlue,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _highestFirst
+                            ? s.tr('الأعلى تقييماً', 'Meilleurs', 'Highest')
+                            : s.tr('ترتيب', 'Trier', 'Sort'),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _fbBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+          if (items.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F8FA),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    CupertinoIcons.star_circle,
+                    size: 32,
+                    color: _muted,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    s.tr(
+                      'لا توجد تقييمات نصية منشورة لـ ${widget.sellerName} حالياً',
+                      'Aucun avis publié pour ${widget.sellerName} pour le moment',
+                      'No written reviews for ${widget.sellerName} yet',
+                    ),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: _muted,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            for (final rev in items) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE4E6EB),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            CupertinoIcons.person_fill,
+                            color: Color(0xFF9CA3AF),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (rev['author'] ?? rev['name'] ?? '')
+                                    .toString(),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: _ink,
+                                ),
+                              ),
+                              if ((rev['date'] ?? '').toString().isNotEmpty)
+                                Text(
+                                  rev['date'].toString(),
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: _muted,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: List.generate(5, (i) {
+                        final st =
+                            int.tryParse((rev['rating'] ?? 5).toString()) ?? 5;
+                        return Icon(
+                          i < st
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 16,
+                          color: _starOrange,
+                        );
+                      }),
+                    ),
+                    if ((rev['comment'] ?? '').toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        rev['comment'].toString(),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          color: _muted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+        ],
       ),
     );
   }
