@@ -10,6 +10,7 @@ import 'post_ad_screen.dart';
 import 'search_screen.dart';
 import 'stores_screen.dart';
 import 'widgets/accommodation_card.dart';
+import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
@@ -185,6 +186,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return sorted.take(6).toList();
   }
 
+  List<Map<String, dynamic>> get _feedAds {
+    final ranked = _state.rankAdsForUser(_ads);
+    if (ranked.isEmpty) return const [];
+    final trendingIds =
+        _trendingAds.map((e) => (e['id'] ?? '').toString()).toSet();
+    final fresh = ranked
+        .where((ad) => !trendingIds.contains((ad['id'] ?? '').toString()))
+        .toList();
+    return fresh.isNotEmpty ? fresh : ranked;
+  }
+
   String get _userName {
     final full = _state.currentUser?['name']?.toString().trim();
     if (full != null && full.isNotEmpty) {
@@ -224,6 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final s = _state.s;
     final isAr = s.isAr;
     final trending = _trendingAds;
+    final feedAds = _feedAds;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -251,12 +264,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: _primary,
                     backgroundColor: Colors.white,
                     onRefresh: _loadData,
-                    child: CustomScrollView(
-                      controller: _scrollController,
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      slivers: [
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 680;
+                        return CustomScrollView(
+                          controller: _scrollController,
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          slivers: [
                         // 1. Top Header Row (Greeting + Notification Bell)
                         SliverToBoxAdapter(
                           child: Padding(
@@ -361,6 +377,105 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: _buildTrendingSection(trending, isAr),
                           ),
 
+                        // 5. Explore-Style Listings Feed directly beneath Exclusive Deals
+                        if (feedAds.isNotEmpty) ...[
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      s.tr(
+                                        'أحدث الإعلانات',
+                                        'Dernières annonces',
+                                        'Latest listings',
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 18.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: _ink,
+                                        letterSpacing:
+                                            AppTypography.trackingForContext(
+                                          context,
+                                          -0.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  GestureDetector(
+                                    onTap: () => _openSearchScreen(null),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          s.tr('عرض الكل', 'Tout voir',
+                                              'See all'),
+                                          style: const TextStyle(
+                                            color: _primary,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Icon(
+                                          isAr
+                                              ? CupertinoIcons.chevron_left
+                                              : CupertinoIcons.chevron_right,
+                                          size: 13,
+                                          color: _primary,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (isWide)
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                              sliver: SliverGrid.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 400,
+                                  mainAxisExtent: 374,
+                                  mainAxisSpacing: 18,
+                                  crossAxisSpacing: 18,
+                                ),
+                                itemCount: feedAds.length,
+                                itemBuilder: (context, idx) {
+                                  final ad = feedAds[idx];
+                                  return RepaintBoundary(
+                                    key: ValueKey('home_wide_${ad['id']}'),
+                                    child: ExploreListingCard(ad: ad),
+                                  );
+                                },
+                              ),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                              sliver: SliverList.separated(
+                                itemCount: feedAds.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, idx) {
+                                  final ad = feedAds[idx];
+                                  return RepaintBoundary(
+                                    key: ValueKey('home_explore_${ad['id']}'),
+                                    child: ExploreListingCard(ad: ad),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+
                         // 5. Explore All Ads Button Bar (Gateway to Search/Annonces Screen)
                         SliverToBoxAdapter(
                           child: Padding(
@@ -439,6 +554,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: SizedBox(height: 110),
                         ),
                       ],
+                    );
+                      },
                     ),
                   ),
       ),
@@ -695,16 +812,21 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    isAr ? 'تصفح حسب الفئات' : 'Catégories',
-                    style: TextStyle(
-                      fontSize: 18.5,
-                      fontWeight: FontWeight.w900,
-                      color: _ink,
-                      letterSpacing:
-                          AppTypography.trackingForContext(context, -0.4),
+                  Expanded(
+                    child: Text(
+                      isAr ? 'تصفح حسب الفئات' : 'Catégories',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18.5,
+                        fontWeight: FontWeight.w900,
+                        color: _ink,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.4),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () => _openSearchScreen(null),
                     child: Row(
@@ -835,26 +957,33 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        CupertinoIcons.flame_fill,
-                        color: _primary,
-                        size: 19,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isAr ? 'عروض حصرية مميزة' : 'Offres exclusives',
-                        style: TextStyle(
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.w900,
-                          color: _ink,
-                          letterSpacing:
-                              AppTypography.trackingForContext(context, -0.4),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.flame_fill,
+                          color: _primary,
+                          size: 19,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            isAr ? 'عروض حصرية مميزة' : 'Offres exclusives',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 18.5,
+                              fontWeight: FontWeight.w900,
+                              color: _ink,
+                              letterSpacing: AppTypography.trackingForContext(
+                                  context, -0.4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
                     children: List.generate(trending.length, (i) {
                       final active = i == _activeTrendingPage;

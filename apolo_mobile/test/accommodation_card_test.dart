@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/home_screen.dart';
 import 'package:apolo_mobile/screens/widgets/accommodation_card.dart';
+import 'package:apolo_mobile/screens/widgets/explore_listing_card.dart';
 
 class _StubHomeHttpAdapter implements HttpClientAdapter {
   @override
@@ -196,6 +197,50 @@ void main() {
     final cardSize = tester.getSize(find.byType(AccommodationCard).first);
     expect(cardSize.width, closeTo(390 * 0.78, 0.5));
     expect(cardSize.width / cardSize.height, closeTo(0.84, 0.01));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'HomeScreen renders ExploreListingCard feed directly below Exclusive Deals carousel',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final state = AppState();
+    final previousAdapter = state.api.dio.httpClientAdapter;
+    state.api.dio.httpClientAdapter = _StubHomeHttpAdapter();
+    addTearDown(() => state.api.dio.httpClientAdapter = previousAdapter);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: HomeScreen(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 800));
+
+    final exclusivePos = tester.getTopLeft(find.text('عروض حصرية مميزة'));
+
+    // Scroll down below the Exclusive Deals carousel to reveal the Explore-style ad feed
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -450));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('أحدث الإعلانات'), findsOneWidget);
+    expect(find.byType(ExploreListingCard), findsWidgets);
+
+    final feedTitlePos = tester.getTopLeft(find.text('أحدث الإعلانات'));
+    final firstExploreCard = find.byType(ExploreListingCard).first;
+    final exploreCardPos = tester.getTopLeft(firstExploreCard);
+    final exploreCardSize = tester.getSize(firstExploreCard);
+
+    expect(feedTitlePos.dy, greaterThan(exclusivePos.dy - 450));
+    expect(exploreCardPos.dy, greaterThan(feedTitlePos.dy));
+    expect(exploreCardSize.width, inInclusiveRange(342, 355));
     expect(tester.takeException(), isNull);
   });
 }
