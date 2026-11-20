@@ -157,51 +157,40 @@ class _MainShellState extends State<MainShell> {
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOut,
                   opacity: showBottomBar ? 1.0 : 0.0,
-                  child: Container(
-                    height: 76,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(40),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _ink.withValues(alpha: 0.08),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(40),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFFF2F3F7).withValues(alpha: 0.94),
-                            borderRadius: BorderRadius.circular(40),
-                            border: Border.all(
-                              color: const Color(0xFFE6E8EE),
-                              width: 1,
+                  child: SizedBox(
+                    height: 62,
+                    child: Row(
+                      textDirection: TextDirection.ltr,
+                      children: [
+                        // Left Expanded Translucent Glass Capsule Pill (4 main tabs)
+                        Expanded(
+                          child: Container(
+                            height: 62,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _ink.withValues(alpha: 0.10),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
-                          ),
-                          child: Row(
-                            textDirection: TextDirection.ltr,
-                            children: [
-                              // Left Expanded White Capsule Pill (4 main tabs)
-                              Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: BackdropFilter(
+                                filter:
+                                    ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                                 child: Container(
-                                  height: 60,
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(5),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Colors.white.withValues(alpha: 0.76),
                                     borderRadius: BorderRadius.circular(999),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _ink.withValues(alpha: 0.06),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
+                                    border: Border.all(
+                                      color: const Color(0xFFE7EAF0)
+                                          .withValues(alpha: 0.85),
+                                      width: 1,
+                                    ),
                                   ),
                                   child: LayoutBuilder(
                                     builder: (context, constraints) {
@@ -224,7 +213,8 @@ class _MainShellState extends State<MainShell> {
                                                   milliseconds: 180),
                                               decoration: BoxDecoration(
                                                 color: activePillSlot >= 0
-                                                    ? const Color(0xFFEEEEF3)
+                                                    ? const Color(0xFFE9EBF0)
+                                                        .withValues(alpha: 0.85)
                                                     : Colors.transparent,
                                                 borderRadius:
                                                     BorderRadius.circular(999),
@@ -297,38 +287,55 @@ class _MainShellState extends State<MainShell> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 10),
-                              // Right Detached Circular "+" Button (Post Ad)
-                              PressableScale(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  if (_currentIndex == 1) {
-                                    _state.notifyTabReselected();
-                                  } else {
-                                    setState(() {
-                                      _searchChromeVisible = true;
-                                      _currentIndex = 1;
-                                    });
-                                  }
-                                },
-                                child: Semantics(
-                                  button: true,
-                                  selected: isPostAdSelected,
-                                  label: s.tr('نشر إعلان', 'Publier'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Right Detached Circular Glass "+" Button (Post Ad)
+                        PressableScale(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            if (_currentIndex == 1) {
+                              _state.notifyTabReselected();
+                            } else {
+                              setState(() {
+                                _searchChromeVisible = true;
+                                _currentIndex = 1;
+                              });
+                            }
+                          },
+                          child: Semantics(
+                            button: true,
+                            selected: isPostAdSelected,
+                            label: s.tr('نشر إعلان', 'Publier'),
+                            child: Container(
+                              width: 62,
+                              height: 62,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _ink.withValues(alpha: 0.10),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: BackdropFilter(
+                                  filter:
+                                      ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                                   child: Container(
-                                    width: 60,
-                                    height: 60,
-                                    padding: const EdgeInsets.all(4),
+                                    padding: const EdgeInsets.all(5),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.76),
                                       shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: _ink.withValues(alpha: 0.06),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 3),
-                                        ),
-                                      ],
+                                      border: Border.all(
+                                        color: const Color(0xFFE7EAF0)
+                                            .withValues(alpha: 0.85),
+                                        width: 1,
+                                      ),
                                     ),
                                     child: AnimatedContainer(
                                       duration:
@@ -336,7 +343,8 @@ class _MainShellState extends State<MainShell> {
                                       curve: Curves.easeOutCubic,
                                       decoration: BoxDecoration(
                                         color: isPostAdSelected
-                                            ? const Color(0xFFEEEEF3)
+                                            ? const Color(0xFFE9EBF0)
+                                                .withValues(alpha: 0.85)
                                             : Colors.transparent,
                                         shape: BoxShape.circle,
                                       ),
@@ -350,10 +358,10 @@ class _MainShellState extends State<MainShell> {
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
