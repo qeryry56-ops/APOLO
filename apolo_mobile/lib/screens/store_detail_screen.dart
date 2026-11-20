@@ -215,15 +215,15 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     final s = _state.s;
     if (_loading) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFF2F3F7),
         body: Center(child: CircularProgressIndicator(color: _red)),
       );
     }
     final store = _store;
     if (store == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(),
+        backgroundColor: const Color(0xFFF2F3F7),
+        appBar: AppBar(backgroundColor: const Color(0xFFF2F3F7), elevation: 0),
         body: Center(
             child: Text(s.tr('المتجر غير موجود', 'Boutique introuvable'))),
       );
@@ -231,7 +231,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     final logo = store['logo_url'] ?? store['logo'];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F3F7),
       floatingActionButton: _ads.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _openOrderSheet,
@@ -253,18 +253,17 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             // Top bar
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 child: Row(
                   children: [
                     PressableScale(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: _pillBg,
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: _border),
                         ),
                         child: const Icon(Icons.arrow_back_ios_new_rounded,
                             size: 17, color: _ink),
@@ -277,11 +276,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
                           color: _ink,
                           letterSpacing:
-                              AppTypography.trackingForContext(context, -0.5),
+                              AppTypography.trackingForContext(context, -0.4),
                         ),
                       ),
                     ),
@@ -313,20 +312,12 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             // Store Profile Showcase Card
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: _border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _ink.withValues(alpha: 0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: Column(
                     children: [

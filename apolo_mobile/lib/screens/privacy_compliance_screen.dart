@@ -404,74 +404,103 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
+    final isAr = s.isAr;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: _ink,
-        title: Text(
-          s.tr(
-            'الخصوصية وحماية البيانات',
-            'Confidentialité & Protection des données',
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2F3F7),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFF2F3F7),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          toolbarHeight: 48,
+          centerTitle: true,
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: Icon(
+              isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left,
+              color: const Color(0xFF0A0A0A),
+              size: 22,
+            ),
           ),
-          style: const TextStyle(
-            fontSize: 17.5,
-            fontWeight: FontWeight.w800,
-            color: _ink,
+          title: Text(
+            s.tr(
+              'الخصوصية وحماية البيانات',
+              'Confidentialité & Protection des données',
+              'Privacy & Data Protection',
+            ),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0A0A0A),
+            ),
           ),
         ),
-      ),
-      body: Column(
-        children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-            child: Row(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
               children: [
-                _buildTabPill(
-                  0,
-                  s.tr('سياسة الخصوصية', 'Confidentialité'),
-                  CupertinoIcons.shield_lefthalf_fill,
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildTabPill(
+                        0,
+                        s.tr('سياسة الخصوصية', 'Confidentialité'),
+                        CupertinoIcons.shield_lefthalf_fill,
+                      ),
+                      const SizedBox(width: 6),
+                      _buildTabPill(
+                        1,
+                        s.tr('حذف الحساب والبيانات', 'Suppression du compte'),
+                        CupertinoIcons.trash_fill,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _buildTabPill(
-                  1,
-                  s.tr('حذف الحساب والبيانات', 'Suppression du compte'),
-                  CupertinoIcons.trash_fill,
+                Expanded(
+                  child: _selectedTab == 0
+                      ? _buildPrivacyPolicyView(s)
+                      : _buildDeleteAccountView(s),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: _selectedTab == 0
-                ? _buildPrivacyPolicyView(s)
-                : _buildDeleteAccountView(s),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildTabPill(int idx, String label, IconData icon) {
     final active = _selectedTab == idx;
+    final activeColor = idx == 1 ? _red : const Color(0xFF0A0A0A);
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = idx),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 10),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _selectedTab = idx);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
           decoration: BoxDecoration(
-            color: active ? _red : const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(14),
+            color: active ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 16,
-                color: active ? Colors.white : _ink,
+                size: 15,
+                color: active ? Colors.white : const Color(0xFF6B7280),
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -481,8 +510,8 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: active ? Colors.white : _ink,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    color: active ? Colors.white : const Color(0xFF0A0A0A),
                   ),
                 ),
               ),

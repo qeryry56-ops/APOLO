@@ -28,7 +28,6 @@ class _StoresScreenState extends State<StoresScreen> {
   static const Color _muted = Color(0xFF8A94A6);
   static const Color _red = Color(0xFFE31B23);
   static const Color _badgeBg = Color(0xFFFEECEE);
-  static const Color _pillBg = Color(0xFFF1F3F7);
   static const Color _border = Color(0xFFE7EAF0);
 
   @override
@@ -124,30 +123,34 @@ class _StoresScreenState extends State<StoresScreen> {
     final s = _state.s;
     final canPop = Navigator.canPop(context);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F3F7),
       body: SafeArea(
         bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Oversized Header
+            // Clean Centered-Style Top Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: Row(
                 children: [
                   if (canPop) ...[
                     PressableScale(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: _pillBg,
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: _border),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            size: 17, color: _ink),
+                        child: Icon(
+                          s.isAr
+                              ? CupertinoIcons.chevron_right
+                              : CupertinoIcons.chevron_left,
+                          size: 20,
+                          color: _ink,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -156,14 +159,14 @@ class _StoresScreenState extends State<StoresScreen> {
                     child: Text(
                       s.stores,
                       style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
                         color: _ink,
                         letterSpacing:
-                            AppTypography.trackingForContext(context, -0.6),
+                            AppTypography.trackingForContext(context, -0.4),
                         height: AppTypography.lineHeightForContext(
                           context,
-                          1.1,
+                          1.15,
                           arabicMin: 1.32,
                         ),
                       ),
@@ -171,7 +174,7 @@ class _StoresScreenState extends State<StoresScreen> {
                   ),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _badgeBg,
                       borderRadius: BorderRadius.circular(999),
@@ -199,15 +202,14 @@ class _StoresScreenState extends State<StoresScreen> {
               ),
             ),
 
-            // Pill Search Bar
+            // Clean White Pill Search Bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Container(
-                height: 50,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: _pillBg,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: _border),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(

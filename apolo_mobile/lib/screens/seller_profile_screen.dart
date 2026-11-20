@@ -52,17 +52,17 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _sellerAds = [];
 
-  // Apple Design Palette 2026
-  static const Color _bg = Color(0xFFFFFFFF);
-  static const Color _surface = Color(0xFFF8FAFC);
+  // Unified 2026 Grouped Card Palette
+  static const Color _bg = Color(0xFFF2F3F7);
+  static const Color _surface = Color(0xFFFFFFFF);
   static const Color _surfaceElevated = Color(0xFFFFFFFF);
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _subtle = Color(0xFF94A3B8);
-  static const Color _border = Color(0xFFE2E8F0);
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _subtle = Color(0xFF8E8E93);
+  static const Color _border = Color(0xFFE7EAF0);
   static const Color _red = Color(0xFFE31B23);
   static const Color _emerald = Color(0xFF10B981);
-  static const Color _blueVerified = Color(0xFF0284C7);
+  static const Color _blueVerified = Color(0xFF0866FF);
   static const Color _starGold = Color(0xFFF59E0B);
 
   @override

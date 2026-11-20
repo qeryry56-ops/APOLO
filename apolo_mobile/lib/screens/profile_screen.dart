@@ -138,36 +138,128 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isAr = s.isAr;
     if (!_state.isLoggedIn) {
       return Scaffold(
-          backgroundColor: Colors.white,
-          appBar: AppBar(title: Text(s.profile), actions: [
+        backgroundColor: const Color(0xFFF2F3F7),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFF2F3F7),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          toolbarHeight: 48,
+          centerTitle: true,
+          title: Text(
+            s.profile,
+            style: const TextStyle(
+              color: Color(0xFF0A0A0A),
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          actions: [
             IconButton(
-                key: const Key('guest-settings'),
-                tooltip: s.tr('الإعدادات والدعم', 'Paramètres et assistance'),
-                onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen())),
-                icon: const Icon(Icons.settings_outlined)),
-          ]),
-          body: Center(
-              child: ElevatedButton(
-            key: const Key('profile-sign-in'),
-            onPressed: () async {
-              await Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AuthScreen()));
-              if (mounted) {
-                _profileIdentity = _identity;
-                await _loadProfileData();
-              }
-            },
-            child: Text(s.tr('سجّل الدخول لعرض حسابك',
-                'Connectez-vous pour voir votre profil')),
-          )));
+              key: const Key('guest-settings'),
+              tooltip: s.tr('الإعدادات والدعم', 'Paramètres et assistance'),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen())),
+              icon: const Icon(CupertinoIcons.gear, color: Color(0xFF0A0A0A)),
+            ),
+          ],
+        ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF2F3F7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.person_fill,
+                        size: 34,
+                        color: Color(0xFF0A0A0A),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      s.tr('مرحباً بك في Apolo', 'Bienvenue sur Apolo',
+                          'Welcome to Apolo'),
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0A0A0A),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      s.tr(
+                        'سجّل الدخول لإدارة إعلاناتك، المفضلة، والمحادثات الفورية مع المشترين.',
+                        'Connectez-vous pour gérer vos annonces, vos favoris et vos messages.',
+                        'Sign in to manage your listings, saved items, and instant chats.',
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        color: Color(0xFF6B7280),
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        key: const Key('profile-sign-in'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: () async {
+                          await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const AuthScreen()));
+                          if (mounted) {
+                            _profileIdentity = _identity;
+                            await _loadProfileData();
+                          }
+                        },
+                        child: Text(
+                          s.tr('سجّل الدخول لعرض حسابك',
+                              'Connectez-vous pour voir votre profil'),
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
     }
     final name = _displayName(isAr);
     final handle = _displayHandle;
     final bio = _displayBio(isAr);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F3F7),
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
@@ -179,10 +271,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             slivers: [
-              // 1. Balanced Apple Top Bar: [+] on start, [profile] in center, [Settings] on end
+              // 1. Clean Top Bar: [+] on start, [@handle] in center, [Reels + Settings] on end
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -198,7 +290,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           height: 40,
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
-                            color: _surface,
+                            color: Colors.white,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -217,8 +309,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w700,
                             color: _ink,
                             letterSpacing:
                                 AppTypography.trackingForContext(context, -0.3),
@@ -248,8 +340,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(0xFFE31B23)
-                                    .withValues(alpha: 0.35),
-                                blurRadius: 10,
+                                    .withValues(alpha: 0.28),
+                                blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
                             ],
@@ -281,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           height: 40,
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
-                            color: _surface,
+                            color: Colors.white,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -296,160 +388,148 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
-              // 2. Generous Whitespace Identity Block with Edit Profile Icon
+              // 2. White Grouped Identity + Metrics Card
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   child: Column(
                     children: [
-                      // Avatar + Edit Photo/Profile Badge
-                      GestureDetector(
-                        onTap: () => _openEditProfileSheet(isAr),
-                        child: Stack(
-                          clipBehavior: Clip.none,
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
                           children: [
-                            Container(
-                              width: 88,
-                              height: 88,
-                              decoration: BoxDecoration(
-                                color: _surface,
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: _hairline, width: 1.5),
+                            // Avatar + Edit Photo/Profile Badge
+                            GestureDetector(
+                              onTap: () => _openEditProfileSheet(isAr),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 88,
+                                    height: 88,
+                                    decoration: BoxDecoration(
+                                      color: _surface,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: _hairline, width: 1.5),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    alignment: Alignment.center,
+                                    child: _buildAvatarContent(name),
+                                  ),
+                                  PositionedDirectional(
+                                    bottom: 0,
+                                    end: -2,
+                                    child: Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: _ink,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: Colors.white, width: 2.5),
+                                      ),
+                                      child: const Icon(
+                                        CupertinoIcons.pencil,
+                                        color: Colors.white,
+                                        size: 13.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              clipBehavior: Clip.antiAlias,
-                              alignment: Alignment.center,
-                              child: _buildAvatarContent(name),
                             ),
-                            PositionedDirectional(
-                              bottom: 0,
-                              end: -2,
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: _ink,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.white, width: 2.5),
-                                ),
-                                child: const Icon(
-                                  CupertinoIcons.pencil,
-                                  color: Colors.white,
-                                  size: 13.5,
+                            const SizedBox(height: 14),
+
+                            // Name + Edit tap
+                            GestureDetector(
+                              onTap: () => _openEditProfileSheet(isAr),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.w800,
+                                        color: _ink,
+                                        letterSpacing:
+                                            AppTypography.trackingForContext(
+                                                context, -0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (bio.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 290),
+                                child: Text(
+                                  bio,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: _muted,
+                                    height: 1.4,
+                                  ),
                                 ),
                               ),
+                            ],
+                            const SizedBox(height: 20),
+                            const Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: Color(0xFFF1F2F6)),
+                            const SizedBox(height: 16),
+
+                            // 3 Airy Tabular Metrics
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildMinimalStat(
+                                  value: '${_myAds.length}',
+                                  label: isAr ? 'إعلاناتي' : 'Annonces',
+                                  onTap: () => setState(() => _activeTab = 0),
+                                ),
+                                Container(
+                                    width: 1, height: 24, color: _hairline),
+                                _buildMinimalStat(
+                                  value: _baseViews?.toString() ?? '—',
+                                  label: isAr ? 'مشاهدة' : 'Vues',
+                                  onTap: () => setState(() => _activeTab = 1),
+                                ),
+                                Container(
+                                    width: 1, height: 24, color: _hairline),
+                                _buildMinimalStat(
+                                  value: '—',
+                                  label: isAr ? 'النمو' : 'Croissance',
+                                  valueColor: _muted,
+                                  onTap: () => setState(() => _activeTab = 1),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
 
-                      // Name + Verified Check + Subtle Edit Icon
-                      GestureDetector(
-                        onTap: () => _openEditProfileSheet(isAr),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: _ink,
-                                  letterSpacing:
-                                      AppTypography.trackingForContext(
-                                          context, -0.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 12),
 
-                      // Clean 1-line Bio
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 290),
-                        child: Text(
-                          bio,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: _muted,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-
-                      if (!_state.isLoggedIn) ...[
-                        const SizedBox(height: 12),
-                        PressableScale(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const AuthScreen()),
-                          ).then((_) => _loadProfileData()),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _surface,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              isAr
-                                  ? 'تسجيل الدخول أو إنشاء حساب'
-                                  : 'Se connecter',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: _ink,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 26),
-
-                      // 3 Airy Tabular Metrics with generous negative space
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildMinimalStat(
-                            value: '${_myAds.length}',
-                            label: isAr ? 'إعلاناتي' : 'Annonces',
-                            onTap: () => setState(() => _activeTab = 0),
-                          ),
-                          Container(width: 1, height: 24, color: _hairline),
-                          _buildMinimalStat(
-                            value: _baseViews?.toString() ?? '—',
-                            label: isAr ? 'مشاهدة' : 'Vues',
-                            onTap: () => setState(() => _activeTab = 1),
-                          ),
-                          Container(width: 1, height: 24, color: _hairline),
-                          _buildMinimalStat(
-                            value: '—',
-                            label: isAr ? 'النمو' : 'Croissance',
-                            valueColor: _muted,
-                            onTap: () => setState(() => _activeTab = 1),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Apolo Reels 2026 Visual Discovery Banner
+                      // Apolo Reels Visual Discovery Banner
                       PressableScale(
                         onTap: () => Navigator.push(
                           context,
@@ -468,14 +548,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _ink.withValues(alpha: 0.14),
-                                blurRadius: 14,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
                             children: [
@@ -507,11 +580,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       children: [
                                         Text(
                                           isAr
-                                              ? 'ريلز وسكرول الإعلانات 🎬'
-                                              : 'Apolo Reels 2026 🎬',
+                                              ? 'ريلز وسكرول الإعلانات'
+                                              : 'Apolo Reels 2026',
                                           style: const TextStyle(
                                             color: Colors.white,
-                                            fontWeight: FontWeight.w900,
+                                            fontWeight: FontWeight.w700,
                                             fontSize: 14,
                                           ),
                                         ),
@@ -531,7 +604,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 9,
-                                              fontWeight: FontWeight.w900,
+                                              fontWeight: FontWeight.w800,
                                             ),
                                           ),
                                         ),
@@ -564,14 +637,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
-                      // Minimal Apple Segmented Control
+                      // Clean White Segmented Control
                       Container(
                         height: 44,
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: _surface,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
