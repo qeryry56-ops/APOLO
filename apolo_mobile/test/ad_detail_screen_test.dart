@@ -290,8 +290,11 @@ void main() {
     expect(find.text('Message'), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Save'), findsOneWidget);
-    expect(find.text('Description'), findsOneWidget);
-    expect(find.text('iPhone 14 Pro for parts iCloud.'), findsOneWidget);
+    expect(find.text('Description', skipOffstage: false), findsOneWidget);
+    expect(
+      find.text('iPhone 14 Pro for parts iCloud.', skipOffstage: false),
+      findsOneWidget,
+    );
 
     // Scroll down to inspect Seller, Location map, Related searches & Hide listing
     await tester.drag(find.byType(ListView), const Offset(0, -650));

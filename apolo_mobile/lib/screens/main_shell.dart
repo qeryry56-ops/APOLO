@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/state/app_state.dart';
-import '../theme/app_typography.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'post_ad_screen.dart';
@@ -20,6 +20,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   final AppState _state = AppState();
   int _currentIndex = 0;
+  int _lastPillSlot = 0;
   int? _searchInitialCategory;
   bool _searchChromeVisible = true;
 
@@ -62,6 +63,7 @@ class _MainShellState extends State<MainShell> {
             _searchInitialCategory = catId;
             _searchChromeVisible = true;
             _currentIndex = 2;
+            _lastPillSlot = 1;
           });
         },
         onOpenPostAd: () {
@@ -75,6 +77,7 @@ class _MainShellState extends State<MainShell> {
         onSuccess: () => setState(() {
           _searchChromeVisible = true;
           _currentIndex = 0;
+          _lastPillSlot = 0;
         }),
       ),
       SearchScreen(
@@ -86,40 +89,44 @@ class _MainShellState extends State<MainShell> {
         onExploreAds: () => setState(() {
           _searchChromeVisible = true;
           _currentIndex = 2;
+          _lastPillSlot = 1;
         }),
       ),
       const ProfileScreen(),
     ];
 
-    final items = [
+    final pillItems = [
       _TabSpec(
+        pageIndex: 0,
         icon: CupertinoIcons.house,
         activeIcon: CupertinoIcons.house_fill,
         label: s.tr('الرئيسية', 'Accueil'),
       ),
       _TabSpec(
-        icon: CupertinoIcons.plus_circle,
-        activeIcon: CupertinoIcons.plus_circle_fill,
-        label: s.tr('نشر إعلان', 'Publier'),
-      ),
-      _TabSpec(
-        icon: CupertinoIcons.search,
-        activeIcon: CupertinoIcons.search,
+        pageIndex: 2,
+        icon: CupertinoIcons.compass,
+        activeIcon: CupertinoIcons.compass_fill,
         label: s.tr('إعلانات', 'Annonces'),
       ),
       _TabSpec(
+        pageIndex: 3,
         icon: CupertinoIcons.chat_bubble_2,
         activeIcon: CupertinoIcons.chat_bubble_2_fill,
         label: s.tr('رسائل', 'Messages'),
       ),
       _TabSpec(
+        pageIndex: 4,
         icon: CupertinoIcons.person,
         activeIcon: CupertinoIcons.person_fill,
         label: s.tr('حسابي', 'Profil'),
       ),
     ];
 
+    final activePillSlot =
+        pillItems.indexWhere((e) => e.pageIndex == _currentIndex);
+    final displaySlot = activePillSlot >= 0 ? activePillSlot : _lastPillSlot;
     final showBottomBar = _currentIndex != 2 || _searchChromeVisible;
+    final isPostAdSelected = _currentIndex == 1;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -133,7 +140,7 @@ class _MainShellState extends State<MainShell> {
                 TickerMode(enabled: _currentIndex == i, child: pages[i])
             ],
           ),
-          // Floating iOS 26 Liquid-Glass Pill Tab Bar (auto-hides during Explore scroll)
+          // Floating iOS Split Pill Dock + Detached Plus Button (auto-hides during Explore scroll)
           Positioned(
             left: 16,
             right: 16,
@@ -151,107 +158,199 @@ class _MainShellState extends State<MainShell> {
                   curve: Curves.easeOut,
                   opacity: showBottomBar ? 1.0 : 0.0,
                   child: Container(
-                    height: 68,
+                    height: 76,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(36),
+                      borderRadius: BorderRadius.circular(40),
                       boxShadow: [
                         BoxShadow(
-                          color: _ink.withValues(alpha: 0.10),
+                          color: _ink.withValues(alpha: 0.08),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(36),
+                      borderRadius: BorderRadius.circular(40),
                       child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            borderRadius: BorderRadius.circular(36),
+                            color:
+                                const Color(0xFFF2F3F7).withValues(alpha: 0.94),
+                            borderRadius: BorderRadius.circular(40),
                             border: Border.all(
-                              color: const Color(0xFFE7EAF0),
+                              color: const Color(0xFFE6E8EE),
                               width: 1,
                             ),
                           ),
                           child: Row(
-                            children: List.generate(items.length, (idx) {
-                              final item = items[idx];
-                              final selected = _currentIndex == idx;
-                              return Expanded(
-                                child: PressableScale(
-                                  onTap: () {
-                                    if (_currentIndex == idx) {
-                                      _state.notifyTabReselected();
-                                    } else {
-                                      setState(() {
-                                        _searchChromeVisible = true;
-                                        _currentIndex = idx;
-                                      });
-                                    }
-                                  },
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      minWidth: 44,
-                                      minHeight: 44,
-                                    ),
-                                    child: Semantics(
-                                      button: true,
-                                      selected: selected,
-                                      label: item.label,
-                                      child: AnimatedContainer(
-                                        duration:
-                                            const Duration(milliseconds: 200),
-                                        curve: Curves.easeOutCubic,
-                                        decoration: BoxDecoration(
-                                          color: selected
-                                              ? const Color(0xFFFEECEE)
-                                              : Colors.transparent,
-                                          borderRadius:
-                                              BorderRadius.circular(30),
-                                        ),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              selected
-                                                  ? item.activeIcon
-                                                  : item.icon,
-                                              size: 24,
-                                              color: selected ? _blue : _ink,
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              item.label,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: selected
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w600,
-                                                color: selected ? _blue : _ink,
-                                                letterSpacing: AppTypography
-                                                    .trackingForContext(
-                                                  context,
-                                                  -0.1,
-                                                ),
+                            textDirection: TextDirection.ltr,
+                            children: [
+                              // Left Expanded White Capsule Pill (4 main tabs)
+                              Expanded(
+                                child: Container(
+                                  height: 60,
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(999),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _ink.withValues(alpha: 0.06),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final slotWidth = constraints.maxWidth /
+                                          pillItems.length;
+                                      final slotHeight = constraints.maxHeight;
+                                      return Stack(
+                                        children: [
+                                          AnimatedPositioned(
+                                            duration: const Duration(
+                                                milliseconds: 320),
+                                            curve: const Cubic(
+                                                0.22, 1.0, 0.36, 1.0),
+                                            left: slotWidth * displaySlot,
+                                            top: 0,
+                                            width: slotWidth,
+                                            height: slotHeight,
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 180),
+                                              decoration: BoxDecoration(
+                                                color: activePillSlot >= 0
+                                                    ? const Color(0xFFEEEEF3)
+                                                    : Colors.transparent,
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
                                               ),
                                             ),
-                                          ],
+                                          ),
+                                          Row(
+                                            textDirection: TextDirection.ltr,
+                                            children: List.generate(
+                                              pillItems.length,
+                                              (idx) {
+                                                final item = pillItems[idx];
+                                                final selected =
+                                                    _currentIndex ==
+                                                        item.pageIndex;
+                                                return Expanded(
+                                                  child: PressableScale(
+                                                    onTap: () {
+                                                      HapticFeedback
+                                                          .selectionClick();
+                                                      if (_currentIndex ==
+                                                          item.pageIndex) {
+                                                        _state
+                                                            .notifyTabReselected();
+                                                      } else {
+                                                        setState(() {
+                                                          _searchChromeVisible =
+                                                              true;
+                                                          _currentIndex =
+                                                              item.pageIndex;
+                                                          _lastPillSlot = idx;
+                                                        });
+                                                      }
+                                                    },
+                                                    child: ConstrainedBox(
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                        minWidth: 44,
+                                                        minHeight: 44,
+                                                      ),
+                                                      child: Semantics(
+                                                        button: true,
+                                                        selected: selected,
+                                                        label: item.label,
+                                                        child: SizedBox(
+                                                          height: slotHeight,
+                                                          child: Center(
+                                                            child: Icon(
+                                                              selected
+                                                                  ? item
+                                                                      .activeIcon
+                                                                  : item.icon,
+                                                              size: 24,
+                                                              color: selected
+                                                                  ? _blue
+                                                                  : _ink,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Right Detached Circular "+" Button (Post Ad)
+                              PressableScale(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  if (_currentIndex == 1) {
+                                    _state.notifyTabReselected();
+                                  } else {
+                                    setState(() {
+                                      _searchChromeVisible = true;
+                                      _currentIndex = 1;
+                                    });
+                                  }
+                                },
+                                child: Semantics(
+                                  button: true,
+                                  selected: isPostAdSelected,
+                                  label: s.tr('نشر إعلان', 'Publier'),
+                                  child: Container(
+                                    width: 60,
+                                    height: 60,
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _ink.withValues(alpha: 0.06),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 3),
                                         ),
+                                      ],
+                                    ),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 220),
+                                      curve: Curves.easeOutCubic,
+                                      decoration: BoxDecoration(
+                                        color: isPostAdSelected
+                                            ? const Color(0xFFEEEEF3)
+                                            : Colors.transparent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        CupertinoIcons.add,
+                                        size: 26,
+                                        color: isPostAdSelected ? _blue : _ink,
                                       ),
                                     ),
                                   ),
                                 ),
-                              );
-                            }),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -268,11 +367,13 @@ class _MainShellState extends State<MainShell> {
 }
 
 class _TabSpec {
+  final int pageIndex;
   final IconData icon;
   final IconData activeIcon;
   final String label;
 
   const _TabSpec({
+    required this.pageIndex,
     required this.icon,
     required this.activeIcon,
     required this.label,

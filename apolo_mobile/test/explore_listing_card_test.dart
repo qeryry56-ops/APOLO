@@ -402,7 +402,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
 
     // Switch to Explore Ads tab
-    await tester.tap(find.text(state.s.tr('إعلانات', 'Annonces')));
+    await tester.tap(find.bySemanticsLabel(state.s.tr('إعلانات', 'Annonces')));
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pump(const Duration(milliseconds: 800));
 
