@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../location/marketplace_location.dart';
 import '../network/api_client.dart';
 import '../config/app_config.dart';
 
@@ -30,6 +32,23 @@ class AppState extends ChangeNotifier {
   int? preferredCityId;
   String accountType = 'individual'; // 'individual' | 'pro'
 
+  // Facebook Marketplace Geographic Zone Strategy
+  double? userLat;
+  double? userLng;
+  String? zoneCityNameAr;
+  String? zoneCityNameFr;
+  double zoneRadiusKm = MarketplaceLocation.defaultZoneRadiusKm;
+  bool zoneFilterEnabled = false;
+  bool _zoneDetecting = false;
+  bool _zoneAutoDetected = false;
+
+  bool get isDetectingZone => _zoneDetecting;
+  bool get hasActiveZone =>
+      zoneFilterEnabled &&
+      userLat != null &&
+      userLng != null &&
+      zoneRadiusKm > 0;
+
   Locale get locale => _locale;
   AppStrings get s => AppStrings(_locale.languageCode);
   bool get isLoggedIn => currentUser != null && api.isAuthenticated;
@@ -52,6 +71,8 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshRemote() async {
     await Future.wait([fetchTaxonomy(), if (api.isAuthenticated) fetchMe()]);
+    syncZoneFromPreferredCity();
+    unawaited(detectUserZoneAutomatically(tryGps: true, silent: true));
   }
 
   int _sessionRevision = 0;
@@ -61,6 +82,13 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       preferredCityId = prefs.getInt('apolo_preferred_city_id');
       accountType = prefs.getString('apolo_account_type') ?? 'individual';
+      userLat = prefs.getDouble('apolo_zone_lat');
+      userLng = prefs.getDouble('apolo_zone_lng');
+      zoneCityNameAr = prefs.getString('apolo_zone_city_ar');
+      zoneCityNameFr = prefs.getString('apolo_zone_city_fr');
+      zoneRadiusKm = prefs.getDouble('apolo_zone_radius_km') ??
+          MarketplaceLocation.defaultZoneRadiusKm;
+      zoneFilterEnabled = prefs.getBool('apolo_zone_enabled') ?? false;
       final rawWeights = prefs.getString('apolo_interest_weights');
       if (rawWeights != null && rawWeights.isNotEmpty) {
         final decoded = jsonDecode(rawWeights);
@@ -85,11 +113,167 @@ class AppState extends ChangeNotifier {
         await prefs.setInt('apolo_preferred_city_id', preferredCityId!);
       }
       await prefs.setString('apolo_account_type', accountType);
+      if (userLat != null && userLng != null) {
+        await prefs.setDouble('apolo_zone_lat', userLat!);
+        await prefs.setDouble('apolo_zone_lng', userLng!);
+      }
+      if (zoneCityNameAr != null) {
+        await prefs.setString('apolo_zone_city_ar', zoneCityNameAr!);
+      }
+      if (zoneCityNameFr != null) {
+        await prefs.setString('apolo_zone_city_fr', zoneCityNameFr!);
+      }
+      await prefs.setDouble('apolo_zone_radius_km', zoneRadiusKm);
+      await prefs.setBool('apolo_zone_enabled', zoneFilterEnabled);
       final encoded = jsonEncode(
         categoryInterestWeights.map((k, v) => MapEntry(k.toString(), v)),
       );
       await prefs.setString('apolo_interest_weights', encoded);
     } catch (_) {}
+  }
+
+  String activeZoneCityLabel(AppStrings s) {
+    final stored = s.isAr ? zoneCityNameAr : zoneCityNameFr;
+    if (stored != null && stored.trim().isNotEmpty) return stored.trim();
+    if (preferredCityId != null) {
+      final taxCity =
+          MarketplaceLocation.resolveTaxonomyCity(preferredCityId, cities);
+      if (taxCity != null) return taxCity.labelForLang(s.lang);
+    }
+    return s.allCities;
+  }
+
+  String activeZoneBadgeLabel(AppStrings s) {
+    if (!hasActiveZone) return s.allCities;
+    final city = activeZoneCityLabel(s);
+    final unit = s.tr('كم', 'km', 'km');
+    return '$city · ${zoneRadiusKm.round()} $unit';
+  }
+
+  Future<void> setUserZone({
+    required double lat,
+    required double lng,
+    required String nameAr,
+    required String nameFr,
+    int? cityId,
+    double radiusKm = MarketplaceLocation.defaultZoneRadiusKm,
+    bool enabled = true,
+  }) async {
+    userLat = lat;
+    userLng = lng;
+    zoneCityNameAr = nameAr;
+    zoneCityNameFr = nameFr;
+    zoneRadiusKm = radiusKm;
+    zoneFilterEnabled = enabled && radiusKm > 0;
+    _zoneAutoDetected = true;
+    if (cityId != null) {
+      preferredCityId = cityId;
+    } else {
+      final match = MarketplaceLocation.matchCityByName('$nameFr $nameAr');
+      if (match != null) {
+        preferredCityId =
+            MarketplaceLocation.findTaxonomyCityId(match, cities) ??
+                preferredCityId;
+      }
+    }
+    await _savePersonalizationPrefs();
+    notifyListeners();
+  }
+
+  Future<void> clearZoneFilter() async {
+    zoneFilterEnabled = false;
+    _zoneAutoDetected = true;
+    await _savePersonalizationPrefs();
+    notifyListeners();
+  }
+
+  void syncZoneFromPreferredCity() {
+    if (preferredCityId == null) return;
+    if (userLat != null && userLng != null && zoneFilterEnabled) return;
+    final matched =
+        MarketplaceLocation.resolveTaxonomyCity(preferredCityId, cities);
+    if (matched != null) {
+      userLat = matched.lat;
+      userLng = matched.lng;
+      zoneCityNameAr = matched.nameAr;
+      zoneCityNameFr = matched.nameFr;
+      zoneFilterEnabled = true;
+      _zoneAutoDetected = true;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> detectUserZoneAutomatically({
+    bool tryGps = false,
+    bool silent = true,
+  }) async {
+    if (_zoneDetecting) return false;
+    if (silent && (_zoneAutoDetected || (zoneFilterEnabled && userLat != null))) {
+      return true;
+    }
+
+    _zoneDetecting = true;
+    if (!silent) notifyListeners();
+    try {
+      final detected =
+          await MarketplaceLocation.detectLocation(tryGps: tryGps);
+      if (detected != null) {
+        final taxId =
+            MarketplaceLocation.findTaxonomyCityId(detected.city, cities);
+        await setUserZone(
+          lat: detected.lat,
+          lng: detected.lng,
+          nameAr: detected.city.nameAr,
+          nameFr: detected.city.nameFr,
+          cityId: taxId,
+          radiusKm: zoneRadiusKm > 0
+              ? zoneRadiusKm
+              : MarketplaceLocation.defaultZoneRadiusKm,
+          enabled: true,
+        );
+        return true;
+      }
+
+      // Fallback to authenticated user's city preference if IP/GPS unavailable
+      final profileCityId = int.tryParse(
+        (preferredCityId ??
+                currentUser?['preferred_city_id'] ??
+                currentUser?['city_id'] ??
+                '')
+            .toString(),
+      );
+      if (profileCityId != null) {
+        preferredCityId = profileCityId;
+        syncZoneFromPreferredCity();
+        if (userLat != null) {
+          await _savePersonalizationPrefs();
+          return true;
+        }
+      }
+      return false;
+    } finally {
+      _zoneDetecting = false;
+      _zoneAutoDetected = true;
+      notifyListeners();
+    }
+  }
+
+  /// Applies Marketplace Zone filtering + Haversine distance annotation to an ad list.
+  List<Map<String, dynamic>> applyZoneToAds(
+    List<Map<String, dynamic>> ads, {
+    bool enforceRadiusFilter = true,
+  }) {
+    if (ads.isEmpty || userLat == null || userLng == null) return ads;
+    final cityLabel = zoneCityNameFr ?? zoneCityNameAr ?? '';
+    return MarketplaceLocation.filterAndAnnotateByZone(
+      ads,
+      zoneLat: userLat,
+      zoneLng: userLng,
+      zoneCityId: preferredCityId,
+      zoneCityName: cityLabel,
+      radiusKm: zoneRadiusKm,
+      enabled: enforceRadiusFilter && hasActiveZone,
+    );
   }
 
   /// Records user interaction with a category (view = +2, search/filter = +3, favorite = +5, onboarding = +12)
@@ -107,7 +291,10 @@ class AppState extends ChangeNotifier {
     required Set<int> selectedCategories,
   }) async {
     accountType = accType;
-    if (cityId != null) preferredCityId = cityId;
+    if (cityId != null) {
+      preferredCityId = cityId;
+      syncZoneFromPreferredCity();
+    }
     for (final catId in selectedCategories) {
       categoryInterestWeights[catId] =
           (categoryInterestWeights[catId] ?? 0) + 12;
@@ -448,6 +635,16 @@ class AppState extends ChangeNotifier {
       final body = response.data;
       if (body is Map && body['status'] == 'success' && body['user'] is Map) {
         currentUser = Map<String, dynamic>.from(body['user'] as Map);
+        if (preferredCityId == null) {
+          final userCityId = int.tryParse(
+            (currentUser?['preferred_city_id'] ?? currentUser?['city_id'] ?? '')
+                .toString(),
+          );
+          if (userCityId != null) {
+            preferredCityId = userCityId;
+            syncZoneFromPreferredCity();
+          }
+        }
         notifyListeners();
         await Future.wait([
           fetchFavoritesIds(),

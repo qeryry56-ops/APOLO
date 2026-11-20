@@ -12,6 +12,7 @@ import 'stores_screen.dart';
 import 'widgets/accommodation_card.dart';
 import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/marketplace_zone_sheet.dart';
 import 'widgets/skeleton_loader.dart';
 
 /// 2026 Apple Whitespace Home Screen:
@@ -58,9 +59,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _state.addListener(_onStateChanged);
     _state.tabReselectCounter.addListener(_scrollToTop);
     _loadData();
     _startAutoSlide();
+  }
+
+  void _onStateChanged() {
+    if (mounted) setState(() {});
   }
 
   void _scrollToTop() {
@@ -75,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _state.removeListener(_onStateChanged);
     _state.tabReselectCounter.removeListener(_scrollToTop);
     _autoSlideTimer?.cancel();
     _scrollController.dispose();
@@ -194,7 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final fresh = ranked
         .where((ad) => !trendingIds.contains((ad['id'] ?? '').toString()))
         .toList();
-    return fresh.isNotEmpty ? fresh : ranked;
+    final pool = fresh.isNotEmpty ? fresh : ranked;
+    return _state.applyZoneToAds(pool, enforceRadiusFilter: true);
   }
 
   String get _userName {
@@ -378,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
 
                         // 5. Explore-Style Listings Feed directly beneath Exclusive Deals
-                        if (feedAds.isNotEmpty) ...[
+                        if (feedAds.isNotEmpty || _ads.isNotEmpty) ...[
                           SliverToBoxAdapter(
                             child: Padding(
                               padding:
@@ -388,27 +396,41 @@ class _HomeScreenState extends State<HomeScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
-                                    child: Text(
-                                      s.tr(
-                                        'أحدث الإعلانات',
-                                        'Dernières annonces',
-                                        'Latest listings',
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 18.5,
-                                        fontWeight: FontWeight.w900,
-                                        color: _ink,
-                                        letterSpacing:
-                                            AppTypography.trackingForContext(
-                                          context,
-                                          -0.4,
+                                    child: Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      spacing: 8,
+                                      runSpacing: 6,
+                                      children: [
+                                        Text(
+                                          s.tr(
+                                            'أحدث الإعلانات',
+                                            'Dernières annonces',
+                                            'Latest listings',
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 18.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: _ink,
+                                            letterSpacing: AppTypography
+                                                .trackingForContext(
+                                              context,
+                                              -0.4,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        MarketplaceZonePill(
+                                          state: _state,
+                                          compact: true,
+                                          onTap: () =>
+                                              showMarketplaceZoneSheet(context),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 8),
                                   GestureDetector(
                                     onTap: () => _openSearchScreen(null),
                                     child: Row(
@@ -437,7 +459,109 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          if (isWide)
+                          if (feedAds.isEmpty)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        s.tr(
+                                          'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)} حالياً',
+                                          'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km autour de ${_state.activeZoneCityLabel(s)}',
+                                          'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)} yet',
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: _ink,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          PressableScale(
+                                            onTap: () => _state.clearZoneFilter(),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: _ink,
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                              ),
+                                              child: Text(
+                                                s.tr(
+                                                  'عرض كل المغرب',
+                                                  'Tout le Maroc',
+                                                  'Show all Morocco',
+                                                ),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          PressableScale(
+                                            onTap: () =>
+                                                showMarketplaceZoneSheet(
+                                                    context),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                                border: Border.all(
+                                                  color:
+                                                      const Color(0xFFD0D5DD),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                s.tr(
+                                                  'تغيير المنطقة',
+                                                  'Changer de zone',
+                                                  'Change zone',
+                                                ),
+                                                style: const TextStyle(
+                                                  color: _ink,
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                          else if (isWide)
                             SliverPadding(
                               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                               sliver: SliverGrid.builder(

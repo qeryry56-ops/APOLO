@@ -6,14 +6,17 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/config/app_config.dart';
+import '../core/location/marketplace_location.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'widgets/price_text.dart';
-import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
 import 'widgets/boost_sheet.dart';
 import 'widgets/chat_utils.dart';
+import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/marketplace_zone_sheet.dart';
+import 'widgets/real_marketplace_map.dart';
 import 'widgets/skeleton_loader.dart';
 import 'chat_room_screen.dart';
 import 'privacy_compliance_screen.dart';
@@ -881,9 +884,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
             ),
 
-            // 7. Approximate Location Map Preview
+            // 7. Real Interactive Approximate Location Map Preview
             _buildLocationSection(
               s: s,
+              ad: ad,
               cityName: cityName,
               locationSubtitle: locationSubtitle,
             ),
@@ -904,33 +908,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               isOwner: isOwner,
             ),
 
-            // 10. Related Ads Strip (when present)
-            if (_relatedAds.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 12),
-                child: _SectionHeader(
-                  icon: CupertinoIcons.square_grid_2x2_fill,
-                  title:
-                      s.tr('إعلانات مشابهة فـ نفس القسم', 'Annonces similaires'),
-                ),
-              ),
-              SizedBox(
-                height: 242,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: _relatedAds.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
-                  itemBuilder: (_, idx) => SizedBox(
-                    width: 185,
-                    child: AdCard(
-                      ad: Map<String, dynamic>.from(_relatedAds[idx]),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            // 10. Similar / Related Ads using ExploreListingCard (matching Explore Screen)
+            if (_relatedAds.isNotEmpty)
+              _buildRelatedExploreFeed(s),
           ],
         ),
       ),
@@ -1554,18 +1534,23 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE4E7EE), width: 1.1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 2),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.055),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -1575,41 +1560,80 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             Row(
               children: [
                 Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    color: _fbBlue,
-                    shape: BoxShape.circle,
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1A84FF), _fbBlue],
+                    ),
+                    borderRadius: BorderRadius.circular(9),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _fbBlue.withValues(alpha: 0.28),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   alignment: Alignment.center,
                   child: const Icon(
                     CupertinoIcons.chat_bubble_fill,
-                    size: 11,
+                    size: 13,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  s.tr('راسل البائع', 'Contacter le vendeur', 'Message seller'),
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    color: _ink,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    s.tr('راسل البائع', 'Contacter le vendeur', 'Message seller'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: _ink,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3.5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEBF5FF),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    s.tr('رد سريع', 'Réponse rapide', 'Fast reply'),
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: _fbBlue,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 42),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    constraints: const BoxConstraints(minHeight: 46),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: _surface,
-                      borderRadius: BorderRadius.circular(20),
+                      color: const Color(0xFFF3F5F8),
+                      borderRadius: BorderRadius.circular(23),
+                      border: Border.all(
+                        color: const Color(0xFFE5E8EE),
+                        width: 1,
+                      ),
                     ),
                     alignment: AlignmentDirectional.centerStart,
                     child: TextField(
@@ -1621,7 +1645,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         fontSize: 13.5,
                         color: _ink,
                         height: 1.3,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w500,
                       ),
                       decoration: InputDecoration(
                         isDense: true,
@@ -1641,7 +1665,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 9),
                 PressableScale(
                   key: const Key('detail-quick-send'),
                   onTap: () {
@@ -1651,11 +1675,23 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     );
                   },
                   child: Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    height: 44,
+                    constraints: const BoxConstraints(minWidth: 76),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
                     decoration: BoxDecoration(
-                      color: _fbBlue,
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1A7BFF), Color(0xFF0055E5)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _fbBlue.withValues(alpha: 0.26),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -1663,7 +1699,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -1766,24 +1802,63 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
   Widget _buildQuickSpecGrid(
     List<({String value, String label})> cards, {
-    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(20, 20, 20, 0),
+    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(20, 14, 20, 0),
   }) {
-    return Padding(
-      padding: padding,
-      child: Row(
-        children: [
-          for (int i = 0; i < cards.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
+    if (cards.isEmpty) return const SizedBox.shrink();
+    final rows = <Widget>[];
+    for (int i = 0; i < cards.length; i += 2) {
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 8));
+      rows.add(
+        Row(
+          children: [
             Expanded(
               child: _SpecStatCard(
                 value: cards[i].value,
                 label: cards[i].label,
+                icon: _specIconForLabel(cards[i].label),
               ),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: i + 1 < cards.length
+                  ? _SpecStatCard(
+                      value: cards[i + 1].value,
+                      label: cards[i + 1].label,
+                      icon: _specIconForLabel(cards[i + 1].label),
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
-        ],
-      ),
+        ),
+      );
+    }
+    return Padding(
+      padding: padding,
+      child: Column(children: rows),
     );
+  }
+
+  IconData _specIconForLabel(String label) {
+    final l = label.toLowerCase();
+    if (l.contains('guest') || l.contains('ضيف') || l.contains('voyageur')) {
+      return CupertinoIcons.person_2_fill;
+    }
+    if (l.contains('bed') || l.contains('غرف') || l.contains('سري') || l.contains('chambre')) {
+      return CupertinoIcons.bed_double_fill;
+    }
+    if (l.contains('bath') || l.contains('حمام') || l.contains('bain')) {
+      return Icons.bathtub_outlined;
+    }
+    if (l.contains('view') || l.contains('مشاهد') || l.contains('vue')) {
+      return CupertinoIcons.eye_fill;
+    }
+    if (l.contains('city') || l.contains('مدين') || l.contains('ville')) {
+      return CupertinoIcons.location_solid;
+    }
+    if (l.contains('cond') || l.contains('حال') || l.contains('état')) {
+      return CupertinoIcons.checkmark_seal_fill;
+    }
+    return CupertinoIcons.tag_fill;
   }
 
   Widget _buildDescriptionSection({
@@ -1806,111 +1881,208 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         : rawDesc;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            s.tr('الوصف', 'Description', 'Description'),
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _ink,
+          // Soft Gray-Outlined Rounded Description Container (subtle outline, not a heavy card)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(15, 13, 15, 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFAFAFC),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: const Color(0xFFDADEE6),
+                width: 1.15,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            fullDescription,
-            maxLines: _descExpanded ? 50 : 4,
-            overflow:
-                _descExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14.5,
-              height: 1.45,
-              color: _ink,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          if (fullDescription.length > 140) ...[
-            const SizedBox(height: 6),
-            GestureDetector(
-              onTap: () => setState(() => _descExpanded = !_descExpanded),
-              child: Text(
-                _descExpanded
-                    ? s.tr('عرض أقل', 'Voir moins', 'See less')
-                    : s.tr('قراءة المزيد', 'Lire la suite', 'See more'),
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: _fbBlue,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      CupertinoIcons.doc_text,
+                      size: 16,
+                      color: Color(0xFF64748B),
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      s.tr('الوصف', 'Description', 'Description'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  fullDescription,
+                  maxLines: _descExpanded ? 50 : 4,
+                  overflow: _descExpanded
+                      ? TextOverflow.visible
+                      : TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.48,
+                    color: Color(0xFF1E293B),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                if (fullDescription.length > 140) ...[
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: () =>
+                        setState(() => _descExpanded = !_descExpanded),
+                    child: Text(
+                      _descExpanded
+                          ? s.tr('عرض أقل', 'Voir moins', 'See less')
+                          : s.tr('قراءة المزيد', 'Lire la suite', 'See more'),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: _fbBlue,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Balanced 2x2 Bento Spec Cards
+          _buildQuickSpecGrid(
+            quickSpecCards,
+            padding: const EdgeInsets.only(top: 12),
+          ),
+
+          // Clean Key-Value Spec Card rows when listing has extra metadata
+          if (rawSpecs.length > 2) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+              ),
+              child: Column(
+                children: structuredSpecs.skip(2).take(6).map((e) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.5),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            e.key,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: _mutedText,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            e.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: _ink,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ],
 
-          // Compact 4-stat Specs row
-          _buildQuickSpecGrid(
-            quickSpecCards,
-            padding: const EdgeInsets.only(top: 14),
-          ),
-
-          // Additional specs when ad has rich metadata
-          if (rawSpecs.length > 2) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: structuredSpecs.skip(2).take(6).map((e) {
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _surface,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${e.key}: ${e.value}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: _ink,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-
           if (!isOwner && phone != null && phone.isNotEmpty) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             PressableScale(
               onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
               child: Container(
                 width: double.infinity,
-                height: 42,
+                height: 50,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: _surface,
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      CupertinoIcons.phone_fill,
-                      size: 16,
-                      color: _ink,
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFECFDF5),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        CupertinoIcons.phone_fill,
+                        size: 15,
+                        color: Color(0xFF059669),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Flexible(
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: Text(
-                        '${s.tr('اتصال هاتفي بالبائع', 'Appeler le vendeur', 'Call seller')} · $phone',
+                        s.tr(
+                          'اتصال هاتفي بالبائع',
+                          'Appeler le vendeur',
+                          'Call seller',
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: _ink,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          phone,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
                         ),
                       ),
                     ),
@@ -2007,7 +2179,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             .toString());
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2033,7 +2205,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       s.tr('البائع', 'Vendeur', 'Seller'),
                       style: const TextStyle(
                         fontSize: 17,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         color: _ink,
                       ),
                     ),
@@ -2067,175 +2239,254 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   );
                 },
                 behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Text(
-                    s.tr('عرض التقييمات', 'Voir les avis', 'See reviews'),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _fbBlue,
-                    ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 6,
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _openSellerOrStore(
-                    ad: ad,
-                    seller: seller,
-                    store: store,
-                    sellerId: sellerId,
-                    sellerDisplayName: sellerDisplayName,
-                    cityName: cityName,
-                    phone: phone,
-                    avatarUrl: avatarUrl,
+                  decoration: BoxDecoration(
+                    color: _fbBlueSoft,
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                  behavior: HitTestBehavior.opaque,
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF39C12),
-                          shape: BoxShape.circle,
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        alignment: Alignment.center,
-                        child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                            ? AppImage(
-                                url: avatarUrl,
-                                width: 46,
-                                height: 46,
-                                fit: BoxFit.cover,
-                                fallback:
-                                    _InitialsCircle(initials: hostInitials),
-                              )
-                            : _InitialsCircle(initials: hostInitials),
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 14,
+                        color: _fbBlue,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    hostTitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 15.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: _ink,
-                                    ),
-                                  ),
-                                ),
-                                if (seller?['is_verified'] == true) ...[
-                                  const SizedBox(width: 4),
-                                  const Icon(
-                                    CupertinoIcons.checkmark_seal_fill,
-                                    size: 14,
-                                    color: _fbBlue,
-                                  ),
-                                ],
-                              ],
-                            ),
-                            if (ratingVal != null && ratingVal > 0) ...[
-                              const SizedBox(height: 3),
-                              Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  ...List.generate(5, (i) {
-                                    final filled = i + 1 <= ratingVal.floor();
-                                    final half = !filled &&
-                                        (ratingVal - i) >= 0.4;
-                                    return Icon(
-                                      half
-                                          ? Icons.star_half_rounded
-                                          : (filled
-                                              ? Icons.star_rounded
-                                              : Icons.star_outline_rounded),
-                                      size: 14.5,
-                                      color: _starOrange,
-                                    );
-                                  }),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    ratingVal.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: _ink,
-                                    ),
-                                  ),
-                                  if (reviewsCountVal != null)
-                                    Text(
-                                      ' ($reviewsCountVal)',
-                                      style: const TextStyle(
-                                        fontSize: 12.5,
-                                        color: _mutedText,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                            const SizedBox(height: 2),
-                            Text(
-                              hostSubtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w400,
-                                color: _mutedText,
-                                height: 1.25,
-                              ),
-                            ),
-                          ],
+                      const SizedBox(width: 4),
+                      Text(
+                        s.tr('عرض التقييمات', 'Voir les avis', 'See reviews'),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: _fbBlue,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              if (!isOwner) ...[
-                const SizedBox(width: 10),
-                PressableScale(
-                  key: const Key('detail-follow-seller'),
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _followingSeller = !_followingSeller);
-                  },
-                  child: Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: _followingSeller ? _fbBlueSoft : _pillGrey,
-                      borderRadius: BorderRadius.circular(8),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _openSellerOrStore(
+                      ad: ad,
+                      seller: seller,
+                      store: store,
+                      sellerId: sellerId,
+                      sellerDisplayName: sellerDisplayName,
+                      cityName: cityName,
+                      phone: phone,
+                      avatarUrl: avatarUrl,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      _followingSeller
-                          ? s.tr('متابَع', 'Suivi', 'Following')
-                          : s.tr('متابعة', 'Suivre', 'Follow'),
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: _followingSeller ? _fbBlue : _ink,
-                      ),
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFFF59E0B),
+                                    Color(0xFFE67E22),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              alignment: Alignment.center,
+                              child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                                  ? AppImage(
+                                      url: avatarUrl,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      fallback: _InitialsCircle(
+                                        initials: hostInitials,
+                                      ),
+                                    )
+                                  : _InitialsCircle(initials: hostInitials),
+                            ),
+                            if (seller?['is_verified'] == true)
+                              PositionedDirectional(
+                                bottom: -1,
+                                end: -1,
+                                child: Container(
+                                  width: 18,
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    color: _fbBlue,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 1.8,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hostTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: _ink,
+                                ),
+                              ),
+                              if (ratingVal != null && ratingVal > 0) ...[
+                                const SizedBox(height: 3),
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    ...List.generate(5, (i) {
+                                      final filled = i + 1 <= ratingVal.floor();
+                                      final half =
+                                          !filled && (ratingVal - i) >= 0.4;
+                                      return Icon(
+                                        half
+                                            ? Icons.star_half_rounded
+                                            : (filled
+                                                ? Icons.star_rounded
+                                                : Icons.star_outline_rounded),
+                                        size: 14,
+                                        color: _starOrange,
+                                      );
+                                    }),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      ratingVal.toStringAsFixed(1),
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: _ink,
+                                      ),
+                                    ),
+                                    if (reviewsCountVal != null)
+                                      Text(
+                                        ' ($reviewsCountVal)',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: _mutedText,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 3),
+                              Text(
+                                hostSubtitle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w400,
+                                  color: _mutedText,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+                if (!isOwner) ...[
+                  const SizedBox(width: 10),
+                  PressableScale(
+                    key: const Key('detail-follow-seller'),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _followingSeller = !_followingSeller);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: _followingSeller ? _fbBlueSoft : _ink,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: _followingSeller
+                              ? _fbBlue.withValues(alpha: 0.35)
+                              : _ink,
+                          width: 1,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_followingSeller) ...[
+                            const Icon(
+                              CupertinoIcons.checkmark_alt,
+                              size: 13.5,
+                              color: _fbBlue,
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Text(
+                            _followingSeller
+                                ? s.tr('متابَع', 'Suivi', 'Following')
+                                : s.tr('متابعة', 'Suivre', 'Follow'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: _followingSeller ? _fbBlue : Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ),
@@ -2244,116 +2495,188 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
   Widget _buildLocationSection({
     required AppStrings s,
+    required Map<String, dynamic> ad,
     required String cityName,
     required String locationSubtitle,
   }) {
-    final mapDisplayCity = cityName;
+    final loc = MarketplaceLocation.resolveAdLocation(ad);
+    final distKm = MarketplaceLocation.distanceBetweenAdAndZone(
+      ad,
+      _state.userLat,
+      _state.userLng,
+    );
+    final bool inZone =
+        distKm != null && (!_state.hasActiveZone || distKm <= _state.zoneRadiusKm);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            s.tr('موقع الإعلان', 'Localisation', 'Location'),
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _ink,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                s.tr('موقع الإعلان', 'Localisation', 'Location'),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: _ink,
+                ),
+              ),
+              MarketplaceZonePill(
+                state: _state,
+                compact: true,
+                onTap: () => showMarketplaceZoneSheet(context),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () async {
-              final q = Uri.encodeComponent('$locationSubtitle, Morocco');
-              final uri = Uri.parse('https://maps.google.com/?q=$q');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                height: 164,
-                width: double.infinity,
-                child: Stack(
-                  fit: StackFit.expand,
+          RealMarketplaceMap(
+            lat: loc.lat,
+            lng: loc.lng,
+            cityLabel: cityName,
+            circleRadiusKm: 3.4,
+            userLat: _state.userLat,
+            userLng: _state.userLng,
+            height: 192,
+            borderRadius: 18,
+            interactive: true,
+            topOverlay: distKm == null
+                ? null
+                : Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: inZone ? const Color(0xFF059669) : _fbBlue,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          inZone
+                              ? s.tr(
+                                  'في منطقتك · ${distKm.round()} كم',
+                                  'Dans votre zone · ${distKm.round()} km',
+                                  'In your zone · ${distKm.round()} km',
+                                )
+                              : s.tr(
+                                  'يبعد ${distKm.round()} كم',
+                                  'À ${distKm.round()} km',
+                                  '${distKm.round()} km away',
+                                ),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+            onExpandTap: () => showFullMarketplaceMapDialog(
+              context: context,
+              s: s,
+              lat: loc.lat,
+              lng: loc.lng,
+              cityLabel: cityName,
+              locationSubtitle: locationSubtitle,
+              userLat: _state.userLat,
+              userLng: _state.userLng,
+              onFilterToListingZone: () {
+                final match = loc.match;
+                if (match != null) {
+                  _state.setUserZone(
+                    lat: loc.lat,
+                    lng: loc.lng,
+                    nameAr: match.nameAr,
+                    nameFr: match.nameFr,
+                    radiusKm: _state.zoneRadiusKm > 0
+                        ? _state.zoneRadiusKm
+                        : MarketplaceLocation.defaultZoneRadiusKm,
+                    enabled: true,
+                  );
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CustomPaint(painter: _ApproxMapPainter()),
-                    Center(
-                      child: Container(
-                        width: 78,
-                        height: 78,
-                        decoration: BoxDecoration(
-                          color: _fbBlue.withValues(alpha: 0.16),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: _fbBlue.withValues(alpha: 0.45),
-                            width: 1.5,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text(
-                            mapDisplayCity,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF1E3A8A),
-                            ),
-                          ),
-                        ),
+                    Text(
+                      cityName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: _ink,
                       ),
                     ),
-                    PositionedDirectional(
-                      bottom: 10,
-                      end: 10,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          CupertinoIcons.info,
-                          color: Colors.white,
-                          size: 13,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      s.tr(
+                        'الموقع تقريبي',
+                        'La localisation est approximative',
+                        'Location is approximate',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w400,
+                        color: _mutedText,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            cityName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w500,
-              color: _ink,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            s.tr(
-              'الموقع تقريبي',
-              'La localisation est approximative',
-              'Location is approximate',
-            ),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: _mutedText,
-            ),
+              GestureDetector(
+                onTap: () => showFullMarketplaceMapDialog(
+                  context: context,
+                  s: s,
+                  lat: loc.lat,
+                  lng: loc.lng,
+                  cityLabel: cityName,
+                  locationSubtitle: locationSubtitle,
+                  userLat: _state.userLat,
+                  userLng: _state.userLng,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _fbBlueSoft,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    s.tr('عرض الخريطة', 'Voir la carte', 'Full map'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _fbBlue,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -2472,13 +2795,21 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     required bool isOwner,
   }) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7F8FA),
-          borderRadius: BorderRadius.circular(14),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2486,9 +2817,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             Text.rich(
               TextSpan(
                 style: const TextStyle(
-                  fontSize: 13.5,
-                  color: _ink,
-                  height: 1.35,
+                  fontSize: 13,
+                  color: Color(0xFF475569),
+                  height: 1.4,
                 ),
                 children: [
                   TextSpan(
@@ -2504,7 +2835,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       'masquer cette annonce',
                       'hide this listing',
                     ),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: _ink,
+                    ),
                   ),
                   TextSpan(
                     text: s.tr(
@@ -2545,26 +2879,46 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 }
               },
               child: Container(
-                height: 40,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: _pillGrey,
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  _hiddenListing
-                      ? s.tr('تم الإخفاء', 'Masquée', 'Hidden')
-                      : s.tr('إخفاء الإعلان', 'Masquer l’annonce',
-                          'Hide listing'),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _ink,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _hiddenListing
+                          ? CupertinoIcons.eye
+                          : CupertinoIcons.eye_slash,
+                      size: 16,
+                      color: _ink,
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      _hiddenListing
+                          ? s.tr('تم الإخفاء', 'Masquée', 'Hidden')
+                          : s.tr(
+                              'إخفاء الإعلان',
+                              'Masquer l’annonce',
+                              'Hide listing',
+                            ),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: GestureDetector(
@@ -2577,16 +2931,19 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     children: [
                       const Icon(
                         CupertinoIcons.shield_lefthalf_fill,
-                        size: 13,
+                        size: 13.5,
                         color: _mutedText,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Text(
-                        s.tr('الإبلاغ أو الأمان', 'Signaler / Sécurité',
-                            'Report & Safety'),
+                        s.tr(
+                          'الإبلاغ أو الأمان',
+                          'Signaler / Sécurité',
+                          'Report & Safety',
+                        ),
                         style: const TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                           color: _mutedText,
                         ),
                       ),
@@ -2598,6 +2955,63 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRelatedExploreFeed(AppStrings s) {
+    final rawRelated = _relatedAds
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final related = _state.applyZoneToAds(
+      rawRelated,
+      enforceRadiusFilter: false,
+    );
+    if (related.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
+          child: _SectionHeader(
+            icon: CupertinoIcons.square_grid_2x2_fill,
+            title: s.tr(
+              'إعلانات مشابهة فـ نفس القسم',
+              'Annonces similaires',
+              'Similar listings',
+            ),
+          ),
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 680;
+            if (isWide) {
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 400,
+                  mainAxisExtent: 374,
+                  mainAxisSpacing: 18,
+                  crossAxisSpacing: 18,
+                ),
+                itemCount: related.length,
+                itemBuilder: (_, idx) => ExploreListingCard(ad: related[idx]),
+              );
+            }
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: related.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              itemBuilder: (_, idx) => ExploreListingCard(ad: related[idx]),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -2973,48 +3387,71 @@ class _ImageTagPill extends StatelessWidget {
 class _SpecStatCard extends StatelessWidget {
   final String value;
   final String label;
+  final IconData icon;
 
   const _SpecStatCard({
     required this.value,
     required this.label,
+    this.icon = CupertinoIcons.tag_fill,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFECECEC), width: 1),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
-              height: 1.15,
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              size: 14,
+              color: const Color(0xFF475569),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
-              color: Color(0xFF8E8E93),
-              height: 1.15,
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    height: 1.15,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -3159,25 +3596,31 @@ class _MarketplaceActionCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PressableScale(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 44,
-            height: 44,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               color:
-                  active ? const Color(0xFFE7F3FF) : const Color(0xFFE4E6EB),
+                  active ? const Color(0xFFE7F3FF) : const Color(0xFFF2F4F7),
               shape: BoxShape.circle,
+              border: Border.all(
+                color: active
+                    ? const Color(0xFF0866FF).withValues(alpha: 0.35)
+                    : const Color(0xFFE5E7EB),
+                width: 1,
+              ),
             ),
             alignment: Alignment.center,
             child: Icon(
               icon,
-              size: 20,
-              color: active ? const Color(0xFF0866FF) : const Color(0xFF050505),
+              size: 19,
+              color: active ? const Color(0xFF0866FF) : const Color(0xFF0F172A),
             ),
           ),
           const SizedBox(height: 6),
@@ -3187,94 +3630,15 @@ class _MarketplaceActionCircle extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: active ? const Color(0xFF0866FF) : const Color(0xFF050505),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: active ? const Color(0xFF0866FF) : const Color(0xFF1E293B),
             ),
           ),
         ],
       ),
     );
   }
-}
-
-class _ApproxMapPainter extends CustomPainter {
-  const _ApproxMapPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Land base
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFFE8F1E1),
-    );
-
-    // Coastal sea strip (matches screenshot soft blue ocean edge)
-    final seaPath = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width * 0.72, 0)
-      ..quadraticBezierTo(
-        size.width * 0.34,
-        size.height * 0.25,
-        0,
-        size.height * 0.62,
-      )
-      ..close();
-    canvas.drawPath(
-      seaPath,
-      Paint()..color = const Color(0xFF9CD4FF),
-    );
-
-    // Park / terrain patch
-    final parkPath = Path()
-      ..moveTo(size.width * 0.56, size.height * 0.30)
-      ..quadraticBezierTo(
-        size.width * 0.85,
-        size.height * 0.36,
-        size.width,
-        size.height * 0.72,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(size.width * 0.48, size.height)
-      ..close();
-    canvas.drawPath(
-      parkPath,
-      Paint()..color = const Color(0xFFD6ECC8),
-    );
-
-    // Subtle roads
-    final roadPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.90)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    final highway = Path()
-      ..moveTo(0, size.height * 0.82)
-      ..quadraticBezierTo(
-        size.width * 0.45,
-        size.height * 0.52,
-        size.width,
-        size.height * 0.14,
-      );
-    canvas.drawPath(highway, roadPaint);
-
-    final crossRoad = Path()
-      ..moveTo(size.width * 0.28, size.height)
-      ..quadraticBezierTo(
-        size.width * 0.48,
-        size.height * 0.48,
-        size.width * 0.56,
-        0,
-      );
-    canvas.drawPath(
-      crossRoad,
-      roadPaint..strokeWidth = 2.0,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SellerReviewsScreen extends StatefulWidget {
@@ -3297,14 +3661,15 @@ class _SellerReviewsScreen extends StatefulWidget {
 }
 
 class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
-  int _minStarsFilter = 0; // 0: All, 5: 5 stars, 4: 4+ stars
+  int _minStarsFilter = 0; // 0: All, or exact / >= star filter
   bool _highestFirst = false;
+  final Set<int> _helpfulIndices = {};
 
-  static const Color _ink = Color(0xFF050505);
-  static const Color _muted = Color(0xFF65676B);
+  static const Color _ink = Color(0xFF0F172A);
+  static const Color _muted = Color(0xFF64748B);
   static const Color _fbBlue = Color(0xFF0866FF);
   static const Color _fbBlueSoft = Color(0xFFE7F3FF);
-  static const Color _starOrange = Color(0xFFE87A24);
+  static const Color _starOrange = Color(0xFFF59E0B);
 
   List<Map<String, dynamic>> get _reviews {
     final raw = (widget.rawReviews ?? [])
@@ -3313,7 +3678,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
         .where((r) {
       if (_minStarsFilter == 0) return true;
       final stars = int.tryParse((r['rating'] ?? 0).toString()) ?? 0;
-      return stars >= _minStarsFilter;
+      return _minStarsFilter == 5 ? stars == 5 : stars >= _minStarsFilter;
     }).toList();
     if (_highestFirst) {
       raw.sort((a, b) {
@@ -3333,17 +3698,15 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
     final int totalCount =
         widget.reviewsCount > 0 ? widget.reviewsCount : items.length;
 
-    // Distribution counts (5 -> 1 stars) computed from real review items
     final Map<int, int> counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
     for (final r in (widget.rawReviews ?? []).whereType<Map>()) {
       final st = int.tryParse((r['rating'] ?? 0).toString()) ?? 0;
       if (counts.containsKey(st)) counts[st] = counts[st]! + 1;
     }
-    final int maxCount =
-        counts.values.fold<int>(1, (m, c) => c > m ? c : m);
+    final int maxCount = counts.values.fold<int>(1, (m, c) => c > m ? c : m);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -3358,134 +3721,227 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
           ),
         ),
         centerTitle: true,
-        title: Text(
-          s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: _ink,
-          ),
+        title: Column(
+          children: [
+            Text(
+              s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
+              style: const TextStyle(
+                fontSize: 16.5,
+                fontWeight: FontWeight.w800,
+                color: _ink,
+              ),
+            ),
+            Text(
+              widget.sellerName,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: _muted,
+              ),
+            ),
+          ],
         ),
       ),
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
         children: [
-          Text(
-            s.tr('تقييم البائع', 'Note du vendeur', 'Seller rating'),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: _ink,
+          // 2026 Hero Rating Summary Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: _ink.withValues(alpha: 0.045),
+                  blurRadius: 16,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.tr('تقييم البائع', 'Note du vendeur', 'Seller rating'),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Big Score Pillar
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          ratingValue > 0 ? ratingValue.toStringAsFixed(1) : '—',
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w900,
+                            color: _ink,
+                            height: 1.0,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(5, (i) {
+                            final filled = i + 1 <= ratingValue.floor();
+                            final half = !filled && (ratingValue - i) >= 0.4;
+                            return Icon(
+                              half
+                                  ? Icons.star_half_rounded
+                                  : (filled
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded),
+                              size: 15,
+                              color: _starOrange,
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '($totalCount)',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: _muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Container(
+                      width: 1,
+                      height: 92,
+                      color: const Color(0xFFE5E7EB),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Interactive 5-to-1 Bars
+                    Expanded(
+                      child: Column(
+                        children: [
+                          for (int star = 5; star >= 1; star--)
+                            GestureDetector(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                setState(() {
+                                  _minStarsFilter =
+                                      _minStarsFilter == star ? 0 : star;
+                                });
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 3.5),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 54,
+                                      child: Text(
+                                        s.tr(
+                                          '$star نجوم',
+                                          '$star é.',
+                                          star == 1 ? '1 star' : '$star stars',
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: _minStarsFilter == star
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                          color: _minStarsFilter == star
+                                              ? _fbBlue
+                                              : _ink,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(99),
+                                        child: LinearProgressIndicator(
+                                          value: (counts[star] ?? 0) / maxCount,
+                                          minHeight: 7,
+                                          backgroundColor:
+                                              const Color(0xFFF1F5F9),
+                                          valueColor:
+                                              const AlwaysStoppedAnimation<
+                                                  Color>(_starOrange),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 18,
+                                      child: Text(
+                                        '${counts[star] ?? 0}',
+                                        textAlign: TextAlign.end,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: _muted,
+                                          fontFeatures: [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
+
+          const SizedBox(height: 20),
           Row(
             children: [
-              ...List.generate(5, (i) {
-                final filled = i + 1 <= ratingValue.floor();
-                final half = !filled && (ratingValue - i) >= 0.4;
-                return Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 2),
-                  child: Icon(
-                    half
-                        ? Icons.star_half_rounded
-                        : (filled
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded),
-                    size: 20,
-                    color: _starOrange,
+              Expanded(
+                child: Text(
+                  s.tr(
+                    'تقييمات البائع ($totalCount)',
+                    'Avis sur le vendeur ($totalCount)',
+                    'Seller reviews ($totalCount)',
                   ),
-                );
-              }),
-              const SizedBox(width: 8),
-              Text(
-                ratingValue > 0 ? ratingValue.toStringAsFixed(1) : '—',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _ink,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
                 ),
               ),
-              const SizedBox(width: 4),
-              Text(
-                '($totalCount)',
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: _muted,
+              if (_minStarsFilter != 0)
+                GestureDetector(
+                  onTap: () => setState(() => _minStarsFilter = 0),
+                  child: Text(
+                    s.tr('عرض الكل', 'Tout afficher', 'Show all'),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: _fbBlue,
+                    ),
+                  ),
                 ),
-              ),
             ],
-          ),
-          const SizedBox(height: 14),
-
-          // 5-to-1 Stars Horizontal Breakdown Bars
-          for (int star = 5; star >= 1; star--) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 58,
-                    child: Text(
-                      s.tr(
-                        '$star نجوم',
-                        '$star étoiles',
-                        star == 1 ? '1 star' : '$star stars',
-                      ),
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: _ink,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: (counts[star] ?? 0) / maxCount,
-                        minHeight: 7,
-                        backgroundColor: const Color(0xFFF0F2F5),
-                        valueColor:
-                            const AlwaysStoppedAnimation<Color>(_starOrange),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 24,
-                    child: Text(
-                      '${counts[star] ?? 0}',
-                      textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: _muted,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 22),
-          Text(
-            s.tr(
-              'تقييمات البائع ($totalCount)',
-              'Avis sur le vendeur ($totalCount)',
-              'Seller reviews ($totalCount)',
-            ),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: _ink,
-            ),
           ),
           const SizedBox(height: 12),
 
-          // Filters & Sort Soft Blue Pills (matching Screenshot 2)
+          // Filters & Sort Pills
           Row(
             children: [
               GestureDetector(
@@ -3495,26 +3951,31 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                     _minStarsFilter = _minStarsFilter == 0 ? 5 : 0;
                   });
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
                   height: 36,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: _fbBlueSoft,
-                    borderRadius: BorderRadius.circular(8),
+                    color: _minStarsFilter != 0 ? _fbBlue : _fbBlueSoft,
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.tune_rounded, size: 17, color: _fbBlue),
+                      Icon(
+                        Icons.tune_rounded,
+                        size: 16,
+                        color: _minStarsFilter != 0 ? Colors.white : _fbBlue,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         _minStarsFilter == 5
                             ? s.tr('5 نجوم فقط', '5 étoiles', '5 stars')
                             : s.tr('تصفية', 'Filtres', 'Filters'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: _fbBlue,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: _minStarsFilter != 0 ? Colors.white : _fbBlue,
                         ),
                       ),
                     ],
@@ -3527,30 +3988,31 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                   HapticFeedback.selectionClick();
                   setState(() => _highestFirst = !_highestFirst);
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
                   height: 36,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: _fbBlueSoft,
-                    borderRadius: BorderRadius.circular(8),
+                    color: _highestFirst ? _fbBlue : _fbBlueSoft,
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.swap_vert_rounded,
-                        size: 17,
-                        color: _fbBlue,
+                        size: 16,
+                        color: _highestFirst ? Colors.white : _fbBlue,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         _highestFirst
                             ? s.tr('الأعلى تقييماً', 'Meilleurs', 'Highest')
                             : s.tr('ترتيب', 'Trier', 'Sort'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: _fbBlue,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: _highestFirst ? Colors.white : _fbBlue,
                         ),
                       ),
                     ],
@@ -3560,19 +4022,20 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
             ],
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           if (items.isEmpty)
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F8FA),
-                borderRadius: BorderRadius.circular(14),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: Column(
                 children: [
                   const Icon(
                     CupertinoIcons.star_circle,
-                    size: 32,
+                    size: 36,
                     color: _muted,
                   ),
                   const SizedBox(height: 8),
@@ -3592,9 +4055,22 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
               ),
             )
           else
-            for (final rev in items) ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 18),
+            for (int idx = 0; idx < items.length; idx++) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _ink.withValues(alpha: 0.025),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -3604,14 +4080,14 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                           width: 40,
                           height: 40,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFE4E6EB),
+                            color: Color(0xFFEFF6FF),
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
                           child: const Icon(
                             CupertinoIcons.person_fill,
-                            color: Color(0xFF9CA3AF),
-                            size: 20,
+                            color: _fbBlue,
+                            size: 19,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -3620,52 +4096,137 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                (rev['author'] ?? rev['name'] ?? '')
+                                (items[idx]['author'] ??
+                                        items[idx]['name'] ??
+                                        '')
                                     .toString(),
                                 style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
                                   color: _ink,
                                 ),
                               ),
-                              if ((rev['date'] ?? '').toString().isNotEmpty)
+                              if ((items[idx]['date'] ?? '')
+                                  .toString()
+                                  .isNotEmpty)
                                 Text(
-                                  rev['date'].toString(),
+                                  items[idx]['date'].toString(),
                                   style: const TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 12,
                                     color: _muted,
                                   ),
                                 ),
                             ],
                           ),
                         ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 13.5,
+                                color: _starOrange,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${int.tryParse((items[idx]['rating'] ?? 5).toString()) ?? 5}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Row(
                       children: List.generate(5, (i) {
-                        final st =
-                            int.tryParse((rev['rating'] ?? 5).toString()) ?? 5;
+                        final st = int.tryParse(
+                                (items[idx]['rating'] ?? 5).toString()) ??
+                            5;
                         return Icon(
                           i < st
                               ? Icons.star_rounded
                               : Icons.star_outline_rounded,
-                          size: 16,
+                          size: 15.5,
                           color: _starOrange,
                         );
                       }),
                     ),
-                    if ((rev['comment'] ?? '').toString().isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                    if ((items[idx]['comment'] ?? '').toString().isNotEmpty) ...[
+                      const SizedBox(height: 6),
                       Text(
-                        rev['comment'].toString(),
+                        items[idx]['comment'].toString(),
                         style: const TextStyle(
                           fontSize: 13.5,
-                          color: _muted,
-                          height: 1.4,
+                          color: Color(0xFF334155),
+                          height: 1.45,
                         ),
                       ),
                     ],
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          if (_helpfulIndices.contains(idx)) {
+                            _helpfulIndices.remove(idx);
+                          } else {
+                            _helpfulIndices.add(idx);
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _helpfulIndices.contains(idx)
+                              ? _fbBlueSoft
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _helpfulIndices.contains(idx)
+                                  ? CupertinoIcons.hand_thumbsup_fill
+                                  : CupertinoIcons.hand_thumbsup,
+                              size: 13,
+                              color: _helpfulIndices.contains(idx)
+                                  ? _fbBlue
+                                  : _muted,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              s.tr('مفيد', 'Utile', 'Helpful'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _helpfulIndices.contains(idx)
+                                    ? _fbBlue
+                                    : _muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

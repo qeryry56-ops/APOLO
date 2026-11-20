@@ -9,6 +9,7 @@ import 'ad_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/marketplace_zone_sheet.dart';
 import 'widgets/price_text.dart';
 import 'widgets/skeleton_loader.dart';
 
@@ -42,10 +43,12 @@ class _SearchScreenState extends State<SearchScreen>
   bool _onlyNegotiable = false;
   final String _sortBy = 'smart';
 
+  List<dynamic> _rawAds = [];
   List<Map<String, dynamic>> _ads = [];
   bool _loading = true;
   bool _chromeVisible = true;
   double _accumulatedScrollDelta = 0.0;
+  String? _lastZoneSignature;
 
   int _currentPage = 1;
   int _lastPage = 1;
@@ -69,8 +72,25 @@ class _SearchScreenState extends State<SearchScreen>
       _state.recordCategoryInterest(_categoryId, weight: 3);
     }
     _scrollCtrl.addListener(_onScroll);
+    _state.addListener(_onAppStateChanged);
     _state.tabReselectCounter.addListener(_scrollToTop);
+    _lastZoneSignature =
+        '${_state.zoneFilterEnabled}_${_state.userLat}_${_state.userLng}_${_state.zoneRadiusKm}';
     _searchAds();
+  }
+
+  void _onAppStateChanged() {
+    if (!mounted) return;
+    final sig =
+        '${_state.zoneFilterEnabled}_${_state.userLat}_${_state.userLng}_${_state.zoneRadiusKm}';
+    if (sig != _lastZoneSignature) {
+      _lastZoneSignature = sig;
+      setState(() {
+        _ads = _filterAndSortAds(_rawAds);
+      });
+    } else {
+      setState(() {});
+    }
   }
 
   void _setChromeVisible(bool visible) {
@@ -131,6 +151,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   @override
   void dispose() {
+    _state.removeListener(_onAppStateChanged);
     _state.tabReselectCounter.removeListener(_scrollToTop);
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
@@ -255,6 +276,13 @@ class _SearchScreenState extends State<SearchScreen>
         break;
     }
 
+    if (_cityId == null) {
+      filtered = _state.applyZoneToAds(
+        filtered,
+        enforceRadiusFilter: _state.hasActiveZone,
+      );
+    }
+
     return filtered;
   }
 
@@ -354,7 +382,8 @@ class _SearchScreenState extends State<SearchScreen>
       if (res.data is Map && res.data['status'] == 'success') {
         if (mounted) {
           final meta = res.data['meta'];
-          final rawData = res.data['data'] ?? [];
+          final rawData = (res.data['data'] as List?) ?? [];
+          _rawAds = rawData;
           setState(() {
             _ads = _filterAndSortAds(rawData);
             _currentPage =
@@ -367,10 +396,11 @@ class _SearchScreenState extends State<SearchScreen>
       }
     } catch (_) {}
     if (mounted) {
+      final fallbackSource =
+          _hasActiveQueryOrFilters ? const [] : _fallbackExploreListings;
+      _rawAds = fallbackSource;
       setState(() {
-        _ads = _filterAndSortAds(
-          _hasActiveQueryOrFilters ? const [] : _fallbackExploreListings,
-        );
+        _ads = _filterAndSortAds(fallbackSource);
         _loading = false;
       });
     }
@@ -391,8 +421,18 @@ class _SearchScreenState extends State<SearchScreen>
       };
       final res = await _state.api.dio.get('/ads', queryParameters: params);
       if (res.data is Map && res.data['status'] == 'success') {
+        final List<dynamic> incomingRaw = (res.data['data'] as List?) ?? [];
+        final existingRawIds = _rawAds
+            .whereType<Map>()
+            .map((e) => e['id']?.toString())
+            .toSet();
+        for (final it in incomingRaw) {
+          if (it is Map && !existingRawIds.contains(it['id']?.toString())) {
+            _rawAds.add(it);
+          }
+        }
         final List<Map<String, dynamic>> newItems =
-            _filterAndSortAds(res.data['data'] ?? []);
+            _filterAndSortAds(incomingRaw);
         final meta = res.data['meta'];
         if (mounted) {
           setState(() {
@@ -1166,7 +1206,7 @@ class _SearchScreenState extends State<SearchScreen>
                       cursorColor: _ink,
                       onChanged: (_) {
                         setState(() {
-                          _ads = _filterAndSortAds(_ads);
+                          _ads = _filterAndSortAds(_rawAds);
                         });
                       },
                       onSubmitted: (_) => _searchAds(),
@@ -1453,6 +1493,45 @@ class _SearchScreenState extends State<SearchScreen>
                         ),
                       ),
                     ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                        child: Row(
+                          children: [
+                            MarketplaceZonePill(
+                              state: _state,
+                              compact: true,
+                              onTap: () => showMarketplaceZoneSheet(context),
+                            ),
+                            const Spacer(),
+                            if (_state.hasActiveZone)
+                              GestureDetector(
+                                onTap: () => _state.clearZoneFilter(),
+                                child: Text(
+                                  s.tr('كل المغرب', 'Tout voir', 'All areas'),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF0866FF),
+                                  ),
+                                ),
+                              )
+                            else
+                              GestureDetector(
+                                onTap: () => showMarketplaceZoneSheet(context),
+                                child: Text(
+                                  s.tr('حدد منطقتك', 'Choisir zone', 'Set area'),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                     if (_loading)
                       const SliverFillRemaining(
                         hasScrollBody: true,
@@ -1465,16 +1544,31 @@ class _SearchScreenState extends State<SearchScreen>
                           assetPath: 'assets/images/state_empty_ads.png',
                           imageSize: 156,
                           title: s.noAdsFound,
-                          subtitle: s.tr(
-                            'جرب تبدل القسم أو توسع نطاق البحث والمدينة.',
-                            'Essayez une autre catégorie ou élargissez vos filtres.',
-                          ),
-                          actionLabel: s.tr(
-                            'إعادة ضبط الفلاتر',
-                            'Réinitialiser les filtres',
-                          ),
-                          onAction: () {
+                          subtitle: _state.hasActiveZone
+                              ? s.tr(
+                                  'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)}. يمكنك توسيع النطاق أو عرض كل المغرب.',
+                                  'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km.',
+                                  'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)}.',
+                                )
+                              : s.tr(
+                                  'جرب تبدل القسم أو توسع نطاق البحث والمدينة.',
+                                  'Essayez une autre catégorie ou élargissez vos filtres.',
+                                ),
+                          actionLabel: _state.hasActiveZone
+                              ? s.tr(
+                                  'عرض كل المغرب 🌍',
+                                  'Voir tout le Maroc',
+                                  'Show all Morocco',
+                                )
+                              : s.tr(
+                                  'إعادة ضبط الفلاتر',
+                                  'Réinitialiser les filtres',
+                                ),
+                          onAction: () async {
                             _setChromeVisible(true);
+                            if (_state.hasActiveZone) {
+                              await _state.clearZoneFilter();
+                            }
                             setState(() {
                               _categoryId = null;
                               _cityId = null;
