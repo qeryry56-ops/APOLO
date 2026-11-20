@@ -221,7 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: ElevatedButton(
                         key: const Key('profile-sign-in'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _primary,
+                          backgroundColor: const Color(0xFF0A0A0A),
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: const StadiumBorder(),

@@ -37,18 +37,21 @@ class AppTypography {
 
   /// Resolves the font family for the given [locale] and [platform].
   ///
-  /// Returns `null` on iOS/macOS to ensure native Apple System Font is selected by the OS.
-  /// On Android and other platforms, returns 'Tajawal' for Arabic and 'Inter' for Latin scripts.
+  /// Returns `null` on native iOS/macOS to ensure native Apple System Font is selected by the OS.
+  /// On Android, Flutter Web (all browsers including iOS/macOS Safari), and other platforms,
+  /// returns 'Tajawal' for Arabic and 'Inter' for Latin scripts.
   static String? resolveFontFamily(
     Locale locale, {
     TargetPlatform? platform,
+    bool? isWeb,
   }) {
+    final effectiveIsWeb = isWeb ?? kIsWeb;
     final effectivePlatform = platform ?? defaultTargetPlatform;
     final isApplePlatform = effectivePlatform == TargetPlatform.iOS ||
         effectivePlatform == TargetPlatform.macOS;
 
-    if (isApplePlatform) {
-      // Let iOS automatically pick the native Apple System Font (.SF Pro / .SF Arabic)
+    if (!effectiveIsWeb && isApplePlatform) {
+      // Let native iOS/macOS automatically pick the Apple System Font (.SF Pro / .SF Arabic)
       return null;
     }
 
@@ -60,12 +63,14 @@ class AppTypography {
   static List<String>? resolveFontFamilyFallback(
     Locale locale, {
     TargetPlatform? platform,
+    bool? isWeb,
   }) {
+    final effectiveIsWeb = isWeb ?? kIsWeb;
     final effectivePlatform = platform ?? defaultTargetPlatform;
     final isApplePlatform = effectivePlatform == TargetPlatform.iOS ||
         effectivePlatform == TargetPlatform.macOS;
 
-    if (isApplePlatform) {
+    if (!effectiveIsWeb && isApplePlatform) {
       return null;
     }
 

@@ -29,24 +29,25 @@ class AppConfig {
     'Tajawal',
   ];
 
-  // Apolo.ma Official Brand Identity + 2026 Unslop / Triply Neutral Ramp
-  static const Color primary =
-      Color(0xFFE31B23); // Official Brand Primary Red RGB(227, 27, 35)
-  static const Color primaryDark = Color(0xFFC81018); // Deep Brand Red
-  static const Color accent = Color(0xFFE31B23); // Primary Red CTA
+  // Monochrome Black, White & Neutral Gray System (with Crimson reserved for key accents)
+  static const Color primary = Color(0xFF0A0A0A); // Obsidian Black Primary
+  static const Color primaryDark = Color(0xFF000000); // Pure Black
+  static const Color accent = Color(0xFF262626); // Charcoal Neutral Accent
+  static const Color brandRed =
+      Color(0xFFE31B23); // Reserved Brand Crimson (hearts, VIP, destructive)
   static const Color badgeBg =
-      Color(0xFFFEECEE); // Soft Rose Tint for Icon Badges
+      Color(0xFFF3F4F6); // Soft Neutral Gray Badge Tint
   static const Color vipGold = Color(0xFFF59E0B); // Luxury Amber Gold for VIP
   static const Color success = Color(0xFF10B981); // Emerald Verified Green
   static const Color danger = Color(0xFFE31B23);
-  static const Color bgLight = Colors.white; // Pure White #FFFFFF
+  static const Color bgLight = Color(0xFFF2F3F7); // Clean iOS Neutral Gray Canvas
   static const Color cardBg = Colors.white; // Pure White #FFFFFF
   static const Color surfaceGray =
-      Color(0xFFF1F3F7); // Calm Neutral Pill/Input Fill
+      Color(0xFFF3F4F6); // Calm Neutral Pill/Input Fill
   static const Color borderGray =
-      Color(0xFFE7EAF0); // Hairline Card/Input Border
-  static const Color textPrimary = Color(0xFF0F1B2D); // Deep Slate Ink
-  static const Color textSecondary = Color(0xFF8A94A6); // Muted Neutral Gray
+      Color(0xFFE5E7EB); // Hairline Card/Input Border
+  static const Color textPrimary = Color(0xFF0A0A0A); // Crisp Obsidian Ink
+  static const Color textSecondary = Color(0xFF6B7280); // Balanced Neutral Gray
 
   static List<BoxShadow> get softShadow => [
         BoxShadow(

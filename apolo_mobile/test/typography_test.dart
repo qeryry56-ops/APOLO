@@ -110,6 +110,33 @@ void main() {
       );
       expect(frFallback, contains(AppTypography.fontInter));
     });
+
+    test('Web uses bundled Tajawal/Inter even on iOS/macOS browsers', () {
+      expect(
+        AppTypography.resolveFontFamily(
+          const Locale('ar'),
+          platform: TargetPlatform.iOS,
+          isWeb: true,
+        ),
+        equals(AppTypography.fontTajawal),
+      );
+      expect(
+        AppTypography.resolveFontFamily(
+          const Locale('en'),
+          platform: TargetPlatform.iOS,
+          isWeb: true,
+        ),
+        equals(AppTypography.fontInter),
+      );
+      expect(
+        AppTypography.resolveFontFamily(
+          const Locale('fr'),
+          platform: TargetPlatform.macOS,
+          isWeb: true,
+        ),
+        equals(AppTypography.fontInter),
+      );
+    });
   });
 
   group('Typography Design Specifications & Scale', () {

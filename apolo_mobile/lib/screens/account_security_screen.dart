@@ -531,7 +531,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             child: FilledButton(
                               key: const Key('security-save-password'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: _red,
+                                backgroundColor: _ink,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),

@@ -235,7 +235,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
       floatingActionButton: _ads.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _openOrderSheet,
-              backgroundColor: _red,
+              backgroundColor: const Color(0xFF0A0A0A),
               foregroundColor: Colors.white,
               elevation: 4,
               icon: const Icon(Icons.shopping_bag_outlined, size: 20),

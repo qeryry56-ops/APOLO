@@ -17,26 +17,78 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell>
+    with SingleTickerProviderStateMixin {
   final AppState _state = AppState();
   int _currentIndex = 0;
   int _lastPillSlot = 0;
   int? _searchInitialCategory;
   bool _searchChromeVisible = true;
 
-  static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _blue = Color(0xFFE31B23); // Apolo Brand Primary Red
+  late final AnimationController _squashCtrl;
+  late final Animation<double> _pillScaleX;
+  late final Animation<double> _pillScaleY;
+
+  // Monochrome Obsidian Black + Neutral Gray Dock Palette
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _inactive = Color(0xFF6B7280);
+  static const Color _activePill = Color(0xFFE8EAEE);
 
   @override
   void initState() {
     super.initState();
     _state.addListener(_onStateChanged);
+    _squashCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+    );
+    _pillScaleX = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.18)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.18, end: 0.94)
+            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.94, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 30,
+      ),
+    ]).animate(_squashCtrl);
+    _pillScaleY = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.85)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.85, end: 1.06)
+            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.06, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 30,
+      ),
+    ]).animate(_squashCtrl);
   }
 
   @override
   void dispose() {
     _state.removeListener(_onStateChanged);
+    _squashCtrl.dispose();
     super.dispose();
+  }
+
+  void _triggerSquashStretch() {
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      _squashCtrl.forward(from: 0.0);
+    }
   }
 
   void _onStateChanged() {
@@ -59,6 +111,7 @@ class _MainShellState extends State<MainShell> {
           if (catId != null) {
             _state.recordCategoryInterest(catId, weight: 3);
           }
+          _triggerSquashStretch();
           setState(() {
             _searchInitialCategory = catId;
             _searchChromeVisible = true;
@@ -67,6 +120,7 @@ class _MainShellState extends State<MainShell> {
           });
         },
         onOpenPostAd: () {
+          _triggerSquashStretch();
           setState(() {
             _searchChromeVisible = true;
             _currentIndex = 1;
@@ -74,11 +128,14 @@ class _MainShellState extends State<MainShell> {
         },
       ),
       PostAdScreen(
-        onSuccess: () => setState(() {
-          _searchChromeVisible = true;
-          _currentIndex = 0;
-          _lastPillSlot = 0;
-        }),
+        onSuccess: () {
+          _triggerSquashStretch();
+          setState(() {
+            _searchChromeVisible = true;
+            _currentIndex = 0;
+            _lastPillSlot = 0;
+          });
+        },
       ),
       SearchScreen(
         key: ValueKey(_searchInitialCategory),
@@ -86,11 +143,14 @@ class _MainShellState extends State<MainShell> {
         onChromeVisibilityChanged: _handleSearchChromeVisibility,
       ),
       ChatListScreen(
-        onExploreAds: () => setState(() {
-          _searchChromeVisible = true;
-          _currentIndex = 2;
-          _lastPillSlot = 1;
-        }),
+        onExploreAds: () {
+          _triggerSquashStretch();
+          setState(() {
+            _searchChromeVisible = true;
+            _currentIndex = 2;
+            _lastPillSlot = 1;
+          });
+        },
       ),
       const ProfileScreen(),
     ];
@@ -127,6 +187,7 @@ class _MainShellState extends State<MainShell> {
     final displaySlot = activePillSlot >= 0 ? activePillSlot : _lastPillSlot;
     final showBottomBar = _currentIndex != 2 || _searchChromeVisible;
     final isPostAdSelected = _currentIndex == 1;
+    final safeBottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -140,13 +201,11 @@ class _MainShellState extends State<MainShell> {
                 TickerMode(enabled: _currentIndex == i, child: pages[i])
             ],
           ),
-          // Floating iOS Split Pill Dock + Detached Plus Button (auto-hides during Explore scroll)
+          // Responsive Floating Translucent Pill Dock + Borderless "+" Button with Squash & Stretch
           Positioned(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).padding.bottom > 0
-                ? MediaQuery.of(context).padding.bottom
-                : 16,
+            left: 20,
+            right: 20,
+            bottom: safeBottom > 0 ? safeBottom + 4 : 16,
             child: IgnorePointer(
               ignoring: !showBottomBar,
               child: AnimatedSlide(
@@ -157,211 +216,272 @@ class _MainShellState extends State<MainShell> {
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOut,
                   opacity: showBottomBar ? 1.0 : 0.0,
-                  child: SizedBox(
-                    height: 62,
-                    child: Row(
-                      textDirection: TextDirection.ltr,
-                      children: [
-                        // Left Expanded Translucent Glass Capsule Pill (4 main tabs)
-                        Expanded(
-                          child: Container(
-                            height: 62,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _ink.withValues(alpha: 0.10),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: BackdropFilter(
-                                filter:
-                                    ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                                child: Container(
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.76),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: const Color(0xFFE7EAF0)
-                                          .withValues(alpha: 0.85),
-                                      width: 1,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 380),
+                      child: SizedBox(
+                        height: 58,
+                        child: Row(
+                          textDirection: TextDirection.ltr,
+                          children: [
+                            // Left Expanded Translucent Glass Capsule Pill (4 main tabs)
+                            Expanded(
+                              child: Container(
+                                height: 58,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(999),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _ink.withValues(alpha: 0.09),
+                                      blurRadius: 22,
+                                      offset: const Offset(0, 7),
                                     ),
-                                  ),
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final slotWidth = constraints.maxWidth /
-                                          pillItems.length;
-                                      final slotHeight = constraints.maxHeight;
-                                      return Stack(
-                                        children: [
-                                          AnimatedPositioned(
-                                            duration: const Duration(
-                                                milliseconds: 320),
-                                            curve: const Cubic(
-                                                0.22, 1.0, 0.36, 1.0),
-                                            left: slotWidth * displaySlot,
-                                            top: 0,
-                                            width: slotWidth,
-                                            height: slotHeight,
-                                            child: AnimatedContainer(
-                                              duration: const Duration(
-                                                  milliseconds: 180),
-                                              decoration: BoxDecoration(
-                                                color: activePillSlot >= 0
-                                                    ? const Color(0xFFE9EBF0)
-                                                        .withValues(alpha: 0.85)
-                                                    : Colors.transparent,
-                                                borderRadius:
-                                                    BorderRadius.circular(999),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                        sigmaX: 24, sigmaY: 24),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4.5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.78),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.72),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final slotWidth =
+                                              constraints.maxWidth /
+                                                  pillItems.length;
+                                          final slotHeight =
+                                              constraints.maxHeight;
+                                          return Stack(
+                                            children: [
+                                              AnimatedPositioned(
+                                                duration: const Duration(
+                                                    milliseconds: 320),
+                                                curve: const Cubic(
+                                                    0.22, 1.0, 0.36, 1.0),
+                                                left: slotWidth * displaySlot,
+                                                top: 0,
+                                                width: slotWidth,
+                                                height: slotHeight,
+                                                child: AnimatedBuilder(
+                                                  animation: _squashCtrl,
+                                                  builder: (context, child) {
+                                                    final sx =
+                                                        _squashCtrl.isAnimating
+                                                            ? _pillScaleX.value
+                                                            : 1.0;
+                                                    final sy =
+                                                        _squashCtrl.isAnimating
+                                                            ? _pillScaleY.value
+                                                            : 1.0;
+                                                    return Transform(
+                                                      alignment:
+                                                          Alignment.center,
+                                                      transform: Matrix4
+                                                          .diagonal3Values(
+                                                              sx, sy, 1.0),
+                                                      child: child,
+                                                    );
+                                                  },
+                                                  child: AnimatedContainer(
+                                                    duration: const Duration(
+                                                        milliseconds: 180),
+                                                    decoration: BoxDecoration(
+                                                      color: activePillSlot >= 0
+                                                          ? _activePill
+                                                              .withValues(
+                                                                  alpha: 0.90)
+                                                          : Colors.transparent,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              999),
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
-                                          Row(
-                                            textDirection: TextDirection.ltr,
-                                            children: List.generate(
-                                              pillItems.length,
-                                              (idx) {
-                                                final item = pillItems[idx];
-                                                final selected =
-                                                    _currentIndex ==
-                                                        item.pageIndex;
-                                                return Expanded(
-                                                  child: PressableScale(
-                                                    onTap: () {
-                                                      HapticFeedback
-                                                          .selectionClick();
-                                                      if (_currentIndex ==
-                                                          item.pageIndex) {
-                                                        _state
-                                                            .notifyTabReselected();
-                                                      } else {
-                                                        setState(() {
-                                                          _searchChromeVisible =
-                                                              true;
-                                                          _currentIndex =
-                                                              item.pageIndex;
-                                                          _lastPillSlot = idx;
-                                                        });
-                                                      }
-                                                    },
-                                                    child: ConstrainedBox(
-                                                      constraints:
-                                                          const BoxConstraints(
-                                                        minWidth: 44,
-                                                        minHeight: 44,
-                                                      ),
-                                                      child: Semantics(
-                                                        button: true,
-                                                        selected: selected,
-                                                        label: item.label,
-                                                        child: SizedBox(
-                                                          height: slotHeight,
-                                                          child: Center(
-                                                            child: Icon(
-                                                              selected
-                                                                  ? item
-                                                                      .activeIcon
-                                                                  : item.icon,
-                                                              size: 24,
-                                                              color: selected
-                                                                  ? _blue
-                                                                  : _ink,
+                                              Row(
+                                                textDirection:
+                                                    TextDirection.ltr,
+                                                children: List.generate(
+                                                  pillItems.length,
+                                                  (idx) {
+                                                    final item = pillItems[idx];
+                                                    final selected =
+                                                        _currentIndex ==
+                                                            item.pageIndex;
+                                                    return Expanded(
+                                                      child: PressableScale(
+                                                        pressedScale: 0.90,
+                                                        onTap: () {
+                                                          HapticFeedback
+                                                              .selectionClick();
+                                                          _triggerSquashStretch();
+                                                          if (_currentIndex ==
+                                                              item.pageIndex) {
+                                                            _state
+                                                                .notifyTabReselected();
+                                                          } else {
+                                                            setState(() {
+                                                              _searchChromeVisible =
+                                                                  true;
+                                                              _currentIndex =
+                                                                  item.pageIndex;
+                                                              _lastPillSlot =
+                                                                  idx;
+                                                            });
+                                                          }
+                                                        },
+                                                        child: ConstrainedBox(
+                                                          constraints:
+                                                              const BoxConstraints(
+                                                            minWidth: 44,
+                                                            minHeight: 44,
+                                                          ),
+                                                          child: Semantics(
+                                                            button: true,
+                                                            selected: selected,
+                                                            label: item.label,
+                                                            child: SizedBox(
+                                                              height:
+                                                                  slotHeight,
+                                                              child: Center(
+                                                                child:
+                                                                    AnimatedScale(
+                                                                  scale: selected
+                                                                      ? 1.06
+                                                                      : 1.0,
+                                                                  duration:
+                                                                      const Duration(
+                                                                          milliseconds:
+                                                                              220),
+                                                                  curve: const Cubic(
+                                                                      0.22,
+                                                                      1.0,
+                                                                      0.36,
+                                                                      1.0),
+                                                                  child: Icon(
+                                                                    selected
+                                                                        ? item
+                                                                            .activeIcon
+                                                                        : item
+                                                                            .icon,
+                                                                    size: 22.5,
+                                                                    color: selected
+                                                                        ? _ink
+                                                                        : _inactive,
+                                                                  ),
+                                                                ),
+                                                              ),
                                                             ),
                                                           ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Right Detached Circular Glass "+" Button (Post Ad)
-                        PressableScale(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            if (_currentIndex == 1) {
-                              _state.notifyTabReselected();
-                            } else {
-                              setState(() {
-                                _searchChromeVisible = true;
-                                _currentIndex = 1;
-                              });
-                            }
-                          },
-                          child: Semantics(
-                            button: true,
-                            selected: isPostAdSelected,
-                            label: s.tr('نشر إعلان', 'Publier'),
-                            child: Container(
-                              width: 62,
-                              height: 62,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _ink.withValues(alpha: 0.10),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: BackdropFilter(
-                                  filter:
-                                      ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.76),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFFE7EAF0)
-                                            .withValues(alpha: 0.85),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 220),
-                                      curve: Curves.easeOutCubic,
-                                      decoration: BoxDecoration(
-                                        color: isPostAdSelected
-                                            ? const Color(0xFFE9EBF0)
-                                                .withValues(alpha: 0.85)
-                                            : Colors.transparent,
-                                        shape: BoxShape.circle,
-                                      ),
+                            const SizedBox(width: 10),
+                            // Right Detached Borderless Circular Glass "+" Button (Post Ad)
+                            PressableScale(
+                              pressedScale: 0.88,
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                _triggerSquashStretch();
+                                if (_currentIndex == 1) {
+                                  _state.notifyTabReselected();
+                                } else {
+                                  setState(() {
+                                    _searchChromeVisible = true;
+                                    _currentIndex = 1;
+                                  });
+                                }
+                              },
+                              child: Semantics(
+                                button: true,
+                                selected: isPostAdSelected,
+                                label: s.tr('نشر إعلان', 'Publier'),
+                                child: AnimatedBuilder(
+                                  animation: _squashCtrl,
+                                  builder: (context, child) {
+                                    final active = isPostAdSelected &&
+                                        _squashCtrl.isAnimating;
+                                    final sx =
+                                        active ? _pillScaleX.value : 1.0;
+                                    final sy =
+                                        active ? _pillScaleY.value : 1.0;
+                                    return Transform(
                                       alignment: Alignment.center,
-                                      child: Icon(
-                                        CupertinoIcons.add,
-                                        size: 26,
-                                        color: isPostAdSelected ? _blue : _ink,
+                                      transform:
+                                          Matrix4.diagonal3Values(sx, sy, 1.0),
+                                      child: child,
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 58,
+                                    height: 58,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _ink.withValues(alpha: 0.09),
+                                          blurRadius: 22,
+                                          offset: const Offset(0, 7),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                            sigmaX: 24, sigmaY: 24),
+                                        child: AnimatedContainer(
+                                          duration:
+                                              const Duration(milliseconds: 220),
+                                          curve: Curves.easeOutCubic,
+                                          decoration: BoxDecoration(
+                                            color: isPostAdSelected
+                                                ? _ink.withValues(alpha: 0.90)
+                                                : Colors.white
+                                                    .withValues(alpha: 0.78),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Icon(
+                                            CupertinoIcons.add,
+                                            size: 24,
+                                            color: isPostAdSelected
+                                                ? Colors.white
+                                                : _ink,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

@@ -1241,9 +1241,9 @@ class _AuthScreenState extends State<AuthScreen>
                                       key: const Key('auth-submit'),
                                       onPressed: _busy ? null : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppConfig.primary,
+                                        backgroundColor: AppConfig.brandRed,
                                         disabledBackgroundColor: AppConfig
-                                            .primary
+                                            .brandRed
                                             .withValues(alpha: 0.6),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
