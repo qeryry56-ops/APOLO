@@ -114,15 +114,16 @@ void main() {
     }
   }
 
-  testWidgets('renders all three authentication providers', (
+  testWidgets('renders Google and email authentication providers without Apple',
+      (
     tester,
   ) async {
     await tester.pumpWidget(_app(const WelcomeScreen()));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('welcome-apple')), findsOneWidget);
+    expect(find.byKey(const ValueKey('welcome-apple')), findsNothing);
+    expect(find.text('Continue with Apple'), findsNothing);
     expect(find.byKey(const ValueKey('welcome-google')), findsOneWidget);
     expect(find.byKey(const ValueKey('welcome-sign-in')), findsOneWidget);
-    expect(find.text('Continue with Apple'), findsOneWidget);
     expect(find.text('Continue with Google'), findsOneWidget);
     expect(find.text('Continue with email'), findsOneWidget);
     expect(tester.takeException(), isNull);

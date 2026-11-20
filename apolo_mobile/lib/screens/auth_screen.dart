@@ -1231,34 +1231,41 @@ class _AuthScreenState extends State<AuthScreen>
 
                                 const SizedBox(height: 18),
 
-                                // Primary CTA Button (52px height, 12px radius, solid #E31B23)
+                                // Primary CTA Button (2026 Monochrome: 54px height, 14px squircle)
                                 _TapPressScale(
                                   enabled: !_busy,
                                   child: SizedBox(
                                     width: double.infinity,
-                                    height: 52,
+                                    height: 54,
                                     child: ElevatedButton(
                                       key: const Key('auth-submit'),
                                       onPressed: _busy ? null : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppConfig.brandRed,
-                                        disabledBackgroundColor: AppConfig
-                                            .brandRed
-                                            .withValues(alpha: 0.6),
-                                        foregroundColor: Colors.white,
+                                        backgroundColor: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF0A0A0A),
+                                        disabledBackgroundColor: (isDark
+                                                ? Colors.white
+                                                : const Color(0xFF0A0A0A))
+                                            .withValues(alpha: 0.55),
+                                        foregroundColor: isDark
+                                            ? const Color(0xFF0A0A0A)
+                                            : Colors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(12),
+                                              BorderRadius.circular(14),
                                         ),
                                         elevation: 0,
                                       ),
                                       child: _busy
-                                          ? const SizedBox(
+                                          ? SizedBox(
                                               width: 20,
                                               height: 20,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                color: Colors.white,
+                                                color: isDark
+                                                    ? const Color(0xFF0A0A0A)
+                                                    : Colors.white,
                                               ),
                                             )
                                           : Text(
@@ -1267,10 +1274,12 @@ class _AuthScreenState extends State<AuthScreen>
                                                 'Se connecter',
                                                 'Sign in',
                                               ),
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w700,
-                                                color: Colors.white,
+                                                color: isDark
+                                                    ? const Color(0xFF0A0A0A)
+                                                    : Colors.white,
                                               ),
                                             ),
                                     ),
@@ -1314,7 +1323,7 @@ class _AuthScreenState extends State<AuthScreen>
                                   ),
                                 ),
 
-                                // Social Login Group (12px radius, authentic SVG vector logos)
+                                // Social Login: Google Only (Apple login removed)
                                 _buildSocialButton(
                                   key: const Key('auth-google'),
                                   icon: const _GoogleIcon(size: 20),
@@ -1327,30 +1336,6 @@ class _AuthScreenState extends State<AuthScreen>
                                   textColor: inkColor,
                                   borderColor: borderColor,
                                   onPressed: _launchGoogleSignIn,
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                _buildSocialButton(
-                                  key: const Key('auth-apple'),
-                                  icon: _AppleIcon(size: 20, color: inkColor),
-                                  text: s.tr(
-                                    'المتابعة باستخدام Apple',
-                                    'Continuer avec Apple',
-                                    'Continue With Apple',
-                                  ),
-                                  surfaceColor: surfaceColor,
-                                  textColor: inkColor,
-                                  borderColor: borderColor,
-                                  onPressed: () {
-                                    HapticFeedback.lightImpact();
-                                    setState(() {
-                                      _notice = s.tr(
-                                        'الدخول عبر Apple غير متاح حالياً داخل التطبيق.',
-                                        'Apple sign-in is not available yet.',
-                                      );
-                                    });
-                                  },
                                 ),
                               ],
 
@@ -1421,16 +1406,22 @@ class _AuthScreenState extends State<AuthScreen>
                               key: const Key('reg-step1-continue'),
                               onPressed: _nextRegisterStep,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0A0A0A),
-                                foregroundColor: Colors.white,
-                                shape: const StadiumBorder(),
+                                backgroundColor: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF0A0A0A),
+                                foregroundColor: isDark
+                                    ? const Color(0xFF0A0A0A)
+                                    : Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
                                 elevation: 0,
                               ),
                               child: Text(
                                 s.tr('متابعة', 'Continuer', 'Continue'),
                                 style: const TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
@@ -1452,19 +1443,19 @@ class _AuthScreenState extends State<AuthScreen>
                                 : s.tr('حدد تاريخ الازدياد', 'Select date'),
                           ),
 
-                          // City Selector
+                          // City Selector (Dark-mode aware 2026 squircle)
                           GestureDetector(
                             onTap: _showCityPicker,
                             child: Container(
-                              height: 54,
+                              height: 56,
                               margin: const EdgeInsets.only(bottom: 14),
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 16),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: surfaceColor,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: const Color(0xFFE5E7EB),
+                                  color: borderColor,
                                   width: 1.2,
                                 ),
                               ),
@@ -1479,26 +1470,26 @@ class _AuthScreenState extends State<AuthScreen>
                                     children: [
                                       Text(
                                         s.tr('المدينة', 'City'),
-                                        style: const TextStyle(
-                                          fontSize: 10.5,
+                                        style: TextStyle(
+                                          fontSize: 11,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF6B7280),
+                                          color: mutedColor,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         _cityName,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
-                                          color: Color(0xFF111827),
+                                          color: inkColor,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const Icon(
+                                  Icon(
                                     Icons.keyboard_arrow_down_rounded,
-                                    color: Color(0xFF6B7280),
+                                    color: mutedColor,
                                   ),
                                 ],
                               ),
@@ -1564,12 +1555,14 @@ class _AuthScreenState extends State<AuthScreen>
                                   child: OutlinedButton(
                                     onPressed: _prevRegisterStep,
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF111827),
-                                      side: const BorderSide(
-                                        color: Color(0xFFE5E7EB),
+                                      foregroundColor: inkColor,
+                                      side: BorderSide(
+                                        color: borderColor,
                                         width: 1.2,
                                       ),
-                                      shape: const StadiumBorder(),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
                                     ),
                                     child: Text(
                                       s.tr('رجوع', 'Retour', 'Back'),
@@ -1589,16 +1582,22 @@ class _AuthScreenState extends State<AuthScreen>
                                     key: const Key('reg-step2-continue'),
                                     onPressed: _nextRegisterStep,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0A0A0A),
-                                      foregroundColor: Colors.white,
-                                      shape: const StadiumBorder(),
+                                      backgroundColor: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF0A0A0A),
+                                      foregroundColor: isDark
+                                          ? const Color(0xFF0A0A0A)
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
                                       elevation: 0,
                                     ),
                                     child: Text(
                                       s.tr('متابعة', 'Continuer', 'Continue'),
                                       style: const TextStyle(
                                         fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -1667,12 +1666,14 @@ class _AuthScreenState extends State<AuthScreen>
                                   child: OutlinedButton(
                                     onPressed: _busy ? null : _prevRegisterStep,
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF111827),
-                                      side: const BorderSide(
-                                        color: Color(0xFFE5E7EB),
+                                      foregroundColor: inkColor,
+                                      side: BorderSide(
+                                        color: borderColor,
                                         width: 1.2,
                                       ),
-                                      shape: const StadiumBorder(),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
                                     ),
                                     child: Text(
                                       s.tr('رجوع', 'Retour', 'Back'),
@@ -1692,9 +1693,15 @@ class _AuthScreenState extends State<AuthScreen>
                                     key: const Key('auth-submit'),
                                     onPressed: _busy ? null : _submit,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0A0A0A),
-                                      foregroundColor: Colors.white,
-                                      shape: const StadiumBorder(),
+                                      backgroundColor: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF0A0A0A),
+                                      foregroundColor: isDark
+                                          ? const Color(0xFF0A0A0A)
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
                                       elevation: 0,
                                     ),
                                     child: _busy
@@ -2495,68 +2502,4 @@ class _GoogleIconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Crisp SVG-faithful Apple brand logo
-class _AppleIcon extends StatelessWidget {
-  final double size;
-  final Color color;
-  const _AppleIcon({this.size = 20, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _AppleIconPainter(color),
-    );
-  }
-}
-
-class _AppleIconPainter extends CustomPainter {
-  final Color color;
-  const _AppleIconPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double sx = size.width / 24.0;
-    final double sy = size.height / 24.0;
-    canvas.save();
-    canvas.scale(sx, sy);
-
-    final Paint paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    // Leaf
-    final Path leaf = Path()
-      ..moveTo(15.2, 2.2)
-      ..cubicTo(15.4, 3.8, 14.2, 5.4, 12.6, 5.8)
-      ..cubicTo(12.2, 4.3, 13.5, 2.7, 15.2, 2.2)
-      ..close();
-    canvas.drawPath(leaf, paint);
-
-    // Body
-    final Path body = Path()
-      ..moveTo(18.7, 12.7)
-      ..cubicTo(18.7, 10.1, 20.8, 8.8, 20.9, 8.7)
-      ..cubicTo(19.6, 6.9, 17.6, 6.7, 16.9, 6.6)
-      ..cubicTo(15.2, 6.4, 13.6, 7.6, 12.8, 7.6)
-      ..cubicTo(11.9, 7.6, 10.6, 6.6, 9.2, 6.7)
-      ..cubicTo(7.4, 6.7, 5.7, 7.7, 4.7, 9.4)
-      ..cubicTo(2.8, 12.7, 4.2, 17.7, 6.1, 20.4)
-      ..cubicTo(7.0, 21.7, 8.1, 23.1, 9.5, 23.1)
-      ..cubicTo(10.9, 23.0, 11.4, 22.2, 13.0, 22.2)
-      ..cubicTo(14.6, 22.2, 15.0, 23.1, 16.5, 23.0)
-      ..cubicTo(18.0, 23.0, 18.9, 21.7, 19.8, 20.4)
-      ..cubicTo(20.9, 18.8, 21.3, 17.3, 21.3, 17.2)
-      ..cubicTo(21.3, 17.2, 18.7, 16.2, 18.7, 12.7)
-      ..close();
-    canvas.drawPath(body, paint);
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _AppleIconPainter oldDelegate) =>
-      oldDelegate.color != color;
 }

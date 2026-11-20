@@ -280,24 +280,23 @@ void main() {
       final forgotText = tester.widget<Text>(find.text('نسيت كلمة المرور؟'));
       expect(forgotText.style?.color, const Color(0xFF6B7280));
 
-      // 6. Primary CTA: 52px high, 12px radius, solid #E31B23
+      // 6. Primary CTA: 54px high, 14px radius, monochrome #0A0A0A
       final submitBtn =
           tester.widget<ElevatedButton>(find.byKey(const Key('auth-submit')));
       final submitSize = tester.getSize(find.byKey(const Key('auth-submit')));
-      expect(submitSize.height, 52.0);
+      expect(submitSize.height, 54.0);
       expect(
         submitBtn.style?.backgroundColor?.resolve(<WidgetState>{}),
-        const Color(0xFFE31B23),
+        const Color(0xFF0A0A0A),
       );
 
-      // 7. Social buttons & Divider 'أو'
+      // 7. Social buttons & Divider 'أو' (Google only; Apple login removed)
       expect(find.text('أو'), findsOneWidget);
       expect(find.byKey(const Key('auth-google')), findsOneWidget);
-      expect(find.byKey(const Key('auth-apple')), findsOneWidget);
+      expect(find.byKey(const Key('auth-apple')), findsNothing);
       expect(find.text('المتابعة باستخدام Google'), findsOneWidget);
-      expect(find.text('المتابعة باستخدام Apple'), findsOneWidget);
+      expect(find.text('المتابعة باستخدام Apple'), findsNothing);
       expect(tester.getSize(find.byKey(const Key('auth-google'))).height, 52.0);
-      expect(tester.getSize(find.byKey(const Key('auth-apple'))).height, 52.0);
 
       // 8. Footer: 'أول مرة هنا؟ ' muted + 'إنشاء حساب'
       expect(find.textContaining('أول مرة هنا؟'), findsOneWidget);

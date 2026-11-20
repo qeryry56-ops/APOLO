@@ -96,25 +96,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  void _openAppleAuth() {
-    // Navigates to auth flow with seamless fallback notice
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        transitionDuration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-        reverseTransitionDuration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-        pageBuilder: (_, animation, secondaryAnimation) => AuthScreen(
-          initialIsLogin: true,
-          onSuccess: _enterMainApp,
-        ),
-        transitionsBuilder: (_, animation, secondaryAnimation, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
-  }
-
   void _openPrivacy() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -224,23 +205,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 else
                                   const Spacer(flex: 4),
 
-                                // Button 1: Continue with Apple
-                                _buildCapsuleButton(
-                                  key: const ValueKey('welcome-apple'),
-                                  backgroundColor: Colors.white,
-                                  textColor: Colors.black,
-                                  icon: const Icon(
-                                    Icons.apple,
-                                    color: Colors.black,
-                                    size: 24,
-                                  ),
-                                  text: 'Continue with Apple',
-                                  onPressed: _openAppleAuth,
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                // Button 2: Continue with Google
+                                // Button 1: Continue with Google
                                 _buildCapsuleButton(
                                   key: const ValueKey('welcome-google'),
                                   backgroundColor: Colors.white,
