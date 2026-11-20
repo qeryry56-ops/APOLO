@@ -22,6 +22,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AppState _state = AppState();
+  final ScrollController _scrollController = ScrollController();
 
   List<Map<String, dynamic>> _myAds = [];
   bool _loadingAds = false;
@@ -45,12 +46,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _profileIdentity = _identity;
     _state.addListener(_onAccountChanged);
+    _state.tabReselectCounter.addListener(_scrollToTop);
     _loadProfileData();
+  }
+
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override
   void dispose() {
     _state.removeListener(_onAccountChanged);
+    _state.tabReselectCounter.removeListener(_scrollToTop);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -267,6 +281,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: Colors.white,
           onRefresh: _loadProfileData,
           child: CustomScrollView(
+            controller: _scrollController,
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),

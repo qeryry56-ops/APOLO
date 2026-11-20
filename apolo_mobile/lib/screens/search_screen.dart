@@ -162,7 +162,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   void _onScroll() {
     if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 240) {
+        _scrollCtrl.position.maxScrollExtent - 650) {
       if (!_loading && !_loadingMore && _currentPage < _lastPage) {
         _loadMoreAds();
       }

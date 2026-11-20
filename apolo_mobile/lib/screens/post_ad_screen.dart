@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
@@ -127,15 +129,96 @@ class _PostAdScreenState extends State<PostAdScreen>
       if (_state.currentUser != null && _state.currentUser!['phone'] != null) {
         _phoneCtrl.text = _state.currentUser!['phone'].toString();
       }
+      unawaited(_restoreDraft());
     }
   }
 
+  static const String _draftKey = 'apolo_post_ad_draft_v1';
+  Timer? _draftDebounce;
+
+  Future<void> _restoreDraft() async {
+    if (_isEditing) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_draftKey);
+      if (raw == null || raw.isEmpty || !mounted) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      final title = (decoded['title'] ?? '').toString();
+      final desc = (decoded['description'] ?? '').toString();
+      final price = (decoded['price'] ?? '').toString();
+      final phone = (decoded['phone'] ?? '').toString();
+      if (title.isEmpty && desc.isEmpty && price.isEmpty) return;
+      setState(() {
+        if (_titleCtrl.text.isEmpty && title.isNotEmpty) {
+          _titleCtrl.text = title;
+        }
+        if (_descCtrl.text.isEmpty && desc.isNotEmpty) {
+          _descCtrl.text = desc;
+        }
+        if (_priceCtrl.text.isEmpty && price.isNotEmpty) {
+          _priceCtrl.text = price;
+        }
+        if (_phoneCtrl.text.isEmpty && phone.isNotEmpty) {
+          _phoneCtrl.text = phone;
+        }
+        if (decoded['category_id'] is int) {
+          _categoryId = decoded['category_id'] as int;
+        }
+        if (decoded['city_id'] is int) {
+          _cityId = decoded['city_id'] as int;
+        }
+        if (decoded['negotiable'] is bool) {
+          _negotiable = decoded['negotiable'] as bool;
+        }
+        if (decoded['free'] is bool) {
+          _free = decoded['free'] as bool;
+        }
+        if (decoded['hide_phone'] is bool) {
+          _hidePhone = decoded['hide_phone'] as bool;
+        }
+      });
+    } catch (_) {}
+  }
+
+  void _scheduleSaveDraft() {
+    if (_isEditing) return;
+    _draftDebounce?.cancel();
+    _draftDebounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final payload = jsonEncode({
+          'title': _titleCtrl.text,
+          'description': _descCtrl.text,
+          'price': _priceCtrl.text,
+          'phone': _phoneCtrl.text,
+          'category_id': _categoryId,
+          'city_id': _cityId,
+          'negotiable': _negotiable,
+          'free': _free,
+          'hide_phone': _hidePhone,
+        });
+        await prefs.setString(_draftKey, payload);
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _clearDraft() async {
+    _draftDebounce?.cancel();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_draftKey);
+    } catch (_) {}
+  }
+
   void _onFieldChanged() {
+    _scheduleSaveDraft();
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _draftDebounce?.cancel();
     _celebrationCtrl.dispose();
     _titleCtrl.dispose();
     _descCtrl.dispose();
@@ -429,6 +512,7 @@ class _PostAdScreenState extends State<PostAdScreen>
 
   void _resetWizard() {
     HapticFeedback.selectionClick();
+    unawaited(_clearDraft());
     _celebrationCtrl.stop();
     _titleCtrl.clear();
     _descCtrl.clear();

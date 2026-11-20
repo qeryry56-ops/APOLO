@@ -72,7 +72,9 @@ class AppState extends ChangeNotifier {
   Future<void> refreshRemote() async {
     await Future.wait([fetchTaxonomy(), if (api.isAuthenticated) fetchMe()]);
     syncZoneFromPreferredCity();
-    unawaited(detectUserZoneAutomatically(tryGps: true, silent: true));
+    // Ask-at-the-Tap UX: never prompt for GPS permission on app launch;
+    // only use silent IP/city fallback here. GPS is requested when user taps "Detect my location".
+    unawaited(detectUserZoneAutomatically(tryGps: false, silent: true));
   }
 
   int _sessionRevision = 0;
