@@ -12,6 +12,7 @@ import '../theme/app_typography.dart';
 import '../widgets/custom_auth_input_field.dart';
 import '../widgets/interests_survey_sheet.dart';
 import 'forgot_password_screen.dart';
+import 'privacy_compliance_screen.dart';
 import 'support_screen.dart';
 
 enum _OtpPhase {
@@ -75,12 +76,10 @@ class _AuthScreenState extends State<AuthScreen>
   final _phone = TextEditingController();
 
   String _gender = 'male'; // 'male' or 'female'
-  int _cityId = 1;
-  String _cityName = 'الدار البيضاء';
+  final int _cityId = 1;
   String _accountType = 'individual'; // 'individual' (Buyer) or 'pro' (Seller)
   int _registerStep = 1; // 1 to 4
-
-  List<Map<String, dynamic>> _cities = [];
+  bool _acceptedTerms = false;
 
   late final AccountAuth _auth;
   late bool _login;
@@ -94,33 +93,13 @@ class _AuthScreenState extends State<AuthScreen>
   int _remaining = 0;
   _OtpPhase _otpPhase = _OtpPhase.idle;
   int _resendFailures = 0;
-  bool _isPhoneMode = false;
-  String _countryCode = '+212';
   late final AnimationController _shakeCtrl;
-
-  static const List<Map<String, dynamic>> _fallbackCities = [
-    {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
-    {'id': 2, 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
-    {'id': 3, 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
-    {'id': 4, 'name_ar': 'طنجة', 'name_fr': 'Tanger'},
-    {'id': 5, 'name_ar': 'فاس', 'name_fr': 'Fès'},
-    {'id': 6, 'name_ar': 'أكادير', 'name_fr': 'Agadir'},
-    {'id': 7, 'name_ar': 'مكناس', 'name_fr': 'Meknès'},
-    {'id': 8, 'name_ar': 'وجدة', 'name_fr': 'Oujda'},
-    {'id': 9, 'name_ar': 'القنيطرة', 'name_fr': 'Kénitra'},
-    {'id': 10, 'name_ar': 'تطوان', 'name_fr': 'Tétouan'},
-    {'id': 11, 'name_ar': 'العيون', 'name_fr': 'Laâyoune'},
-    {'id': 12, 'name_ar': 'الداخلة', 'name_fr': 'Dakhla'},
-  ];
 
   @override
   void initState() {
     super.initState();
     _login = widget.initialRegisterMode ? false : widget.initialIsLogin;
     _auth = widget.auth ?? AccountAuth(locale: _state.locale.languageCode);
-    _cities = _fallbackCities;
-    _cityId = 1;
-    _cityName = _cityLabel(_cities.first);
     _shakeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -128,11 +107,6 @@ class _AuthScreenState extends State<AuthScreen>
     _codeFocus.addListener(() {
       if (mounted) setState(() {});
     });
-    _email.addListener(_onIdentifierChanged);
-
-    if (!_login) {
-      _loadCities();
-    }
 
     if (widget.autoTriggerGoogle) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -169,188 +143,8 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
-  Future<void> _loadCities() async {
-    try {
-      final taxonomy = await _auth.taxonomy();
-      if (!mounted) return;
-      final raw = taxonomy['cities'];
-      if (raw is List && raw.isNotEmpty) {
-        final parsed = raw
-            .whereType<Map>()
-            .map((item) => Map<String, dynamic>.from(item))
-            .where((item) => (int.tryParse('${item['id']}') ?? 0) > 0)
-            .toList();
-        if (parsed.isNotEmpty) {
-          setState(() {
-            _cities = parsed;
-            _cityId = int.tryParse('${_cities.first['id']}') ?? 1;
-            _cityName = _cityLabel(_cities.first);
-          });
-          return;
-        }
-      }
-    } catch (_) {
-      // Fallback
-    }
-    if (mounted) {
-      setState(() {
-        _cities = _fallbackCities;
-        _cityId = 1;
-        _cityName = _cityLabel(_cities.first);
-      });
-    }
-  }
-
-  String _cityLabel(Map<String, dynamic> city) {
-    return (city[_state.s.isAr ? 'name_ar' : 'name_fr'] ?? city['name'] ?? '')
-        .toString();
-  }
-
-  bool _detectPhoneMode(String raw) {
-    final normalized = AccountValidation.normalizeDigits(raw).trim();
-    if (normalized.isEmpty || normalized.contains('@')) return false;
-    return RegExp(r'^\+?[0-9\s\-().]+$').hasMatch(normalized);
-  }
-
-  void _onIdentifierChanged() {
-    if (!mounted || !_login) return;
-    final nextPhone = _detectPhoneMode(_email.text);
-    if (nextPhone != _isPhoneMode) {
-      setState(() => _isPhoneMode = nextPhone);
-    }
-  }
-
-  Future<void> _showCountryCodeSheet() async {
-    HapticFeedback.selectionClick();
-    final s = _state.s;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final ink = isDark ? const Color(0xFFF9FAFB) : const Color(0xFF111827);
-    final muted = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
-    final normalizedPhone = AccountValidation.phone(_email.text);
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: bg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF333333)
-                          : const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  s.tr('رمز الدولة', 'Indicatif pays', 'Country code'),
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: ink,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Text('🇲🇦', style: TextStyle(fontSize: 22)),
-                  title: Text(
-                    s.tr('المغرب (Morocco)', 'Maroc', 'Morocco'),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: ink,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '+212 (05 / 06 / 07)',
-                    style: TextStyle(color: muted, fontSize: 12.5),
-                  ),
-                  trailing: const Icon(
-                    Icons.check_circle,
-                    color: AppConfig.primary,
-                    size: 20,
-                  ),
-                  onTap: () {
-                    setState(() => _countryCode = '+212');
-                    if (normalizedPhone != null &&
-                        !_email.text.trim().startsWith('+212')) {
-                      _email.text = normalizedPhone;
-                      _email.selection = TextSelection.collapsed(
-                        offset: normalizedPhone.length,
-                      );
-                    }
-                    Navigator.pop(ctx);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPhonePrefixBadge(bool isDark) {
-    return GestureDetector(
-      key: const Key('auth-phone-prefix'),
-      onTap: _busy ? null : _showCountryCodeSheet,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(7),
-          border: Border.all(
-            color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFE5E7EB),
-            width: 0.8,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🇲🇦', style: TextStyle(fontSize: 12)),
-            const SizedBox(width: 4),
-            Text(
-              _countryCode,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isDark
-                    ? const Color(0xFFF9FAFB)
-                    : const Color(0xFF111827),
-              ),
-            ),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 14,
-              color: isDark
-                  ? const Color(0xFF9CA3AF)
-                  : const Color(0xFF6B7280),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   void dispose() {
-    _email.removeListener(_onIdentifierChanged);
     _timer?.cancel();
     _autoSubmitTimer?.cancel();
     _shakeCtrl.dispose();
@@ -384,14 +178,66 @@ class _AuthScreenState extends State<AuthScreen>
     });
   }
 
+  String? _validateDob18Plus(String? raw) {
+    final text = AccountValidation.normalizeDigits(raw ?? '').trim();
+    if (text.isEmpty) {
+      return _state.s.tr(
+        'يرجى تحديد تاريخ الازدياد (YYYY-MM-DD)',
+        'Veuillez saisir votre date de naissance (YYYY-MM-DD)',
+        'Please enter your date of birth (YYYY-MM-DD)',
+      );
+    }
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
+    if (match == null) {
+      return _state.s.tr(
+        'أدخل التاريخ بصيغة YYYY-MM-DD (مثال: 2005-04-12)',
+        'Format requis : YYYY-MM-DD (ex: 2005-04-12)',
+        'Required format: YYYY-MM-DD (e.g. 2005-04-12)',
+      );
+    }
+    final year = int.tryParse(match.group(1)!) ?? 0;
+    final month = int.tryParse(match.group(2)!) ?? 0;
+    final day = int.tryParse(match.group(3)!) ?? 0;
+    if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) {
+      return _state.s.tr(
+        'تاريخ الازدياد غير صالح',
+        'Date de naissance invalide',
+        'Invalid date of birth',
+      );
+    }
+    final parsed = DateTime(year, month, day);
+    if (parsed.year != year || parsed.month != month || parsed.day != day) {
+      return _state.s.tr(
+        'تاريخ الازدياد غير صالح',
+        'Date de naissance invalide',
+        'Invalid date of birth',
+      );
+    }
+    final now = DateTime.now();
+    int age = now.year - parsed.year;
+    if (now.month < parsed.month ||
+        (now.month == parsed.month && now.day < parsed.day)) {
+      age--;
+    }
+    if (age < 18) {
+      return _state.s.tr(
+        'يجب أن يكون عمرك 18 سنة على الأقل للتسجيل',
+        'Vous devez avoir au moins 18 ans pour vous inscrire',
+        'You must be at least 18 years old to register',
+      );
+    }
+    return null;
+  }
+
   Future<void> _pickDateOfBirth() async {
     HapticFeedback.lightImpact();
     final now = DateTime.now();
+    final adultLastDate = DateTime(now.year - 18, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime(2000, 1, 1),
       firstDate: DateTime(1940),
-      lastDate: DateTime(now.year - 12, now.month, now.day),
+      lastDate: adultLastDate,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -411,78 +257,6 @@ class _AuthScreenState extends State<AuthScreen>
             "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       });
     }
-  }
-
-  void _showCityPicker() {
-    HapticFeedback.lightImpact();
-    final s = _state.s;
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      backgroundColor: Colors.white,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  s.tr('اختر مدينتك', 'Choisissez votre ville',
-                      'Select your city'),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: _cities.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final item = _cities[index];
-                    final id = int.tryParse('${item['id']}') ?? 1;
-                    final name = _cityLabel(item);
-                    final isSelected = id == _cityId;
-
-                    return ListTile(
-                      title: Text(
-                        name,
-                        style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected
-                              ? AppConfig.primary
-                              : const Color(0xFF111827),
-                        ),
-                      ),
-                      trailing: isSelected
-                          ? const Icon(
-                              Icons.check_circle_rounded,
-                              color: AppConfig.primary,
-                            )
-                          : null,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          _cityId = id;
-                          _cityName = name;
-                        });
-                        Navigator.of(context).pop();
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   void _nextRegisterStep() {
@@ -507,11 +281,9 @@ class _AuthScreenState extends State<AuthScreen>
       HapticFeedback.lightImpact();
       setState(() => _registerStep = 2);
     } else if (_registerStep == 2) {
-      if (_dob.text.isEmpty) {
-        setState(() => _error = _state.s.tr(
-              'يرجى تحديد تاريخ الازدياد',
-              'Please select your date of birth',
-            ));
+      final dobError = _validateDob18Plus(_dob.text);
+      if (dobError != null) {
+        setState(() => _error = dobError);
         return;
       }
       HapticFeedback.lightImpact();
@@ -630,6 +402,16 @@ class _AuthScreenState extends State<AuthScreen>
         return;
       }
     } else if (!_form.currentState!.validate()) {
+      return;
+    } else if (!_login && !_acceptedTerms) {
+      HapticFeedback.heavyImpact();
+      setState(() {
+        _error = _state.s.tr(
+          'يرجى الموافقة على الشروط والأحكام وسياسة الخصوصية للمتابعة',
+          'Veuillez accepter les conditions d’utilisation et la politique de confidentialité',
+          'Please accept the Terms & Conditions and Privacy Policy to continue',
+        );
+      });
       return;
     }
 
@@ -1019,8 +801,8 @@ class _AuthScreenState extends State<AuthScreen>
                                                 )
                                               : _registerStep == 2
                                                   ? s.tr(
-                                                      'حدد تاريخ ميلادك ومدينتك وكيف ستستخدم أبولو',
-                                                      'Set your birth date, city, and role',
+                                                      'حدد تاريخ ميلادك وكيف ستستخدم أبولو',
+                                                      'Set your birth date and role',
                                                     )
                                                   : s.tr(
                                                       'أدخل بريدك الإلكتروني وكلمة مرور قوية',
@@ -1143,9 +925,6 @@ class _AuthScreenState extends State<AuthScreen>
                                     AutofillHints.telephoneNumber,
                                   ],
                                   enabled: !_busy,
-                                  prefixBadge: _isPhoneMode
-                                      ? _buildPhonePrefixBadge(isDark)
-                                      : null,
                                   validator: (v) {
                                     final text = (v ?? '').trim();
                                     if (text.isEmpty) {
@@ -1160,8 +939,8 @@ class _AuthScreenState extends State<AuthScreen>
                                         AccountValidation.phone(text) != null;
                                     if (!isEmail && !isPhone) {
                                       return s.tr(
-                                        'أدخل بريداً صحيحاً أو رقماً يبدأ بـ 05/06/07/212+',
-                                        'Enter a valid email or phone (05/06/07/+212)',
+                                        'أدخل بريداً صحيحاً أو رقماً يبدأ بـ 05/06/07',
+                                        'Enter a valid email or phone (05/06/07)',
                                       );
                                     }
                                     return null;
@@ -1231,7 +1010,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                                 const SizedBox(height: 18),
 
-                                // Primary CTA Button (2026 Monochrome: 54px height, 14px squircle)
+                                // Primary CTA Button (2026 Monochrome: 54px height, Pill StadiumBorder)
                                 _TapPressScale(
                                   enabled: !_busy,
                                   child: SizedBox(
@@ -1251,10 +1030,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         foregroundColor: isDark
                                             ? const Color(0xFF0A0A0A)
                                             : Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                        ),
+                                        shape: const StadiumBorder(),
                                         elevation: 0,
                                       ),
                                       child: _busy
@@ -1412,9 +1188,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 foregroundColor: isDark
                                     ? const Color(0xFF0A0A0A)
                                     : Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
+                                shape: const StadiumBorder(),
                                 elevation: 0,
                               ),
                               child: Text(
@@ -1429,71 +1203,37 @@ class _AuthScreenState extends State<AuthScreen>
                         ],
 
                         // ============================================
-                        // MODE 2: REGISTER STEP 2 (DOB, CITY, BUYER/SELLER)
+                        // MODE 2: REGISTER STEP 2 (DOB 18+ & BUYER/SELLER)
                         // ============================================
                         if (!_login && _registerStep == 2) ...[
                           CustomAuthInputField(
                             controller: _dob,
-                            label: s.tr('تاريخ الازدياد', 'Date of birth'),
+                            label: s.tr(
+                              'تاريخ الازدياد (+18)',
+                              'Date de naissance (+18)',
+                              'Date of birth (18+)',
+                            ),
                             keyName: 'reg-dob',
                             hint: 'YYYY-MM-DD',
-                            onTap: _pickDateOfBirth,
-                            validator: (v) => (v ?? '').isNotEmpty
-                                ? null
-                                : s.tr('حدد تاريخ الازدياد', 'Select date'),
-                          ),
-
-                          // City Selector (Dark-mode aware 2026 squircle)
-                          GestureDetector(
-                            onTap: _showCityPicker,
-                            child: Container(
-                              height: 56,
-                              margin: const EdgeInsets.only(bottom: 14),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: surfaceColor,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: borderColor,
-                                  width: 1.2,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        s.tr('المدينة', 'City'),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: mutedColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _cityName,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color: inkColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Icon(
-                                    Icons.keyboard_arrow_down_rounded,
+                            maskPattern: 'YYYY-MM-DD',
+                            type: TextInputType.datetime,
+                            inputFormatters: const [_DobDateInputFormatter()],
+                            trailingWidget: GestureDetector(
+                              onTap: _pickDateOfBirth,
+                              behavior: HitTestBehavior.opaque,
+                              child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Center(
+                                  child: Icon(
+                                    CupertinoIcons.calendar,
+                                    size: 19,
                                     color: mutedColor,
                                   ),
-                                ],
+                                ),
                               ),
                             ),
+                            validator: _validateDob18Plus,
                           ),
 
                           const SizedBox(height: 4),
@@ -1560,9 +1300,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         color: borderColor,
                                         width: 1.2,
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
+                                      shape: const StadiumBorder(),
                                     ),
                                     child: Text(
                                       s.tr('رجوع', 'Retour', 'Back'),
@@ -1588,9 +1326,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       foregroundColor: isDark
                                           ? const Color(0xFF0A0A0A)
                                           : Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
+                                      shape: const StadiumBorder(),
                                       elevation: 0,
                                     ),
                                     child: Text(
@@ -1608,7 +1344,7 @@ class _AuthScreenState extends State<AuthScreen>
                         ],
 
                         // ============================================
-                        // MODE 2: REGISTER STEP 3 (EMAIL & PASSWORD)
+                        // MODE 2: REGISTER STEP 3 (EMAIL, PASSWORD & TERMS)
                         // ============================================
                         if (!_login && _registerStep == 3) ...[
                           CustomAuthInputField(
@@ -1656,7 +1392,111 @@ class _AuthScreenState extends State<AuthScreen>
                                         'Passwords do not match',
                                       ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 4),
+                          // Terms & Conditions acceptance row
+                          GestureDetector(
+                            onTap: _busy
+                                ? null
+                                : () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() {
+                                      _acceptedTerms = !_acceptedTerms;
+                                      if (_acceptedTerms) _error = null;
+                                    });
+                                  },
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  AnimatedContainer(
+                                    key: const Key('reg-terms-checkbox'),
+                                    duration: const Duration(milliseconds: 160),
+                                    curve: Curves.easeOutCubic,
+                                    width: 22,
+                                    height: 22,
+                                    decoration: BoxDecoration(
+                                      color: _acceptedTerms
+                                          ? (isDark
+                                              ? Colors.white
+                                              : const Color(0xFF0A0A0A))
+                                          : surfaceColor,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: _acceptedTerms
+                                            ? (isDark
+                                                ? Colors.white
+                                                : const Color(0xFF0A0A0A))
+                                            : borderColor,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: _acceptedTerms
+                                        ? Icon(
+                                            Icons.check_rounded,
+                                            size: 15,
+                                            color: isDark
+                                                ? const Color(0xFF0A0A0A)
+                                                : Colors.white,
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Text(
+                                          s.tr(
+                                            'أوافق على ',
+                                            'J’accepte les ',
+                                            'I agree to the ',
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            color: mutedColor,
+                                            height: 1.35,
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () {
+                                            HapticFeedback.lightImpact();
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const PrivacyComplianceScreen(
+                                                  initialTab: 0,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: Text(
+                                            s.tr(
+                                              'الشروط والأحكام وسياسة الخصوصية',
+                                              'Conditions d’utilisation et Politique de confidentialité',
+                                              'Terms & Conditions and Privacy Policy',
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: inkColor,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                              height: 1.35,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           Row(
                             children: [
                               Expanded(
@@ -1671,9 +1511,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         color: borderColor,
                                         width: 1.2,
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
+                                      shape: const StadiumBorder(),
                                     ),
                                     child: Text(
                                       s.tr('رجوع', 'Retour', 'Back'),
@@ -1699,9 +1537,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       foregroundColor: isDark
                                           ? const Color(0xFF0A0A0A)
                                           : Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
+                                      shape: const StadiumBorder(),
                                       elevation: 0,
                                     ),
                                     child: _busy
@@ -1814,7 +1650,6 @@ class _AuthScreenState extends State<AuthScreen>
                                         _notice = null;
                                         _password.clear();
                                         _confirmation.clear();
-                                        if (!_login) _loadCities();
                                       });
                                     },
                               behavior: HitTestBehavior.opaque,
@@ -2355,9 +2190,7 @@ class _AuthScreenState extends State<AuthScreen>
             backgroundColor: surfaceColor,
             foregroundColor: textColor,
             side: BorderSide(color: borderColor, width: 1.0),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: const StadiumBorder(),
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 20),
           ),
@@ -2502,4 +2335,38 @@ class _GoogleIconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DobDateInputFormatter extends TextInputFormatter {
+  const _DobDateInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final normalized = AccountValidation.normalizeDigits(newValue.text);
+    final digits = normalized.replaceAll(RegExp(r'[^0-9]'), '');
+    final capped = digits.length > 8 ? digits.substring(0, 8) : digits;
+    final isDeleting = newValue.text.length < oldValue.text.length;
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < capped.length; i++) {
+      if (i == 4 || i == 6) {
+        buffer.write('-');
+      }
+      buffer.write(capped[i]);
+    }
+    if (!isDeleting &&
+        newValue.text.endsWith('-') &&
+        (capped.length == 4 || capped.length == 6)) {
+      buffer.write('-');
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
 }

@@ -32,6 +32,9 @@ class CustomAuthInputField extends StatefulWidget {
   final TextInputAction textInputAction;
   final VoidCallback? onFieldSubmitted;
   final Widget? prefixBadge;
+  final List<TextInputFormatter>? inputFormatters;
+  final String? maskPattern;
+  final Widget? trailingWidget;
 
   const CustomAuthInputField({
     super.key,
@@ -52,6 +55,9 @@ class CustomAuthInputField extends StatefulWidget {
     this.textInputAction = TextInputAction.next,
     this.onFieldSubmitted,
     this.prefixBadge,
+    this.inputFormatters,
+    this.maskPattern,
+    this.trailingWidget,
   });
 
   @override
@@ -113,8 +119,24 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
     final Color hintColor =
         isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF);
     final bool isRtl = Directionality.of(context) == TextDirection.rtl;
+    final bool hasTrailing = widget.secret || widget.trailingWidget != null;
     final TextAlign effectiveTextAlign =
-        (isRtl && widget.prefixBadge == null) ? TextAlign.right : TextAlign.start;
+        (isRtl && widget.prefixBadge == null && widget.maskPattern == null)
+            ? TextAlign.right
+            : TextAlign.start;
+    final TextStyle inputTextStyle = TextStyle(
+      fontSize: 15.5,
+      height: 1.25,
+      fontWeight: FontWeight.w500,
+      color: textColor,
+      letterSpacing: AppTypography.trackingForContext(context, -0.2),
+    );
+    final String currentText = widget.controller.text;
+    final String? remainingMask = (widget.maskPattern != null &&
+            _shouldFloat &&
+            currentText.length < widget.maskPattern!.length)
+        ? widget.maskPattern!.substring(currentText.length)
+        : null;
 
     final Widget textFormField = Theme(
       data: Theme.of(context).copyWith(
@@ -132,78 +154,114 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
           disabledBorder: InputBorder.none,
         ),
       ),
-      child: TextFormField(
-        key: Key(widget.keyName),
-        controller: widget.controller,
-        focusNode: _focusNode,
-        enabled: widget.enabled,
-        readOnly: widget.readOnly,
-        textDirection: widget.ltr ? TextDirection.ltr : null,
-        textAlign: effectiveTextAlign,
-        keyboardType: widget.type,
-        autofillHints: widget.autofill,
-        obscureText: widget.secret && _obscure,
-        autocorrect: false,
-        enableSuggestions: !widget.secret,
-        textInputAction: widget.textInputAction,
-        onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
-        style: TextStyle(
-          fontSize: 15.5,
-          height: 1.25,
-          fontWeight: FontWeight.w500,
-          color: textColor,
-          letterSpacing: AppTypography.trackingForContext(context, -0.2),
-        ),
-        cursorColor: textColor,
-        cursorWidth: 1.8,
-        cursorHeight: 19,
-        cursorOpacityAnimates: false,
-        inputFormatters: widget.type == TextInputType.number
-            ? [
-                TextInputFormatter.withFunction(
-                  (oldValue, newValue) => newValue.copyWith(
-                    text: AccountValidation.normalizeDigits(newValue.text),
+      child: Stack(
+        alignment: AlignmentDirectional.centerStart,
+        children: [
+          if (remainingMask != null)
+            IgnorePointer(
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
+                    TextSpan(
+                      style: inputTextStyle,
+                      children: [
+                        TextSpan(
+                          text: currentText,
+                          style: inputTextStyle.copyWith(
+                            color: Colors.transparent,
+                          ),
+                        ),
+                        TextSpan(
+                          text: remainingMask,
+                          style: inputTextStyle.copyWith(
+                            color: hintColor,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
                   ),
                 ),
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(6),
-              ]
-            : null,
-        validator: (value) {
-          final err = widget.validator(value);
-          if (mounted && err != _error) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => _error = err);
-            });
-          }
-          return err != null ? '' : null;
-        },
-        onChanged: (val) {
-          if (_error != null) {
-            setState(() => _error = null);
-          }
-          widget.onChanged?.call(val);
-        },
-        decoration: InputDecoration(
-          filled: false,
-          fillColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          isDense: true,
-          contentPadding: EdgeInsets.zero,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          focusedErrorBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          errorStyle: const TextStyle(height: 0, fontSize: 0),
-          hintText: _shouldFloat ? widget.hint : null,
-          hintStyle: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: hintColor,
+              ),
+            ),
+          TextFormField(
+            key: Key(widget.keyName),
+            controller: widget.controller,
+            focusNode: _focusNode,
+            enabled: widget.enabled,
+            readOnly: widget.readOnly,
+            textDirection: widget.ltr ? TextDirection.ltr : null,
+            textAlign:
+                widget.maskPattern != null ? TextAlign.left : effectiveTextAlign,
+            keyboardType: widget.type,
+            autofillHints: widget.autofill,
+            obscureText: widget.secret && _obscure,
+            autocorrect: false,
+            enableSuggestions: !widget.secret,
+            textInputAction: widget.textInputAction,
+            onFieldSubmitted: (_) => widget.onFieldSubmitted?.call(),
+            style: inputTextStyle,
+            cursorColor: textColor,
+            cursorWidth: 1.8,
+            cursorHeight: 19,
+            cursorOpacityAnimates: false,
+            inputFormatters: widget.inputFormatters ??
+                (widget.type == TextInputType.number
+                    ? [
+                        TextInputFormatter.withFunction(
+                          (oldValue, newValue) => newValue.copyWith(
+                            text: AccountValidation.normalizeDigits(
+                              newValue.text,
+                            ),
+                          ),
+                        ),
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(6),
+                      ]
+                    : null),
+            validator: (value) {
+              final err = widget.validator(value);
+              if (mounted && err != _error) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) setState(() => _error = err);
+                });
+              }
+              return err != null ? '' : null;
+            },
+            onChanged: (val) {
+              if (_error != null) {
+                setState(() => _error = null);
+              }
+              widget.onChanged?.call(val);
+            },
+            decoration: InputDecoration(
+              filled: false,
+              fillColor: Colors.transparent,
+              hoverColor: Colors.transparent,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              focusedErrorBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              errorStyle: const TextStyle(height: 0, fontSize: 0),
+              hintText: (_shouldFloat && widget.maskPattern == null)
+                  ? widget.hint
+                  : null,
+              hintStyle: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: hintColor,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
 
@@ -236,7 +294,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
               ),
               padding: EdgeInsetsDirectional.only(
                 start: 16,
-                end: widget.secret ? 4 : 16,
+                end: hasTrailing ? 4 : 16,
               ),
               child: Stack(
                 alignment: AlignmentDirectional.centerStart,
@@ -247,7 +305,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                     curve: Curves.easeOut,
                     top: _shouldFloat ? 8.0 : 18.0,
                     start: 0,
-                    end: widget.secret ? 48 : 0,
+                    end: hasTrailing ? 48 : 0,
                     child: IgnorePointer(
                       child: AnimatedDefaultTextStyle(
                         duration: animDuration,
@@ -277,7 +335,7 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                     top: _shouldFloat ? 21 : 0,
                     bottom: 0,
                     start: 0,
-                    end: widget.secret ? 48 : 0,
+                    end: hasTrailing ? 48 : 0,
                     child: widget.prefixBadge != null
                         ? Directionality(
                             textDirection: widget.ltr
@@ -294,6 +352,14 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
                           )
                         : Center(child: textFormField),
                   ),
+
+                  if (widget.trailingWidget != null && !widget.secret)
+                    PositionedDirectional(
+                      end: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(child: widget.trailingWidget!),
+                    ),
 
                   // Trailing Show/Hide Password Toggle (44x44px hit target, vertically centered)
                   if (widget.secret)

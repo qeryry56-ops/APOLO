@@ -232,13 +232,13 @@ void main() {
       expect(emailDec.borderRadius, BorderRadius.circular(13));
       expect(tester.getSize(emailContainerFinder).height, 59.0);
 
-      // 3. Automatic Moroccan +212 country code pill appears for phone numbers & hides for email
+      // 3. Phone number input stays clean without +212 prefix badge
       expect(find.byKey(const Key('auth-phone-prefix')), findsNothing);
       await tester.enterText(
           find.byKey(const Key('auth-email')), '0612345678');
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('auth-phone-prefix')), findsOneWidget);
-      expect(find.text('+212'), findsOneWidget);
+      expect(find.byKey(const Key('auth-phone-prefix')), findsNothing);
+      expect(find.text('+212'), findsNothing);
 
       await tester.enterText(
           find.byKey(const Key('auth-email')), 'amine@apolo.ma');

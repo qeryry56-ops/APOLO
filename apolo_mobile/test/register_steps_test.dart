@@ -55,11 +55,20 @@ void main() {
     await tester.tap(find.byKey(const Key('reg-step1-continue')));
     await tester.pumpAndSettle();
 
-    // STEP 2: Verify DOB & Buyer/Seller cards
+    // STEP 2: Verify DOB (18+ validation + YYYY-MM-DD mask) & Buyer/Seller cards (City removed)
     expect(find.byKey(const Key('reg-dob')), findsOneWidget);
+    expect(find.text('المدينة'), findsNothing);
     expect(find.text('مشتري'), findsOneWidget);
     expect(find.text('بائع'), findsOneWidget);
 
+    // Under-18 DOB is rejected
+    await tester.enterText(find.byKey(const Key('reg-dob')), '2015-01-01');
+    await tester.ensureVisible(find.byKey(const Key('reg-step2-continue')));
+    await tester.tap(find.byKey(const Key('reg-step2-continue')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('reg-dob')), findsOneWidget);
+
+    // Adult DOB (18+) is accepted
     await tester.enterText(find.byKey(const Key('reg-dob')), '2000-01-01');
     await tester.ensureVisible(find.text('بائع'));
     await tester.tap(find.text('بائع'));
@@ -68,10 +77,11 @@ void main() {
     await tester.tap(find.byKey(const Key('reg-step2-continue')));
     await tester.pumpAndSettle();
 
-    // STEP 3: Verify Credentials (Email, Password, Confirm)
+    // STEP 3: Verify Credentials (Email, Password, Confirm) & Terms checkbox
     expect(find.byKey(const Key('auth-email')), findsOneWidget);
     expect(find.byKey(const Key('auth-password')), findsOneWidget);
     expect(find.byKey(const Key('auth-confirmation')), findsOneWidget);
+    expect(find.byKey(const Key('reg-terms-checkbox')), findsOneWidget);
 
     await tester.enterText(
         find.byKey(const Key('auth-email')), 'amine@test.ma');
@@ -79,6 +89,9 @@ void main() {
         find.byKey(const Key('auth-password')), 'secret123');
     await tester.enterText(
         find.byKey(const Key('auth-confirmation')), 'secret123');
+    await tester.ensureVisible(find.byKey(const Key('reg-terms-checkbox')));
+    await tester.tap(find.byKey(const Key('reg-terms-checkbox')));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('auth-submit')));
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();

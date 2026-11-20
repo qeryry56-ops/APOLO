@@ -7,9 +7,11 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'notifications_screen.dart';
 import 'post_ad_screen.dart';
+import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'stores_screen.dart';
 import 'widgets/accommodation_card.dart';
+import 'widgets/app_image.dart';
 import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/marketplace_zone_sheet.dart';
@@ -213,6 +215,37 @@ class _HomeScreenState extends State<HomeScreen> {
     return '';
   }
 
+  String get _userFullName {
+    final full = _state.currentUser?['name']?.toString().trim();
+    if (full != null && full.isNotEmpty) {
+      return full;
+    }
+    return '';
+  }
+
+  String get _userAvatarUrl {
+    final user = _state.currentUser;
+    if (user == null) return '';
+    return (user['avatar'] ??
+            user['photo'] ??
+            user['profile_photo_url'] ??
+            user['avatar_url'] ??
+            '')
+        .toString()
+        .trim();
+  }
+
+  String get _userInitials {
+    final full = _userFullName;
+    if (full.isEmpty) return 'AP';
+    final parts =
+        full.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return parts.first.characters.take(2).toString().toUpperCase();
+  }
+
   void _openSearchScreen([int? categoryId]) {
     HapticFeedback.selectionClick();
     if (widget.onOpenSearch != null) {
@@ -281,39 +314,136 @@ class _HomeScreenState extends State<HomeScreen> {
                             parent: AlwaysScrollableScrollPhysics(),
                           ),
                           slivers: [
-                        // 1. Top Header Row (Greeting + Notification Bell)
+                        // 1. Top Header Row (Profile Avatar + Name + Location below + Bare Notification Bell)
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    _userName.isEmpty
-                                        ? (isAr ? 'مرحباً بك' : 'Bienvenue')
-                                        : (isAr
-                                            ? 'مرحباً، $_userName'
-                                            : 'Bonjour, $_userName'),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 27,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing:
-                                          AppTypography.trackingForContext(
-                                              context, -0.6),
-                                      color: _ink,
-                                      height:
-                                          AppTypography.lineHeightForContext(
-                                        context,
-                                        1.15,
-                                        arabicMin: 1.32,
+                                // Profile Photo / Initials Avatar
+                                PressableScale(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const ProfileScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0A0A0A),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                        width: 1.0,
                                       ),
                                     ),
+                                    clipBehavior: Clip.antiAlias,
+                                    alignment: Alignment.center,
+                                    child: _userAvatarUrl.isNotEmpty
+                                        ? AppImage(
+                                            url: _userAvatarUrl,
+                                            width: 44,
+                                            height: 44,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : (_userName.isNotEmpty
+                                            ? Text(
+                                                _userInitials,
+                                                style: const TextStyle(
+                                                  fontSize: 14.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              )
+                                            : const Icon(
+                                                CupertinoIcons.person_fill,
+                                                size: 20,
+                                                color: Colors.white,
+                                              )),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
+                                // User Name + Location below
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _userFullName.isEmpty
+                                            ? s.tr(
+                                                'مرحباً بك في Apolo',
+                                                'Bienvenue sur Apolo',
+                                                'Welcome to Apolo',
+                                              )
+                                            : _userFullName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing:
+                                              AppTypography.trackingForContext(
+                                                  context, -0.3),
+                                          color: _ink,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          showMarketplaceZoneSheet(context);
+                                        },
+                                        behavior: HitTestBehavior.opaque,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              CupertinoIcons.location_solid,
+                                              size: 13,
+                                              color: _ink,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                _state.hasActiveZone
+                                                    ? _state
+                                                        .activeZoneBadgeLabel(s)
+                                                    : _state
+                                                        .activeZoneCityLabel(s),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _muted,
+                                                  height: 1.2,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            const Icon(
+                                              CupertinoIcons.chevron_down,
+                                              size: 11,
+                                              color: _muted,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Bare Notification Bell Icon (no gray background circle)
                                 PressableScale(
                                   onTap: () => Navigator.push(
                                     context,
@@ -322,45 +452,39 @@ class _HomeScreenState extends State<HomeScreen> {
                                           const NotificationsScreen(),
                                     ),
                                   ),
-                                  child: Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: _surface,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                        width: 1.0,
-                                      ),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        const Icon(
-                                          CupertinoIcons.bell,
-                                          size: 21,
-                                          color: _ink,
-                                        ),
-                                        if (_state.unreadNotificationsCount > 0)
-                                          Positioned(
-                                            top: 1,
-                                            right: 1,
-                                            child: Container(
-                                              width: 8,
-                                              height: 8,
-                                              decoration: BoxDecoration(
-                                                color: _primary,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: Colors.white,
-                                                  width: 1.5,
+                                  child: SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: Center(
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          const Icon(
+                                            CupertinoIcons.bell,
+                                            size: 23,
+                                            color: _ink,
+                                          ),
+                                          if (_state.unreadNotificationsCount >
+                                              0)
+                                            Positioned(
+                                              top: 0,
+                                              right: 0,
+                                              child: Container(
+                                                width: 8.5,
+                                                height: 8.5,
+                                                decoration: BoxDecoration(
+                                                  color: _primary,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: Colors.white,
+                                                    width: 1.5,
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
