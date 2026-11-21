@@ -147,6 +147,27 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
     widget.onCenterChanged?.call(next);
   }
 
+  Widget _buildPositionedTile({
+    required int tx,
+    required int ty,
+    required int nTiles,
+    required Offset topLeftWorld,
+  }) {
+    final wrappedTx = ((tx % nTiles) + nTiles) % nTiles;
+    final hostIdx = (tx + ty).abs() % 4;
+    return Positioned(
+      left: tx * _tileSize - topLeftWorld.dx,
+      top: ty * _tileSize - topLeftWorld.dy,
+      width: _tileSize,
+      height: _tileSize,
+      child: _MapTileImage(
+        url: 'https://mt$hostIdx.google.com/vt/lyrs=m&x=$wrappedTx&y=$ty&z=$_zoom',
+        fallbackUrl:
+            'https://${_subdomains[hostIdx]}.basemaps.cartocdn.com/rastertiles/voyager/$_zoom/$wrappedTx/$ty.png',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -219,18 +240,14 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
                     ),
                   ),
 
-                  // 1. Real CartoDB Voyager / OSM Slippy Map Raster Tiles
+                  // 1. Real Google Maps Slippy Map Tiles (with CARTO Voyager fallback)
                   for (int ty = minTy; ty <= maxTy; ty++)
                     for (int tx = minTx; tx <= maxTx; tx++)
-                      Positioned(
-                        left: tx * _tileSize - topLeftWorld.dx,
-                        top: ty * _tileSize - topLeftWorld.dy,
-                        width: _tileSize,
-                        height: _tileSize,
-                        child: _MapTileImage(
-                          url:
-                              'https://${_subdomains[(tx + ty).abs() % _subdomains.length]}.basemaps.cartocdn.com/rastertiles/voyager/$_zoom/${((tx % nTiles) + nTiles) % nTiles}/$ty.png',
-                        ),
+                      _buildPositionedTile(
+                        tx: tx,
+                        ty: ty,
+                        nTiles: nTiles,
+                        topLeftWorld: topLeftWorld,
                       ),
 
                   // 2. Approximate Zone Circle scaled to Mercator radius
@@ -377,7 +394,7 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
                       ),
                     ),
 
-                  // 6. Clean Attribution badge (OSM / CARTO)
+                  // 6. Clean Attribution badge (Google Maps)
                   PositionedDirectional(
                     bottom: 8,
                     end: 10,
@@ -391,7 +408,7 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
-                        '© OSM · CARTO',
+                        'Google Maps',
                         textDirection: TextDirection.ltr,
                         style: TextStyle(
                           fontSize: 9.5,
@@ -413,8 +430,22 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
 
 class _MapTileImage extends StatelessWidget {
   final String url;
+  final String? fallbackUrl;
 
-  const _MapTileImage({required this.url});
+  const _MapTileImage({
+    required this.url,
+    this.fallbackUrl,
+  });
+
+  Widget _buildFallback() {
+    if (fallbackUrl == null) return const SizedBox.shrink();
+    return Image.network(
+      fallbackUrl!,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -423,7 +454,7 @@ class _MapTileImage extends StatelessWidget {
         url,
         fit: BoxFit.cover,
         gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        errorBuilder: (_, __, ___) => _buildFallback(),
       );
     }
     return CachedNetworkImage(
@@ -432,7 +463,7 @@ class _MapTileImage extends StatelessWidget {
       httpHeaders: const {'User-Agent': 'ApoloMobile/1.0 (+https://apolo.ma)'},
       fadeInDuration: const Duration(milliseconds: 180),
       placeholder: (_, __) => const SizedBox.shrink(),
-      errorWidget: (_, __, ___) => const SizedBox.shrink(),
+      errorWidget: (_, __, ___) => _buildFallback(),
     );
   }
 }
