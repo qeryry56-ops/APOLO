@@ -2,10 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import 'account_security_screen.dart';
 import 'auth_screen.dart';
+import 'notifications_screen.dart';
+import 'post_ad_screen.dart';
 import 'privacy_compliance_screen.dart';
+import 'stores_screen.dart';
 import 'support_screen.dart';
 import 'widgets/marketplace_zone_sheet.dart';
 
@@ -20,8 +24,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _state = AppState();
   bool _busy = false;
-  bool _activeStatusOn = true;
-  bool _notificationsOn = false;
   String? _error;
 
   static const Color _bg = Color(0xFFF2F3F7);
@@ -30,8 +32,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const Color _sectionLabel = Color(0xFF6B7280);
   static const Color _trailingMuted = Color(0xFF8E8E93);
   static const Color _divider = Color(0xFFF1F2F6);
-  static const Color _blueDot = Color(0xFF0866FF);
-  static const Color _red = Color(0xFFE31828);
+  static const Color _blueDot = Color(0xFF0A0A0A);
+  static const Color _red = Color(0xFFE31B23);
   static const Color _lightRedBg = Color(0xFFFDE8E8);
 
   Future<void> _language() async {
@@ -162,94 +164,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     children: [
-                      // Group 1: Top System & Privacy Card (5 rows, no section title above)
-                      _buildCard(
-                        isAr: isAr,
-                        children: [
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.circle_filled,
-                            title: s.tr(
-                                'حالة النشاط', 'Statut en ligne', 'Active Status'),
-                            trailingLabel: _activeStatusOn
-                                ? s.tr('مفعل', 'Activé', 'On')
-                                : s.tr('متوقف', 'Désactivé', 'Off'),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(
-                                  () => _activeStatusOn = !_activeStatusOn);
-                            },
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.moon_fill,
-                            title:
-                                s.tr('المظهر الداكن', 'Mode sombre', 'Dark mode'),
-                            trailingLabel:
-                                s.tr('تلقائي', 'Système', 'System'),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(s.tr(
-                                    'المظهر يتبع إعدادات النظام تلقائياً',
-                                    'Le thème suit automatiquement le système',
-                                    'Theme automatically follows system mode',
-                                  )),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.globe,
-                            title: s.tr(
-                                'لغة التطبيق', 'Langue de l’app', 'App icon & language'),
-                            trailingLabel: s.isAr
-                                ? 'العربية'
-                                : (s.isEn ? 'English' : 'Français'),
-                            onTap: _busy ? null : _language,
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: Icons.accessibility_new_rounded,
-                            title: s.tr('المنطقة وإمكانية الوصول',
-                                'Accessibilité', 'Accessibility'),
-                            onTap: () => showMarketplaceZoneSheet(context),
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: Icons.lock_outline,
-                            title: s.tr('الخصوصية والأمان',
-                                'Confidentialité et sécurité', 'Privacy & safety'),
-                            showBlueDot: true,
-                            onTap: () => _open(const AccountSecurityScreen()),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // Group 2: Standalone Single-Row Card (Family Centre / Account Centre)
-                      _buildCard(
-                        isAr: isAr,
-                        children: [
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.house_fill,
-                            title: s.tr(
-                                'مركز الحساب والعائلة',
-                                'Centre famille et compte',
-                                'Family Centre'),
-                            onTap: _handleEditProfileTap,
-                          ),
-                        ],
-                      ),
-
-                      // Group 3: Preferences Section
+                      // Group 1: Account & Apolo Store Controls
                       _buildSectionHeader(
-                        s.tr('التفضيلات', 'Préférences', 'Preferences'),
+                        s.tr('الحساب والمتجر', 'Compte et boutique',
+                            'Account & Store'),
                       ),
                       _buildCard(
                         isAr: isAr,
@@ -258,94 +176,114 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             isAr: isAr,
                             icon: CupertinoIcons.person_crop_circle_fill,
                             title: s.tr(
-                                'الصورة الشخصية', 'Avatar', 'Avatar'),
+                              'تعديل الملف الشخصي',
+                              'Modifier le profil',
+                              'Edit profile',
+                            ),
+                            trailingLabel: _state.isLoggedIn
+                                ? _resolveHandle()
+                                : s.tr('زائر', 'Invité', 'Guest'),
                             onTap: _handleEditProfileTap,
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.at,
-                            title: s.tr('اسم المستخدم', 'Nom d’utilisateur',
-                                'Username'),
-                            trailingLabel: _resolveHandle(),
-                            onTap: _handleEditProfileTap,
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.bell_fill,
-                            title: s.tr('الإشعارات والأصوات',
-                                'Notifications et sons', 'Notifications and sounds'),
-                            trailingLabel: _notificationsOn
-                                ? s.tr('مفعل', 'Activé', 'On')
-                                : s.tr('متوقف', 'Désactivé', 'Off'),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() =>
-                                  _notificationsOn = !_notificationsOn);
-                            },
                           ),
                           _buildRow(
                             isAr: isAr,
                             icon: CupertinoIcons.bag_fill,
                             title: s.tr(
-                                'الطلبات والمحفوظات', 'Commandes', 'Orders'),
-                            onTap: () {
-                              if (!_state.isLoggedIn) {
-                                _open(const AuthScreen());
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(s.tr(
-                                      'قائمة الإعلانات المفضلة والطلبات متوفرة في حسابك',
-                                      'Vos favoris et commandes sont dans votre profil',
-                                      'Your saved items and orders are in your profile',
-                                    )),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
+                              'المتاجر الرسمية (PRO)',
+                              'Boutiques officielles (PRO)',
+                              'Official Stores (PRO)',
+                            ),
+                            onTap: () => _open(const StoresScreen()),
                           ),
                           _buildRow(
                             isAr: isAr,
-                            icon: CupertinoIcons.photo_fill,
-                            title: s.tr('الصور والوسائط', 'Photos et médias',
-                                'Photos and media'),
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(s.tr(
-                                    'جودة الصور العالية مفعلة تلقائياً',
-                                    'La qualité HD des photos est activée',
-                                    'High-resolution media upload is enabled',
-                                  )),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            },
+                            icon: CupertinoIcons.plus_circle_fill,
+                            title: s.tr(
+                              'نشر إعلان جديد',
+                              'Publier une annonce',
+                              'Post a new ad',
+                            ),
+                            onTap: () => _open(const PostAdScreen()),
                           ),
                         ],
                       ),
 
-                      // Group 4: Account and support
+                      // Group 2: App Preferences & Experience
                       _buildSectionHeader(
-                        s.tr('الحساب والدعم', 'Compte et assistance',
-                            'Account and support'),
+                        s.tr('تفضيلات التطبيق', 'Préférences de l’app',
+                            'App preferences'),
                       ),
                       _buildCard(
                         isAr: isAr,
                         children: [
                           _buildRow(
                             isAr: isAr,
-                            icon: Icons.help_outline,
-                            title: s.tr('الإبلاغ عن مشكلة',
-                                'Signaler un problème', 'Report a problem'),
-                            onTap: () => _open(const SupportScreen()),
+                            icon: CupertinoIcons.location_solid,
+                            title: s.tr(
+                              'منطقة الإعلانات (GPS)',
+                              'Zone des annonces',
+                              'Marketplace Zone',
+                            ),
+                            trailingLabel: _state.hasActiveZone
+                                ? _state.activeZoneBadgeLabel(s)
+                                : s.allCities,
+                            onTap: () => showMarketplaceZoneSheet(context),
+                          ),
+                          _buildRow(
+                            isAr: isAr,
+                            icon: CupertinoIcons.globe,
+                            title: s.tr(
+                              'لغة التطبيق',
+                              'Langue de l’app',
+                              'App language',
+                            ),
+                            trailingLabel: s.isAr
+                                ? 'العربية'
+                                : (s.isEn ? 'English' : 'Français'),
+                            onTap: _busy ? null : _language,
+                          ),
+                          _buildRow(
+                            isAr: isAr,
+                            icon: CupertinoIcons.bell_fill,
+                            title: s.tr(
+                              'مركز الإشعارات',
+                              'Notifications',
+                              'Notifications',
+                            ),
+                            trailingLabel: _state.unreadNotificationsCount > 0
+                                ? '${_state.unreadNotificationsCount}'
+                                : null,
+                            onTap: () => _open(const NotificationsScreen()),
+                          ),
+                        ],
+                      ),
+
+                      // Group 3: Privacy & Security
+                      _buildSectionHeader(
+                        s.tr('الأمان والخصوصية', 'Sécurité et confidentialité',
+                            'Security & Privacy'),
+                      ),
+                      _buildCard(
+                        isAr: isAr,
+                        children: [
+                          _buildRow(
+                            isAr: isAr,
+                            icon: Icons.lock_outline,
+                            title: s.tr(
+                              'كلمة المرور والأمان',
+                              'Mot de passe et sécurité',
+                              'Password & security',
+                            ),
+                            onTap: () => _open(const AccountSecurityScreen()),
                           ),
                           _buildRow(
                             isAr: isAr,
                             icon: CupertinoIcons.doc_text_fill,
-                            title: s.tr('الشروط وسياسة الخصوصية',
-                                'Conditions et confidentialité', 'Terms & privacy'),
+                            title: s.tr(
+                              'الشروط وسياسة الخصوصية',
+                              'Conditions et confidentialité',
+                              'Terms & privacy',
+                            ),
                             onTap: () => _open(
                                 const PrivacyComplianceScreen(initialTab: 0)),
                           ),
@@ -353,8 +291,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _buildRow(
                               isAr: isAr,
                               icon: CupertinoIcons.trash_fill,
-                              title: s.tr('تعطيل الحساب',
-                                  'Désactiver le compte', 'Deactivate account'),
+                              title: s.tr(
+                                'حذف الحساب نهائياً',
+                                'Supprimer le compte',
+                                'Delete account',
+                              ),
                               isDanger: true,
                               showChevron: false,
                               onTap: () => _open(
@@ -363,12 +304,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
 
+                      // Group 4: Support & Sync
+                      _buildSectionHeader(
+                        s.tr('الدعم والمساعدة', 'Aide et assistance',
+                            'Help & Support'),
+                      ),
+                      _buildCard(
+                        isAr: isAr,
+                        children: [
+                          _buildRow(
+                            isAr: isAr,
+                            icon: Icons.help_outline,
+                            title: s.tr(
+                              'المساعدة والإبلاغ عن مشكلة',
+                              'Aide et signaler un problème',
+                              'Help & report a problem',
+                            ),
+                            onTap: () => _open(const SupportScreen()),
+                          ),
+                          _buildRow(
+                            isAr: isAr,
+                            icon: CupertinoIcons.refresh,
+                            title: s.tr(
+                              'تحديث بيانات التطبيق',
+                              'Synchroniser les données',
+                              'Refresh app data',
+                            ),
+                            onTap: _busy
+                                ? null
+                                : () async {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _busy = true);
+                                    try {
+                                      await _state.refreshRemote();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(s.tr(
+                                              'تم تحديث بيانات التطبيق بنجاح',
+                                              'Données synchronisées avec succès',
+                                              'App data refreshed successfully',
+                                            )),
+                                            duration:
+                                                const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() => _busy = false);
+                                      }
+                                    }
+                                  },
+                          ),
+                        ],
+                      ),
+
                       const SizedBox(height: 18),
 
                       // Bottom Pill Button (LOGIN / LOGOUT)
                       Container(
                         width: double.infinity,
-                        height: 50,
+                        height: 52,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                         child: TextButton(
                           key: ValueKey(_state.isLoggedIn
@@ -380,8 +378,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ? _logout
                                   : () => _open(const AuthScreen())),
                           style: TextButton.styleFrom(
-                            backgroundColor: _lightRedBg,
-                            foregroundColor: _red,
+                            backgroundColor: _state.isLoggedIn
+                                ? _lightRedBg
+                                : _textDark,
+                            foregroundColor:
+                                _state.isLoggedIn ? _red : Colors.white,
                             shape: const StadiumBorder(),
                             elevation: 0,
                           ),
@@ -389,11 +390,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             (_state.isLoggedIn ? s.logout : s.login)
                                 .toUpperCase(),
                             style: TextStyle(
-                              color: _red,
+                              color: _state.isLoggedIn ? _red : Colors.white,
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                               letterSpacing: isAr ? 0.0 : 0.6,
                             ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Center(
+                        child: Text(
+                          '${AppConfig.appName} · v${AppConfig.appVersion}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _trailingMuted,
                           ),
                         ),
                       ),

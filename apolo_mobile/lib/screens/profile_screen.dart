@@ -910,32 +910,455 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Tab 1: Upgraded Apple-Style Insights & Boost Studio (Period Switcher, Funnel, Cities, Ad Ranking)
+  /// Tab 1: 2026 Monochrome Mobile Seller Analytics & Boost Dashboard
   Widget _buildUpgradedInsightsStudio(bool isAr) {
+    final totalAds = _myAds.length;
+    final totalViews = _baseViews ?? 0;
+    final avgViews = totalAds > 0 ? (totalViews / totalAds).round() : 0;
+    final boostedCount = _myAds
+        .where((ad) =>
+            ad['is_vip'] == true ||
+            ad['is_featured'] == true ||
+            ad['is_highlighted'] == true)
+        .length;
+
+    final sortedAds = List<Map<String, dynamic>>.from(_myAds)
+      ..sort((a, b) {
+        final va =
+            int.tryParse((a['views_count'] ?? a['views'] ?? 0).toString()) ?? 0;
+        final vb =
+            int.tryParse((b['views_count'] ?? b['views'] ?? 0).toString()) ?? 0;
+        return vb.compareTo(va);
+      });
+    final topChartAds = sortedAds.take(6).toList();
+    final maxViews = topChartAds.fold<int>(
+      1,
+      (prev, ad) {
+        final v =
+            int.tryParse((ad['views_count'] ?? ad['views'] ?? 0).toString()) ??
+                0;
+        return v > prev ? v : prev;
+      },
+    );
+
     return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-                isAr
-                    ? 'مشاهدات الإعلانات الحالية'
-                    : 'Vues des annonces actuelles',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            Text(_baseViews?.toString() ??
-                (isAr
-                    ? 'عدد المشاهدات غير متاح.'
-                    : 'Nombre de vues indisponible.')),
-            const SizedBox(height: 12),
-            Text(
-                isAr
-                    ? 'إحصائيات النمو والرسائل والمناطق والفترات الزمنية غير متاحة حالياً.'
-                    : 'Les statistiques de croissance, contacts, régions et périodes ne sont pas disponibles.',
-                style: const TextStyle(color: _muted)),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. 2x2 KPI Bento Grid
+          Row(
+            children: [
+              Expanded(
+                child: _buildAnalyticsKpiCard(
+                  icon: CupertinoIcons.eye_fill,
+                  label: isAr ? 'إجمالي المشاهدات' : 'Vues totales',
+                  value: _baseViews?.toString() ?? '0',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildAnalyticsKpiCard(
+                  icon: CupertinoIcons.square_grid_2x2_fill,
+                  label: isAr ? 'الإعلانات النشطة' : 'Annonces actives',
+                  value: '$totalAds',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAnalyticsKpiCard(
+                  icon: CupertinoIcons.chart_bar_fill,
+                  label: isAr ? 'متوسط المشاهدات' : 'Moy. / annonce',
+                  value: '$avgViews',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildAnalyticsKpiCard(
+                  icon: CupertinoIcons.bolt_fill,
+                  label: isAr ? 'إعلانات ممولة' : 'Annonces Boost',
+                  value: '$boostedCount',
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // 2. Mobile Performance Bar Chart Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isAr ? 'توزيع المشاهدات' : 'Répartition des vues',
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: _ink,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _surface,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        isAr ? 'مباشر' : 'En direct',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (topChartAds.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Text(
+                        isAr
+                            ? 'انشر إعلانك الأول لتبدأ متابعة المشاهدات والأداء هنا.'
+                            : 'Publiez votre première annonce pour suivre vos vues ici.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: _muted,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 132,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: List.generate(topChartAds.length, (i) {
+                        final ad = topChartAds[i];
+                        final v = int.tryParse(
+                                (ad['views_count'] ?? ad['views'] ?? 0)
+                                    .toString()) ??
+                            0;
+                        final ratio = (v / maxViews).clamp(0.12, 1.0);
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '$v',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: _ink,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures()
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 320),
+                                  height: 82 * ratio,
+                                  decoration: BoxDecoration(
+                                    color: i == 0
+                                        ? _ink
+                                        : const Color(0xFFD1D5DB),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '#${i + 1}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 3. Top Performing Ads Ranking (with 1-tap Edit & Boost)
+          if (sortedAds.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isAr ? 'أفضل إعلاناتك أداءً' : 'Vos meilleures annonces',
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                      color: _ink,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...sortedAds.take(5).map((ad) {
+                    final adId = int.tryParse((ad['id'] ?? 0).toString()) ?? 0;
+                    final title = (ad['title'] ?? '').toString();
+                    final imgUrl =
+                        (ad['main_image'] ?? ad['primary_image'] ?? '')
+                            .toString();
+                    final views = int.tryParse(
+                            (ad['views_count'] ?? ad['views'] ?? 0)
+                                .toString()) ??
+                        0;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              color: _surface,
+                              child: AppImage(url: imgUrl, fit: BoxFit.cover),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      CupertinoIcons.eye_fill,
+                                      size: 12,
+                                      color: _muted,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '$views ${isAr ? 'مشاهدة' : 'vues'}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _muted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PostAdScreen(initialAd: ad),
+                              ),
+                            ).then((_) => _loadProfileData()),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: const BoxDecoration(
+                                color: _surface,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                CupertinoIcons.pencil,
+                                size: 15,
+                                color: _ink,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () =>
+                                _openBoostModal(adId: adId, adTitle: title),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 11,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _ink,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'Boost',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
           ],
-        ));
+
+          // 4. Smart Actionable Tip Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _ink,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    CupertinoIcons.sparkles,
+                    color: Colors.white,
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isAr ? 'نصيحة لزيادة المبيعات' : 'Conseil de vente',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        sortedAds.isEmpty
+                            ? (isAr
+                                ? 'أضف صوراً واضحة وثمناً مناسباً في إعلانك الأول لجذب المشترين بسرعة.'
+                                : 'Ajoutez des photos nettes et un prix clair pour attirer plus d’acheteurs.')
+                            : (isAr
+                                ? 'تحديث الصور والوصف أو تمويل إعلانك الأكثر مشاهدة يضاعف فرص البيع.'
+                                : 'Mettre à jour vos photos ou booster votre meilleure annonce accélère la vente.'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.78),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsKpiCard({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: _surface,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 16, color: _ink),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: _ink,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _muted,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openBoostModal({required int adId, required String adTitle}) {
