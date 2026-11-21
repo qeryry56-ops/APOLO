@@ -22,6 +22,9 @@ class MediaRtcBridge {
   static JSObject? get _rtc =>
       globalContext.getProperty<JSObject?>('ApoloRTC'.toJS);
 
+  static JSObject? get _alerts =>
+      globalContext.getProperty<JSObject?>('ApoloAlerts'.toJS);
+
   // ───────────────────────── Voice Notes ─────────────────────────
 
   static bool get isVoiceSupported {
@@ -191,6 +194,47 @@ class MediaRtcBridge {
   static void rtcEndCall() {
     try {
       _rtc?.callMethod<JSAny?>('endCall'.toJS);
+    } catch (_) {}
+  }
+
+  // ───────────────────────── Sounds, Ringtone & Browser Notifications ─────────────────────────
+
+  static void playMessageSound() {
+    try {
+      _alerts?.callMethod<JSAny?>('playMessageSound'.toJS);
+    } catch (_) {}
+  }
+
+  static void playNotificationSound() {
+    try {
+      _alerts?.callMethod<JSAny?>('playNotificationSound'.toJS);
+    } catch (_) {}
+  }
+
+  static void startRingtone() {
+    try {
+      _alerts?.callMethod<JSAny?>('startRingtone'.toJS);
+    } catch (_) {}
+  }
+
+  static void stopRingtone() {
+    try {
+      _alerts?.callMethod<JSAny?>('stopRingtone'.toJS);
+    } catch (_) {}
+  }
+
+  static void requestBrowserNotificationPermission() {
+    try {
+      _alerts?.callMethod<JSAny?>('requestPermission'.toJS);
+    } catch (_) {}
+  }
+
+  static void showBrowserNotification(String title, String body) {
+    try {
+      _alerts?.callMethodVarArgs<JSAny?>(
+        'showBrowserNotification'.toJS,
+        <JSAny?>[title.toJS, body.toJS],
+      );
     } catch (_) {}
   }
 }

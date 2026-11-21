@@ -18,6 +18,9 @@ class FirebaseChatService {
   bool _isReady = false;
   bool get isReady => _isReady;
 
+  /// Currently open chat room doc ID (used to suppress duplicate in-app banners).
+  static String? activeChatDocId;
+
   FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _conversations =>
@@ -212,6 +215,7 @@ class FirebaseChatService {
           'peer_avatar': (peerMeta['avatar'] ?? '').toString(),
           'peer_online': true,
           'last_message': displayLastMsg,
+          'last_sender_id': (data['last_sender_id'] ?? '').toString(),
           'last_message_time': timeLabel,
           'updated_at_ms': updatedMs,
           'unread_count': unreadCount,

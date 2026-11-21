@@ -168,6 +168,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     final docId = _activeFirestoreDocId;
     if (docId == null || _myUserId <= 0) return;
+    FirebaseChatService.activeChatDocId = docId;
 
     FirebaseChatService.instance.markConversationRead(
       docId: docId,
@@ -179,6 +180,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         .listen((incoming) {
       if (!mounted) return;
       final hadMore = incoming.length > _messages.length;
+      final wasAlreadyLoaded = !_loading;
       setState(() {
         _messages = incoming;
         _pending.clear();
@@ -187,6 +189,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       });
       if (hadMore) {
         _scrollToEnd();
+        if (wasAlreadyLoaded &&
+            incoming.isNotEmpty &&
+            incoming.last['is_mine'] != true) {
+          MediaRtcBridge.playMessageSound();
+        }
         FirebaseChatService.instance.markConversationRead(
           docId: docId,
           myUserId: _myUserId,
@@ -285,6 +292,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   @override
   void dispose() {
+    if (FirebaseChatService.activeChatDocId == _activeFirestoreDocId) {
+      FirebaseChatService.activeChatDocId = null;
+    }
     if (_useFirestore) {
       FirebaseChatService.instance.setTyping(
         docId: _activeFirestoreDocId!,

@@ -64,6 +64,7 @@ class _CallScreenState extends State<CallScreen> {
       if (_isIncoming) {
         _callId = widget.incomingCallId;
         _status = 'ringing';
+        MediaRtcBridge.startRingtone();
         _watchCallDoc(_callId!, isCaller: false);
       } else {
         _startOutgoingCall();
@@ -73,6 +74,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    MediaRtcBridge.stopRingtone();
     _durationTimer?.cancel();
     _callSub?.cancel();
     _candSub?.cancel();
@@ -168,6 +170,7 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _acceptIncomingCall() async {
     if (_acceptedIncoming || _callId == null) return;
+    MediaRtcBridge.stopRingtone();
     final offerJson = widget.incomingOfferJson ?? '';
     if (offerJson.isEmpty) return;
 
@@ -240,6 +243,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _onConnected() {
+    MediaRtcBridge.stopRingtone();
     if (!mounted) return;
     if (_status != 'connected') {
       setState(() => _status = 'connected');
@@ -252,6 +256,7 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _endAndPop({bool notifyServer = true}) async {
     if (_status == 'ended') return;
     _status = 'ended';
+    MediaRtcBridge.stopRingtone();
     _durationTimer?.cancel();
     _callSub?.cancel();
     _candSub?.cancel();

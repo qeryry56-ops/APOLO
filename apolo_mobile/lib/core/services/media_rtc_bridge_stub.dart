@@ -58,4 +58,16 @@ class MediaRtcBridge {
   static void rtcSetCameraEnabled(bool enabled) {}
 
   static void rtcEndCall() {}
+
+  static void playMessageSound() {}
+
+  static void playNotificationSound() {}
+
+  static void startRingtone() {}
+
+  static void stopRingtone() {}
+
+  static void requestBrowserNotificationPermission() {}
+
+  static void showBrowserNotification(String title, String body) {}
 }

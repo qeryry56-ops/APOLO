@@ -383,4 +383,91 @@
       removeVideoOverlay();
     }
   };
+
+  // ========================= 3. SOUNDS, RINGTONE & NOTIFICATIONS =========================
+  let _audioCtx = null;
+  let _ringtoneTimer = null;
+
+  function getAudioCtx() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!_audioCtx) _audioCtx = new Ctx();
+    if (_audioCtx.state === 'suspended') {
+      _audioCtx.resume().catch(function () {});
+    }
+    return _audioCtx;
+  }
+
+  function playTone(freq, startOffset, duration, gainPeak) {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + startOffset);
+      gain.gain.exponentialRampToValueAtTime(gainPeak, ctx.currentTime + startOffset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startOffset + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + startOffset);
+      osc.stop(ctx.currentTime + startOffset + duration + 0.02);
+    } catch (_) {}
+  }
+
+  function ringBurst() {
+    // Classic pleasant dual-tone phone ring burst
+    playTone(523.25, 0.0, 0.22, 0.14);
+    playTone(659.25, 0.0, 0.22, 0.12);
+    playTone(523.25, 0.28, 0.22, 0.14);
+    playTone(659.25, 0.28, 0.22, 0.12);
+    playTone(783.99, 0.56, 0.34, 0.13);
+  }
+
+  window.ApoloAlerts = {
+    playMessageSound: function () {
+      // Crisp 2-note modern message pop
+      playTone(784, 0.0, 0.10, 0.14);
+      playTone(1046.5, 0.09, 0.16, 0.14);
+    },
+
+    playNotificationSound: function () {
+      // Soft app notification chime
+      playTone(659.25, 0.0, 0.12, 0.12);
+      playTone(880, 0.10, 0.18, 0.12);
+    },
+
+    startRingtone: function () {
+      window.ApoloAlerts.stopRingtone();
+      ringBurst();
+      _ringtoneTimer = setInterval(ringBurst, 2200);
+    },
+
+    stopRingtone: function () {
+      if (_ringtoneTimer) {
+        clearInterval(_ringtoneTimer);
+        _ringtoneTimer = null;
+      }
+    },
+
+    requestPermission: function () {
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+          Notification.requestPermission().catch(function () {});
+        }
+      } catch (_) {}
+    },
+
+    showBrowserNotification: function (title, body) {
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification(title || 'Apolo.ma', {
+            body: body || '',
+            icon: 'icons/Icon-192.png'
+          });
+        }
+      } catch (_) {}
+    }
+  };
 })();
