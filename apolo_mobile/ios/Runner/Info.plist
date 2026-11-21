@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Apolo Mobile</string>
+	<string>Apolo.ma</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -66,5 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>يحتاج Apolo.ma إلى الكاميرا لالتقاط صور الإعلانات وإجراء مكالمات الفيديو.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>يحتاج Apolo.ma إلى الميكروفون لإرسال الرسائل الصوتية وإجراء المكالمات.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يحتاج Apolo.ma إلى مكتبة الصور لإرفاق صور الإعلانات والرسائل وتحديث صورة الحساب.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>يحتاج Apolo.ma إلى موقعك لعرض الإعلانات القريبة منك وتحديد نطاق البحث.</string>
 </dict>
 </plist>

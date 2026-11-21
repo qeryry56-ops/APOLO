@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../account/account_helpers.dart';
 import '../core/state/app_state.dart';
@@ -20,7 +19,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
-  bool _opening = false;
   bool _savingProfile = false;
   bool _savingPassword = false;
   bool _obscureCurrent = true;
@@ -33,7 +31,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
   static const Color _cardBg = Colors.white;
   static const Color _ink = Color(0xFF0A0A0A);
   static const Color _muted = Color(0xFF6B7280);
-  static const Color _trailingMuted = Color(0xFF8E8E93);
   static const Color _divider = Color(0xFFF1F2F6);
   static const Color _inputFill = Color(0xFFF8F9FB);
   static const Color _inputBorder = Color(0xFFE5E7EB);
@@ -172,29 +169,6 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       }
     } finally {
       if (mounted) setState(() => _savingPassword = false);
-    }
-  }
-
-  Future<void> _open() async {
-    if (_opening) return;
-    HapticFeedback.selectionClick();
-    setState(() {
-      _opening = true;
-      _error = null;
-    });
-    try {
-      if (!await launchUrl(accountWebsite,
-          mode: LaunchMode.externalApplication)) {
-        throw StateError('Website unavailable');
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _error = AppState().s.tr(
-            'تعذر فتح الموقع. افتح apolo.ma في المتصفح.',
-            'Impossible d’ouvrir le site. Ouvrez apolo.ma dans votre navigateur.'));
-      }
-    } finally {
-      if (mounted) setState(() => _opening = false);
     }
   }
 
@@ -578,8 +552,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             icon: Icons.password,
                             title: s.tr('كلمة المرور', 'Mot de passe'),
                             subtitle: s.tr(
-                                'سجّل الدخول للتعديل أو استخدم الموقع',
-                                'Connectez-vous pour modifier ou utilisez le site'),
+                                'سجّل الدخول في التطبيق لتعديل هذه البيانات',
+                                'Connectez-vous dans l’application pour modifier ces informations'),
                           ),
                           const Padding(
                             padding:
@@ -591,8 +565,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             icon: CupertinoIcons.at,
                             title: s.tr('البريد الإلكتروني', 'Adresse e-mail'),
                             subtitle: s.tr(
-                                'سجّل الدخول للتعديل أو استخدم الموقع',
-                                'Connectez-vous pour modifier ou utilisez le site'),
+                                'سجّل الدخول في التطبيق لتعديل هذه البيانات',
+                                'Connectez-vous dans l’application pour modifier ces informations'),
                           ),
                           const Padding(
                             padding:
@@ -604,83 +578,13 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             icon: CupertinoIcons.phone,
                             title: s.tr('رقم الهاتف', 'Numéro de téléphone'),
                             subtitle: s.tr(
-                                'سجّل الدخول للتعديل أو استخدم الموقع',
-                                'Connectez-vous pour modifier ou utilisez le site'),
+                                'سجّل الدخول في التطبيق لتعديل هذه البيانات',
+                                'Connectez-vous dans l’application pour modifier ces informations'),
                           ),
                         ],
                       ),
                     ),
                   ],
-
-                  // External Website Card
-                  _buildSectionHeader(
-                    s.tr('الموقع الرسمي', 'Site officiel', 'Official website'),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _cardBg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _opening ? null : _open,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 13),
-                          child: Row(
-                            children: [
-                              const Icon(CupertinoIcons.globe,
-                                  size: 20, color: _ink),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Text(
-                                  s.tr('فتح apolo.ma', 'Ouvrir apolo.ma',
-                                      'Open apolo.ma'),
-                                  style: const TextStyle(
-                                    color: _ink,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                              if (_opening)
-                                const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              else
-                                Icon(
-                                  isAr
-                                      ? CupertinoIcons.chevron_left
-                                      : CupertinoIcons.chevron_right,
-                                  size: 15,
-                                  color: _trailingMuted,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 0),
-                    child: Text(
-                      s.tr(
-                        'لن يتم تغيير أي بيانات بمجرد فتح الموقع. جلسة التطبيق لا تنتقل إلى المتصفح.',
-                        'Ouvrir le site ne modifie aucune donnée. Votre session dans l’application n’est pas transférée au navigateur.',
-                        'Opening the website does not modify any data. Your app session is not transferred to the browser.',
-                      ),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: _muted,
-                        height: 1.45,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
