@@ -9,12 +9,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/config/app_config.dart';
+import '../core/location/marketplace_location.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'auth_screen.dart';
 import '../account/account_helpers.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/real_marketplace_map.dart';
 
 class PostAdScreen extends StatefulWidget {
   final VoidCallback? onSuccess;
@@ -46,6 +48,9 @@ class _PostAdScreenState extends State<PostAdScreen>
 
   int? _categoryId;
   int? _cityId;
+  double? _adLat;
+  double? _adLng;
+  bool _detectingGps = false;
   bool _negotiable = false;
   bool _free = false;
   bool _hidePhone = false;
@@ -342,6 +347,47 @@ class _PostAdScreenState extends State<PostAdScreen>
         .toString();
   }
 
+  MoroccanCityCoord _selectedCityCoord() {
+    return MarketplaceLocation.resolveTaxonomyCity(_cityId, _effectiveCities) ??
+        MarketplaceLocation.matchCityByName(_selectedCityName()) ??
+        MarketplaceLocation.fallbackCasablanca;
+  }
+
+  Future<void> _detectAdGps(AppStrings s) async {
+    setState(() => _detectingGps = true);
+    try {
+      final res = await MarketplaceLocation.detectLocation(tryGps: true);
+      if (!mounted) return;
+      if (res != null) {
+        HapticFeedback.mediumImpact();
+        setState(() {
+          _adLat = res.lat;
+          _adLng = res.lng;
+          _cityId = MarketplaceLocation.findTaxonomyCityId(
+                res.city,
+                _effectiveCities,
+              ) ??
+              _cityId;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              s.tr(
+                'تعذر تحديد موقعك تلقائياً — اختر المدينة من القائمة',
+                'Détection GPS impossible — choisissez votre ville',
+                'Could not detect GPS location — pick your city',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _detectingGps = false);
+    }
+  }
+
   String _step3DAsset() {
     switch (_currentStep) {
       case 0:
@@ -522,6 +568,8 @@ class _PostAdScreenState extends State<PostAdScreen>
       _dynamicValues.clear();
       _categoryId = null;
       _cityId = _state.preferredCityId ?? 1;
+      _adLat = null;
+      _adLng = null;
       _negotiable = false;
       _free = false;
       _hidePhone = false;
@@ -570,6 +618,12 @@ class _PostAdScreenState extends State<PostAdScreen>
         'price': _free ? 0 : _parsedPrice!,
         'category_id': _categoryId,
         'city_id': _cityId,
+        if (_adLat != null && _adLng != null) ...{
+          'latitude': _adLat,
+          'longitude': _adLng,
+          'lat': _adLat,
+          'lng': _adLng,
+        },
         'phone_call': AccountValidation.phone(_phoneCtrl.text) ?? '',
         'phone_whatsapp': AccountValidation.phone(_phoneCtrl.text) ?? '',
         'negotiable': _negotiable ? 1 : 0,
@@ -935,7 +989,11 @@ class _PostAdScreenState extends State<PostAdScreen>
               return PressableScale(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  setState(() => _cityId = id);
+                  setState(() {
+                    _cityId = id;
+                    _adLat = null;
+                    _adLng = null;
+                  });
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -968,6 +1026,102 @@ class _PostAdScreenState extends State<PostAdScreen>
               );
             },
           ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // Interactive GPS + Map Location Preview Card
+        Builder(
+          builder: (context) {
+            final cityCoord = _selectedCityCoord();
+            final mapLat = _adLat ?? cityCoord.lat;
+            final mapLng = _adLng ?? cityCoord.lng;
+            final cityLabel = _selectedCityName().isNotEmpty
+                ? _selectedCityName()
+                : cityCoord.labelForLang(s.lang);
+            return Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _surface,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  RealMarketplaceMap(
+                    lat: mapLat,
+                    lng: mapLng,
+                    cityLabel: cityLabel,
+                    circleRadiusKm: 4.5,
+                    height: 148,
+                    borderRadius: 14,
+                    interactive: true,
+                    onCenterChanged: (pos) {
+                      setState(() {
+                        _adLat = pos.lat;
+                        _adLng = pos.lng;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  PressableScale(
+                    key: const Key('post-ad-gps-btn'),
+                    onTap: _detectingGps ? () {} : () => _detectAdGps(s),
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: const Color(0xFFE5E7EB),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_detectingGps)
+                            const SizedBox(
+                              width: 15,
+                              height: 15,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: _ink,
+                              ),
+                            )
+                          else
+                            const Icon(
+                              CupertinoIcons.location_fill,
+                              size: 15,
+                              color: _ink,
+                            ),
+                          const SizedBox(width: 7),
+                          Text(
+                            _adLat != null
+                                ? s.tr(
+                                    'تم تحديد موقع الإعلان (GPS)',
+                                    'Position GPS enregistrée',
+                                    'GPS location set',
+                                  )
+                                : s.tr(
+                                    'تحديد موقع الإعلان بـ GPS',
+                                    'Détecter la position (GPS)',
+                                    'Detect ad location (GPS)',
+                                  ),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: _ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
 
         const SizedBox(height: 24),

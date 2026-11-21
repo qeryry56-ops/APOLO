@@ -537,6 +537,204 @@ class MarketplaceLocation {
     return scored.map((e) => e.ad).toList();
   }
 
+  /// Reverse-geocodes coordinates to a neighborhood + Moroccan city via OpenStreetMap Nominatim.
+  static Future<({String labelAr, String labelFr, MoroccanCityCoord city})>
+      reverseGeocode(double lat, double lng) async {
+    final fallback = nearestCity(lat, lng);
+    try {
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(milliseconds: 3500),
+          receiveTimeout: const Duration(milliseconds: 3500),
+          headers: const {'Accept': 'application/json'},
+        ),
+      );
+      final res = await dio.get(
+        'https://nominatim.openstreetmap.org/reverse',
+        queryParameters: {
+          'format': 'jsonv2',
+          'lat': lat,
+          'lon': lng,
+          'accept-language': 'ar,fr',
+        },
+      );
+      if (res.data is Map) {
+        final data = res.data as Map;
+        final addr = data['address'] is Map ? data['address'] as Map : const {};
+        final area = (addr['suburb'] ??
+                addr['neighbourhood'] ??
+                addr['quarter'] ??
+                addr['city_district'] ??
+                '')
+            .toString()
+            .trim();
+        final rawCity = (addr['city'] ??
+                addr['town'] ??
+                addr['village'] ??
+                addr['municipality'] ??
+                addr['county'] ??
+                addr['state'] ??
+                '')
+            .toString()
+            .trim();
+
+        final matched = matchCityByName('$rawCity $area');
+        final city = matched ?? fallback;
+
+        String buildLabel(String baseCity, {required bool arabic}) {
+          if (baseCity.isEmpty) return arabic ? fallback.nameAr : fallback.nameFr;
+          if (area.isNotEmpty &&
+              _normalizeText(area) != _normalizeText(baseCity) &&
+              !_normalizeText(area).contains(_normalizeText(city.nameFr)) &&
+              !_normalizeText(area).contains(_normalizeText(city.nameAr))) {
+            return arabic ? '$area، $baseCity' : '$area, $baseCity';
+          }
+          return baseCity;
+        }
+
+        final baseAr = matched != null
+            ? matched.nameAr
+            : (rawCity.isNotEmpty ? rawCity : fallback.nameAr);
+        final baseFr = matched != null
+            ? matched.nameFr
+            : (rawCity.isNotEmpty ? rawCity : fallback.nameFr);
+
+        return (
+          labelAr: buildLabel(baseAr, arabic: true),
+          labelFr: buildLabel(baseFr, arabic: false),
+          city: city,
+        );
+      }
+    } catch (_) {}
+
+    return (
+      labelAr: fallback.nameAr,
+      labelFr: fallback.nameFr,
+      city: fallback,
+    );
+  }
+
+  /// Searches neighborhoods, streets, and cities in Morocco via OpenStreetMap Nominatim.
+  static Future<
+          List<
+              ({
+                String title,
+                String subtitle,
+                double lat,
+                double lng,
+                MoroccanCityCoord city,
+              })>>
+      searchPlaces(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.length < 2) return const [];
+
+    try {
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(milliseconds: 3500),
+          receiveTimeout: const Duration(milliseconds: 3500),
+          headers: const {'Accept': 'application/json'},
+        ),
+      );
+      final res = await dio.get(
+        'https://nominatim.openstreetmap.org/search',
+        queryParameters: {
+          'format': 'jsonv2',
+          'countrycodes': 'ma',
+          'limit': 5,
+          'addressdetails': 1,
+          'accept-language': 'ar,fr',
+          'q': trimmed,
+        },
+      );
+
+      if (res.data is List) {
+        final results = <({
+          String title,
+          String subtitle,
+          double lat,
+          double lng,
+          MoroccanCityCoord city,
+        })>[];
+
+        for (final item in res.data as List) {
+          if (item is! Map) continue;
+          final lat = double.tryParse((item['lat'] ?? '').toString());
+          final lng = double.tryParse((item['lon'] ?? '').toString());
+          if (lat == null || lng == null) continue;
+
+          final addr =
+              item['address'] is Map ? item['address'] as Map : const {};
+          final rawName = (item['name'] ?? '').toString().trim();
+          final displayName = (item['display_name'] ?? '').toString().trim();
+          final area = (addr['suburb'] ??
+                  addr['neighbourhood'] ??
+                  addr['quarter'] ??
+                  addr['city_district'] ??
+                  '')
+              .toString()
+              .trim();
+          final rawCity = (addr['city'] ??
+                  addr['town'] ??
+                  addr['village'] ??
+                  addr['state'] ??
+                  '')
+              .toString()
+              .trim();
+
+          final city = matchCityByName('$rawName $rawCity $area $displayName') ??
+              nearestCity(lat, lng);
+          final title = rawName.isNotEmpty
+              ? rawName
+              : (area.isNotEmpty
+                  ? area
+                  : (rawCity.isNotEmpty ? rawCity : city.nameFr));
+
+          final subtitleParts = <String>[];
+          if (rawCity.isNotEmpty &&
+              _normalizeText(rawCity) != _normalizeText(title)) {
+            subtitleParts.add(rawCity);
+          } else if (_normalizeText(city.nameFr) != _normalizeText(title)) {
+            subtitleParts.add(city.nameFr);
+          }
+          final state = (addr['state'] ?? '').toString().trim();
+          if (state.isNotEmpty &&
+              _normalizeText(state) != _normalizeText(title) &&
+              _normalizeText(state) != _normalizeText(rawCity)) {
+            subtitleParts.add(state);
+          }
+
+          results.add((
+            title: title,
+            subtitle: subtitleParts.join(', '),
+            lat: lat,
+            lng: lng,
+            city: city,
+          ));
+        }
+        if (results.isNotEmpty) return results;
+      }
+    } catch (_) {}
+
+    // Offline / fallback search across local Moroccan cities
+    final normQuery = _normalizeText(trimmed);
+    return cities
+        .where((c) => c.nameFr != 'Cascais')
+        .where((c) =>
+            _normalizeText(c.nameFr).contains(normQuery) ||
+            _normalizeText(c.nameAr).contains(normQuery) ||
+            c.aliases.any((a) => _normalizeText(a).contains(normQuery)))
+        .take(5)
+        .map((c) => (
+              title: c.nameFr,
+              subtitle: c.nameAr,
+              lat: c.lat,
+              lng: c.lng,
+              city: c,
+            ))
+        .toList();
+  }
+
   /// Attempts automatic GPS (on request) or silent IP-based geolocation.
   static Future<({double lat, double lng, MoroccanCityCoord city, String? detectedCity})?>
       detectLocation({
@@ -545,12 +743,12 @@ class MarketplaceLocation {
     if (tryGps) {
       final gps = await tryBrowserGeolocation();
       if (gps != null) {
-        final city = nearestCity(gps.lat, gps.lng);
+        final rev = await reverseGeocode(gps.lat, gps.lng);
         return (
           lat: gps.lat,
           lng: gps.lng,
-          city: city,
-          detectedCity: city.nameFr,
+          city: rev.city,
+          detectedCity: rev.labelFr,
         );
       }
     }

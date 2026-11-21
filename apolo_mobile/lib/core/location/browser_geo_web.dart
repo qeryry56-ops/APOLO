@@ -35,9 +35,9 @@ Future<({double lat, double lng})?> tryBrowserGeolocation({
     }
 
     final options = JSObject()
-      ..setProperty('enableHighAccuracy'.toJS, false.toJS)
+      ..setProperty('enableHighAccuracy'.toJS, true.toJS)
       ..setProperty('timeout'.toJS, timeout.inMilliseconds.toJS)
-      ..setProperty('maximumAge'.toJS, 300000.toJS);
+      ..setProperty('maximumAge'.toJS, 60000.toJS);
 
     geo.callMethodVarArgs<JSAny?>(
       'getCurrentPosition'.toJS,

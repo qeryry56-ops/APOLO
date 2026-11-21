@@ -26,6 +26,7 @@ class RealMarketplaceMap extends StatefulWidget {
   final Widget? topOverlay;
   final VoidCallback? onExpandTap;
   final ValueChanged<({double lat, double lng})>? onCenterChanged;
+  final ValueChanged<({double lat, double lng})>? onPanEnd;
 
   const RealMarketplaceMap({
     super.key,
@@ -42,6 +43,7 @@ class RealMarketplaceMap extends StatefulWidget {
     this.topOverlay,
     this.onExpandTap,
     this.onCenterChanged,
+    this.onPanEnd,
   });
 
   static int recommendedZoomForRadius(double radiusKm) {
@@ -177,7 +179,11 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
             final minTy = (topLeftWorld.dy / _tileSize).floor().clamp(0, nTiles - 1);
             final maxTy = ((topLeftWorld.dy + vh) / _tileSize).floor().clamp(0, nTiles - 1);
 
-            final markerWorld = _latLngToWorld(widget.lat, widget.lng, _zoom);
+            final bool pinTracksCenter =
+                widget.onCenterChanged != null || widget.onPanEnd != null;
+            final double pinLat = pinTracksCenter ? _centerLat : widget.lat;
+            final double pinLng = pinTracksCenter ? _centerLng : widget.lng;
+            final markerWorld = _latLngToWorld(pinLat, pinLng, _zoom);
             final markerScreen = markerWorld - topLeftWorld;
 
             Offset? userScreen;
@@ -187,7 +193,7 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
                       topLeftWorld;
             }
 
-            final mpp = _metersPerPixel(widget.lat, _zoom);
+            final mpp = _metersPerPixel(pinLat, _zoom);
             final rawCirclePx = (widget.circleRadiusKm * 1000.0) / mpp;
             final double radiusPx = rawCirclePx.clamp(
               32.0,
@@ -196,6 +202,10 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
 
             return GestureDetector(
               onPanUpdate: widget.interactive ? _handlePanUpdate : null,
+              onPanEnd: widget.interactive
+                  ? (_) => widget.onPanEnd
+                      ?.call((lat: _centerLat, lng: _centerLng))
+                  : null,
               onTap: widget.onExpandTap,
               behavior: HitTestBehavior.opaque,
               child: Stack(

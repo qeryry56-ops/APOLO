@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -123,6 +124,45 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
   late double _radiusKm;
   late bool _allMorocco;
   bool _detecting = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  Timer? _searchDebounce;
+  List<
+      ({
+        String title,
+        String subtitle,
+        double lat,
+        double lng,
+        MoroccanCityCoord city,
+      })> _searchResults = [];
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    final trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setState(() {
+        _searching = false;
+        _searchResults = [];
+      });
+      return;
+    }
+    setState(() => _searching = true);
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      final results = await MarketplaceLocation.searchPlaces(trimmed);
+      if (!mounted) return;
+      setState(() {
+        _searching = false;
+        _searchResults = results.take(4).toList();
+      });
+    });
+  }
 
   @override
   void initState() {
@@ -158,13 +198,19 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
       final detected = await MarketplaceLocation.detectLocation(tryGps: true);
       if (!mounted) return;
       if (detected != null) {
+        final rev = await MarketplaceLocation.reverseGeocode(
+          detected.lat,
+          detected.lng,
+        );
+        if (!mounted) return;
         HapticFeedback.mediumImpact();
         setState(() {
           _lat = detected.lat;
           _lng = detected.lng;
-          _nameAr = detected.city.nameAr;
-          _nameFr = detected.city.nameFr;
+          _nameAr = rev.labelAr;
+          _nameFr = rev.labelFr;
           _allMorocco = false;
+          _searchResults = [];
           if (_radiusKm <= 0) {
             _radiusKm = MarketplaceLocation.defaultZoneRadiusKm;
           }
@@ -283,7 +329,7 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
               ),
               const SizedBox(height: 14),
 
-              // 1. White Grouped Card: Interactive Map + GPS Auto-Detect
+              // 1. White Grouped Card: Search + Interactive Map + GPS Auto-Detect
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -292,6 +338,186 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
                 ),
                 child: Column(
                   children: [
+                    // Place Search Input Bar
+                    Container(
+                      height: 42,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: _pillGray,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            CupertinoIcons.search,
+                            size: 16,
+                            color: _muted,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Theme(
+                              data: Theme.of(context).copyWith(
+                                inputDecorationTheme:
+                                    const InputDecorationTheme(
+                                  filled: false,
+                                  fillColor: Colors.transparent,
+                                  hoverColor: Colors.transparent,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                              child: TextField(
+                                key: const Key('zone-place-search'),
+                                controller: _searchCtrl,
+                                onChanged: _onSearchChanged,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: _ink,
+                                ),
+                                decoration: InputDecoration(
+                                  filled: false,
+                                  fillColor: Colors.transparent,
+                                  hoverColor: Colors.transparent,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  hintText: s.tr(
+                                    'ابحث عن حي، مدينة أو عنوان...',
+                                    'Rechercher un quartier, une ville...',
+                                    'Search neighborhood, city, address...',
+                                  ),
+                                  hintStyle: const TextStyle(
+                                    fontSize: 13,
+                                    color: _muted,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_searching)
+                            const SizedBox(
+                              width: 15,
+                              height: 15,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: _ink,
+                              ),
+                            )
+                          else if (_searchCtrl.text.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                _searchCtrl.clear();
+                                setState(() {
+                                  _searchResults = [];
+                                  _searching = false;
+                                });
+                              },
+                              child: const Icon(
+                                CupertinoIcons.xmark_circle_fill,
+                                size: 17,
+                                color: _muted,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (_searchResults.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _pillGray,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          children: [
+                            for (int i = 0; i < _searchResults.length; i++) ...[
+                              if (i > 0)
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFE5E7EB),
+                                ),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () {
+                                  final r = _searchResults[i];
+                                  HapticFeedback.selectionClick();
+                                  FocusScope.of(context).unfocus();
+                                  setState(() {
+                                    _lat = r.lat;
+                                    _lng = r.lng;
+                                    _nameAr = r.title == r.city.nameFr ||
+                                            r.title == r.city.nameAr
+                                        ? r.city.nameAr
+                                        : '${r.title}، ${r.city.nameAr}';
+                                    _nameFr = r.title == r.city.nameFr ||
+                                            r.title == r.city.nameAr
+                                        ? r.city.nameFr
+                                        : '${r.title}, ${r.city.nameFr}';
+                                    _allMorocco = false;
+                                    _searchResults = [];
+                                    _searchCtrl.text = r.title;
+                                  });
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        CupertinoIcons.location_solid,
+                                        size: 14,
+                                        color: _ink,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _searchResults[i].title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: _ink,
+                                              ),
+                                            ),
+                                            if (_searchResults[i]
+                                                .subtitle
+                                                .isNotEmpty)
+                                              Text(
+                                                _searchResults[i].subtitle,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 11.5,
+                                                  color: _muted,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
                     RealMarketplaceMap(
                       lat: _lat,
                       lng: _lng,
@@ -302,6 +528,24 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
                       height: 172,
                       borderRadius: 16,
                       interactive: true,
+                      onCenterChanged: (pos) {
+                        setState(() {
+                          _lat = pos.lat;
+                          _lng = pos.lng;
+                          _allMorocco = false;
+                        });
+                      },
+                      onPanEnd: (pos) async {
+                        final rev = await MarketplaceLocation.reverseGeocode(
+                          pos.lat,
+                          pos.lng,
+                        );
+                        if (!mounted) return;
+                        setState(() {
+                          _nameAr = rev.labelAr;
+                          _nameFr = rev.labelFr;
+                        });
+                      },
                       topOverlay: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
