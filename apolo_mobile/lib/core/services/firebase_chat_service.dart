@@ -23,6 +23,9 @@ class FirebaseChatService {
   CollectionReference<Map<String, dynamic>> get _conversations =>
       _db.collection('conversations');
 
+  CollectionReference<Map<String, dynamic>> get _calls =>
+      _db.collection('calls');
+
   /// Safe initialization (never throws in headless widget tests).
   Future<bool> initialize() async {
     if (_isReady) return true;
@@ -187,6 +190,8 @@ class FirebaseChatService {
           displayLastMsg = lastMsgRaw;
         } else if (lastType == 'image') {
           displayLastMsg = '📷 Photo';
+        } else if (lastType == 'audio') {
+          displayLastMsg = '🎤 Voice message';
         } else {
           displayLastMsg = '';
         }
@@ -268,6 +273,9 @@ class FirebaseChatService {
           'type': (data['type'] ?? 'text').toString(),
           'body': (data['body'] ?? '').toString(),
           'image_base64': (data['image_base64'] ?? '').toString(),
+          'audio_base64': (data['audio_base64'] ?? '').toString(),
+          'audio_mime': (data['audio_mime'] ?? 'audio/webm').toString(),
+          'audio_duration': (data['audio_duration'] ?? '0:01').toString(),
           'is_mine': isMine,
           'read': isReadByPeer,
           'created_at_ms': createdMs,
@@ -518,5 +526,187 @@ class FirebaseChatService {
     await _conversations.doc(docId).set({
       'deleted_by': FieldValue.arrayUnion(['$myUserId']),
     }, SetOptions(merge: true));
+  }
+
+  /// Sends a Voice Note message stored in Firestore.
+  Future<void> sendAudioMessage({
+    required String docId,
+    required int myUserId,
+    required String myName,
+    String myAvatar = '',
+    required int peerUserId,
+    required String peerName,
+    String peerAvatar = '',
+    required String audioBase64,
+    required String audioMime,
+    required String audioDuration,
+    int adId = 0,
+    String adTitle = '',
+    String adPrice = '',
+    String adImage = '',
+  }) async {
+    final myKey = '$myUserId';
+    final peerKey = '$peerUserId';
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final convRef = _conversations.doc(docId);
+
+    await convRef.set({
+      'participants': [myKey, peerKey],
+      'participants_meta': {
+        myKey: {
+          'id': myUserId,
+          'name': myName.trim().isNotEmpty ? myName.trim() : 'Apolo User',
+          'avatar': myAvatar,
+        },
+        peerKey: {
+          'id': peerUserId,
+          'name': peerName.trim().isNotEmpty ? peerName.trim() : 'Apolo Seller',
+          'avatar': peerAvatar,
+        },
+      },
+      if (adId > 0) 'ad_id': adId,
+      if (adTitle.isNotEmpty) 'ad_title': adTitle,
+      if (adPrice.isNotEmpty) 'ad_price': adPrice,
+      if (adImage.isNotEmpty) 'ad_image': adImage,
+      'last_message': '🎤 $audioDuration',
+      'last_message_type': 'audio',
+      'last_sender_id': myKey,
+      'updated_at_ms': nowMs,
+      'unread_counts': {
+        myKey: 0,
+        peerKey: FieldValue.increment(1),
+      },
+      'typing': {
+        myKey: false,
+      },
+      'deleted_by': FieldValue.arrayRemove([myKey, peerKey]),
+    }, SetOptions(merge: true));
+
+    await convRef.collection('messages').add({
+      'sender_id': myKey,
+      'sender_name': myName,
+      'type': 'audio',
+      'body': '',
+      'audio_base64': audioBase64,
+      'audio_mime': audioMime,
+      'audio_duration': audioDuration,
+      'created_at_ms': nowMs,
+      'read_by': [myKey],
+      'edited': false,
+      'deleted_for_everyone': false,
+      'deleted_for': <String>[],
+    });
+  }
+
+  // ───────────────────────── WebRTC Call Signaling ─────────────────────────
+
+  Future<String> createCall({
+    required String conversationDocId,
+    required int callerId,
+    required String callerName,
+    String callerAvatar = '',
+    required int calleeId,
+    required String calleeName,
+    String calleeAvatar = '',
+    required bool isVideo,
+    required String offerJson,
+  }) async {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final ref = await _calls.add({
+      'conversation_doc_id': conversationDocId,
+      'caller_id': '$callerId',
+      'caller_name': callerName,
+      'caller_avatar': callerAvatar,
+      'callee_id': '$calleeId',
+      'callee_name': calleeName,
+      'callee_avatar': calleeAvatar,
+      'is_video': isVideo,
+      'status': 'ringing',
+      'offer': offerJson,
+      'answer': '',
+      'created_at_ms': nowMs,
+      'updated_at_ms': nowMs,
+    });
+    return ref.id;
+  }
+
+  Future<void> answerCall({
+    required String callId,
+    required String answerJson,
+  }) async {
+    await _calls.doc(callId).update({
+      'answer': answerJson,
+      'status': 'connected',
+      'updated_at_ms': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  Future<void> addCallCandidate({
+    required String callId,
+    required bool isCaller,
+    required String candidateJson,
+  }) async {
+    final sub = isCaller ? 'caller_candidates' : 'callee_candidates';
+    await _calls.doc(callId).collection(sub).add({
+      'candidate': candidateJson,
+      'created_at_ms': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  Future<void> updateCallStatus({
+    required String callId,
+    required String status,
+  }) async {
+    try {
+      await _calls.doc(callId).update({
+        'status': status,
+        'updated_at_ms': DateTime.now().millisecondsSinceEpoch,
+      });
+    } catch (_) {}
+  }
+
+  Stream<Map<String, dynamic>?> watchCall(String callId) {
+    return _calls.doc(callId).snapshots().map((doc) {
+      final d = doc.data();
+      if (d == null) return null;
+      return {...d, 'id': doc.id};
+    });
+  }
+
+  Stream<String> watchCallCandidates(
+    String callId, {
+    required bool watchCallerCandidates,
+  }) {
+    final sub = watchCallerCandidates ? 'caller_candidates' : 'callee_candidates';
+    return _calls.doc(callId).collection(sub).snapshots().expand((snap) {
+      return snap.docChanges
+          .where((c) => c.type == DocumentChangeType.added)
+          .map((c) => (c.doc.data()?['candidate'] ?? '').toString())
+          .where((s) => s.isNotEmpty);
+    });
+  }
+
+  /// Watches active incoming ringing calls for [myUserId] (no composite index needed).
+  Stream<Map<String, dynamic>?> watchIncomingCalls(int myUserId) {
+    final myKey = '$myUserId';
+    return _calls
+        .where('callee_id', isEqualTo: myKey)
+        .snapshots()
+        .map((snap) {
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      Map<String, dynamic>? latest;
+      int latestMs = 0;
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        if (d['status'] != 'ringing') continue;
+        final created = int.tryParse('${d['created_at_ms'] ?? 0}') ?? 0;
+        if (nowMs - created > 90000) continue; // ignore stale calls > 90s
+        if (created >= latestMs) {
+          latestMs = created;
+          latest = {...d, 'id': doc.id};
+        }
+      }
+      return latest;
+    });
   }
 }

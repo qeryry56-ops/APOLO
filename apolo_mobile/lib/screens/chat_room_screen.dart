@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/services/firebase_chat_service.dart';
+import '../core/services/media_rtc_bridge.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'call_screen.dart';
@@ -60,14 +61,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   bool _showCallMenu = false;
   bool _sending = false;
   bool _uploadingMedia = false;
+  bool _isRecordingVoice = false;
+  int _recordSeconds = 0;
+  String? _playingAudioId;
+  double _playingProgress = 0.0;
   bool _loadingRequest = false;
   bool _peerTyping = false;
   String? _loadError;
   Timer? _pollTimer;
   Timer? _focusScrollTimer;
   Timer? _typingTimer;
+  Timer? _recordTimer;
   StreamSubscription<List<Map<String, dynamic>>>? _messagesSub;
   StreamSubscription<Map<String, dynamic>?>? _convMetaSub;
+  StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
+  String? _lastHandledCallId;
   Object? _accountId;
 
   int get _myUserId => int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
@@ -210,6 +218,30 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         setState(() => _peerTyping = someoneElseTyping);
       }
     });
+
+    _incomingCallSub?.cancel();
+    _incomingCallSub = FirebaseChatService.instance
+        .watchIncomingCalls(_myUserId)
+        .listen((callData) {
+      if (!mounted || callData == null) return;
+      final callId = (callData['id'] ?? '').toString();
+      if (callId.isEmpty || callId == _lastHandledCallId) return;
+      _lastHandledCallId = callId;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CallScreen(
+            peerName: (callData['caller_name'] ?? widget.peerName).toString(),
+            peerAvatar: callData['caller_avatar']?.toString(),
+            peerId: int.tryParse('${callData['caller_id'] ?? ''}'),
+            conversationDocId: callData['conversation_doc_id']?.toString(),
+            isVideo: callData['is_video'] == true,
+            incomingCallId: callId,
+            incomingOfferJson: (callData['offer'] ?? '').toString(),
+          ),
+        ),
+      );
+    });
   }
 
   void _onAccountChanged() {
@@ -262,7 +294,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
     _messagesSub?.cancel();
     _convMetaSub?.cancel();
+    _incomingCallSub?.cancel();
     _typingTimer?.cancel();
+    _recordTimer?.cancel();
+    if (_isRecordingVoice) {
+      MediaRtcBridge.cancelVoiceRecording();
+    }
+    MediaRtcBridge.pauseVoiceMessage();
     _pollTimer?.cancel();
     _focusScrollTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -772,9 +810,150 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
+  Future<void> _startVoiceRecording() async {
+    if (!_useFirestore || !MediaRtcBridge.isVoiceSupported) {
+      _mediaUnavailable();
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    final ok = await MediaRtcBridge.startVoiceRecording();
+    if (!mounted) return;
+    if (!ok) {
+      _notice(_state.s.tr(
+        'يرجى السماح بالوصول للميكروفون لتسجيل رسالة صوتية.',
+        'Veuillez autoriser le micro pour enregistrer un message vocal.',
+        'Please allow microphone access to record a voice note.',
+      ));
+      return;
+    }
+    _recordTimer?.cancel();
+    setState(() {
+      _isRecordingVoice = true;
+      _recordSeconds = 0;
+    });
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _recordSeconds++);
+      if (_recordSeconds >= 45) {
+        _stopAndSendVoiceRecording();
+      }
+    });
+  }
+
+  Future<void> _cancelVoiceRecording() async {
+    _recordTimer?.cancel();
+    await MediaRtcBridge.cancelVoiceRecording();
+    if (mounted) {
+      setState(() {
+        _isRecordingVoice = false;
+        _recordSeconds = 0;
+      });
+    }
+  }
+
+  Future<void> _stopAndSendVoiceRecording() async {
+    if (!_isRecordingVoice) return;
+    _recordTimer?.cancel();
+    setState(() {
+      _isRecordingVoice = false;
+      _uploadingMedia = true;
+    });
+    try {
+      final result = await MediaRtcBridge.stopVoiceRecording();
+      if (!mounted || result == null || result.base64.isEmpty) return;
+
+      if (result.base64.length > 900 * 1024) {
+        _notice(_state.s.tr(
+          'التسجيل طويل بزاف، حاول تسجّل رسالة أقصر.',
+          'Enregistrement trop long, essayez un message plus court.',
+          'Recording is too long, please try a shorter message.',
+        ));
+        return;
+      }
+
+      final mins = result.durationSec ~/ 60;
+      final secs = (result.durationSec % 60).toString().padLeft(2, '0');
+      final durationStr = '$mins:$secs';
+
+      final myName = (_state.currentUser?['name'] ??
+              _state.currentUser?['full_name'] ??
+              'Apolo User')
+          .toString();
+      final myAvatar = (_state.currentUser?['avatar_url'] ??
+              _state.currentUser?['avatar'] ??
+              '')
+          .toString();
+
+      await FirebaseChatService.instance.sendAudioMessage(
+        docId: _activeFirestoreDocId!,
+        myUserId: _myUserId,
+        myName: myName,
+        myAvatar: myAvatar,
+        peerUserId: widget.peerId ?? 0,
+        peerName: widget.peerName,
+        peerAvatar: widget.peerAvatar ?? '',
+        audioBase64: result.base64,
+        audioMime: result.mime,
+        audioDuration: durationStr,
+        adTitle: widget.adTitle,
+        adPrice: widget.adPrice ?? '',
+        adImage: widget.adImage ?? '',
+      );
+      _scrollToEnd();
+    } catch (_) {
+      if (mounted) {
+        _notice(_state.s.tr(
+          'تعذر إرسال الرسالة الصوتية.',
+          'Impossible d\'envoyer le message vocal.',
+          'Failed to send voice note.',
+        ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _uploadingMedia = false;
+          _recordSeconds = 0;
+        });
+      }
+    }
+  }
+
+  void _togglePlayVoice(String id, String base64, String mime) {
+    if (_playingAudioId == id) {
+      MediaRtcBridge.pauseVoiceMessage();
+      setState(() {
+        _playingAudioId = null;
+        _playingProgress = 0.0;
+      });
+      return;
+    }
+    setState(() {
+      _playingAudioId = id;
+      _playingProgress = 0.0;
+    });
+    MediaRtcBridge.playVoiceMessage(
+      id,
+      base64,
+      mime,
+      onProgress: (p) {
+        if (mounted && _playingAudioId == id) {
+          setState(() => _playingProgress = p);
+        }
+      },
+      onEnded: () {
+        if (mounted && _playingAudioId == id) {
+          setState(() {
+            _playingAudioId = null;
+            _playingProgress = 0.0;
+          });
+        }
+      },
+    );
+  }
+
   void _mediaUnavailable() => _notice(_state.s.tr(
-      'الرسائل الصوتية غير متاحة حالياً. يمكنك إرسال النصوص والصور.',
-      'Les messages vocaux sont indisponibles pour le moment. Vous pouvez envoyer des textes et des photos.'));
+      'الرسائل الصوتية غير متاحة على هذا الجهاز حالياً.',
+      'Les messages vocaux sont indisponibles sur cet appareil.'));
 
   // ───────────────────────── Voice & Video Calls ─────────────────────────
   void _startCall({required bool isVideo}) {
@@ -786,6 +965,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         builder: (_) => CallScreen(
           peerName: widget.peerName,
           peerAvatar: widget.peerAvatar,
+          peerId: widget.peerId,
+          conversationDocId: _activeFirestoreDocId,
           isVideo: isVideo,
         ),
       ),
@@ -1176,25 +1357,30 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   // Floating Call Dropdown Card (Voice & Video)
   Widget _buildCallDropdownCard() {
+    final liveCalls = _useFirestore && MediaRtcBridge.isRtcSupported;
     return Material(
       elevation: 12,
       borderRadius: BorderRadius.circular(18),
       child: SizedBox(
-        width: 260,
+        width: 240,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(CupertinoIcons.phone, color: _chatBlue),
-              title: Text(_state.s.tr(
-                  'مكالمة صوتية — غير متاحة', 'Appel vocal — indisponible')),
+              title: Text(liveCalls
+                  ? _state.s.tr('مكالمة صوتية', 'Appel vocal', 'Voice Call')
+                  : _state.s.tr('مكالمة صوتية — غير متاحة',
+                      'Appel vocal — indisponible')),
               onTap: () => _startCall(isVideo: false),
             ),
             ListTile(
               leading:
                   const Icon(CupertinoIcons.videocam_fill, color: _chatBlue),
-              title: Text(_state.s.tr(
-                  'مكالمة فيديو — غير متاحة', 'Appel vidéo — indisponible')),
+              title: Text(liveCalls
+                  ? _state.s.tr('مكالمة فيديو', 'Appel vidéo', 'Video Call')
+                  : _state.s.tr('مكالمة فيديو — غير متاحة',
+                      'Appel vidéo — indisponible')),
               onTap: () => _startCall(isVideo: true),
             ),
           ],
@@ -1279,7 +1465,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isAudio)
-                    _buildAudioBubbleContent(index, audioDuration, isMine)
+                    _buildAudioBubbleContent(m, msgKey, audioDuration, isMine)
                   else if (imageBytes != null) ...[
                     GestureDetector(
                       onTap: () => _openImagePreview(imageBytes!),
@@ -1370,11 +1556,89 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
-  Widget _buildAudioBubbleContent(int index, String duration, bool isMine) {
-    return Text(
-        _state.s.tr('رسالة صوتية — التشغيل غير متاح',
-            'Message vocal — lecture indisponible'),
-        style: TextStyle(color: isMine ? Colors.white : _textBlack));
+  Widget _buildAudioBubbleContent(
+      Map<String, dynamic> m, String msgKey, String duration, bool isMine) {
+    final audioB64 = (m['audio_base64'] ?? '').toString().trim();
+    final audioMime = (m['audio_mime'] ?? 'audio/webm').toString();
+    final canPlay = audioB64.isNotEmpty && MediaRtcBridge.isVoiceSupported;
+    final isPlaying = _playingAudioId == msgKey;
+    final progress = isPlaying ? _playingProgress : 0.0;
+    const heights = [6.0, 12.0, 18.0, 10.0, 20.0, 14.0, 8.0, 17.0, 13.0, 19.0, 11.0, 15.0, 9.0, 12.0];
+
+    if (!canPlay) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(CupertinoIcons.mic_fill,
+              size: 16, color: isMine ? Colors.white70 : _textMuted),
+          const SizedBox(width: 6),
+          Text(
+            duration.isNotEmpty ? '🎤 $duration' : _state.s.tr('رسالة صوتية', 'Message vocal', 'Voice note'),
+            style: TextStyle(
+              color: isMine ? Colors.white : _textBlack,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return SizedBox(
+      width: 210,
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => _togglePlayVoice(msgKey, audioB64, audioMime),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isMine
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : _textBlack,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                isPlaying ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill,
+                color: Colors.white,
+                size: 17,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: List.generate(heights.length, (i) {
+                final filled = (i / heights.length) <= progress && isPlaying;
+                return Container(
+                  width: 3,
+                  height: heights[i],
+                  decoration: BoxDecoration(
+                    color: isMine
+                        ? (filled ? Colors.white : Colors.white.withValues(alpha: 0.42))
+                        : (filled ? _textBlack : _textBlack.withValues(alpha: 0.25)),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            duration.isNotEmpty ? duration : '0:01',
+            style: TextStyle(
+              color: isMine ? Colors.white70 : _textMuted,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildComposer() {
@@ -1428,7 +1692,84 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ],
               ),
             ),
-          Row(
+          if (_isRecordingVoice)
+            Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: _surfaceGrey,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _cancelVoiceRecording,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(CupertinoIcons.xmark,
+                          size: 16, color: Color(0xFFE31B23)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE31B23),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_recordSeconds ~/ 60}:${(_recordSeconds % 60).toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: _textBlack,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _state.s.tr('جاري التسجيل...', 'Enregistrement...',
+                          'Recording...'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: _textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _stopAndSendVoiceRecording,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: _chatBlue,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        CupertinoIcons.arrow_up,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Row(
             children: [
               // Start `+` button in circular soft grey container (Photo picker)
               GestureDetector(
@@ -1531,9 +1872,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           ),
                         ),
                         const SizedBox(width: 10),
-                        // Media integration is not available; tapping explains the limitation.
+                        // Voice Note Recording Button
                         GestureDetector(
-                          onTap: _mediaUnavailable,
+                          onTap: _startVoiceRecording,
                           child: const Icon(
                             CupertinoIcons.mic_fill,
                             color: _chatBlue,

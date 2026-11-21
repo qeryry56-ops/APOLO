@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import 'call_screen.dart';
 import 'chat_room_screen.dart';
 import 'post_ad_screen.dart';
 import 'auth_screen.dart';
@@ -53,6 +54,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
   // Active conversation for desktop 2-column web view
   Map<String, dynamic>? _activeWebConversation;
   StreamSubscription<List<Map<String, dynamic>>>? _convSub;
+  StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
+  String? _lastHandledCallId;
   int? _subscribedUserId;
 
   @override
@@ -71,6 +74,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   void dispose() {
     _convSub?.cancel();
+    _incomingCallSub?.cancel();
     _state.removeListener(_onStateChanged);
     _searchController.dispose();
     super.dispose();
@@ -80,6 +84,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (!_state.isLoggedIn) {
       _convSub?.cancel();
       _convSub = null;
+      _incomingCallSub?.cancel();
+      _incomingCallSub = null;
       _subscribedUserId = null;
       if (mounted) {
         setState(() {
@@ -124,6 +130,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
         if (mounted) {
           setState(() => _isLoading = false);
         }
+      });
+      _incomingCallSub?.cancel();
+      _incomingCallSub = FirebaseChatService.instance
+          .watchIncomingCalls(myUserId)
+          .listen((callData) {
+        if (!mounted || callData == null) return;
+        final callId = (callData['id'] ?? '').toString();
+        if (callId.isEmpty || callId == _lastHandledCallId) return;
+        _lastHandledCallId = callId;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CallScreen(
+              peerName: (callData['caller_name'] ?? 'Apolo User').toString(),
+              peerAvatar: callData['caller_avatar']?.toString(),
+              peerId: int.tryParse('${callData['caller_id'] ?? ''}'),
+              conversationDocId: callData['conversation_doc_id']?.toString(),
+              isVideo: callData['is_video'] == true,
+              incomingCallId: callId,
+              incomingOfferJson: (callData['offer'] ?? '').toString(),
+            ),
+          ),
+        );
       });
       return;
     }
