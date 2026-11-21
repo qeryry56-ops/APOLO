@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'call_screen.dart';
 import 'seller_profile_screen.dart';
+import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
 
@@ -55,6 +57,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final Set<String> _hiddenMessageKeys = {};
   final Set<String> _deletedForEveryoneKeys = {};
   final Map<String, String> _editedMessageBodies = {};
+  final Map<String, Map<String, String>> _localReactions = {};
+  final Set<String> _pinnedMessageKeys = {};
+  final Set<String> _starredMessageKeys = {};
   Map<String, dynamic>? _editingMessage;
   String? _editingMessageKey;
   bool _loading = true;
@@ -79,6 +84,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Object? _accountId;
 
   int get _myUserId => int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
+
+  String get _peerBlockKey {
+    final pid = widget.peerId ?? 0;
+    return pid > 0 ? '$pid' : widget.peerName.trim();
+  }
+
+  bool get _isPeerBlocked =>
+      FirebaseChatService.instance.isBlocked(_peerBlockKey);
 
   String? get _activeFirestoreDocId {
     final explicit = widget.firestoreDocId?.trim();
@@ -489,15 +502,101 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     ));
   }
 
-  void _showMessageActionsSheet(Map<String, dynamic> m, int index) {
-    final key = _messageKey(m, index);
-    if (_deletedForEveryoneKeys.contains(key)) return;
-    HapticFeedback.mediumImpact();
-    final s = _state.s;
-    final bool isMine = m['is_mine'] == true;
-    final bool isAudio = m['type'] == 'audio';
-    final String body = (_editedMessageBodies[key] ?? m['body'] ?? '').toString();
+  void _toggleReaction(Map<String, dynamic> m, String key, String emoji) {
+    HapticFeedback.lightImpact();
+    final myKey = '${_myUserId > 0 ? _myUserId : 1}';
+    final currentMap = <String, String>{
+      if (m['reactions'] is Map)
+        ...Map<String, String>.from(
+          (m['reactions'] as Map).map((k, v) => MapEntry('$k', '$v')),
+        ),
+      if (_localReactions[key] != null) ..._localReactions[key]!,
+    };
+    final existing = currentMap[myKey];
+    final nextEmoji = existing == emoji ? '' : emoji;
+    setState(() {
+      final map = _localReactions.putIfAbsent(key, () => <String, String>{});
+      if (nextEmoji.isEmpty) {
+        map.remove(myKey);
+        if (m['reactions'] is Map) {
+          (m['reactions'] as Map).remove(myKey);
+        }
+      } else {
+        map[myKey] = nextEmoji;
+      }
+    });
+    final docMsgId = (m['doc_id'] ?? '').toString().trim();
+    if (_useFirestore && docMsgId.isNotEmpty) {
+      FirebaseChatService.instance.toggleMessageReaction(
+        docId: _activeFirestoreDocId!,
+        messageDocId: docMsgId,
+        myUserId: _myUserId,
+        emoji: nextEmoji,
+      );
+    }
+  }
 
+  void _togglePin(Map<String, dynamic> m, String key) {
+    HapticFeedback.selectionClick();
+    final currentlyPinned =
+        m['pinned'] == true || _pinnedMessageKeys.contains(key);
+    final nextPinned = !currentlyPinned;
+    setState(() {
+      if (nextPinned) {
+        _pinnedMessageKeys.add(key);
+        m['pinned'] = true;
+      } else {
+        _pinnedMessageKeys.remove(key);
+        m['pinned'] = false;
+      }
+    });
+    final docMsgId = (m['doc_id'] ?? '').toString().trim();
+    if (_useFirestore && docMsgId.isNotEmpty) {
+      FirebaseChatService.instance.togglePinMessage(
+        docId: _activeFirestoreDocId!,
+        messageDocId: docMsgId,
+        pinned: nextPinned,
+      );
+    }
+    _notice(nextPinned
+        ? _state.s.tr('تم تثبيت الرسالة', 'Message épinglé', 'Message pinned')
+        : _state.s.tr('تم إلغاء التثبيت', 'Désépinglé', 'Message unpinned'));
+  }
+
+  void _toggleStar(Map<String, dynamic> m, String key) {
+    HapticFeedback.selectionClick();
+    final starredBy = m['starred_by'] is List
+        ? (m['starred_by'] as List).map((e) => '$e').toList()
+        : const <String>[];
+    final currentlyStarred =
+        starredBy.contains('$_myUserId') || _starredMessageKeys.contains(key);
+    final nextStarred = !currentlyStarred;
+    setState(() {
+      if (nextStarred) {
+        _starredMessageKeys.add(key);
+      } else {
+        _starredMessageKeys.remove(key);
+      }
+    });
+    final docMsgId = (m['doc_id'] ?? '').toString().trim();
+    if (_useFirestore && docMsgId.isNotEmpty) {
+      FirebaseChatService.instance.toggleStarMessage(
+        docId: _activeFirestoreDocId!,
+        messageDocId: docMsgId,
+        myUserId: _myUserId,
+        starred: nextStarred,
+      );
+    }
+    _notice(nextStarred
+        ? _state.s.tr('تم تمييز الرسالة بنجمة ⭐', 'Message suivi ⭐',
+            'Message starred ⭐')
+        : _state.s.tr('تمت إزالة النجمة', 'Étoile retirée', 'Star removed'));
+  }
+
+  void _showChatSafetyMenu() {
+    HapticFeedback.selectionClick();
+    final s = _state.s;
+    final blocked = _isPeerBlocked;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -506,7 +605,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -519,51 +618,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ),
               ),
               const SizedBox(height: 12),
-              if (!isAudio && body.isNotEmpty)
-                ListTile(
-                  leading: const Icon(CupertinoIcons.doc_on_doc,
-                      color: _textBlack, size: 20),
-                  title: Text(
-                    s.tr('نسخ النص', 'Copier le texte', 'Copy text'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: _textBlack,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    Clipboard.setData(ClipboardData(text: body));
-                    _notice(s.tr('تم النسخ', 'Copié', 'Copied'));
-                  },
-                ),
-              if (isMine && !isAudio)
-                ListTile(
-                  leading: const Icon(CupertinoIcons.pencil,
-                      color: _textBlack, size: 20),
-                  title: Text(
-                    s.tr('تعديل الرسالة', 'Modifier le message', 'Edit message'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: _textBlack,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    setState(() {
-                      _editingMessage = m;
-                      _editingMessageKey = key;
-                      _msgCtrl.text = body;
-                      _msgCtrl.selection =
-                          TextSelection.collapsed(offset: body.length);
-                    });
-                    _focus.requestFocus();
-                  },
-                ),
               ListTile(
-                leading: const Icon(CupertinoIcons.eye_slash,
-                    color: _textBlack, size: 20),
+                leading: const Icon(
+                  CupertinoIcons.exclamationmark_triangle,
+                  color: _textBlack,
+                ),
                 title: Text(
-                  s.tr('حذف لدي فقط', 'Supprimer pour moi', 'Delete for me'),
+                  s.tr('الإبلاغ عن المحادثة', 'Signaler la conversation',
+                      'Report conversation'),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: _textBlack,
@@ -571,46 +633,476 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  setState(() => _hiddenMessageKeys.add(key));
-                  final docMsgId = (m['doc_id'] ?? '').toString().trim();
-                  if (_useFirestore && docMsgId.isNotEmpty) {
-                    FirebaseChatService.instance.deleteMessageForMe(
-                      docId: _activeFirestoreDocId!,
-                      messageDocId: docMsgId,
-                      myUserId: _myUserId,
-                    );
-                  }
-                  _notice(s.tr(
-                    'تم حذف الرسالة من عندك فقط',
-                    'Supprimé pour vous uniquement',
-                    'Deleted for you',
-                  ));
+                  showApoloReportSheet(
+                    context,
+                    targetType: 'chat',
+                    targetId: _activeFirestoreDocId ?? '${widget.conversationId}',
+                    targetName: widget.peerName,
+                    reportedUserId: _peerBlockKey,
+                    reportedUserAvatar: widget.peerAvatar,
+                  );
                 },
               ),
-              if (isMine)
-                ListTile(
-                  leading: const Icon(CupertinoIcons.trash,
-                      color: Color(0xFFE31B23), size: 20),
-                  title: Text(
-                    s.tr(
-                      'حذف لدى الجميع',
-                      'Supprimer pour tout le monde',
-                      'Delete for everyone',
-                    ),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFE31B23),
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _deleteMessageForEveryone(m, key);
-                  },
+              ListTile(
+                leading: Icon(
+                  blocked
+                      ? CupertinoIcons.checkmark_shield
+                      : CupertinoIcons.nosign,
+                  color: blocked ? _textBlack : const Color(0xFFE31B23),
                 ),
+                title: Text(
+                  blocked
+                      ? s.tr('إلغاء حظر ${widget.peerName}',
+                          'Débloquer ${widget.peerName}', 'Unblock ${widget.peerName}')
+                      : s.tr('حظر ${widget.peerName}',
+                          'Bloquer ${widget.peerName}', 'Block ${widget.peerName}'),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: blocked ? _textBlack : const Color(0xFFE31B23),
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  if (blocked) {
+                    await FirebaseChatService.instance.unblockTarget(
+                      myUserId: _myUserId,
+                      targetId: _peerBlockKey,
+                    );
+                    if (mounted) setState(() {});
+                    _notice(s.tr('تم إلغاء الحظر', 'Utilisateur débloqué',
+                        'User unblocked'));
+                  } else {
+                    await FirebaseChatService.instance.blockTarget(
+                      myUserId: _myUserId,
+                      targetId: _peerBlockKey,
+                      targetName: widget.peerName,
+                      targetAvatar: widget.peerAvatar ?? '',
+                    );
+                    if (mounted) setState(() {});
+                    _notice(s.tr('تم حظر ${widget.peerName}',
+                        '${widget.peerName} a été bloqué', 'User blocked'));
+                  }
+                },
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// iOS / WhatsApp Blurred Emoji Reaction & Context Overlay matching reference screenshot.
+  void _showMessageActionsSheet(Map<String, dynamic> m, int index) {
+    final key = _messageKey(m, index);
+    if (_deletedForEveryoneKeys.contains(key) ||
+        m['_deleted_for_everyone'] == true) {
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    final s = _state.s;
+    final bool isMine = m['is_mine'] == true;
+    final bool isAudio = m['type'] == 'audio';
+    final String body = (_editedMessageBodies[key] ?? m['body'] ?? '').toString();
+    final String timeStr = (m['created_at_time'] ?? '').toString();
+    final bool isPinned =
+        m['pinned'] == true || _pinnedMessageKeys.contains(key);
+    final starredBy = m['starred_by'] is List
+        ? (m['starred_by'] as List).map((e) => '$e').toList()
+        : const <String>[];
+    final bool isStarred =
+        starredBy.contains('$_myUserId') || _starredMessageKeys.contains(key);
+
+    const quickEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '👏'];
+    const extraEmojis = [
+      '🔥', '🎉', '💯', '😍', '🤝', '✅', '⚡', '🙌',
+      '😎', '🤔', '😡', '💔', '🤩', '👌', '🫡', '✨',
+    ];
+    bool showMoreEmojis = false;
+
+    Widget buildMenuRow({
+      required String label,
+      required IconData icon,
+      required VoidCallback onTap,
+      bool isDestructive = false,
+      bool showDivider = true,
+    }) {
+      final color = isDestructive ? const Color(0xFFFF6B6B) : Colors.white;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Icon(icon, color: color, size: 19),
+                ],
+              ),
+            ),
+          ),
+          if (showDivider)
+            Divider(
+              height: 1,
+              thickness: 0.6,
+              color: Colors.white.withValues(alpha: 0.12),
+            ),
+        ],
+      );
+    }
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss Message Menu',
+      barrierColor: Colors.black.withValues(alpha: 0.42),
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (ctx, anim, secondaryAnim, child) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutBack);
+        return FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
+            child: child,
+          ),
+        );
+      },
+      pageBuilder: (dialogCtx, _, __) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return Scaffold(
+              backgroundColor: Colors.transparent,
+              body: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.pop(dialogCtx),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: SafeArea(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 22,
+                          vertical: 20,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {},
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 340),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: isMine
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                              children: [
+                                // 1. Top Pill Emoji Reaction Bar
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1F2024),
+                                    borderRadius: BorderRadius.circular(999),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            Colors.black.withValues(alpha: 0.35),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      for (final emoji in quickEmojis)
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.pop(dialogCtx);
+                                            _toggleReaction(m, key, emoji);
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 5.5,
+                                            ),
+                                            child: Text(
+                                              emoji,
+                                              style:
+                                                  const TextStyle(fontSize: 25),
+                                            ),
+                                          ),
+                                        ),
+                                      const SizedBox(width: 4),
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          setDialogState(() {
+                                            showMoreEmojis = !showMoreEmojis;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFF35373D),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Icon(
+                                            showMoreEmojis
+                                                ? CupertinoIcons.xmark
+                                                : CupertinoIcons.plus,
+                                            color: Colors.white70,
+                                            size: 17,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                if (showMoreEmojis) ...[
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1F2024),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Wrap(
+                                      spacing: 12,
+                                      runSpacing: 10,
+                                      children: extraEmojis.map((emoji) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            Navigator.pop(dialogCtx);
+                                            _toggleReaction(m, key, emoji);
+                                          },
+                                          child: Text(
+                                            emoji,
+                                            style:
+                                                const TextStyle(fontSize: 24),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+
+                                const SizedBox(height: 12),
+
+                                // 2. Selected Message Preview Bubble
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 11,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF23252A),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          isAudio
+                                              ? '🎤 ${(m['audio_duration'] ?? '0:01')}'
+                                              : (body.isNotEmpty
+                                                  ? body
+                                                  : '📷 Photo'),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      if (timeStr.isNotEmpty) ...[
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          timeStr,
+                                          style: const TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // 3. Dark Rounded Actions Menu Card
+                                Container(
+                                  width: 245,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1F2024),
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            Colors.black.withValues(alpha: 0.35),
+                                        blurRadius: 24,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      buildMenuRow(
+                                        label: isPinned
+                                            ? s.tr('إلغاء التثبيت',
+                                                'Désépingler', 'Unpin')
+                                            : s.tr('تثبيت', 'Épingler', 'Pin'),
+                                        icon: isPinned
+                                            ? CupertinoIcons.pin_slash
+                                            : CupertinoIcons.pin,
+                                        onTap: () {
+                                          Navigator.pop(dialogCtx);
+                                          _togglePin(m, key);
+                                        },
+                                      ),
+                                      buildMenuRow(
+                                        label: isStarred
+                                            ? s.tr('إزالة النجمة',
+                                                'Retirer l\'étoile', 'Unstar')
+                                            : s.tr('تمييز بنجمة',
+                                                'Marquer d\'une étoile', 'Star'),
+                                        icon: isStarred
+                                            ? CupertinoIcons.star_fill
+                                            : CupertinoIcons.star,
+                                        onTap: () {
+                                          Navigator.pop(dialogCtx);
+                                          _toggleStar(m, key);
+                                        },
+                                      ),
+                                      if (!isAudio && body.isNotEmpty)
+                                        buildMenuRow(
+                                          label: s.tr('نسخ النص',
+                                              'Copier le texte', 'Copy'),
+                                          icon: CupertinoIcons.doc_on_doc,
+                                          onTap: () {
+                                            Navigator.pop(dialogCtx);
+                                            Clipboard.setData(
+                                                ClipboardData(text: body));
+                                            _notice(s.tr(
+                                                'تم النسخ', 'Copié', 'Copied'));
+                                          },
+                                        ),
+                                      if (isMine && !isAudio)
+                                        buildMenuRow(
+                                          label: s.tr('تعديل الرسالة',
+                                              'Modifier', 'Edit'),
+                                          icon: CupertinoIcons.pencil,
+                                          onTap: () {
+                                            Navigator.pop(dialogCtx);
+                                            setState(() {
+                                              _editingMessage = m;
+                                              _editingMessageKey = key;
+                                              _msgCtrl.text = body;
+                                              _msgCtrl.selection =
+                                                  TextSelection.collapsed(
+                                                      offset: body.length);
+                                            });
+                                            _focus.requestFocus();
+                                          },
+                                        ),
+                                      buildMenuRow(
+                                        label: s.tr('إبلاغ', 'Signaler', 'Report'),
+                                        icon: CupertinoIcons
+                                            .exclamationmark_triangle,
+                                        onTap: () {
+                                          Navigator.pop(dialogCtx);
+                                          showApoloReportSheet(
+                                            context,
+                                            targetType: 'message',
+                                            targetId:
+                                                '${m['doc_id'] ?? m['id'] ?? key}',
+                                            targetName: widget.peerName,
+                                            reportedUserId: _peerBlockKey,
+                                            reportedUserAvatar:
+                                                widget.peerAvatar,
+                                            messageExcerpt: body,
+                                          );
+                                        },
+                                      ),
+                                      buildMenuRow(
+                                        label: s.tr('حذف لدي فقط',
+                                            'Supprimer pour moi', 'Delete'),
+                                        icon: CupertinoIcons.trash,
+                                        isDestructive: true,
+                                        showDivider: isMine,
+                                        onTap: () {
+                                          Navigator.pop(dialogCtx);
+                                          setState(() =>
+                                              _hiddenMessageKeys.add(key));
+                                          final docMsgId = (m['doc_id'] ?? '')
+                                              .toString()
+                                              .trim();
+                                          if (_useFirestore &&
+                                              docMsgId.isNotEmpty) {
+                                            FirebaseChatService.instance
+                                                .deleteMessageForMe(
+                                              docId: _activeFirestoreDocId!,
+                                              messageDocId: docMsgId,
+                                              myUserId: _myUserId,
+                                            );
+                                          }
+                                          _notice(s.tr(
+                                            'تم حذف الرسالة من عندك فقط',
+                                            'Supprimé pour vous uniquement',
+                                            'Deleted for you',
+                                          ));
+                                        },
+                                      ),
+                                      if (isMine)
+                                        buildMenuRow(
+                                          label: s.tr(
+                                            'حذف لدى الجميع',
+                                            'Supprimer pour tous',
+                                            'Delete for everyone',
+                                          ),
+                                          icon: CupertinoIcons.trash_fill,
+                                          isDestructive: true,
+                                          showDivider: false,
+                                          onTap: () {
+                                            Navigator.pop(dialogCtx);
+                                            _deleteMessageForEveryone(m, key);
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1360,6 +1852,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               ),
             ),
           ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: _showChatSafetyMenu,
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: _surfaceGrey,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                CupertinoIcons.ellipsis_vertical,
+                color: _textBlack,
+                size: 17,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1433,6 +1943,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       } catch (_) {}
     }
 
+    final bool isPinned =
+        !isDeletedAll && (m['pinned'] == true || _pinnedMessageKeys.contains(msgKey));
+    final starredBy = m['starred_by'] is List
+        ? (m['starred_by'] as List).map((e) => '$e').toList()
+        : const <String>[];
+    final bool isStarred = !isDeletedAll &&
+        (starredBy.contains('$_myUserId') || _starredMessageKeys.contains(msgKey));
+    final mergedReactions = <String, String>{
+      if (!isDeletedAll && m['reactions'] is Map)
+        ...Map<String, String>.from(
+          (m['reactions'] as Map).map((k, v) => MapEntry('$k', '$v')),
+        ),
+      if (!isDeletedAll && _localReactions[msgKey] != null)
+        ..._localReactions[msgKey]!,
+    };
+    final reactionEmojis = mergedReactions.values
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+    final uniqueEmojis = reactionEmojis.toSet().take(4).join(' ');
+
     final borderRadius = BorderRadiusDirectional.only(
       topStart: const Radius.circular(18),
       topEnd: const Radius.circular(18),
@@ -1441,125 +1971,200 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: reactionEmojis.isNotEmpty ? 14 : 10),
       child: Row(
         mainAxisAlignment:
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          GestureDetector(
-            onLongPress:
-                isDeletedAll ? null : () => _showMessageActionsSheet(m, index),
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.76,
-              ),
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-              decoration: BoxDecoration(
-                color: isDeletedAll
-                    ? _surfaceGrey
-                    : (isMine ? _chatBlue : _surfaceGrey),
-                borderRadius: borderRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: isMine && !isDeletedAll
-                        ? _chatBlue.withValues(alpha: 0.14)
-                        : Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+          Column(
+            crossAxisAlignment:
+                isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onLongPress:
+                    isDeletedAll ? null : () => _showMessageActionsSheet(m, index),
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.76,
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isAudio)
-                    _buildAudioBubbleContent(m, msgKey, audioDuration, isMine)
-                  else if (imageBytes != null) ...[
-                    GestureDetector(
-                      onTap: () => _openImagePreview(imageBytes!),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: 230,
-                            maxHeight: 260,
-                          ),
-                          child: Image.memory(
-                            imageBytes,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (body.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        body,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isMine ? Colors.white : _textBlack,
-                          fontWeight: FontWeight.w500,
-                        ),
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+                  decoration: BoxDecoration(
+                    color: isDeletedAll
+                        ? _surfaceGrey
+                        : (isMine ? _chatBlue : _surfaceGrey),
+                    borderRadius: borderRadius,
+                    boxShadow: [
+                      BoxShadow(
+                        color: isMine && !isDeletedAll
+                            ? _chatBlue.withValues(alpha: 0.14)
+                            : Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
-                  ] else
-                    Text(
-                      body,
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        height: 1.35,
-                        fontStyle:
-                            isDeletedAll ? FontStyle.italic : FontStyle.normal,
-                        color: isDeletedAll
-                            ? _textMuted
-                            : (isMine ? Colors.white : _textBlack),
-                        fontWeight:
-                            isDeletedAll ? FontWeight.w400 : FontWeight.w500,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Row(
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isEdited && !isDeletedAll) ...[
-                        Text(
-                          _state.s.tr('معدّلة · ', 'modifié · ', 'edited · '),
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: isMine ? Colors.white60 : _textSubtle,
-                            fontWeight: FontWeight.w500,
+                      if (isAudio)
+                        _buildAudioBubbleContent(m, msgKey, audioDuration, isMine)
+                      else if (imageBytes != null) ...[
+                        GestureDetector(
+                          onTap: () => _openImagePreview(imageBytes!),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: 230,
+                                maxHeight: 260,
+                              ),
+                              child: Image.memory(
+                                imageBytes,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                      Text(
-                        timeStr,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDeletedAll
-                              ? _textSubtle
-                              : (isMine ? Colors.white70 : _textSubtle),
-                          fontWeight: FontWeight.w500,
+                        if (body.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            body,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isMine ? Colors.white : _textBlack,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ] else
+                        Text(
+                          body,
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            height: 1.35,
+                            fontStyle: isDeletedAll
+                                ? FontStyle.italic
+                                : FontStyle.normal,
+                            color: isDeletedAll
+                                ? _textMuted
+                                : (isMine ? Colors.white : _textBlack),
+                            fontWeight:
+                                isDeletedAll ? FontWeight.w400 : FontWeight.w500,
+                          ),
                         ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isPinned) ...[
+                            Icon(
+                              CupertinoIcons.pin_fill,
+                              size: 11,
+                              color: isMine ? Colors.white70 : _textSubtle,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          if (isStarred) ...[
+                            Icon(
+                              CupertinoIcons.star_fill,
+                              size: 11,
+                              color: isMine
+                                  ? const Color(0xFFFBBF24)
+                                  : const Color(0xFFF59E0B),
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          if (isEdited && !isDeletedAll) ...[
+                            Text(
+                              _state.s
+                                  .tr('معدّلة · ', 'modifié · ', 'edited · '),
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isMine ? Colors.white60 : _textSubtle,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDeletedAll
+                                  ? _textSubtle
+                                  : (isMine ? Colors.white70 : _textSubtle),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (isMine && !isDeletedAll) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              m['_pending'] == true
+                                  ? CupertinoIcons.clock
+                                  : m['read'] == true
+                                      ? Icons.done_all_rounded
+                                      : Icons.done_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ],
+                        ],
                       ),
-                      if (isMine && !isDeletedAll) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          m['_pending'] == true
-                              ? CupertinoIcons.clock
-                              : m['read'] == true
-                                  ? Icons.done_all_rounded
-                                  : Icons.done_rounded,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                      ],
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
+              if (reactionEmojis.isNotEmpty)
+                Transform.translate(
+                  offset: const Offset(0, -6),
+                  child: GestureDetector(
+                    onTap: () => _showMessageActionsSheet(m, index),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: const Color(0xFFE5E7EB),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            uniqueEmojis,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          if (reactionEmojis.length > 1) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '${reactionEmojis.length}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: _textBlack,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -1654,6 +2259,58 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Widget _buildComposer() {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final canSend = _msgCtrl.text.trim().isNotEmpty;
+
+    if (_isPeerBlocked) {
+      return Container(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, bottomInset + 12),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+        ),
+        child: Row(
+          children: [
+            const Icon(CupertinoIcons.nosign, size: 18, color: _textMuted),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _state.s.tr(
+                  'لقد قمت بحظر هذا المستخدم',
+                  'Vous avez bloqué cet utilisateur',
+                  'You blocked this user',
+                ),
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: _textMuted,
+                ),
+              ),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: _textBlack,
+                foregroundColor: Colors.white,
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              ),
+              onPressed: () async {
+                await FirebaseChatService.instance.unblockTarget(
+                  myUserId: _myUserId,
+                  targetId: _peerBlockKey,
+                );
+                if (mounted) setState(() {});
+              },
+              child: Text(
+                _state.s.tr('إلغاء الحظر', 'Débloquer', 'Unblock'),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: EdgeInsets.fromLTRB(14, 8, 14, bottomInset + 8),

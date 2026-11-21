@@ -1,10 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/config/app_config.dart';
+import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'widgets/ad_card.dart';
+import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
@@ -51,6 +54,101 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
       }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
+  }
+
+  void _showStoreSafetySheet(Map<String, dynamic> store) {
+    HapticFeedback.selectionClick();
+    final s = _state.s;
+    final storeName = (store['name'] ?? widget.subdomain).toString();
+    final storeLogo = (store['logo_url'] ?? store['logo'] ?? '').toString();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(
+                  CupertinoIcons.exclamationmark_triangle,
+                  color: _ink,
+                ),
+                title: Text(
+                  s.tr('الإبلاغ عن هذا المتجر', 'Signaler cette boutique',
+                      'Report store'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _ink,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showApoloReportSheet(
+                    context,
+                    targetType: 'store',
+                    targetId: widget.subdomain,
+                    targetName: storeName,
+                    reportedUserId: widget.subdomain,
+                    reportedUserAvatar: storeLogo,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  CupertinoIcons.nosign,
+                  color: Color(0xFFE31B23),
+                ),
+                title: Text(
+                  s.tr('حظر هذا المتجر', 'Bloquer cette boutique', 'Block store'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFE31B23),
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final myUserId =
+                      int.tryParse('${_state.currentUser?['id'] ?? 0}') ?? 0;
+                  await FirebaseChatService.instance.blockTarget(
+                    myUserId: myUserId,
+                    targetId: widget.subdomain,
+                    targetName: storeName,
+                    targetAvatar: storeLogo,
+                    targetType: 'store',
+                  );
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: _ink,
+                      content: Text(
+                        s.tr('تم حظر المتجر بنجاح', 'Boutique bloquée',
+                            'Store blocked'),
+                      ),
+                    ),
+                  );
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _openOrderSheet() {
@@ -308,6 +406,23 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    PressableScale(
+                      onTap: () => _showStoreSafetySheet(store),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.ellipsis,
+                          size: 18,
+                          color: _ink,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -440,8 +555,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         Expanded(
                                           child: PressableScale(
                                             onTap: () async {
+                                              final cleanPhone = phone.replaceAll(
+                                                  RegExp(r'[^0-9+]'), '');
+                                              if (cleanPhone.isEmpty) return;
                                               final uri =
-                                                  Uri.parse('tel:$phone');
+                                                  Uri.parse('tel:$cleanPhone');
                                               if (await canLaunchUrl(uri)) {
                                                 await launchUrl(uri);
                                               }

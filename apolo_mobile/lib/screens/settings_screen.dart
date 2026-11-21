@@ -11,6 +11,7 @@ import 'post_ad_screen.dart';
 import 'privacy_compliance_screen.dart';
 import 'stores_screen.dart';
 import 'support_screen.dart';
+import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/marketplace_zone_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -275,6 +276,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               'Password & security',
                             ),
                             onTap: () => _open(const AccountSecurityScreen()),
+                          ),
+                          _buildRow(
+                            isAr: isAr,
+                            icon: CupertinoIcons.nosign,
+                            title: s.tr(
+                              'الحسابات المحظورة',
+                              'Comptes bloqués',
+                              'Blocked accounts',
+                            ),
+                            onTap: () => showBlockedAccountsSheet(context),
                           ),
                           _buildRow(
                             isAr: isAr,

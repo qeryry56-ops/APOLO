@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'ad_detail_screen.dart';
+import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
 import 'widgets/kinetic_widgets.dart';
@@ -223,20 +225,26 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   void _reportSeller(bool isAr) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isAr
-              ? 'تم تسجيل البلاغ وسيقوم فريق Apolo بمراجعته'
-              : 'Signalement envoyé à l\'équipe Apolo',
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _ink,
-      ),
+    showApoloReportSheet(
+      context,
+      targetType: 'user',
+      targetId: '${widget.sellerId}',
+      targetName: widget.sellerName,
+      reportedUserId: '${widget.sellerId}',
+      reportedUserAvatar: widget.sellerAvatar,
     );
   }
 
-  void _blockSeller(bool isAr) {
+  Future<void> _blockSeller(bool isAr) async {
+    final myUserId = int.tryParse('${_state.currentUser?['id'] ?? 0}') ?? 0;
+    await FirebaseChatService.instance.blockTarget(
+      myUserId: myUserId,
+      targetId:
+          widget.sellerId > 0 ? '${widget.sellerId}' : widget.sellerName,
+      targetName: widget.sellerName,
+      targetAvatar: widget.sellerAvatar ?? '',
+    );
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

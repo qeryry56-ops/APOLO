@@ -11,6 +11,7 @@ import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'widgets/price_text.dart';
+import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/boost_sheet.dart';
 import 'widgets/chat_utils.dart';
@@ -20,7 +21,6 @@ import 'widgets/marketplace_zone_sheet.dart';
 import 'widgets/real_marketplace_map.dart';
 import 'widgets/skeleton_loader.dart';
 import 'chat_room_screen.dart';
-import 'privacy_compliance_screen.dart';
 import 'search_screen.dart';
 import 'seller_profile_screen.dart';
 import 'store_detail_screen.dart';
@@ -259,7 +259,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       child: PressableScale(
                         onTap: () async {
                           Navigator.pop(ctx);
-                          final uri = Uri.parse('tel:$phone');
+                          final cleanPhone =
+                              phone.replaceAll(RegExp(r'[^0-9+]'), '');
+                          if (cleanPhone.isEmpty) return;
+                          final uri = Uri.parse('tel:$cleanPhone');
                           if (await canLaunchUrl(uri)) {
                             await launchUrl(uri);
                           }
@@ -450,23 +453,41 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   }
 
   Future<void> _blockSeller(int sellerId) async {
-    if (!_state.isLoggedIn) return;
-    try {
-      await _state.api.dio
-          .post('/users/block', data: {'blocked_user_id': sellerId});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: _ink,
-            content: Text(
-              _state.s.tr('تم حظر هذا المستخدم بنجاح', 'Utilisateur bloqué'),
-            ),
+    final myUserId = int.tryParse('${_state.currentUser?['id'] ?? 0}') ?? 0;
+    final sellerName = (_ad?['store']?['name'] ??
+            _ad?['seller_name'] ??
+            _ad?['seller']?['name'] ??
+            'Apolo Seller')
+        .toString();
+    final sellerAvatar = (_ad?['store']?['logo_url'] ??
+            _ad?['seller_avatar'] ??
+            _ad?['seller']?['avatar_url'] ??
+            '')
+        .toString();
+    await FirebaseChatService.instance.blockTarget(
+      myUserId: myUserId,
+      targetId: sellerId > 0 ? '$sellerId' : sellerName,
+      targetName: sellerName,
+      targetAvatar: sellerAvatar,
+    );
+    if (_state.isLoggedIn && sellerId > 0) {
+      try {
+        await _state.api.dio
+            .post('/users/block', data: {'blocked_user_id': sellerId});
+      } catch (_) {}
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: _ink,
+          content: Text(
+            _state.s.tr('تم حظر هذا المستخدم بنجاح', 'Utilisateur bloqué'),
           ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (_) {}
+        ),
+      );
+      Navigator.pop(context);
+    }
   }
 
   void _showMoreActionsSheet(
@@ -511,10 +532,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
-                    showAiContentReportSheet(
+                    showApoloReportSheet(
                       context,
-                      featureContext:
-                          '${s.tr('بلاغ عن إعلان', 'Signalement annonce')}: ${(ad['title'] ?? '').toString()}',
+                      targetType: 'ad',
+                      targetId: '${widget.adId}',
+                      targetName: (ad['title'] ?? '').toString(),
+                      reportedUserId: '${seller?['id'] ?? ''}',
                     );
                   },
                 ),

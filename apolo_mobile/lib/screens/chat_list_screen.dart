@@ -11,6 +11,7 @@ import 'call_screen.dart';
 import 'chat_room_screen.dart';
 import 'post_ad_screen.dart';
 import 'auth_screen.dart';
+import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
@@ -388,6 +389,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 onTap: () {
                                   Navigator.pop(dialogCtx);
                                   HapticFeedback.heavyImpact();
+                                  final myUserId = int.tryParse(
+                                          '${_state.currentUser?['id'] ?? 0}') ??
+                                      0;
+                                  final peerKey =
+                                      '${conv['peer_id'] ?? convId}'.trim();
+                                  FirebaseChatService.instance.blockTarget(
+                                    myUserId: myUserId,
+                                    targetId:
+                                        peerKey.isNotEmpty ? peerKey : peerName,
+                                    targetName: peerName,
+                                    targetAvatar: avatarUrl ?? '',
+                                  );
                                   setState(() {
                                     _conversations
                                         .removeWhere((c) => c['id'] == convId);
@@ -401,8 +414,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 onTap: () {
                                   Navigator.pop(dialogCtx);
                                   HapticFeedback.mediumImpact();
-                                  _showActionSnackBar(
-                                      'تم إرسال البلاغ للإدارة');
+                                  showApoloReportSheet(
+                                    context,
+                                    targetType: 'chat',
+                                    targetId:
+                                        '${conv['firestore_doc_id'] ?? convId}',
+                                    targetName: peerName,
+                                    reportedUserId: '${conv['peer_id'] ?? ''}',
+                                    reportedUserAvatar: avatarUrl,
+                                  );
                                 },
                               ),
                               _buildAppleMenuItem(

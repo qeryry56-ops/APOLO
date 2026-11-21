@@ -29,6 +29,18 @@ class FirebaseChatService {
   CollectionReference<Map<String, dynamic>> get _calls =>
       _db.collection('calls');
 
+  CollectionReference<Map<String, dynamic>> get _reports =>
+      _db.collection('reports');
+
+  CollectionReference<Map<String, dynamic>> get _userBlocks =>
+      _db.collection('user_blocks');
+
+  final Set<String> _blockedKeys = {};
+  final Map<String, Map<String, dynamic>> _blockedMeta = {};
+
+  bool isBlocked(dynamic targetId) => _blockedKeys.contains('$targetId');
+  List<Map<String, dynamic>> get blockedList => _blockedMeta.values.toList();
+
   /// Safe initialization (never throws in headless widget tests).
   Future<bool> initialize() async {
     if (_isReady) return true;
@@ -269,6 +281,18 @@ class FirebaseChatService {
             ? formatChatClock(DateTime.fromMillisecondsSinceEpoch(createdMs))
             : '';
 
+        final rawReactions = data['reactions'];
+        final reactions = <String, String>{};
+        if (rawReactions is Map) {
+          rawReactions.forEach((k, v) {
+            final vs = (v ?? '').toString().trim();
+            if (vs.isNotEmpty) reactions['$k'] = vs;
+          });
+        }
+        final starredBy = (data['starred_by'] is List)
+            ? (data['starred_by'] as List).map((e) => '$e').toList()
+            : const <String>[];
+
         result.add({
           'id': doc.id,
           'doc_id': doc.id,
@@ -282,6 +306,9 @@ class FirebaseChatService {
           'audio_duration': (data['audio_duration'] ?? '0:01').toString(),
           'is_mine': isMine,
           'read': isReadByPeer,
+          'reactions': reactions,
+          'pinned': data['pinned'] == true,
+          'starred_by': starredBy,
           'created_at_ms': createdMs,
           'created_at_time': clock,
           '_edited': data['edited'] == true,
@@ -703,6 +730,7 @@ class FirebaseChatService {
       for (final doc in snap.docs) {
         final d = doc.data();
         if (d['status'] != 'ringing') continue;
+        if (isBlocked(d['caller_id'])) continue;
         final created = int.tryParse('${d['created_at_ms'] ?? 0}') ?? 0;
         if (nowMs - created > 90000) continue; // ignore stale calls > 90s
         if (created >= latestMs) {
@@ -712,5 +740,150 @@ class FirebaseChatService {
       }
       return latest;
     });
+  }
+
+  // ───────────────────────── Emoji Reactions, Pin & Star ─────────────────────────
+
+  Future<void> toggleMessageReaction({
+    required String docId,
+    required String messageDocId,
+    required int myUserId,
+    required String emoji,
+  }) async {
+    if (!_isReady) return;
+    final msgRef = _conversations
+        .doc(docId)
+        .collection('messages')
+        .doc(messageDocId);
+    if (emoji.isEmpty) {
+      await msgRef.update({'reactions.$myUserId': FieldValue.delete()});
+    } else {
+      await msgRef.set({
+        'reactions': {'$myUserId': emoji},
+      }, SetOptions(merge: true));
+    }
+  }
+
+  Future<void> togglePinMessage({
+    required String docId,
+    required String messageDocId,
+    required bool pinned,
+  }) async {
+    if (!_isReady) return;
+    await _conversations
+        .doc(docId)
+        .collection('messages')
+        .doc(messageDocId)
+        .update({'pinned': pinned});
+  }
+
+  Future<void> toggleStarMessage({
+    required String docId,
+    required String messageDocId,
+    required int myUserId,
+    required bool starred,
+  }) async {
+    if (!_isReady) return;
+    await _conversations
+        .doc(docId)
+        .collection('messages')
+        .doc(messageDocId)
+        .update({
+      'starred_by': starred
+          ? FieldValue.arrayUnion(['$myUserId'])
+          : FieldValue.arrayRemove(['$myUserId']),
+    });
+  }
+
+  // ───────────────────────── Safety: Reports & User Blocks ─────────────────────────
+
+  Future<void> submitReport({
+    required String targetType,
+    required String targetId,
+    required String targetTitle,
+    required int reporterId,
+    String reportedUserId = '',
+    required String reason,
+    String details = '',
+    String messageExcerpt = '',
+  }) async {
+    if (!_isReady) return;
+    await _reports.add({
+      'target_type': targetType,
+      'target_id': targetId,
+      'target_title': targetTitle,
+      'reporter_id': '$reporterId',
+      'reported_user_id': reportedUserId,
+      'reason': reason,
+      'details': details,
+      'message_excerpt': messageExcerpt,
+      'status': 'pending',
+      'created_at_ms': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  Future<void> blockTarget({
+    required int myUserId,
+    required String targetId,
+    required String targetName,
+    String targetAvatar = '',
+    String targetType = 'user',
+  }) async {
+    final cleanId = targetId.trim();
+    if (cleanId.isEmpty) return;
+    final entry = <String, dynamic>{
+      'id': cleanId,
+      'name': targetName.trim().isNotEmpty ? targetName.trim() : 'Apolo User',
+      'avatar': targetAvatar,
+      'type': targetType,
+      'blocked_at_ms': DateTime.now().millisecondsSinceEpoch,
+    };
+    _blockedKeys.add(cleanId);
+    _blockedMeta[cleanId] = entry;
+    if (_isReady && myUserId > 0) {
+      await _userBlocks.doc('$myUserId').set({
+        'blocked': {cleanId: entry},
+      }, SetOptions(merge: true));
+    }
+  }
+
+  Future<void> unblockTarget({
+    required int myUserId,
+    required String targetId,
+  }) async {
+    final cleanId = targetId.trim();
+    if (cleanId.isEmpty) return;
+    _blockedKeys.remove(cleanId);
+    _blockedMeta.remove(cleanId);
+    if (_isReady && myUserId > 0) {
+      try {
+        await _userBlocks.doc('$myUserId').update({
+          FieldPath(['blocked', cleanId]): FieldValue.delete(),
+        });
+      } catch (_) {}
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> loadBlockedTargets(int myUserId) async {
+    if (!_isReady || myUserId <= 0) return blockedList;
+    try {
+      final doc = await _userBlocks.doc('$myUserId').get();
+      final data = doc.data();
+      final rawBlocked = data?['blocked'];
+      if (rawBlocked is Map) {
+        _blockedKeys.clear();
+        _blockedMeta.clear();
+        rawBlocked.forEach((k, v) {
+          final idStr = '$k'.trim();
+          if (idStr.isEmpty || v is! Map) return;
+          _blockedKeys.add(idStr);
+          _blockedMeta[idStr] = {
+            ...Map<String, dynamic>.from(v),
+            'id': idStr,
+          };
+        });
+      }
+    } catch (_) {}
+    return blockedList;
   }
 }
