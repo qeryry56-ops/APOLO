@@ -59,7 +59,7 @@ class RealMarketplaceMap extends StatefulWidget {
 
 class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
   static const double _tileSize = 256.0;
-  static const Color _fbBlue = Color(0xFF0866FF);
+  static const Color _fbBlue = Color(0xFF0A0A0A);
   static const List<String> _subdomains = ['a', 'b', 'c', 'd'];
 
   late double _centerLat;
@@ -264,7 +264,7 @@ class _RealMarketplaceMapState extends State<RealMarketplaceMap> {
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF1E3A8A),
+                              color: Color(0xFF0A0A0A),
                             ),
                           ),
                         ),
@@ -680,8 +680,8 @@ class _FullMarketplaceMapPage extends StatelessWidget {
                         child: Container(
                           height: 48,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE7F3FF),
-                            borderRadius: BorderRadius.circular(14),
+                            color: const Color(0xFFF2F3F7),
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           alignment: Alignment.center,
                           child: Text(
@@ -693,7 +693,7 @@ class _FullMarketplaceMapPage extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF0866FF),
+                              color: Color(0xFF0A0A0A),
                             ),
                           ),
                         ),
@@ -718,8 +718,8 @@ class _FullMarketplaceMapPage extends StatelessWidget {
                       child: Container(
                         height: 48,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0866FF),
-                          borderRadius: BorderRadius.circular(14),
+                          color: const Color(0xFF0A0A0A),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         alignment: Alignment.center,
                         child: Text(

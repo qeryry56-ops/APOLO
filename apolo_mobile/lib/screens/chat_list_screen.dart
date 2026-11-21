@@ -32,12 +32,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final AppState _state = AppState();
 
   static const Color _bgWhite = Color(0xFFFFFFFF);
-  static const Color _surfaceGrey = Color(0xFFF3F4F6);
-  static const Color _textBlack = Color(0xFF111827);
+  static const Color _surfaceGrey = Color(0xFFF2F3F7);
+  static const Color _textBlack = Color(0xFF0A0A0A);
   static const Color _textMuted = Color(0xFF6B7280);
   static const Color _textSubtle = Color(0xFF9CA3AF);
-  static const Color _chatBlue = Color(0xFF288AF2);
-  static const Color _chatBlueSoft = Color(0xFFE3F1FE);
+  static const Color _chatBlue = Color(0xFF0A0A0A);
+  static const Color _chatBlueSoft = Color(0xFFF2F3F7);
 
   List<Map<String, dynamic>> _conversations = [];
   final Set<int> _pinnedIds = {};
@@ -1006,17 +1006,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? _chatBlueSoft : _surfaceGrey,
-          borderRadius: BorderRadius.circular(14),
+          color: active ? _textBlack : _surfaceGrey,
+          borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? _chatBlue : _textMuted,
+            color: active ? Colors.white : _textMuted,
             fontSize: 12.5,
             fontWeight: active ? FontWeight.w700 : FontWeight.w500,
           ),

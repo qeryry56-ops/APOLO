@@ -52,11 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
   double _trendingStride = 318.0;
   Timer? _autoSlideTimer;
 
-  static const Color _primary = Color(0xFFE31B23);
-  static const Color _primarySoft = Color(0xFFFEECEE);
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _surface = Color(0xFFF5F6F8);
+  static const Color _primary = Color(0xFF0A0A0A);
+  static const Color _primarySoft = Color(0xFFE8EAEE);
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _surface = Color(0xFFF2F3F7);
 
   @override
   void initState() {
@@ -821,15 +821,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Vibrant Red Gradient Container
+          // 2026 Monochrome Obsidian Gradient Container
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [
-                  Color(0xFFC80E16),
-                  Color(0xFFE31B23),
-                  Color(0xFFEA2E37),
+                  Color(0xFF0A0A0A),
+                  Color(0xFF18181B),
+                  Color(0xFF27272A),
                 ],
                 stops: [0.0, 0.58, 1.0],
                 begin: AlignmentDirectional.topStart,
@@ -837,12 +837,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.28),
+                color: Colors.white.withValues(alpha: 0.14),
                 width: 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _primary.withValues(alpha: 0.30),
+                  color: _primary.withValues(alpha: 0.18),
                   blurRadius: 22,
                   offset: const Offset(0, 8),
                 ),

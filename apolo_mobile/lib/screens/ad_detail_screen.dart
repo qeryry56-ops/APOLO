@@ -58,15 +58,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   bool _followingSeller = false;
   bool _hiddenListing = false;
 
-  // Calibrated Apple / Marketplace Light Tokens
-  static const Color _ink = Color(0xFF050505);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _redSoft = Color(0xFFFEECEE);
-  static const Color _surface = Color(0xFFF0F2F5);
-  static const Color _pillGrey = Color(0xFFE4E6EB);
-  static const Color _fbBlue = Color(0xFF0866FF);
-  static const Color _fbBlueSoft = Color(0xFFE7F3FF);
-  static const Color _mutedText = Color(0xFF65676B);
+  // Calibrated 2026 Monochrome Light Tokens (Crimson reserved for favorites/destructive)
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _red = Color(0xFF0A0A0A);
+  static const Color _redSoft = Color(0xFFE8EAEE);
+  static const Color _surface = Color(0xFFF2F3F7);
+  static const Color _pillGrey = Color(0xFFE8EAEE);
+  static const Color _fbBlue = Color(0xFF0A0A0A);
+  static const Color _fbBlueSoft = Color(0xFFF2F3F7);
+  static const Color _mutedText = Color(0xFF6B7280);
   static const Color _starOrange = Color(0xFFE87A24);
 
   @override

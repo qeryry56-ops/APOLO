@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -80,6 +81,25 @@ class AppImage extends StatelessWidget {
       return defaultFallback;
     }
 
+    // Base64 data URI (e.g. locally picked avatar photo)
+    if (url!.startsWith('data:image/')) {
+      final commaIdx = url!.indexOf(',');
+      if (commaIdx != -1) {
+        try {
+          final bytes = base64Decode(url!.substring(commaIdx + 1));
+          return Image.memory(
+            bytes,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (_, __, ___) => defaultFallback,
+          );
+        } catch (_) {
+          return defaultFallback;
+        }
+      }
+    }
+
     // Local bundled assets (e.g. 3D category cutouts used in demo content)
     if (url!.startsWith('assets/')) {
       return Image.asset(
@@ -124,7 +144,7 @@ class AppImage extends StatelessWidget {
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Color(0xFFE31B23)),
+                  strokeWidth: 2, color: Color(0xFF0A0A0A)),
             ),
           );
         },
@@ -147,7 +167,7 @@ class AppImage extends StatelessWidget {
           width: 18,
           height: 18,
           child: CircularProgressIndicator(
-              strokeWidth: 2, color: Color(0xFFE31B23)),
+              strokeWidth: 2, color: Color(0xFF0A0A0A)),
         ),
       ),
       errorWidget: (_, __, ___) => defaultFallback,

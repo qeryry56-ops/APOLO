@@ -54,11 +54,11 @@ class _SearchScreenState extends State<SearchScreen>
   int _lastPage = 1;
   bool _loadingMore = false;
 
-  // Apple Whitespace & Brand Tokens
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _redSoft = Color(0xFFFEECEE);
-  static const Color _surface = Color(0xFFF5F6F8);
+  // 2026 Monochrome Black, White & Neutral Gray Tokens
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _red = Color(0xFF0A0A0A);
+  static const Color _redSoft = Color(0xFFE8EAEE);
+  static const Color _surface = Color(0xFFF2F3F7);
   static const Color _emerald = Color(0xFF10B981);
 
   @override
@@ -746,7 +746,7 @@ class _SearchScreenState extends State<SearchScreen>
                         height: 54,
                         decoration: BoxDecoration(
                           color: _red,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -1512,7 +1512,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF0866FF),
+                                    color: Color(0xFF0A0A0A),
                                   ),
                                 ),
                               )
@@ -1740,7 +1740,7 @@ class _ModalFilterChip extends StatelessWidget {
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: active ? const Color(0xFFE31B23) : const Color(0xFFF5F6F8),
+              color: active ? const Color(0xFF0A0A0A) : const Color(0xFFF2F3F7),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -1748,7 +1748,7 @@ class _ModalFilterChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: active ? Colors.white : const Color(0xFF0F172A),
+                color: active ? Colors.white : const Color(0xFF0A0A0A),
               ),
             ),
           ),

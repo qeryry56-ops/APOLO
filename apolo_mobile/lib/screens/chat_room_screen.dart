@@ -56,10 +56,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Object? _accountId;
 
   static const Color _bg = Color(0xFFFFFFFF);
-  static const Color _chatBlue = Color(0xFF288AF2);
-  static const Color _chatBlueSoft = Color(0xFFE3F1FE);
-  static const Color _surfaceGrey = Color(0xFFF3F4F6);
-  static const Color _textBlack = Color(0xFF0F172A);
+  static const Color _chatBlue = Color(0xFF0A0A0A);
+  static const Color _chatBlueSoft = Color(0xFFF2F3F7);
+  static const Color _surfaceGrey = Color(0xFFF2F3F7);
+  static const Color _textBlack = Color(0xFF0A0A0A);
   static const Color _textMuted = Color(0xFF6B7280);
   static const Color _textSubtle = Color(0xFF9CA3AF);
 
@@ -727,19 +727,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ),
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
             decoration: BoxDecoration(
-              gradient: isMine
-                  ? const LinearGradient(
-                      colors: [Color(0xFF3A98F7), _chatBlue],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: isMine ? null : _surfaceGrey,
+              color: isMine ? _chatBlue : _surfaceGrey,
               borderRadius: borderRadius,
               boxShadow: [
                 BoxShadow(
                   color: isMine
-                      ? _chatBlue.withValues(alpha: 0.20)
+                      ? _chatBlue.withValues(alpha: 0.14)
                       : Colors.black.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),

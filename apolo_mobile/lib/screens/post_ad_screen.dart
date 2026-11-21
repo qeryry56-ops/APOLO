@@ -57,12 +57,12 @@ class _PostAdScreenState extends State<PostAdScreen>
 
   late final AnimationController _celebrationCtrl;
 
-  // Apple Whitespace & Brand Tokens
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _redSoft = Color(0xFFFEECEE);
-  static const Color _muted = Color(0xFF8A94A6);
-  static const Color _surface = Color(0xFFF5F6F8);
+  // 2026 Monochrome Black, White & Neutral Gray Tokens
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _red = Color(0xFF0A0A0A);
+  static const Color _redSoft = Color(0xFFE8EAEE);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _surface = Color(0xFFF2F3F7);
   static const Color _emerald = Color(0xFF10B981);
 
   List<dynamic> get _effectiveCategories => _state.categories;

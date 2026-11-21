@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'ad_detail_screen.dart';
-import 'ad_reels_screen.dart';
 import 'auth_screen.dart';
 import 'post_ad_screen.dart';
 import 'settings_screen.dart';
@@ -35,11 +37,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? '${_state.api.dio.options.baseUrl}:${_state.currentUser!['id']}'
           : null;
 
-  static const Color _primary = Color(0xFFE31B23);
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF8A94A6);
-  static const Color _surface = Color(0xFFF5F6F8);
-  static const Color _hairline = Color(0xFFECEEF2);
+  static const Color _primary = Color(0xFF0A0A0A);
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _surface = Color(0xFFF2F3F7);
+  static const Color _hairline = Color(0xFFE5E7EB);
 
   @override
   void initState() {
@@ -333,43 +335,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
 
-                      // Apolo Reels Video Feed Button
-                      PressableScale(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AdReelsScreen(),
-                          ),
-                        ),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFE31B23), Color(0xFFFF3366)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFE31B23)
-                                    .withValues(alpha: 0.28),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.play_rectangle_fill,
-                            color: Colors.white,
-                            size: 19,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
                       // Standalone Settings Page Button
                       PressableScale(
                         onTap: () => Navigator.push(
@@ -403,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
-              // 2. White Grouped Identity + Metrics Card
+              // 2. White Grouped Identity + Metrics Card (Instagram-style Profile + @username + Bio)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -450,7 +415,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             color: Colors.white, width: 2.5),
                                       ),
                                       child: const Icon(
-                                        CupertinoIcons.pencil,
+                                        CupertinoIcons.camera_fill,
                                         color: Colors.white,
                                         size: 13.5,
                                       ),
@@ -486,26 +451,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '@$handle',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _muted,
+                              ),
+                            ),
                             if (bio.isNotEmpty) ...[
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 8),
                               ConstrainedBox(
                                 constraints:
-                                    const BoxConstraints(maxWidth: 290),
+                                    const BoxConstraints(maxWidth: 300),
                                 child: Text(
                                   bio,
                                   textAlign: TextAlign.center,
-                                  maxLines: 2,
+                                  maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 13,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.w500,
-                                    color: _muted,
+                                    color: _ink,
                                     height: 1.4,
                                   ),
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 14),
+
+                            // Instagram-style Edit Profile Pill Button
+                            PressableScale(
+                              onTap: () => _openEditProfileSheet(isAr),
+                              child: Container(
+                                height: 38,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _surface,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      CupertinoIcons.pencil,
+                                      size: 14,
+                                      color: _ink,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      s.tr(
+                                        'تعديل الملف الشخصي',
+                                        'Modifier le profil',
+                                        'Edit profile',
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: _ink,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 18),
                             const Divider(
                                 height: 1,
                                 thickness: 1,
@@ -539,116 +555,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ],
                             ),
                           ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Apolo Reels Visual Discovery Banner
-                      PressableScale(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AdReelsScreen(),
-                          ),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFE31B23),
-                                      Color(0xFFFF3366)
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  CupertinoIcons.play_rectangle_fill,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          isAr
-                                              ? 'ريلز وسكرول الإعلانات'
-                                              : 'Apolo Reels 2026',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFE31B23),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                          child: const Text(
-                                            'NEW',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      isAr
-                                          ? 'تصفح العروض بالفيديو والصور بـ سكرول عمودي سريع'
-                                          : 'Scrollez les annonces en plein écran façon Reels',
-                                      style: TextStyle(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.72),
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                isAr
-                                    ? CupertinoIcons.chevron_left
-                                    : CupertinoIcons.chevron_right,
-                                color: Colors.white70,
-                                size: 16,
-                              ),
-                            ],
-                          ),
                         ),
                       ),
 
@@ -1012,120 +918,498 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Profile identity is server-backed. Never read legacy unscoped preferences.
+  static const List<String> _presetAvatars = [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+    'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=400&q=80',
+  ];
+
+  // Full-screen Instagram-style Edit Profile Screen (Photo, Name, @username, Bio)
   Future<void> _openEditProfileSheet(bool isAr) async {
     final identity = _identity;
     if (identity == null) return;
     final nameCtrl = TextEditingController(text: _displayName(isAr));
+    final usernameCtrl = TextEditingController(text: _displayHandle);
     final bioCtrl = TextEditingController(text: _displayBio(isAr));
-    final phoneCtrl = TextEditingController(
-        text: _state.currentUser?['phone']?.toString() ?? '');
+    String selectedAvatar =
+        (_state.currentUser?['avatar'] ?? '').toString().trim();
     bool saving = false;
     String? error;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-          builder: (ctx, update) => PopScope(
-                canPop: !saving,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                      24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-                  child: SingleChildScrollView(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text(isAr ? 'تعديل البروفايل' : 'Modifier le profil',
-                        style: const TextStyle(
-                            fontSize: 19, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 20),
-                    IgnorePointer(
-                        ignoring: saving,
-                        child: Column(children: [
-                          _buildEditField(
-                              label: isAr ? 'الاسم الكامل' : 'Nom complet',
-                              controller: nameCtrl,
-                              icon: CupertinoIcons.person),
-                          const SizedBox(height: 12),
-                          _buildEditField(
-                              label: isAr ? 'النبذة التعريفية' : 'Biographie',
-                              controller: bioCtrl,
-                              icon: CupertinoIcons.text_alignleft,
-                              maxLines: 2),
-                          const SizedBox(height: 12),
-                          _buildEditField(
-                              label: isAr ? 'رقم الهاتف' : 'Téléphone',
-                              controller: phoneCtrl,
-                              icon: CupertinoIcons.phone,
-                              keyboardType: TextInputType.phone),
-                        ])),
-                    if (error != null)
-                      Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text(error!,
-                              style: const TextStyle(color: _primary))),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                        key: const Key('profile-save'),
-                        onPressed: saving
-                            ? null
-                            : () async {
-                                if (identity != _identity) return;
-                                if (nameCtrl.text.trim().isEmpty) {
-                                  update(() => error = isAr
-                                      ? 'الاسم مطلوب.'
-                                      : 'Le nom est requis.');
-                                  return;
-                                }
-                                final values = {
-                                  'name': nameCtrl.text.trim(),
-                                  'bio': bioCtrl.text.trim(),
-                                  'phone': phoneCtrl.text.trim()
-                                };
-                                update(() {
-                                  saving = true;
-                                  error = null;
-                                });
-                                try {
-                                  final response = await _state.api.dio
-                                      .put('/auth/profile', data: values);
-                                  if (response.data is! Map ||
-                                      response.data['status'] != 'success') {
-                                    throw StateError(
-                                        'Profile update not confirmed');
-                                  }
-                                  if (!mounted || identity != _identity) return;
-                                  final user = response.data['user'];
-                                  _state.currentUser = {
-                                    ...?_state.currentUser,
-                                    ...values,
-                                    if (user is Map)
-                                      ...Map<String, dynamic>.from(user)
-                                  };
-                                  setState(() {});
-                                  if (ctx.mounted) {
-                                    update(() => saving = false);
-                                    Navigator.pop(ctx);
-                                  }
-                                } catch (_) {
-                                  if (ctx.mounted) {
-                                    update(() => error = isAr
-                                        ? 'تعذر حفظ التغييرات. حاول مجدداً.'
-                                        : 'Enregistrement impossible. Réessayez.');
-                                  }
-                                } finally {
-                                  if (ctx.mounted) update(() => saving = false);
-                                }
-                              },
-                        child: Text(saving
-                            ? (isAr ? 'جارٍ الحفظ...' : 'Enregistrement...')
-                            : (isAr ? 'حفظ التغييرات' : 'Enregistrer'))),
-                  ])),
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, update) {
+            Future<void> pickFromGallery() async {
+              try {
+                final picked = await ImagePicker().pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 512,
+                  maxHeight: 512,
+                  imageQuality: 82,
+                );
+                if (picked != null) {
+                  final bytes = await picked.readAsBytes();
+                  final b64 = base64Encode(bytes);
+                  update(() {
+                    selectedAvatar = 'data:image/jpeg;base64,$b64';
+                  });
+                }
+              } catch (_) {}
+            }
+
+            void showAvatarPickerSheet() {
+              HapticFeedback.selectionClick();
+              showModalBottomSheet<void>(
+                context: ctx,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-              )),
+                builder: (sheetCtx) => SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD1D5DB),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          isAr
+                              ? 'تغيير صورة الملف الشخصي'
+                              : 'Changer la photo de profil',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: _ink,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: const BoxDecoration(
+                              color: _surface,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.photo_on_rectangle,
+                              color: _ink,
+                              size: 19,
+                            ),
+                          ),
+                          title: Text(
+                            isAr
+                                ? 'اختيار صورة من المعرض'
+                                : 'Choisir depuis la galerie',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: _ink,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(sheetCtx);
+                            pickFromGallery();
+                          },
+                        ),
+                        if (selectedAvatar.isNotEmpty)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFEF2F2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                CupertinoIcons.trash,
+                                color: Color(0xFFE31B23),
+                                size: 19,
+                              ),
+                            ),
+                            title: Text(
+                              isAr
+                                  ? 'إزالة الصورة الحالية'
+                                  : 'Supprimer la photo actuelle',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFE31B23),
+                              ),
+                            ),
+                            onTap: () {
+                              Navigator.pop(sheetCtx);
+                              update(() => selectedAvatar = '');
+                            },
+                          ),
+                        const SizedBox(height: 10),
+                        Text(
+                          isAr
+                              ? 'أو اختر أفاتار جاهز'
+                              : 'Ou choisir un avatar',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: _muted,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 58,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _presetAvatars.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 10),
+                            itemBuilder: (_, i) {
+                              final url = _presetAvatars[i];
+                              final isSel = selectedAvatar == url;
+                              return GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  update(() => selectedAvatar = url);
+                                  Navigator.pop(sheetCtx);
+                                },
+                                child: Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSel ? _ink : _hairline,
+                                      width: isSel ? 2.5 : 1,
+                                    ),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: ClipOval(
+                                    child: AppImage(
+                                      url: url,
+                                      width: 56,
+                                      height: 56,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return PopScope(
+              canPop: !saving,
+              child: Scaffold(
+                backgroundColor: const Color(0xFFF2F3F7),
+                appBar: AppBar(
+                  backgroundColor: const Color(0xFFF2F3F7),
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: const Icon(CupertinoIcons.xmark,
+                        color: _ink, size: 20),
+                    onPressed: saving ? null : () => Navigator.pop(ctx),
+                  ),
+                  title: Text(
+                    isAr ? 'تعديل الملف الشخصي' : 'Modifier le profil',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: _ink,
+                    ),
+                  ),
+                ),
+                body: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                    child: IgnorePointer(
+                      ignoring: saving,
+                      child: Column(
+                        children: [
+                          // 1. Instagram-style Avatar Header Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 22,
+                              horizontal: 20,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Column(
+                              children: [
+                                GestureDetector(
+                                  key: const Key('profile-change-photo'),
+                                  onTap: showAvatarPickerSheet,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      Container(
+                                        width: 96,
+                                        height: 96,
+                                        decoration: BoxDecoration(
+                                          color: _surface,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: _hairline,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        clipBehavior: Clip.antiAlias,
+                                        alignment: Alignment.center,
+                                        child: selectedAvatar.isNotEmpty
+                                            ? AppImage(
+                                                url: selectedAvatar,
+                                                width: 96,
+                                                height: 96,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Text(
+                                                nameCtrl.text.trim().isNotEmpty
+                                                    ? nameCtrl.text
+                                                        .trim()[0]
+                                                        .toUpperCase()
+                                                    : 'A',
+                                                style: const TextStyle(
+                                                  fontSize: 34,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: _ink,
+                                                ),
+                                              ),
+                                      ),
+                                      PositionedDirectional(
+                                        bottom: 0,
+                                        end: -2,
+                                        child: Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            color: _ink,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 2.5,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            CupertinoIcons.camera_fill,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                GestureDetector(
+                                  onTap: showAvatarPickerSheet,
+                                  child: Text(
+                                    isAr
+                                        ? 'تغيير صورة الملف الشخصي'
+                                        : 'Changer la photo de profil',
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: _ink,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // 2. White Grouped Card: Name, @username, Bio (3 TextFields)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildEditField(
+                                  label:
+                                      isAr ? 'الاسم الكامل' : 'Nom complet',
+                                  controller: nameCtrl,
+                                  icon: CupertinoIcons.person,
+                                ),
+                                const SizedBox(height: 14),
+                                _buildEditField(
+                                  label: isAr
+                                      ? 'اسم المستخدم (@username)'
+                                      : 'Nom d’utilisateur (@username)',
+                                  controller: usernameCtrl,
+                                  icon: CupertinoIcons.at,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                      RegExp(r'[a-zA-Z0-9._]'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                _buildEditField(
+                                  label: isAr
+                                      ? 'النبذة التعريفية (Bio)'
+                                      : 'Biographie (Bio)',
+                                  controller: bioCtrl,
+                                  icon: CupertinoIcons.text_alignleft,
+                                  maxLines: 3,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (error != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 14),
+                              child: Text(
+                                error!,
+                                style: const TextStyle(
+                                  color: Color(0xFFE31B23),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+
+                          const SizedBox(height: 22),
+
+                          // 3. Full-width Pill Save Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: ElevatedButton(
+                              key: const Key('profile-save'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _ink,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: const StadiumBorder(),
+                              ),
+                              onPressed: saving
+                                  ? null
+                                  : () async {
+                                      if (identity != _identity) return;
+                                      if (nameCtrl.text.trim().isEmpty) {
+                                        update(() => error = isAr
+                                            ? 'الاسم مطلوب.'
+                                            : 'Le nom est requis.');
+                                        return;
+                                      }
+                                      final cleanUsername = usernameCtrl.text
+                                          .trim()
+                                          .replaceAll('@', '')
+                                          .toLowerCase();
+                                      if (cleanUsername.isEmpty) {
+                                        update(() => error = isAr
+                                            ? 'اسم المستخدم مطلوب.'
+                                            : 'Nom d’utilisateur requis.');
+                                        return;
+                                      }
+                                      final values = <String, dynamic>{
+                                        'name': nameCtrl.text.trim(),
+                                        'username': cleanUsername,
+                                        'bio': bioCtrl.text.trim(),
+                                        'avatar': selectedAvatar,
+                                      };
+                                      update(() {
+                                        saving = true;
+                                        error = null;
+                                      });
+                                      try {
+                                        final response = await _state.api.dio
+                                            .put('/auth/profile', data: values);
+                                        if (response.data is! Map ||
+                                            response.data['status'] !=
+                                                'success') {
+                                          throw StateError(
+                                              'Profile update not confirmed');
+                                        }
+                                        if (!mounted ||
+                                            identity != _identity) {
+                                          return;
+                                        }
+                                        final user = response.data['user'];
+                                        _state.currentUser = {
+                                          ...?_state.currentUser,
+                                          ...values,
+                                          if (user is Map)
+                                            ...Map<String, dynamic>.from(user),
+                                          'name': nameCtrl.text.trim(),
+                                          'username': cleanUsername,
+                                          'bio': bioCtrl.text.trim(),
+                                          'avatar': selectedAvatar,
+                                        };
+                                        setState(() {});
+                                        if (ctx.mounted) {
+                                          update(() => saving = false);
+                                          Navigator.pop(ctx);
+                                        }
+                                      } catch (_) {
+                                        if (ctx.mounted) {
+                                          update(() => error = isAr
+                                              ? 'تعذر حفظ التغييرات. حاول مجدداً.'
+                                              : 'Enregistrement impossible. Réessayez.');
+                                        }
+                                      } finally {
+                                        if (ctx.mounted) {
+                                          update(() => saving = false);
+                                        }
+                                      }
+                                    },
+                              child: Text(
+                                saving
+                                    ? (isAr
+                                        ? 'جارٍ الحفظ...'
+                                        : 'Enregistrement...')
+                                    : (isAr ? 'حفظ التغييرات' : 'Enregistrer'),
+                                style: const TextStyle(
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
     await Future<void>.delayed(const Duration(milliseconds: 300));
     nameCtrl.dispose();
+    usernameCtrl.dispose();
     bioCtrl.dispose();
-    phoneCtrl.dispose();
   }
 
   Widget _buildEditField({
@@ -1134,6 +1418,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required IconData icon,
     int maxLines = 1,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1151,6 +1436,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -1163,16 +1449,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _ink, width: 1.2),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: _ink, width: 1.4),
             ),
           ),
         ),
