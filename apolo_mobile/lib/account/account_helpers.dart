@@ -283,17 +283,29 @@ class AccountAuth {
     required String confirmation,
   }) async {
     if (!AccountValidation.email(email) ||
+        token.trim().length < 4 ||
         !AccountValidation.password(password) ||
         password != confirmation) {
       throw const AccountFailure('validation');
     }
-    final res = await dio.post('/auth/password/reset', data: {
+    final payload = {
       'email': email.trim(),
       'token': token.trim(),
+      'code': token.trim(),
       'password': password,
       'password_confirmation': confirmation,
-    });
-    _payload(res);
+    };
+    try {
+      final res = await dio.post('/auth/password/reset', data: payload);
+      _payload(res);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        final res = await dio.post('/auth/reset-password', data: payload);
+        _payload(res);
+      } else {
+        rethrow;
+      }
+    }
   }
 
   Future<void> updatePassword({
@@ -370,10 +382,19 @@ String accountError(Object error, bool ar) {
           : 'Identifiants ou code de vérification refusés.';
     }
     if (status == 422) {
+      if (data is Map && data['errors'] is Map) {
+        final errorsMap = data['errors'] as Map;
+        for (final entry in errorsMap.values) {
+          if (entry is List && entry.isNotEmpty) {
+            final first = entry.first.toString().trim();
+            if (first.isNotEmpty) return first;
+          }
+        }
+      }
       if (serverMsg != null && serverMsg.isNotEmpty) return serverMsg;
       return ar
-          ? 'تحقق من البيانات المدخلة. قد يكون البريد مستخدماً بالفعل.'
-          : 'Vérifiez les informations. Cette adresse est peut-être déjà utilisée.';
+          ? 'تحقق من البيانات المدخلة. قد يكون البريد أو رقم الهاتف مستخدماً بالفعل.'
+          : 'Vérifiez les informations. Cet e-mail ou numéro est peut-être déjà utilisé.';
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
@@ -384,6 +405,6 @@ String accountError(Object error, bool ar) {
     }
   }
   return ar
-      ? 'لم يتم تأكيد العملية. أعد المحاولة أو استخدم الموقع.'
-      : 'L’opération n’a pas été confirmée. Réessayez ou utilisez le site.';
+      ? 'تعذر إتمام العملية حالياً. يرجى المحاولة مرة أخرى.'
+      : 'Impossible de finaliser l’opération. Veuillez réessayer.';
 }

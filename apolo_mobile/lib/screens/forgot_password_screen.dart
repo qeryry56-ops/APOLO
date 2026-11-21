@@ -106,9 +106,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       HapticFeedback.mediumImpact();
       setState(() {
         _sent = true;
+        _hasCodeStep = true;
         _successMessage = _state.s.tr(
-          'تم إرسال رابط وتعليمات استعادة كلمة المرور إلى ${_email.text.trim()}. تفقد صندوق الوارد أو البريد غير المرغوب فيه.',
-          'Reset instructions have been sent to ${_email.text.trim()}. Please check your inbox or spam folder.',
+          'تم إرسال رمز استعادة كلمة المرور إلى ${_email.text.trim()}. أدخل الرمز وكلمة المرور الجديدة هنا داخل التطبيق مباشرة.',
+          'Un code de réinitialisation a été envoyé à ${_email.text.trim()}. Saisissez-le ici pour changer votre mot de passe dans l\'application.',
+          'A reset code was sent to ${_email.text.trim()}. Enter it below to reset your password right inside the app.',
         );
       });
       _startCooldown();
@@ -392,14 +394,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           CustomAuthInputField(
                             keyName: 'forgot-code',
                             controller: _code,
-                            label: s.tr('رمز التحقق', 'Reset code'),
-                            type: TextInputType.number,
+                            label: s.tr('رمز التحقق', 'Code de vérification', 'Reset code'),
+                            type: TextInputType.text,
                             enabled: !_busy,
-                            validator: (v) => AccountValidation.otp(v ?? '')
+                            validator: (v) => (v ?? '').trim().length >= 4
                                 ? null
                                 : s.tr(
-                                    'أدخل رمزاً مكوناً من 6 أرقام',
-                                    'Enter a 6-digit code',
+                                    'أدخل رمز التحقق الذي وصلك في البريد الإلكتروني',
+                                    'Saisissez le code reçu par e-mail',
+                                    'Enter the reset code from your email',
                                   ),
                           ),
                           CustomAuthInputField(

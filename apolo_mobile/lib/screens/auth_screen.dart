@@ -436,8 +436,7 @@ class _AuthScreenState extends State<AuthScreen>
         // Step 3 registration submission
         final fullName =
             "${_firstName.text.trim()} ${_lastName.text.trim()}".trim();
-        final rawPhone = _phone.text.trim();
-        final phone = rawPhone.isNotEmpty ? rawPhone : '0612345678';
+        final phone = _phone.text.trim();
 
         result = await _auth.register(
           name: fullName.isNotEmpty ? fullName : 'User',
@@ -1360,6 +1359,22 @@ class _AuthScreenState extends State<AuthScreen>
                                 : s.tr(
                                     'أدخل بريداً إلكترونياً صحيحاً',
                                     'Enter a valid email address',
+                                  ),
+                          ),
+                          CustomAuthInputField(
+                            controller: _phone,
+                            label: s.tr('رقم الهاتف', 'Téléphone', 'Phone number'),
+                            keyName: 'auth-phone',
+                            type: TextInputType.phone,
+                            autofill: const [AutofillHints.telephoneNumber],
+                            hint: '06 12 34 56 78',
+                            enabled: !_busy,
+                            validator: (v) => AccountValidation.phone(v ?? '') != null
+                                ? null
+                                : s.tr(
+                                    'أدخل رقم هاتف مغربي صحيح (مثال: 0612345678)',
+                                    'Numéro marocain invalide (ex: 0612345678)',
+                                    'Enter a valid Moroccan phone number',
                                   ),
                           ),
                           CustomAuthInputField(
