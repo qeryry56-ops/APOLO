@@ -36,14 +36,24 @@ class AppImage extends StatelessWidget {
     if (trimmed.isEmpty || trimmed.startsWith('assets/')) return trimmed;
 
     const apoloStoragePrefix = 'https://apolo.ma/storage/';
+    const apoloAssetsPrefix = 'https://apolo.ma/assets/';
     var normalized = trimmed;
     if (normalized.startsWith('/storage/')) {
       normalized = 'https://apolo.ma$normalized';
     } else if (normalized.startsWith('storage/')) {
       normalized = 'https://apolo.ma/$normalized';
+    } else if (normalized.startsWith('/assets/Memoji/')) {
+      normalized = 'https://apolo.ma$normalized';
     } else if (normalized.startsWith('http://apolo.ma/storage/')) {
       normalized = normalized.replaceFirst('http://', 'https://');
+    } else if (normalized.startsWith('http://apolo.ma/assets/')) {
+      normalized = normalized.replaceFirst('http://', 'https://');
     } else if (normalized.startsWith('https://www.apolo.ma/storage/')) {
+      normalized = normalized.replaceFirst(
+        'https://www.apolo.ma/',
+        'https://apolo.ma/',
+      );
+    } else if (normalized.startsWith('https://www.apolo.ma/assets/')) {
       normalized = normalized.replaceFirst(
         'https://www.apolo.ma/',
         'https://apolo.ma/',
@@ -56,10 +66,15 @@ class AppImage extends StatelessWidget {
     }
 
     final useWeb = isWebOverride ?? kIsWeb;
-    if (useWeb && normalized.startsWith(apoloStoragePrefix)) {
+    if (useWeb) {
       final host = (hostOverride ?? Uri.base.host).toLowerCase();
       if (host.endsWith('vercel.app')) {
-        return '/apolo-media/${normalized.substring(apoloStoragePrefix.length)}';
+        if (normalized.startsWith(apoloStoragePrefix)) {
+          return '/apolo-media/${normalized.substring(apoloStoragePrefix.length)}';
+        }
+        if (normalized.startsWith(apoloAssetsPrefix)) {
+          return '/apolo-assets/${normalized.substring(apoloAssetsPrefix.length)}';
+        }
       }
     }
     return normalized;
@@ -186,7 +201,7 @@ class AppAvatar extends StatelessWidget {
     required this.url,
     this.radius = 26,
     this.fallbackIcon = Icons.person_rounded,
-    this.iconColor = const Color(0xFFE31B23),
+    this.iconColor = const Color(0xFF0A0A0A),
   });
 
   @override

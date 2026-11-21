@@ -22,13 +22,13 @@ class _StoresScreenState extends State<StoresScreen> {
   final ScrollController _scrollCtrl = ScrollController();
   int _currentPage = 1;
   int _lastPage = 1;
+  int _totalStores = 0;
   bool _loadingMore = false;
+  int _filterIndex = 0; // 0: All, 1: Most products, 2: Top rated
 
-  static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _muted = Color(0xFF8A94A6);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _badgeBg = Color(0xFFFEECEE);
-  static const Color _border = Color(0xFFE7EAF0);
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _border = Color(0xFFE5E7EB);
 
   @override
   void initState() {
@@ -73,6 +73,9 @@ class _StoresScreenState extends State<StoresScreen> {
             _currentPage =
                 int.tryParse((meta?['current_page'] ?? 1).toString()) ?? 1;
             _lastPage = int.tryParse((meta?['last_page'] ?? 1).toString()) ?? 1;
+            _totalStores =
+                int.tryParse((meta?['total'] ?? _stores.length).toString()) ??
+                    _stores.length;
             _loading = false;
           });
         }
@@ -118,10 +121,37 @@ class _StoresScreenState extends State<StoresScreen> {
     if (mounted) setState(() => _loadingMore = false);
   }
 
+  List<dynamic> get _visibleStores {
+    final list = List<dynamic>.from(_stores);
+    if (_filterIndex == 1) {
+      list.sort((a, b) {
+        final ca = int.tryParse(
+                (a['active_products_count'] ?? a['ads_count'] ?? 0)
+                    .toString()) ??
+            0;
+        final cb = int.tryParse(
+                (b['active_products_count'] ?? b['ads_count'] ?? 0)
+                    .toString()) ??
+            0;
+        return cb.compareTo(ca);
+      });
+    } else if (_filterIndex == 2) {
+      list.sort((a, b) {
+        final ra =
+            double.tryParse((a['average_rating'] ?? 5).toString()) ?? 5.0;
+        final rb =
+            double.tryParse((b['average_rating'] ?? 5).toString()) ?? 5.0;
+        return rb.compareTo(ra);
+      });
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
     final canPop = Navigator.canPop(context);
+    final visible = _visibleStores;
     return Scaffold(
       backgroundColor: const Color(0xFFF2F3F7),
       body: SafeArea(
@@ -156,41 +186,59 @@ class _StoresScreenState extends State<StoresScreen> {
                     const SizedBox(width: 12),
                   ],
                   Expanded(
-                    child: Text(
-                      s.stores,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: _ink,
-                        letterSpacing:
-                            AppTypography.trackingForContext(context, -0.4),
-                        height: AppTypography.lineHeightForContext(
-                          context,
-                          1.15,
-                          arabicMin: 1.32,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s.stores,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: _ink,
+                            letterSpacing:
+                                AppTypography.trackingForContext(context, -0.4),
+                            height: AppTypography.lineHeightForContext(
+                              context,
+                              1.15,
+                              arabicMin: 1.32,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (_totalStores > 0)
+                          Text(
+                            s.tr(
+                              '$_totalStores متجر رسمي موثق في المغرب',
+                              '$_totalStores boutiques officielles vérifiées',
+                              '$_totalStores verified official stores',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _muted,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _badgeBg,
+                      color: _ink,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(CupertinoIcons.checkmark_seal_fill,
-                            size: 14, color: _red),
+                            size: 13.5, color: Colors.white),
                         const SizedBox(width: 5),
                         Text(
                           'PRO',
                           style: TextStyle(
-                            color: _red,
+                            color: Colors.white,
                             fontWeight: FontWeight.w800,
-                            fontSize: 12,
+                            fontSize: 11.5,
                             letterSpacing:
                                 AppTypography.trackingForContext(context, 0.4),
                           ),
@@ -204,17 +252,17 @@ class _StoresScreenState extends State<StoresScreen> {
 
             // Clean White Pill Search Bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Container(
-                height: 46,
+                height: 48,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.only(left: 14, right: 6),
                 child: Row(
                   children: [
-                    const Icon(CupertinoIcons.bag, color: _muted, size: 19),
+                    const Icon(CupertinoIcons.search, color: _muted, size: 19),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
@@ -240,18 +288,57 @@ class _StoresScreenState extends State<StoresScreen> {
                         ),
                       ),
                     ),
+                    if (_searchCtrl.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchCtrl.clear();
+                          _fetchStores();
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6),
+                          child: Icon(
+                            CupertinoIcons.clear_circled_solid,
+                            color: _muted,
+                            size: 18,
+                          ),
+                        ),
+                      ),
                     PressableScale(
                       onTap: _fetchStores,
                       child: Container(
-                        width: 44,
-                        height: 44,
+                        width: 38,
+                        height: 38,
                         decoration: const BoxDecoration(
-                          color: _red,
+                          color: _ink,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(CupertinoIcons.search,
-                            size: 16, color: Colors.white),
+                        child: const Icon(CupertinoIcons.arrow_left_right,
+                            size: 15, color: Colors.white),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Filter Pills Strip
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildFilterPill(0, s.tr('الكل', 'Toutes', 'All')),
+                    const SizedBox(width: 8),
+                    _buildFilterPill(
+                      1,
+                      s.tr('الأكثر منتجات', 'Plus de produits', 'Most products'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterPill(
+                      2,
+                      s.tr('الأعلى تقييماً ⭐', 'Mieux notées ⭐', 'Top rated ⭐'),
                     ),
                   ],
                 ),
@@ -261,8 +348,8 @@ class _StoresScreenState extends State<StoresScreen> {
             // Store Cards List
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: _red))
-                  : _stores.isEmpty
+                  ? const Center(child: CircularProgressIndicator(color: _ink))
+                  : visible.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -271,11 +358,11 @@ class _StoresScreenState extends State<StoresScreen> {
                                 width: 68,
                                 height: 68,
                                 decoration: const BoxDecoration(
-                                  color: _badgeBg,
+                                  color: Colors.white,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.storefront_rounded,
-                                    size: 32, color: _red),
+                                    size: 32, color: _ink),
                               ),
                               const SizedBox(height: 14),
                               Text(
@@ -290,18 +377,19 @@ class _StoresScreenState extends State<StoresScreen> {
                           ),
                         )
                       : RefreshIndicator(
-                          color: _red,
+                          color: _ink,
+                          backgroundColor: Colors.white,
                           onRefresh: _fetchStores,
                           child: ListView.separated(
                             controller: _scrollCtrl,
                             physics: const AlwaysScrollableScrollPhysics(
                                 parent: BouncingScrollPhysics()),
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
-                            itemCount: _stores.length + (_loadingMore ? 1 : 0),
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                            itemCount: visible.length + (_loadingMore ? 1 : 0),
                             separatorBuilder: (_, __) =>
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 12),
                             itemBuilder: (context, idx) {
-                              if (idx >= _stores.length) {
+                              if (idx >= visible.length) {
                                 return const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 20),
                                   child: Center(
@@ -309,20 +397,24 @@ class _StoresScreenState extends State<StoresScreen> {
                                       width: 22,
                                       height: 22,
                                       child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: _red),
+                                          strokeWidth: 2, color: _ink),
                                     ),
                                   ),
                                 );
                               }
-                              final store = _stores[idx];
+                              final store = visible[idx];
                               final logo = store['logo_url'] ?? store['logo'];
+                              final location =
+                                  (store['location'] ?? '').toString().trim();
+                              final rating =
+                                  (store['average_rating'] ?? 5).toString();
                               final int count = int.tryParse(
                                       (store['active_products_count'] ??
                                               store['ads_count'] ??
                                               0)
                                           .toString()) ??
                                   0;
-                              return GestureDetector(
+                              return PressableScale(
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -337,28 +429,18 @@ class _StoresScreenState extends State<StoresScreen> {
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(color: _border),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _ink.withValues(alpha: 0.045),
-                                        blurRadius: 18,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
+                                    borderRadius: BorderRadius.circular(22),
                                   ),
                                   child: Row(
                                     children: [
                                       Stack(
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.all(3),
+                                            padding: const EdgeInsets.all(2.5),
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
                                               border: Border.all(
-                                                  color: _red.withValues(
-                                                      alpha: 0.25),
-                                                  width: 1.5),
+                                                  color: _border, width: 1.2),
                                             ),
                                             child: AppAvatar(
                                               url: logo?.toString(),
@@ -374,7 +456,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                               width: 20,
                                               height: 20,
                                               decoration: BoxDecoration(
-                                                color: _red,
+                                                color: _ink,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
                                                     color: Colors.white,
@@ -394,17 +476,78 @@ class _StoresScreenState extends State<StoresScreen> {
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              (store['name'] ?? '').toString(),
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 16.5,
-                                                color: _ink,
-                                                letterSpacing: AppTypography
-                                                    .trackingForContext(
-                                                        context, -0.3),
-                                              ),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    (store['name'] ?? '')
+                                                        .toString(),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      fontSize: 16,
+                                                      color: _ink,
+                                                      letterSpacing: AppTypography
+                                                          .trackingForContext(
+                                                              context, -0.3),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(
+                                                      CupertinoIcons.star_fill,
+                                                      size: 12,
+                                                      color: Color(0xFFF59E0B),
+                                                    ),
+                                                    const SizedBox(width: 3),
+                                                    Text(
+                                                      rating,
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: _ink,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                             ),
+                                            if (location.isNotEmpty) ...[
+                                              const SizedBox(height: 3),
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    CupertinoIcons
+                                                        .location_solid,
+                                                    size: 11.5,
+                                                    color: _muted,
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                  Expanded(
+                                                    child: Text(
+                                                      location,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontSize: 11.5,
+                                                        color: _muted,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                             if ((store['description'] ?? '')
                                                 .toString()
                                                 .trim()
@@ -421,7 +564,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                     height: 1.35),
                                               ),
                                             ],
-                                            const SizedBox(height: 8),
+                                            const SizedBox(height: 10),
                                             Row(
                                               children: [
                                                 Container(
@@ -430,7 +573,8 @@ class _StoresScreenState extends State<StoresScreen> {
                                                       horizontal: 10,
                                                       vertical: 4),
                                                   decoration: BoxDecoration(
-                                                    color: _badgeBg,
+                                                    color:
+                                                        const Color(0xFFF2F3F7),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             999),
@@ -440,15 +584,15 @@ class _StoresScreenState extends State<StoresScreen> {
                                                         MainAxisSize.min,
                                                     children: [
                                                       const Icon(
-                                                          Icons
-                                                              .inventory_2_outlined,
-                                                          size: 13,
-                                                          color: _red),
+                                                          CupertinoIcons
+                                                              .cube_box,
+                                                          size: 12.5,
+                                                          color: _ink),
                                                       const SizedBox(width: 4),
                                                       Text(
                                                         '$count ${s.tr('منتج', 'produits')}',
                                                         style: const TextStyle(
-                                                            color: _red,
+                                                            color: _ink,
                                                             fontSize: 11.5,
                                                             fontWeight:
                                                                 FontWeight
@@ -458,24 +602,43 @@ class _StoresScreenState extends State<StoresScreen> {
                                                   ),
                                                 ),
                                                 const Spacer(),
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      s.tr('زيارة المتجر',
-                                                          'Visiter'),
-                                                      style: const TextStyle(
-                                                          color: _red,
-                                                          fontSize: 12.5,
-                                                          fontWeight:
-                                                              FontWeight.w700),
-                                                    ),
-                                                    const SizedBox(width: 2),
-                                                    const Icon(
-                                                        Icons
-                                                            .chevron_right_rounded,
-                                                        size: 17,
-                                                        color: _red),
-                                                  ],
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 5),
+                                                  decoration: BoxDecoration(
+                                                    color: _ink,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            999),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        s.tr('زيارة المتجر',
+                                                            'Visiter'),
+                                                        style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 11.5,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w700),
+                                                      ),
+                                                      const SizedBox(width: 3),
+                                                      Icon(
+                                                        s.isAr
+                                                            ? CupertinoIcons
+                                                                .chevron_left
+                                                            : CupertinoIcons
+                                                                .chevron_right,
+                                                        size: 11.5,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -491,6 +654,29 @@ class _StoresScreenState extends State<StoresScreen> {
                         ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterPill(int index, String label) {
+    final active = _filterIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _filterIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? _ink : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: active ? Colors.white : _ink,
+          ),
         ),
       ),
     );

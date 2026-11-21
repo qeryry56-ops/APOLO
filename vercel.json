@@ -42,8 +42,20 @@
   ],
   "rewrites": [
     {
+      "source": "/api/v1/:path*",
+      "destination": "https://apolo.ma/api/v1/:path*"
+    },
+    {
+      "source": "/apolo-staging-api/:path*",
+      "destination": "https://staging.apolo.ma/api/v1/:path*"
+    },
+    {
       "source": "/apolo-media/:path*",
       "destination": "https://apolo.ma/storage/:path*"
+    },
+    {
+      "source": "/apolo-assets/:path*",
+      "destination": "https://apolo.ma/assets/:path*"
     },
     {
       "source": "/privacy",

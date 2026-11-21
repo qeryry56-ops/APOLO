@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
@@ -20,12 +22,12 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   List<dynamic> _ads = [];
   bool _loading = true;
 
-  static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _muted = Color(0xFF8A94A6);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _badgeBg = Color(0xFFFEECEE);
-  static const Color _pillBg = Color(0xFFF1F3F7);
-  static const Color _border = Color(0xFFE7EAF0);
+  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _red = Color(0xFF0A0A0A);
+  static const Color _badgeBg = Color(0xFFE8EAEE);
+  static const Color _pillBg = Color(0xFFF2F3F7);
+  static const Color _border = Color(0xFFE5E7EB);
 
   @override
   void initState() {
@@ -35,7 +37,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
   Future<void> _loadStore() async {
     try {
-      final res = await _state.api.dio.get('/stores/${widget.subdomain}');
+      final encoded = Uri.encodeComponent(widget.subdomain);
+      final res = await _state.api.dio.get('/stores/$encoded');
       if (res.data is Map && res.data['status'] == 'success') {
         if (mounted) {
           setState(() {
@@ -170,8 +173,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     }
                     Navigator.pop(ctx);
                     try {
+                      final encoded = Uri.encodeComponent(widget.subdomain);
                       final res = await _state.api.dio
-                          .post('/stores/${widget.subdomain}/order', data: {
+                          .post('/stores/$encoded/order', data: {
                         'ad_id': selectedAdId,
                         'full_name': nameCtrl.text.trim(),
                         'phone_number': phoneCtrl.text.trim(),
@@ -313,151 +317,296 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Column(
-                    children: [
-                      Stack(
+                child: Builder(
+                  builder: (_) {
+                    final coverUrl =
+                        (store['cover_url'] ?? '').toString().trim();
+                    final location =
+                        (store['location'] ?? '').toString().trim();
+                    final phone = (store['phone'] ?? '').toString().trim();
+
+                    return Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Column(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: _red.withValues(alpha: 0.3), width: 2),
-                            ),
-                            child: AppAvatar(
-                              url: logo?.toString(),
-                              radius: 40,
-                              fallbackIcon: Icons.storefront_rounded,
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 2,
-                            right: 2,
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: _red,
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 2.5),
+                          if (coverUrl.isNotEmpty)
+                            SizedBox(
+                              height: 112,
+                              width: double.infinity,
+                              child: AppImage(
+                                url: coverUrl,
+                                fit: BoxFit.cover,
                               ),
-                              child: const Icon(Icons.check_rounded,
-                                  size: 14, color: Colors.white),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Column(
+                              children: [
+                                Stack(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(3),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: _border, width: 1.5),
+                                      ),
+                                      child: AppAvatar(
+                                        url: logo?.toString(),
+                                        radius: 40,
+                                        fallbackIcon: Icons.storefront_rounded,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 2,
+                                      right: 2,
+                                      child: Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: _ink,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: Colors.white, width: 2.5),
+                                        ),
+                                        child: const Icon(Icons.check_rounded,
+                                            size: 14, color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  (store['name'] ?? '').toString(),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.w800,
+                                    color: _ink,
+                                    letterSpacing:
+                                        AppTypography.trackingForContext(
+                                            context, -0.4),
+                                  ),
+                                ),
+                                if (location.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        CupertinoIcons.location_solid,
+                                        size: 12.5,
+                                        color: _muted,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          location,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: _muted,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                if ((store['description'] ?? '')
+                                    .toString()
+                                    .trim()
+                                    .isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    (store['description'] ?? '').toString(),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        color: _muted,
+                                        fontSize: 13.5,
+                                        height: 1.4),
+                                  ),
+                                ],
+                                if (phone.isNotEmpty || _ads.isNotEmpty) ...[
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    children: [
+                                      if (phone.isNotEmpty) ...[
+                                        Expanded(
+                                          child: PressableScale(
+                                            onTap: () async {
+                                              final uri =
+                                                  Uri.parse('tel:$phone');
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri);
+                                              }
+                                            },
+                                            child: Container(
+                                              height: 42,
+                                              decoration: BoxDecoration(
+                                                color: _pillBg,
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    CupertinoIcons.phone_fill,
+                                                    size: 15,
+                                                    color: _ink,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    s.tr('اتصال', 'Appeler',
+                                                        'Call'),
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: _ink,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        if (_ads.isNotEmpty)
+                                          const SizedBox(width: 10),
+                                      ],
+                                      if (_ads.isNotEmpty)
+                                        Expanded(
+                                          child: PressableScale(
+                                            onTap: _openOrderSheet,
+                                            child: Container(
+                                              height: 42,
+                                              decoration: BoxDecoration(
+                                                color: _ink,
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    CupertinoIcons.bag_fill,
+                                                    size: 15,
+                                                    color: Colors.white,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    s.tr('طلب مباشر',
+                                                        'Commander', 'Order'),
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: _pillBg,
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              '${_ads.length}',
+                                              style: const TextStyle(
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: _ink),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              s.tr('المنتجات', 'Produits'),
+                                              style: const TextStyle(
+                                                  fontSize: 11.5,
+                                                  color: _muted,
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                          width: 1, height: 28, color: _border),
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            const Text(
+                                              '100%',
+                                              style: TextStyle(
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: _ink),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              s.tr('موثوق', 'Vérifié'),
+                                              style: const TextStyle(
+                                                  fontSize: 11.5,
+                                                  color: _muted,
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                          width: 1, height: 28, color: _border),
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            const Text(
+                                              '24/48h',
+                                              style: TextStyle(
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: _ink),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              s.tr('التوصيل', 'Livraison'),
+                                              style: const TextStyle(
+                                                  fontSize: 11.5,
+                                                  color: _muted,
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        (store['name'] ?? '').toString(),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w800,
-                          color: _ink,
-                          letterSpacing:
-                              AppTypography.trackingForContext(context, -0.4),
-                        ),
-                      ),
-                      if ((store['description'] ?? '')
-                          .toString()
-                          .trim()
-                          .isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          (store['description'] ?? '').toString(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: _muted, fontSize: 13.5, height: 1.4),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: _pillBg,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '${_ads.length}',
-                                    style: const TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w800,
-                                        color: _ink),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    s.tr('المنتجات', 'Produits'),
-                                    style: const TextStyle(
-                                        fontSize: 11.5,
-                                        color: _muted,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(width: 1, height: 28, color: _border),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text(
-                                    '100%',
-                                    style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w800,
-                                        color: _red),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    s.tr('موثوق', 'Vérifié'),
-                                    style: const TextStyle(
-                                        fontSize: 11.5,
-                                        color: _muted,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(width: 1, height: 28, color: _border),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Text(
-                                    '24/48h',
-                                    style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w800,
-                                        color: _ink),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    s.tr('التوصيل', 'Livraison'),
-                                    style: const TextStyle(
-                                        fontSize: 11.5,
-                                        color: _muted,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             ),

@@ -43,7 +43,7 @@ class ApiClient {
   ApiClient._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl: AppConfig.currentBaseUrl,
+        baseUrl: AppConfig.effectiveBaseUrl,
         connectTimeout: const Duration(seconds: 20),
         receiveTimeout: const Duration(seconds: 20),
         headers: {
@@ -56,7 +56,7 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          options.baseUrl = AppConfig.currentBaseUrl;
+          options.baseUrl = AppConfig.effectiveBaseUrl;
           options.headers['Accept-Language'] = _locale;
           if (_token != null && _token!.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $_token';

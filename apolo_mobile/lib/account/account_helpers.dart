@@ -88,7 +88,7 @@ class AccountAuth {
   AccountAuth({Dio? client, String locale = 'fr'})
       : dio = client ??
             Dio(BaseOptions(
-              baseUrl: AppConfig.currentBaseUrl,
+              baseUrl: AppConfig.effectiveBaseUrl,
               connectTimeout: const Duration(seconds: 20),
               receiveTimeout: const Duration(seconds: 20),
               headers: {

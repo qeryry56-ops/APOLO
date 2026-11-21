@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -17,6 +18,25 @@ class AppConfig {
 
   // Default to production API; switchable to staging in Profile Settings
   static String currentBaseUrl = prodBaseUrl;
+
+  /// Resolves the active API base URL. On Vercel Web (`*.vercel.app`), routes
+  /// through same-origin Vercel rewrites (`/api/v1/*`) to avoid browser CORS blocks.
+  static String get effectiveBaseUrl => resolveBaseUrl(currentBaseUrl);
+
+  static String resolveBaseUrl(String rawBaseUrl) {
+    if (kIsWeb) {
+      final host = Uri.base.host.toLowerCase();
+      if (host.endsWith('vercel.app')) {
+        if (rawBaseUrl == stagingBaseUrl) {
+          return '${Uri.base.origin}/apolo-staging-api';
+        }
+        if (rawBaseUrl == prodBaseUrl) {
+          return '${Uri.base.origin}/api/v1';
+        }
+      }
+    }
+    return rawBaseUrl;
+  }
 
   // Typography Constants
   static const String fontTajawal = AppTypography.fontTajawal;
