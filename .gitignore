@@ -13,6 +13,15 @@
 key.properties
 google-services.json
 GoogleService-Info.plist
+*.pem
+*.key
+*.p12
+*.pfx
+*.p8
+*.mobileprovision
+credentials.json
+*service-account*.json
+firebase-adminsdk-*.json
 
 # Temp & logs
 *.log

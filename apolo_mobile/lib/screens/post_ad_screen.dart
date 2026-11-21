@@ -659,6 +659,7 @@ class _PostAdScreenState extends State<PostAdScreen>
       if (mounted) {
         setState(() => _submitting = false);
         if (res.data is Map && res.data['status'] == 'success') {
+          unawaited(_clearDraft());
           _triggerCelebration();
           return;
         } else {

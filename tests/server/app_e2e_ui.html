@@ -284,15 +284,26 @@
         const obCats = $('onboard-categories');
         obCats.innerHTML = '';
         for (const c of state.categories) {
+          const cid = escapeHtml(c.id);
+          const cname = escapeHtml(c.name_ar || c.name);
           const lbl = document.createElement('label');
           lbl.style.display = 'inline-flex';
           lbl.style.alignItems = 'center';
           lbl.style.gap = '6px';
           lbl.style.marginInlineEnd = '12px';
-          lbl.innerHTML = `<input type="checkbox" data-testid="onboard-cat-${c.id}" value="${c.id}" style="width:auto;" /> ${c.name_ar || c.name}`;
+          lbl.innerHTML = `<input type="checkbox" data-testid="onboard-cat-${cid}" value="${cid}" style="width:auto;" /> ${cname}`;
           obCats.appendChild(lbl);
         }
       }
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     async function loadFavorites() {
@@ -332,20 +343,24 @@
       }
       for (const ad of state.ads) {
         const isFav = state.favoriteIds.has(Number(ad.id));
+        const safeId = escapeHtml(ad.id);
+        const safeCity = escapeHtml(ad.city_name || 'المغرب');
+        const safeTitle = escapeHtml(ad.title);
+        const safePrice = escapeHtml(ad.price);
         const card = document.createElement('article');
         card.className = 'card';
         card.setAttribute('data-testid', `ad-card-${ad.id}`);
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span class="badge badge-city">${ad.city_name || 'المغرب'}</span>
-            ${ad.is_vip ? `<span class="badge badge-vip" data-testid="vip-badge-${ad.id}">VIP مميز</span>` : ''}
+            <span class="badge badge-city">${safeCity}</span>
+            ${ad.is_vip ? `<span class="badge badge-vip" data-testid="vip-badge-${safeId}">VIP مميز</span>` : ''}
           </div>
-          <h3 style="margin:4px 0 8px;">${ad.title}</h3>
-          <div style="color:var(--primary); font-weight:900; font-size:18px; margin-bottom:10px;">${ad.price} DH</div>
+          <h3 style="margin:4px 0 8px;">${safeTitle}</h3>
+          <div style="color:var(--primary); font-weight:900; font-size:18px; margin-bottom:10px;">${safePrice} DH</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button data-testid="fav-btn-${ad.id}" class="btn-ghost">${isFav ? '♥ محفوظ' : '♡ حفظ'}</button>
-            <button data-testid="boost-btn-${ad.id}" class="btn-gold">تمييز VIP</button>
-            <button data-testid="chat-btn-${ad.id}" class="btn-dark">دردشة</button>
+            <button data-testid="fav-btn-${safeId}" class="btn-ghost">${isFav ? '♥ محفوظ' : '♡ حفظ'}</button>
+            <button data-testid="boost-btn-${safeId}" class="btn-gold">تمييز VIP</button>
+            <button data-testid="chat-btn-${safeId}" class="btn-dark">دردشة</button>
           </div>
         `;
         card.querySelector(`[data-testid="fav-btn-${ad.id}"]`).onclick = () => toggleFavorite(ad.id);
@@ -388,9 +403,12 @@
           item.style.display = 'flex';
           item.style.justifyContent = 'space-between';
           item.style.cursor = 'pointer';
+          const safePlanId = escapeHtml(p.id);
+          const safePlanName = escapeHtml(p.name_ar);
+          const safePlanPrice = escapeHtml(p.price_mad);
           item.innerHTML = `
-            <span><input type="radio" name="boostPlan" value="${p.id}" data-testid="boost-plan-${p.id}" ${p.id === state.selectedPlanId ? 'checked' : ''} style="width:auto;" /> ${p.name_ar}</span>
-            <strong>${p.price_mad} MAD</strong>
+            <span><input type="radio" name="boostPlan" value="${safePlanId}" data-testid="boost-plan-${safePlanId}" ${p.id === state.selectedPlanId ? 'checked' : ''} style="width:auto;" /> ${safePlanName}</span>
+            <strong>${safePlanPrice} MAD</strong>
           `;
           item.querySelector('input').onchange = () => { state.selectedPlanId = p.id; };
           list.appendChild(item);

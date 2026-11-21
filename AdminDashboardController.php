@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
     public function index()
     {
         // 1. Single GROUP BY query for all ad status counts
@@ -146,11 +151,15 @@ class AdminDashboardController extends Controller
             'play_store_url'        => Cache::get('app_play_store_url', 'https://play.google.com/store/apps/details?id=ma.apolo.app'),
         ];
 
-        return view('admin.dashboard', compact(
-            'stats', 'weeklyAds', 'monthlyUsers',
-            'adStatusStats', 'recentUsers', 'pendingAds', 'referralStats',
-            'deviceTokensCount', 'topCities', 'suspiciousUsersCount', 'appConfig'
-        ));
+        return response()
+            ->view('admin.dashboard', compact(
+                'stats', 'weeklyAds', 'monthlyUsers',
+                'adStatusStats', 'recentUsers', 'pendingAds', 'referralStats',
+                'deviceTokensCount', 'topCities', 'suspiciousUsersCount', 'appConfig'
+            ))
+            ->header('X-Frame-Options', 'DENY')
+            ->header('Content-Security-Policy', "frame-ancestors 'none'")
+            ->header('X-Content-Type-Options', 'nosniff');
     }
 
     public function saveAppControl(Request $request)
@@ -160,16 +169,16 @@ class AdminDashboardController extends Controller
             'latest_version'      => 'nullable|string|max:20',
             'maintenance_message' => 'nullable|string|max:255',
             'announcement_banner' => 'nullable|string|max:255',
-            'app_store_url'       => 'nullable|url|max:255',
-            'play_store_url'      => 'nullable|url|max:255',
+            'app_store_url'       => ['nullable', 'url', 'max:255', 'regex:/^https:\/\/(apps\.apple\.com|itunes\.apple\.com)\//i'],
+            'play_store_url'      => ['nullable', 'url', 'max:255', 'regex:/^https:\/\/play\.google\.com\//i'],
         ]);
 
         Cache::forever('app_maintenance_mode', $request->has('maintenance_mode'));
-        Cache::forever('app_maintenance_message', $request->input('maintenance_message', 'تطبيق Apolo.ma يخضع لصيانة دورية مجدولة.'));
-        Cache::forever('app_min_version', $request->input('min_version', '1.0.0'));
-        Cache::forever('app_latest_version', $request->input('latest_version', '2.0.0'));
+        Cache::forever('app_maintenance_message', $request->input('maintenance_message') ?: 'تطبيق Apolo.ma يخضع لصيانة دورية مجدولة.');
+        Cache::forever('app_min_version', $request->input('min_version') ?: '1.0.0');
+        Cache::forever('app_latest_version', $request->input('latest_version') ?: '2.0.0');
         Cache::forever('app_force_update', $request->has('force_update'));
-        Cache::forever('app_announcement_banner', $request->input('announcement_banner', ''));
+        Cache::forever('app_announcement_banner', (string) ($request->input('announcement_banner') ?? ''));
         Cache::forever('app_announcement_active', $request->has('announcement_active'));
         Cache::forever('app_section_vip_enabled', $request->has('section_vip_enabled'));
         Cache::forever('app_section_stores_enabled', $request->has('section_stores_enabled'));
@@ -184,25 +193,54 @@ class AdminDashboardController extends Controller
         $request->validate([
             'push_title' => 'required|string|max:100',
             'push_body'  => 'required|string|max:250',
-            'push_link'  => 'nullable|string|max:255',
+            'push_link'  => ['nullable', 'string', 'max:255', 'regex:/^(https:\/\/|\/[^\/])/i'],
         ]);
 
         $title = $request->input('push_title');
         $body = $request->input('push_body');
         $link = $request->input('push_link');
 
-        // Log push broadcast in database / cache
         $tokensCount = class_exists(DeviceToken::class) ? DeviceToken::count() : 0;
+        $notifiedUsers = 0;
 
-        // Save last broadcast notification
+        User::query()
+            ->where(function ($q) {
+                $q->where('status', 1)->orWhereNull('status');
+            })
+            ->chunkById(100, function ($users) use ($title, $body, $link, &$notifiedUsers) {
+                foreach ($users as $recipient) {
+                    try {
+                        $recipient->notify(new \App\Notifications\AppNotification([
+                            'title_ar'   => $title,
+                            'title_fr'   => $title,
+                            'message_ar' => $body,
+                            'message_fr' => $body,
+                            'icon'       => 'fa-bullhorn text-danger',
+                            'type'       => 'system',
+                            'action_url' => $link ?: '/',
+                        ]));
+                        \App\Services\FcmPushService::sendToUser(
+                            $recipient->id,
+                            $title,
+                            $title,
+                            $body,
+                            $body,
+                            ['type' => 'system', 'action_url' => (string) ($link ?? '')]
+                        );
+                        $notifiedUsers++;
+                    } catch (\Throwable $e) {
+                    }
+                }
+            });
+
         Cache::forever('last_push_broadcast', [
-            'title'     => $title,
-            'body'      => $body,
-            'link'      => $link,
-            'sent_at'   => now()->toDateTimeString(),
-            'recipients'=> $tokensCount,
+            'title'      => $title,
+            'body'       => $body,
+            'link'       => $link,
+            'sent_at'    => now()->toDateTimeString(),
+            'recipients' => max($tokensCount, $notifiedUsers),
         ]);
 
-        return redirect()->route('admin.dashboard')->with('success', "تم جدولة وبث الإشعار الفوري بنجاح إلى {$tokensCount} جهاز متصل عبر تطبيق الموبايل.");
+        return redirect()->route('admin.dashboard')->with('success', "تم إرسال الإشعار بنجاح إلى {$notifiedUsers} مستخدم و {$tokensCount} جهاز متصل.");
     }
 }

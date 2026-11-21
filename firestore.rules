@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// Apolo.ma Cloud Firestore Security Rules (Project: apolo-chat-e3ccf)
+// NOTE:
+// 1. Once Firebase Auth Custom Tokens (minted by Laravel /api/v1/auth/firebase-token)
+//    are enabled in the client, switch `isSignedIn()` below to require `request.auth != null`
+//    and enforce `request.auth.uid in resource.data.participants`.
+// 2. Until Firebase Auth Custom Tokens are rolled out, these rules strictly enforce
+//    collection allowlisting, document ID format, required schema fields, payload size limits,
+//    and immutable sender/participant bindings, and deny all unknown collections.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidUserId(uid) {
+      return uid is string && uid.size() >= 1 && uid.size() <= 32 && uid.matches('^[0-9]+$');
+    }
+
+    function isAuthedUser(uid) {
+      // If Firebase Auth is active on the client, enforce exact UID match;
+      // otherwise validate canonical numeric user ID structure.
+      return request.auth != null
+        ? (request.auth.uid == uid)
+        : isValidUserId(uid);
+    }
+
+    // 1. Conversations collection: ad_{adId}_u_{low}_{high} or dm_u_{low}_{high}
+    match /conversations/{conversationId} {
+      allow read: if conversationId.matches('^(ad_[0-9]+_u_[0-9]+_[0-9]+|dm_u_[0-9]+_[0-9]+)$')
+        && (request.auth == null || (resource != null && request.auth.uid in resource.data.participants));
+
+      allow create: if conversationId.matches('^(ad_[0-9]+_u_[0-9]+_[0-9]+|dm_u_[0-9]+_[0-9]+)$')
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() == 2
+        && isValidUserId(request.resource.data.participants[0])
+        && isValidUserId(request.resource.data.participants[1])
+        && (request.auth == null || request.auth.uid in request.resource.data.participants);
+
+      allow update: if resource.data.participants is list
+        && request.resource.data.participants == resource.data.participants
+        && (request.auth == null || request.auth.uid in resource.data.participants);
+
+      allow delete: if false;
+
+      // 2. Messages subcollection
+      match /messages/{messageId} {
+        allow read: if request.auth == null
+          || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+
+        allow create: if request.resource.data.sender_id is string
+          && isAuthedUser(request.resource.data.sender_id)
+          && (!('body' in request.resource.data) || (request.resource.data.body is string && request.resource.data.body.size() <= 4000))
+          && (!('image_base64' in request.resource.data) || request.resource.data.image_base64 == null || (request.resource.data.image_base64 is string && request.resource.data.image_base64.size() <= 750000))
+          && (!('audio_base64' in request.resource.data) || request.resource.data.audio_base64 == null || (request.resource.data.audio_base64 is string && request.resource.data.audio_base64.size() <= 750000));
+
+        allow update: if resource.data.sender_id is string
+          && request.resource.data.sender_id == resource.data.sender_id
+          && (!('body' in request.resource.data) || (request.resource.data.body is string && request.resource.data.body.size() <= 4000));
+
+        allow delete: if false;
+      }
+    }
+
+    // 3. WebRTC Calls collection
+    match /calls/{callId} {
+      allow read: if request.auth == null
+        || (resource != null && (request.auth.uid == resource.data.caller_id || request.auth.uid == resource.data.callee_id));
+
+      allow create: if request.resource.data.caller_id is string
+        && request.resource.data.callee_id is string
+        && request.resource.data.caller_id != request.resource.data.callee_id
+        && isAuthedUser(request.resource.data.caller_id)
+        && isValidUserId(request.resource.data.callee_id)
+        && request.resource.data.status in ['ringing', 'offered'];
+
+      allow update: if resource.data.caller_id == request.resource.data.caller_id
+        && resource.data.callee_id == request.resource.data.callee_id
+        && request.resource.data.status in ['ringing', 'answered', 'connected', 'ended', 'rejected', 'missed', 'busy'];
+
+      allow delete: if false;
+    }
+
+    // Deny all other collections by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

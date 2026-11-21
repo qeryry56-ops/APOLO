@@ -286,6 +286,7 @@ class _MainShellState extends State<MainShell>
         },
       ),
       PostAdScreen(
+        key: ValueKey('post-ad-${_state.currentUser?['id'] ?? 'guest'}'),
         onSuccess: () {
           _triggerSquashStretch();
           setState(() {

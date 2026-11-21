@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>if (window.top !== window.self) { window.top.location = window.self.location; }</script>
     <title>@yield('title', 'لوحة التحكم') — Apolo Control 2026</title>
     <!-- Fonts: Tajawal + JetBrains Mono for telemetry + Apple SF Pro system fallback -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

@@ -117,7 +117,10 @@
     play: function (id, base64, mime, onProgress, onEnded) {
       window.ApoloVoice.pause();
       try {
-        const src = 'data:' + (mime || 'audio/webm') + ';base64,' + base64;
+        const safeMime = (typeof mime === 'string' && /^audio\/(webm|ogg|mp4|mpeg|wav|aac|x-m4a|3gpp)$/i.test(mime.trim()))
+          ? mime.trim()
+          : 'audio/webm';
+        const src = 'data:' + safeMime + ';base64,' + base64;
         const audio = new Audio(src);
         _activeAudio = audio;
         _activeAudioId = id;

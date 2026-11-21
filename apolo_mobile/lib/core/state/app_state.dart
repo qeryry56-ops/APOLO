@@ -759,7 +759,42 @@ class AppState extends ChangeNotifier {
     return favoriteAdIds.contains(adId);
   }
 
+  Future<void> _clearUserScopedPrefsAndState() async {
+    preferredCityId = null;
+    accountType = 'individual';
+    userLat = null;
+    userLng = null;
+    zoneCityNameAr = null;
+    zoneCityNameFr = null;
+    zoneRadiusKm = MarketplaceLocation.defaultZoneRadiusKm;
+    zoneFilterEnabled = false;
+    categoryInterestWeights = {};
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const keys = <String>[
+        'apolo_preferred_city_id',
+        'apolo_account_type',
+        'apolo_zone_lat',
+        'apolo_zone_lng',
+        'apolo_zone_city_ar',
+        'apolo_zone_city_fr',
+        'apolo_zone_radius_km',
+        'apolo_zone_enabled',
+        'apolo_interest_weights',
+        'apolo_post_ad_draft_v1',
+      ];
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } catch (_) {}
+  }
+
   Future<void> setAuthSession(String token, Map<String, dynamic> user) async {
+    final prevUserId = currentUser?['id']?.toString();
+    final nextUserId = user['id']?.toString();
+    if (prevUserId != null && prevUserId != nextUserId) {
+      await _clearUserScopedPrefsAndState();
+    }
     _sessionRevision++;
     favoriteAdIds.clear();
     await api.setToken(token);
@@ -774,6 +809,7 @@ class AppState extends ChangeNotifier {
       await api.dio.post('/auth/logout');
     } catch (_) {}
     await api.setToken(null);
+    await _clearUserScopedPrefsAndState();
     currentUser = null;
     favoriteAdIds.clear();
     unreadNotificationsCount = 0;

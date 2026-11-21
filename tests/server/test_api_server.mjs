@@ -445,6 +445,7 @@ export function createApoloTestServer({
     res.writeHead(200, {
       'Content-Type': contentType,
       'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
     });
     if (cached) {
       res.end(cached);
@@ -462,21 +463,35 @@ export function createApoloTestServer({
     if (pathname === '/privacy') pathname = '/privacy.html';
     if (pathname === '/delete-account') pathname = '/delete-account.html';
 
+    const resolvedRoot = path.resolve(webRoot);
     const safeRel = pathname.replace(/^\/+/, '');
-    let targetFile = path.resolve(webRoot, safeRel || 'index.html');
-    if (!targetFile.startsWith(path.resolve(webRoot))) {
+    let targetFile = path.resolve(resolvedRoot, safeRel || 'index.html');
+    if (targetFile !== resolvedRoot && !targetFile.startsWith(resolvedRoot + path.sep)) {
       res.writeHead(403).end('Forbidden');
       return;
     }
     if (!fs.existsSync(targetFile) || fs.statSync(targetFile).isDirectory()) {
-      targetFile = path.join(webRoot, 'index.html');
+      targetFile = path.join(resolvedRoot, 'index.html');
     }
     if (!fs.existsSync(targetFile)) {
       res.writeHead(404).end('Not found');
       return;
     }
-    const ext = path.extname(targetFile).toLowerCase();
-    serveCachedFile(res, targetFile, MIME_TYPES[ext] || 'application/octet-stream');
+    let realTarget;
+    let realRoot;
+    try {
+      realTarget = fs.realpathSync(targetFile);
+      realRoot = fs.realpathSync(resolvedRoot);
+    } catch {
+      res.writeHead(404).end('Not found');
+      return;
+    }
+    if (realTarget !== realRoot && !realTarget.startsWith(realRoot + path.sep)) {
+      res.writeHead(403).end('Forbidden');
+      return;
+    }
+    const ext = path.extname(realTarget).toLowerCase();
+    serveCachedFile(res, realTarget, MIME_TYPES[ext] || 'application/octet-stream');
   }
 
   const server = http.createServer(async (req, res) => {
@@ -492,7 +507,13 @@ export function createApoloTestServer({
       }
 
       const urlObj = new URL(req.url, 'http://127.0.0.1');
-      const pathname = decodeURIComponent(urlObj.pathname);
+      let pathname;
+      try {
+        pathname = decodeURIComponent(urlObj.pathname);
+      } catch {
+        res.writeHead(400).end('Bad Request');
+        return;
+      }
 
       if (!pathname.startsWith('/api/v1')) {
         serveStatic(req, res, pathname);

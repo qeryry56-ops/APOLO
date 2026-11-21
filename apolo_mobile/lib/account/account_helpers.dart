@@ -197,8 +197,15 @@ class AccountAuth {
     }
     final data = root['data'] is Map ? root['data'] as Map : root;
     final user = data['user'];
+    final rotatedToken = (data['token'] ??
+            data['access_token'] ??
+            root['token'] ??
+            root['access_token'] ??
+            '')
+        .toString()
+        .trim();
     return AccountSession(
-        pending.token,
+        rotatedToken.isNotEmpty ? rotatedToken : pending.token,
         user is Map && user['id'] != null
             ? Map<String, dynamic>.from(user)
             : pending.user,
