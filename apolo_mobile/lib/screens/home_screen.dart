@@ -821,15 +821,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // 2026 Monochrome Obsidian Gradient Container
+          // Vibrant Red Gradient Container
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [
-                  Color(0xFF0A0A0A),
-                  Color(0xFF18181B),
-                  Color(0xFF27272A),
+                  Color(0xFFC80E16),
+                  Color(0xFFE31B23),
+                  Color(0xFFEA2E37),
                 ],
                 stops: [0.0, 0.58, 1.0],
                 begin: AlignmentDirectional.topStart,
@@ -837,12 +837,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.14),
+                color: Colors.white.withValues(alpha: 0.28),
                 width: 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: _primary.withValues(alpha: 0.18),
+                  color: const Color(0xFFE31B23).withValues(alpha: 0.30),
                   blurRadius: 22,
                   offset: const Offset(0, 8),
                 ),
@@ -977,7 +977,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w900,
-                                    color: _primary,
+                                    color: Color(0xFFE31B23),
                                   ),
                                 ),
                               ),
@@ -987,7 +987,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? CupertinoIcons.arrow_left
                                     : CupertinoIcons.arrow_right,
                                 size: 13,
-                                color: _primary,
+                                color: const Color(0xFFE31B23),
                               ),
                             ],
                           ),
