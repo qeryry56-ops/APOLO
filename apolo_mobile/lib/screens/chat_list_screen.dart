@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'chat_room_screen.dart';
@@ -50,6 +52,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   // Active conversation for desktop 2-column web view
   Map<String, dynamic>? _activeWebConversation;
+  StreamSubscription<List<Map<String, dynamic>>>? _convSub;
+  int? _subscribedUserId;
 
   @override
   void initState() {
@@ -66,6 +70,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   void dispose() {
+    _convSub?.cancel();
     _state.removeListener(_onStateChanged);
     _searchController.dispose();
     super.dispose();
@@ -73,6 +78,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   Future<void> _loadConversations() async {
     if (!_state.isLoggedIn) {
+      _convSub?.cancel();
+      _convSub = null;
+      _subscribedUserId = null;
       if (mounted) {
         setState(() {
           _conversations = [];
@@ -80,6 +88,43 @@ class _ChatListScreenState extends State<ChatListScreen> {
           _isLoading = false;
         });
       }
+      return;
+    }
+
+    final myUserId = int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
+    if (FirebaseChatService.instance.isReady && myUserId > 0) {
+      if (_subscribedUserId == myUserId && _convSub != null) {
+        return;
+      }
+      _convSub?.cancel();
+      _subscribedUserId = myUserId;
+      if (mounted && _conversations.isEmpty) {
+        setState(() => _isLoading = true);
+      }
+      _convSub = FirebaseChatService.instance
+          .watchConversations(myUserId)
+          .listen((list) {
+        if (!mounted) return;
+        setState(() {
+          _conversations = list;
+          if (_activeWebConversation != null) {
+            final activeDocId =
+                _activeWebConversation!['firestore_doc_id']?.toString();
+            final updated = list.where(
+              (c) => c['firestore_doc_id']?.toString() == activeDocId,
+            );
+            _activeWebConversation =
+                updated.isNotEmpty ? updated.first : (list.isNotEmpty ? list.first : null);
+          } else {
+            _activeWebConversation = list.isNotEmpty ? list.first : null;
+          }
+          _isLoading = false;
+        });
+      }, onError: (_) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      });
       return;
     }
 
@@ -338,6 +383,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 onTap: () {
                                   Navigator.pop(dialogCtx);
                                   HapticFeedback.heavyImpact();
+                                  final docId =
+                                      conv['firestore_doc_id']?.toString();
+                                  final myUserId = int.tryParse(
+                                          '${_state.currentUser?['id'] ?? ''}') ??
+                                      0;
+                                  if (FirebaseChatService.instance.isReady &&
+                                      docId != null &&
+                                      docId.isNotEmpty &&
+                                      myUserId > 0) {
+                                    FirebaseChatService.instance
+                                        .deleteConversationForMe(
+                                      docId: docId,
+                                      myUserId: myUserId,
+                                    );
+                                  }
                                   setState(() {
                                     _conversations
                                         .removeWhere((c) => c['id'] == convId);
@@ -537,17 +597,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: _activeWebConversation != null
                   ? ChatRoomScreen(
                       key: ValueKey(
-                          'active_web_${int.tryParse('${_activeWebConversation!['id']}') ?? 101}'),
+                          'active_web_${_activeWebConversation!['firestore_doc_id'] ?? _activeWebConversation!['id']}'),
                       conversationId:
                           int.tryParse('${_activeWebConversation!['id']}') ??
                               101,
+                      firestoreDocId: _activeWebConversation!['firestore_doc_id']
+                          ?.toString(),
+                      peerId: int.tryParse(
+                          '${_activeWebConversation!['peer_id'] ?? ''}'),
                       peerName: (_activeWebConversation!['peer_name'] ??
-                              'Jenny Wilson')
+                              'Apolo User')
                           .toString(),
                       adTitle:
                           _activeWebConversation!['ad_title']?.toString() ?? '',
                       peerAvatar:
                           _activeWebConversation!['peer_avatar']?.toString(),
+                      adImage:
+                          _activeWebConversation!['ad_image']?.toString(),
                       adPrice: _activeWebConversation!['ad_price']?.toString(),
                     )
                   : const Center(
@@ -1049,11 +1115,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
           MaterialPageRoute(
             builder: (_) => ChatRoomScreen(
               key: ValueKey(
-                  'chat_${convId}_${DateTime.now().millisecondsSinceEpoch}'),
+                  'chat_${conv['firestore_doc_id'] ?? convId}_${DateTime.now().millisecondsSinceEpoch}'),
               conversationId: convId,
+              firestoreDocId: conv['firestore_doc_id']?.toString(),
+              peerId: int.tryParse('${conv['peer_id'] ?? ''}'),
               peerName: peerName,
               adTitle: conv['ad_title']?.toString() ?? '',
               peerAvatar: avatarUrl,
+              adImage: conv['ad_image']?.toString(),
               adPrice: conv['ad_price']?.toString(),
             ),
           ),

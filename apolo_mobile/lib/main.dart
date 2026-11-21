@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/config/app_config.dart';
+import 'core/services/firebase_chat_service.dart';
 import 'core/state/app_state.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -9,6 +10,7 @@ import 'theme/app_typography.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseChatService.instance.initialize();
   await AppState().initialize(loadRemote: false);
 
   runApp(const ApoloMobileApp());

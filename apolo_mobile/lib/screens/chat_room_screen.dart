@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'call_screen.dart';
@@ -10,9 +13,10 @@ import 'seller_profile_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
 
-/// Text messaging; unsupported media actions are explicitly unavailable.
+/// Real-time Chat Room powered by Firebase Firestore (with REST fallback).
 class ChatRoomScreen extends StatefulWidget {
   final int conversationId;
+  final String? firestoreDocId;
   final String peerName;
   final int? peerId;
   final String adTitle;
@@ -24,6 +28,7 @@ class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({
     super.key,
     required this.conversationId,
+    this.firestoreDocId,
     required this.peerName,
     this.peerId,
     this.adTitle = '',
@@ -54,11 +59,38 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   bool _loading = true;
   bool _showCallMenu = false;
   bool _sending = false;
+  bool _uploadingMedia = false;
   bool _loadingRequest = false;
+  bool _peerTyping = false;
   String? _loadError;
   Timer? _pollTimer;
   Timer? _focusScrollTimer;
+  Timer? _typingTimer;
+  StreamSubscription<List<Map<String, dynamic>>>? _messagesSub;
+  StreamSubscription<Map<String, dynamic>?>? _convMetaSub;
   Object? _accountId;
+
+  int get _myUserId => int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
+
+  String? get _activeFirestoreDocId {
+    final explicit = widget.firestoreDocId?.trim();
+    if (explicit != null && explicit.isNotEmpty) return explicit;
+    if (FirebaseChatService.instance.isReady &&
+        _myUserId > 0 &&
+        (widget.peerId ?? 0) > 0) {
+      return FirebaseChatService.instance.buildConversationDocId(
+        myUserId: _myUserId,
+        peerUserId: widget.peerId!,
+      );
+    }
+    return null;
+  }
+
+  bool get _useFirestore =>
+      FirebaseChatService.instance.isReady &&
+      _state.isLoggedIn &&
+      _myUserId > 0 &&
+      _activeFirestoreDocId != null;
 
   static const Color _bg = Color(0xFFFFFFFF);
   static const Color _chatBlue = Color(0xFF0A0A0A);
@@ -74,12 +106,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     WidgetsBinding.instance.addObserver(this);
     _accountId = _state.currentUser?['id'];
     _state.addListener(_onAccountChanged);
-    _loadMessages(scrollToBottom: true);
 
     if (widget.initialDraft != null) _msgCtrl.text = widget.initialDraft!;
 
     _msgCtrl.addListener(() {
       if (mounted) setState(() {});
+      _handleTypingActivity();
     });
 
     _focus.addListener(() {
@@ -90,7 +122,94 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
     });
 
-    _startPolling();
+    if (_useFirestore) {
+      _bindFirestoreStreams();
+    } else {
+      _loadMessages(scrollToBottom: true);
+      _startPolling();
+    }
+  }
+
+  void _handleTypingActivity() {
+    if (!_useFirestore) return;
+    final docId = _activeFirestoreDocId!;
+    final hasText = _msgCtrl.text.trim().isNotEmpty;
+    FirebaseChatService.instance.setTyping(
+      docId: docId,
+      myUserId: _myUserId,
+      isTyping: hasText,
+    );
+    _typingTimer?.cancel();
+    if (hasText) {
+      _typingTimer = Timer(const Duration(milliseconds: 2500), () {
+        if (mounted && _useFirestore) {
+          FirebaseChatService.instance.setTyping(
+            docId: docId,
+            myUserId: _myUserId,
+            isTyping: false,
+          );
+        }
+      });
+    }
+  }
+
+  void _bindFirestoreStreams() {
+    _pollTimer?.cancel();
+    _messagesSub?.cancel();
+    _convMetaSub?.cancel();
+
+    final docId = _activeFirestoreDocId;
+    if (docId == null || _myUserId <= 0) return;
+
+    FirebaseChatService.instance.markConversationRead(
+      docId: docId,
+      myUserId: _myUserId,
+    );
+
+    _messagesSub = FirebaseChatService.instance
+        .watchMessages(docId, _myUserId)
+        .listen((incoming) {
+      if (!mounted) return;
+      final hadMore = incoming.length > _messages.length;
+      setState(() {
+        _messages = incoming;
+        _pending.clear();
+        _loading = false;
+        _loadError = null;
+      });
+      if (hadMore) {
+        _scrollToEnd();
+        FirebaseChatService.instance.markConversationRead(
+          docId: docId,
+          myUserId: _myUserId,
+        );
+      }
+    }, onError: (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = _state.s.tr('تعذر الاتصال بالمحادثة. حاول مجدداً.',
+            'Connexion impossible. Réessayez.');
+      });
+    });
+
+    _convMetaSub =
+        FirebaseChatService.instance.watchConversationDoc(docId).listen((data) {
+      if (!mounted || data == null) return;
+      final typingMap = data['typing'] is Map ? data['typing'] as Map : null;
+      bool someoneElseTyping = false;
+      if (typingMap != null) {
+        for (final entry in typingMap.entries) {
+          if ('${entry.key}' != '$_myUserId' && entry.value == true) {
+            someoneElseTyping = true;
+            break;
+          }
+        }
+      }
+      if (someoneElseTyping != _peerTyping) {
+        setState(() => _peerTyping = someoneElseTyping);
+      }
+    });
   }
 
   void _onAccountChanged() {
@@ -102,10 +221,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _loading = false;
     });
     _msgCtrl.clear();
-    _loadMessages();
+    if (_useFirestore) {
+      _bindFirestoreStreams();
+    } else {
+      _loadMessages();
+    }
   }
 
   void _startPolling() {
+    if (_useFirestore) return;
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
@@ -116,6 +240,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_useFirestore) return;
     if (state == AppLifecycleState.resumed) {
       _startPolling();
       if (ModalRoute.of(context)?.isCurrent == true) {
@@ -128,6 +253,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   @override
   void dispose() {
+    if (_useFirestore) {
+      FirebaseChatService.instance.setTyping(
+        docId: _activeFirestoreDocId!,
+        myUserId: _myUserId,
+        isTyping: false,
+      );
+    }
+    _messagesSub?.cancel();
+    _convMetaSub?.cancel();
+    _typingTimer?.cancel();
     _pollTimer?.cancel();
     _focusScrollTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -141,15 +276,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   @override
   void didUpdateWidget(covariant ChatRoomScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.conversationId != widget.conversationId) {
+    if (oldWidget.conversationId != widget.conversationId ||
+        oldWidget.firestoreDocId != widget.firestoreDocId) {
       setState(() {
         _messages = [];
         _pending.clear();
         _loading = true;
         _loadError = null;
+        _peerTyping = false;
         _msgCtrl.text = widget.initialDraft ?? '';
       });
-      _loadMessages(scrollToBottom: true);
+      if (_useFirestore) {
+        _bindFirestoreStreams();
+      } else {
+        _loadMessages(scrollToBottom: true);
+      }
     }
   }
 
@@ -233,6 +374,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _msgCtrl.clear();
     });
 
+    final docMsgId = (target['doc_id'] ?? '').toString().trim();
+    if (_useFirestore && docMsgId.isNotEmpty) {
+      try {
+        await FirebaseChatService.instance.editMessage(
+          docId: _activeFirestoreDocId!,
+          messageDocId: docMsgId,
+          newBody: trimmed,
+        );
+      } catch (_) {}
+      _notice(_state.s.tr('تم تعديل الرسالة', 'Message modifié', 'Message edited'));
+      return;
+    }
+
     final msgId = int.tryParse('${target['id'] ?? ''}');
     if (msgId != null && msgId > 0 && widget.conversationId > 0) {
       try {
@@ -256,6 +410,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         _msgCtrl.clear();
       }
     });
+    final docMsgId = (m['doc_id'] ?? '').toString().trim();
+    if (_useFirestore && docMsgId.isNotEmpty) {
+      try {
+        await FirebaseChatService.instance.deleteMessageForEveryone(
+          docId: _activeFirestoreDocId!,
+          messageDocId: docMsgId,
+        );
+      } catch (_) {}
+      _notice(_state.s.tr(
+        'تم حذف الرسالة لدى الجميع',
+        'Message supprimé pour tout le monde',
+        'Deleted for everyone',
+      ));
+      return;
+    }
     final msgId = int.tryParse('${m['id'] ?? ''}');
     if (msgId != null && msgId > 0 && widget.conversationId > 0) {
       try {
@@ -355,6 +524,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 onTap: () {
                   Navigator.pop(ctx);
                   setState(() => _hiddenMessageKeys.add(key));
+                  final docMsgId = (m['doc_id'] ?? '').toString().trim();
+                  if (_useFirestore && docMsgId.isNotEmpty) {
+                    FirebaseChatService.instance.deleteMessageForMe(
+                      docId: _activeFirestoreDocId!,
+                      messageDocId: docMsgId,
+                      myUserId: _myUserId,
+                    );
+                  }
                   _notice(s.tr(
                     'تم حذف الرسالة من عندك فقط',
                     'Supprimé pour vous uniquement',
@@ -396,6 +573,49 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       await _commitEditMessage(text);
       return;
     }
+    if (_useFirestore) {
+      final docId = _activeFirestoreDocId!;
+      final myName = (_state.currentUser?['name'] ??
+              _state.currentUser?['full_name'] ??
+              'Apolo User')
+          .toString();
+      final myAvatar = (_state.currentUser?['avatar_url'] ??
+              _state.currentUser?['avatar'] ??
+              '')
+          .toString();
+      final peerId = widget.peerId ?? 0;
+
+      if (preset == null) _msgCtrl.clear();
+      setState(() => _sending = true);
+      try {
+        await FirebaseChatService.instance.sendTextMessage(
+          docId: docId,
+          myUserId: _myUserId,
+          myName: myName,
+          myAvatar: myAvatar,
+          peerUserId: peerId,
+          peerName: widget.peerName,
+          peerAvatar: widget.peerAvatar ?? '',
+          body: text,
+          adTitle: widget.adTitle,
+          adPrice: widget.adPrice ?? '',
+          adImage: widget.adImage ?? '',
+        );
+        _scrollToEnd();
+      } catch (_) {
+        if (mounted) {
+          if (_msgCtrl.text.isEmpty) _msgCtrl.text = text;
+          _notice(_state.s.tr(
+            'تعذر إرسال الرسالة. تحقق من الاتصال وحاول مجدداً.',
+            'Impossible d\'envoyer le message. Vérifiez votre connexion.',
+          ));
+        }
+      } finally {
+        if (mounted) setState(() => _sending = false);
+      }
+      return;
+    }
+
     if (!_state.isLoggedIn || widget.conversationId <= 0) {
       _notice(_state.s.tr('سجّل الدخول لإرسال رسالة.',
           'Connectez-vous pour envoyer un message.'));
@@ -465,9 +685,96 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
+  Future<void> _pickAndSendImage() async {
+    if (!_useFirestore) {
+      _mediaUnavailable();
+      return;
+    }
+    if (_uploadingMedia) return;
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 960,
+        imageQuality: 65,
+      );
+      if (picked == null || !mounted) return;
+      setState(() => _uploadingMedia = true);
+
+      final bytes = await picked.readAsBytes();
+      if (bytes.length > 700 * 1024) {
+        if (mounted) {
+          _notice(_state.s.tr(
+            'الصورة كبيرة بزاف، اختار صورة أصغر.',
+            'Image trop lourde, choisissez une image plus petite.',
+            'Image is too large, please choose a smaller one.',
+          ));
+        }
+        return;
+      }
+
+      final base64Str = base64Encode(bytes);
+      final myName = (_state.currentUser?['name'] ??
+              _state.currentUser?['full_name'] ??
+              'Apolo User')
+          .toString();
+      final myAvatar = (_state.currentUser?['avatar_url'] ??
+              _state.currentUser?['avatar'] ??
+              '')
+          .toString();
+
+      await FirebaseChatService.instance.sendImageMessage(
+        docId: _activeFirestoreDocId!,
+        myUserId: _myUserId,
+        myName: myName,
+        myAvatar: myAvatar,
+        peerUserId: widget.peerId ?? 0,
+        peerName: widget.peerName,
+        peerAvatar: widget.peerAvatar ?? '',
+        imageBase64: base64Str,
+        adTitle: widget.adTitle,
+        adPrice: widget.adPrice ?? '',
+        adImage: widget.adImage ?? '',
+      );
+      _scrollToEnd();
+    } catch (_) {
+      if (mounted) {
+        _notice(_state.s.tr(
+          'تعذر إرسال الصورة.',
+          'Impossible d\'envoyer l\'image.',
+          'Failed to send image.',
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingMedia = false);
+    }
+  }
+
+  void _openImagePreview(Uint8List bytes) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.92),
+      builder: (ctx) => Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 4.0,
+            child: Image.memory(bytes, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _mediaUnavailable() => _notice(_state.s.tr(
-      'الرسائل الصوتية والصور غير متاحة حالياً. لم يتم تسجيل أو إرسال أي ملف.',
-      'Les messages vocaux et les photos sont indisponibles. Aucun fichier enregistré ou envoyé.'));
+      'الرسائل الصوتية غير متاحة حالياً. يمكنك إرسال النصوص والصور.',
+      'Les messages vocaux sont indisponibles pour le moment. Vous pouvez envoyer des textes et des photos.'));
 
   // ───────────────────────── Voice & Video Calls ─────────────────────────
   void _startCall({required bool isVideo}) {
@@ -796,22 +1103,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       Container(
                         width: 6.5,
                         height: 6.5,
-                        decoration: const BoxDecoration(
-                          color: _textSubtle,
+                        decoration: BoxDecoration(
+                          color: _useFirestore
+                              ? const Color(0xFF22C55E)
+                              : _textSubtle,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 5),
                       Flexible(
                         child: Text(
-                          _state.s.tr(
-                              'حالة الاتصال غير متاحة', 'Statut indisponible'),
+                          _peerTyping
+                              ? _state.s.tr('يكتب الآن...',
+                                  'En train d\'écrire...', 'Typing...')
+                              : _useFirestore
+                                  ? _state.s.tr('متصل الآن', 'En ligne', 'Online')
+                                  : _state.s.tr('حالة الاتصال غير متاحة',
+                                      'Statut indisponible'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
-                            color: _textMuted,
-                            fontWeight: FontWeight.w500,
+                            color: _peerTyping
+                                ? const Color(0xFF16A34A)
+                                : _textMuted,
+                            fontWeight:
+                                _peerTyping ? FontWeight.w600 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -896,7 +1213,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
 
     final bool isMine = m['is_mine'] == true;
-    final bool isDeletedAll = _deletedForEveryoneKeys.contains(msgKey);
+    final bool isDeletedAll = m['_deleted_for_everyone'] == true ||
+        _deletedForEveryoneKeys.contains(msgKey);
     final bool isEdited =
         m['_edited'] == true || _editedMessageBodies.containsKey(msgKey);
     final String body = isDeletedAll
@@ -908,7 +1226,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         : (_editedMessageBodies[msgKey] ?? m['body'] ?? '').toString();
     final String timeStr = (m['created_at_time'] ?? '').toString();
     final bool isAudio = !isDeletedAll && m['type'] == 'audio';
+    final bool isImage = !isDeletedAll &&
+        m['type'] == 'image' &&
+        (m['image_base64'] ?? '').toString().trim().isNotEmpty;
     final String audioDuration = (m['audio_duration'] ?? '').toString();
+    Uint8List? imageBytes;
+    if (isImage) {
+      try {
+        imageBytes = base64Decode((m['image_base64'] ?? '').toString().trim());
+      } catch (_) {}
+    }
 
     final borderRadius = BorderRadiusDirectional.only(
       topStart: const Radius.circular(18),
@@ -953,7 +1280,35 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 children: [
                   if (isAudio)
                     _buildAudioBubbleContent(index, audioDuration, isMine)
-                  else
+                  else if (imageBytes != null) ...[
+                    GestureDetector(
+                      onTap: () => _openImagePreview(imageBytes!),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: 230,
+                            maxHeight: 260,
+                          ),
+                          child: Image.memory(
+                            imageBytes,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (body.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        body,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isMine ? Colors.white : _textBlack,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ] else
                     Text(
                       body,
                       style: TextStyle(
@@ -1075,9 +1430,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ),
           Row(
             children: [
-              // Start `+` button in circular soft grey container
+              // Start `+` button in circular soft grey container (Photo picker)
               GestureDetector(
-                onTap: _mediaUnavailable,
+                onTap: _pickAndSendImage,
                 child: Container(
                   width: 38,
                   height: 38,
@@ -1086,11 +1441,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
-                    CupertinoIcons.plus,
-                    color: _textBlack,
-                    size: 19,
-                  ),
+                  child: _uploadingMedia
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: _textBlack,
+                          ),
+                        )
+                      : const Icon(
+                          CupertinoIcons.plus,
+                          color: _textBlack,
+                          size: 19,
+                        ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1159,7 +1523,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       ),
                       if (!canSend) ...[
                         GestureDetector(
-                          onTap: _mediaUnavailable,
+                          onTap: _pickAndSendImage,
                           child: const Icon(
                             CupertinoIcons.camera,
                             color: _textMuted,

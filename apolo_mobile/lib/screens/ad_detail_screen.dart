@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/config/app_config.dart';
 import '../core/location/marketplace_location.dart';
+import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'widgets/price_text.dart';
@@ -313,18 +314,74 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
 
     _openingChat = true;
-    final peerName =
-        (_ad?['store']?['name'] ?? _ad?['seller']?['name'] ?? 'Apolo Seller')
-            .toString();
+    final peerName = (_ad?['store']?['name'] ??
+            _ad?['seller_name'] ??
+            _ad?['seller']?['name'] ??
+            _ad?['user']?['name'] ??
+            'Apolo Seller')
+        .toString();
     final peerAvatar = (_ad?['store']?['logo_url'] ??
+            _ad?['seller_avatar'] ??
             _ad?['seller']?['avatar_url'] ??
-            _ad?['seller']?['avatar'])
+            _ad?['seller']?['avatar'] ??
+            _ad?['user']?['avatar_url'] ??
+            _ad?['user']?['avatar'])
         ?.toString();
     final adTitle = (_ad?['title'] ?? '').toString();
     final adPrice =
         (_ad?['price_formatted'] ?? '${_ad?['price'] ?? ''} MAD').toString();
+    final adImage = chatAdImage(_ad);
+
+    final myUserId = int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
+    final rawPeerId = int.tryParse(
+            '${_ad?['user_id'] ?? _ad?['seller_id'] ?? _ad?['seller']?['id'] ?? _ad?['user']?['id'] ?? _ad?['store']?['user_id'] ?? ''}') ??
+        0;
+    final peerId = rawPeerId > 0 ? rawPeerId : (1000000 + widget.adId);
 
     try {
+      // Primary path: Real-time Firebase Firestore Chat
+      if (FirebaseChatService.instance.isReady && myUserId > 0) {
+        final myName = (_state.currentUser?['name'] ??
+                _state.currentUser?['full_name'] ??
+                'Apolo User')
+            .toString();
+        final myAvatar = (_state.currentUser?['avatar_url'] ??
+                _state.currentUser?['avatar'] ??
+                '')
+            .toString();
+        final docId = await FirebaseChatService.instance.ensureConversation(
+          myUserId: myUserId,
+          myName: myName,
+          myAvatar: myAvatar,
+          peerUserId: peerId,
+          peerName: peerName,
+          peerAvatar: peerAvatar ?? '',
+          adId: widget.adId,
+          adTitle: adTitle,
+          adPrice: adPrice,
+          adImage: adImage ?? '',
+        );
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatRoomScreen(
+                conversationId: docId.hashCode.abs(),
+                firestoreDocId: docId,
+                peerId: peerId,
+                peerName: peerName,
+                adTitle: adTitle,
+                peerAvatar: peerAvatar,
+                adImage: adImage,
+                adPrice: adPrice,
+                initialDraft: presetMessage,
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
       final res = await _state.api.dio
           .post('/chat/start', data: {'ad_id': widget.adId});
       if (res.data is Map && res.data['status'] == 'success') {
@@ -336,11 +393,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             MaterialPageRoute(
               builder: (_) => ChatRoomScreen(
                 conversationId: convId,
+                peerId: peerId,
                 peerName: (conv['other_user']?['name'] ?? peerName).toString(),
                 adTitle: adTitle,
                 peerAvatar: (conv['other_user']?['avatar_url'] ?? peerAvatar)
                     ?.toString(),
-                adImage: chatAdImage(_ad),
+                adImage: adImage,
                 adPrice: adPrice,
                 initialDraft: presetMessage,
               ),
