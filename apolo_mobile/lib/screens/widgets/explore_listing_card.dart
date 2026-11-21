@@ -17,7 +17,7 @@ import 'kinetic_widgets.dart';
 ///   - Row 1: Bold title ("Casa Oliva Villa") + gold star #F59E0B rating ("4.8 (126)")
 ///   - Row 2: Compact specs line ("Cascais, 14 km · 3 bedrooms · Pool")
 ///   - Subtle 1px divider
-///   - Bottom row: Emerald checkmark feature ("Free cancellation") on left +
+///   - Bottom row: Seller circular avatar + name (+ verified badge) on left +
 ///     Bold total price ("$933 total") & nightly subtitle ("$233 / night · taxes incl.") on right
 class ExploreListingCard extends StatefulWidget {
   final Map<String, dynamic> ad;
@@ -43,7 +43,7 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
 
   static const Color _ink = Color(0xFF0F172A);
   static const Color _muted = Color(0xFF64748B);
-  static const Color _emerald = Color(0xFF059669);
+  static const Color _verifiedBlue = Color(0xFF1D9BF0);
   static const Color _starAmber = Color(0xFFF59E0B);
 
   @override
@@ -308,16 +308,134 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
     return parts.join(' · ');
   }
 
-  String _resolveFeatureLabel() {
+  String _resolveSellerName() {
     final ad = widget.ad;
-    final explicit = (ad['feature_label'] ?? '').toString().trim();
-    if (explicit.isNotEmpty) return explicit;
+    final userMap = ad['user'] is Map
+        ? Map<String, dynamic>.from(ad['user'] as Map)
+        : null;
+    final sellerMap = ad['seller'] is Map
+        ? Map<String, dynamic>.from(ad['seller'] as Map)
+        : null;
+    final storeMap = ad['store'] is Map
+        ? Map<String, dynamic>.from(ad['store'] as Map)
+        : null;
 
-    if (ad['free_cancellation'] == true) return 'Free cancellation';
-    if (ad['negotiable'] == true || ad['is_negotiable'] == true) {
-      return _state.s.tr('قابل للتفاوض', 'Prix négociable', 'Negotiable');
+    final candidates = [
+      ad['seller_name'],
+      ad['host_name'],
+      userMap?['name'],
+      userMap?['full_name'],
+      sellerMap?['name'],
+      storeMap?['name'],
+    ];
+
+    for (final c in candidates) {
+      final s = (c ?? '').toString().trim();
+      if (s.isNotEmpty) return s;
     }
-    return _state.s.tr('إعلان موثوق', 'Annonce vérifiée', 'Free cancellation');
+
+    return _state.s.tr('معلن', 'Vendeur', 'Seller');
+  }
+
+  String _resolveSellerAvatar() {
+    final ad = widget.ad;
+    final userMap = ad['user'] is Map
+        ? Map<String, dynamic>.from(ad['user'] as Map)
+        : null;
+    final sellerMap = ad['seller'] is Map
+        ? Map<String, dynamic>.from(ad['seller'] as Map)
+        : null;
+    final storeMap = ad['store'] is Map
+        ? Map<String, dynamic>.from(ad['store'] as Map)
+        : null;
+
+    final candidates = [
+      ad['seller_avatar'],
+      ad['host_avatar'],
+      userMap?['avatar'],
+      userMap?['avatar_url'],
+      sellerMap?['avatar'],
+      sellerMap?['avatar_url'],
+      storeMap?['logo_url'],
+      storeMap?['logo'],
+    ];
+
+    for (final c in candidates) {
+      final s = (c ?? '').toString().trim();
+      if (s.isNotEmpty) return s;
+    }
+
+    return '';
+  }
+
+  bool _isSellerVerified() {
+    final ad = widget.ad;
+    final userMap = ad['user'] is Map ? ad['user'] as Map : null;
+    final sellerMap = ad['seller'] is Map ? ad['seller'] as Map : null;
+    return ad['seller_verified'] == true ||
+        ad['is_verified'] == true ||
+        ad['verified'] == true ||
+        userMap?['is_verified'] == true ||
+        sellerMap?['is_verified'] == true;
+  }
+
+  Widget _buildSellerAvatar(String avatarUrl, String sellerName) {
+    final initial = sellerName.trim().isNotEmpty
+        ? sellerName.trim().substring(0, 1).toUpperCase()
+        : 'A';
+
+    Widget fallbackAvatar() {
+      return Container(
+        width: 34,
+        height: 34,
+        decoration: const BoxDecoration(
+          color: Color(0xFF0A0A0A),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
+
+    if (avatarUrl.isEmpty) {
+      return fallbackAvatar();
+    }
+
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFFF1F5F9),
+        border: Border.all(
+          color: Colors.black.withValues(alpha: 0.06),
+          width: 0.8,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: avatarUrl.startsWith('assets/')
+          ? Image.asset(
+              avatarUrl,
+              fit: BoxFit.cover,
+              width: 34,
+              height: 34,
+              errorBuilder: (_, __, ___) => fallbackAvatar(),
+            )
+          : AppImage(
+              url: avatarUrl,
+              fit: BoxFit.cover,
+              width: 34,
+              height: 34,
+              fallback: fallbackAvatar(),
+            ),
+    );
   }
 
   ({String mainAmount, String unitSuffix, String subLine}) _resolvePricing() {
@@ -496,7 +614,9 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
     final rating = _resolveRating();
     final reviewsCount = _resolveReviewsCount();
     final specsLine = _resolveSpecsLine(typeBadge);
-    final featureLabel = _resolveFeatureLabel();
+    final sellerName = _resolveSellerName();
+    final sellerAvatar = _resolveSellerAvatar();
+    final isSellerVerified = _isSellerVerified();
     final pricing = _resolvePricing();
     final isFav = _isFavorited;
     final int dotCount = images.length > 1 ? images.length.clamp(2, 6) : 5;
@@ -758,39 +878,41 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Bottom Row: Feature (✓ Free cancellation) on Start + Pricing on End
+                  // Bottom Row: Seller Profile (Avatar + Name + Verified) on Start + Pricing on End
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final maxRightWidth =
                           (constraints.maxWidth * 0.56).clamp(110.0, 220.0);
                       return Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 2),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.check_rounded,
-                                    size: 15,
-                                    color: _emerald,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Expanded(
-                                    child: Text(
-                                      featureLabel,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: _emerald,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                            child: Row(
+                              children: [
+                                _buildSellerAvatar(sellerAvatar, sellerName),
+                                const SizedBox(width: 9),
+                                Flexible(
+                                  child: Text(
+                                    sellerName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: _ink,
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: -0.1,
                                     ),
                                   ),
+                                ),
+                                if (isSellerVerified) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.verified_rounded,
+                                    size: 16,
+                                    color: _verifiedBlue,
+                                  ),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 10),

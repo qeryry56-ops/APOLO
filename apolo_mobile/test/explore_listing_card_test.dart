@@ -104,7 +104,8 @@ void main() {
       'rating': '4.8',
       'reviews_count': 126,
       'specs_display': 'Cascais, 14 km · 3 bedrooms · Pool',
-      'free_cancellation': true,
+      'seller_name': 'Sarah',
+      'seller_verified': true,
       'total_price_display': '\$933',
       'total_unit_label': 'total',
       'nightly_price_display': '\$233 / night · taxes incl.',
@@ -151,8 +152,8 @@ void main() {
     expect(find.text('(126)'), findsOneWidget);
     expect(find.byIcon(Icons.star_rounded), findsOneWidget);
     expect(find.text('Cascais, 14 km · 3 bedrooms · Pool'), findsOneWidget);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-    expect(find.text('Free cancellation'), findsOneWidget);
+    expect(find.text('Sarah'), findsOneWidget);
+    expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
     expect(find.text('\$233 / night · taxes incl.'), findsOneWidget);
 
     // Verify PageView swipe updates active slide cleanly
