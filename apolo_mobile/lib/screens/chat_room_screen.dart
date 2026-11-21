@@ -46,6 +46,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   List<Map<String, dynamic>> _messages = [];
   final List<Map<String, dynamic>> _pending = [];
+  final Set<String> _hiddenMessageKeys = {};
+  final Set<String> _deletedForEveryoneKeys = {};
+  final Map<String, String> _editedMessageBodies = {};
+  Map<String, dynamic>? _editingMessage;
+  String? _editingMessageKey;
   bool _loading = true;
   bool _showCallMenu = false;
   bool _sending = false;
@@ -206,9 +211,191 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
+  String _messageKey(Map<String, dynamic> m, int index) {
+    final id = m['id'];
+    if (id != null && id.toString().isNotEmpty) return 'id_$id';
+    return 'local_${index}_${m['created_at_time'] ?? ''}_${m['body'] ?? ''}';
+  }
+
+  Future<void> _commitEditMessage(String newText) async {
+    final target = _editingMessage;
+    final key = _editingMessageKey;
+    if (target == null || key == null) return;
+    final trimmed = newText.trim();
+    if (trimmed.isEmpty) return;
+
+    setState(() {
+      _editedMessageBodies[key] = trimmed;
+      target['body'] = trimmed;
+      target['_edited'] = true;
+      _editingMessage = null;
+      _editingMessageKey = null;
+      _msgCtrl.clear();
+    });
+
+    final msgId = int.tryParse('${target['id'] ?? ''}');
+    if (msgId != null && msgId > 0 && widget.conversationId > 0) {
+      try {
+        await _state.api.dio.put(
+          '/chat/conversations/${widget.conversationId}/messages/$msgId',
+          data: {'body': trimmed, 'message': trimmed},
+        );
+      } catch (_) {}
+    }
+    _notice(_state.s.tr('تم تعديل الرسالة', 'Message modifié', 'Message edited'));
+  }
+
+  Future<void> _deleteMessageForEveryone(
+      Map<String, dynamic> m, String key) async {
+    setState(() {
+      _deletedForEveryoneKeys.add(key);
+      _editedMessageBodies.remove(key);
+      if (_editingMessageKey == key) {
+        _editingMessage = null;
+        _editingMessageKey = null;
+        _msgCtrl.clear();
+      }
+    });
+    final msgId = int.tryParse('${m['id'] ?? ''}');
+    if (msgId != null && msgId > 0 && widget.conversationId > 0) {
+      try {
+        await _state.api.dio.delete(
+          '/chat/conversations/${widget.conversationId}/messages/$msgId',
+          data: {'scope': 'everyone'},
+        );
+      } catch (_) {}
+    }
+    _notice(_state.s.tr(
+      'تم حذف الرسالة لدى الجميع',
+      'Message supprimé pour tout le monde',
+      'Deleted for everyone',
+    ));
+  }
+
+  void _showMessageActionsSheet(Map<String, dynamic> m, int index) {
+    final key = _messageKey(m, index);
+    if (_deletedForEveryoneKeys.contains(key)) return;
+    HapticFeedback.mediumImpact();
+    final s = _state.s;
+    final bool isMine = m['is_mine'] == true;
+    final bool isAudio = m['type'] == 'audio';
+    final String body = (_editedMessageBodies[key] ?? m['body'] ?? '').toString();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1D5DB),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (!isAudio && body.isNotEmpty)
+                ListTile(
+                  leading: const Icon(CupertinoIcons.doc_on_doc,
+                      color: _textBlack, size: 20),
+                  title: Text(
+                    s.tr('نسخ النص', 'Copier le texte', 'Copy text'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: _textBlack,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Clipboard.setData(ClipboardData(text: body));
+                    _notice(s.tr('تم النسخ', 'Copié', 'Copied'));
+                  },
+                ),
+              if (isMine && !isAudio)
+                ListTile(
+                  leading: const Icon(CupertinoIcons.pencil,
+                      color: _textBlack, size: 20),
+                  title: Text(
+                    s.tr('تعديل الرسالة', 'Modifier le message', 'Edit message'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: _textBlack,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _editingMessage = m;
+                      _editingMessageKey = key;
+                      _msgCtrl.text = body;
+                      _msgCtrl.selection =
+                          TextSelection.collapsed(offset: body.length);
+                    });
+                    _focus.requestFocus();
+                  },
+                ),
+              ListTile(
+                leading: const Icon(CupertinoIcons.eye_slash,
+                    color: _textBlack, size: 20),
+                title: Text(
+                  s.tr('حذف لدي فقط', 'Supprimer pour moi', 'Delete for me'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _textBlack,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _hiddenMessageKeys.add(key));
+                  _notice(s.tr(
+                    'تم حذف الرسالة من عندك فقط',
+                    'Supprimé pour vous uniquement',
+                    'Deleted for you',
+                  ));
+                },
+              ),
+              if (isMine)
+                ListTile(
+                  leading: const Icon(CupertinoIcons.trash,
+                      color: Color(0xFFE31B23), size: 20),
+                  title: Text(
+                    s.tr(
+                      'حذف لدى الجميع',
+                      'Supprimer pour tout le monde',
+                      'Delete for everyone',
+                    ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFE31B23),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _deleteMessageForEveryone(m, key);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _sendText([String? preset]) async {
     final text = (preset ?? _msgCtrl.text).trim();
     if (text.isEmpty || _sending || !mounted) return;
+    if (preset == null && _editingMessage != null) {
+      await _commitEditMessage(text);
+      return;
+    }
     if (!_state.isLoggedIn || widget.conversationId <= 0) {
       _notice(_state.s.tr('سجّل الدخول لإرسال رسالة.',
           'Connectez-vous pour envoyer un message.'));
@@ -700,11 +887,27 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   // ───────────────────────── 2. Message Bubbles ─────────────────────────
-  Widget _buildMessageBubble(dynamic m, int index) {
+  Widget _buildMessageBubble(dynamic rawMsg, int index) {
+    final Map<String, dynamic> m =
+        rawMsg is Map<String, dynamic> ? rawMsg : Map<String, dynamic>.from(rawMsg);
+    final String msgKey = _messageKey(m, index);
+    if (_hiddenMessageKeys.contains(msgKey)) {
+      return const SizedBox.shrink();
+    }
+
     final bool isMine = m['is_mine'] == true;
-    final String body = (m['body'] ?? '').toString();
+    final bool isDeletedAll = _deletedForEveryoneKeys.contains(msgKey);
+    final bool isEdited =
+        m['_edited'] == true || _editedMessageBodies.containsKey(msgKey);
+    final String body = isDeletedAll
+        ? _state.s.tr(
+            'تم حذف هذه الرسالة',
+            'Ce message a été supprimé',
+            'This message was deleted',
+          )
+        : (_editedMessageBodies[msgKey] ?? m['body'] ?? '').toString();
     final String timeStr = (m['created_at_time'] ?? '').toString();
-    final bool isAudio = m['type'] == 'audio';
+    final bool isAudio = !isDeletedAll && m['type'] == 'audio';
     final String audioDuration = (m['audio_duration'] ?? '').toString();
 
     final borderRadius = BorderRadiusDirectional.only(
@@ -721,67 +924,90 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.76,
-            ),
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-            decoration: BoxDecoration(
-              color: isMine ? _chatBlue : _surfaceGrey,
-              borderRadius: borderRadius,
-              boxShadow: [
-                BoxShadow(
-                  color: isMine
-                      ? _chatBlue.withValues(alpha: 0.14)
-                      : Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isAudio)
-                  _buildAudioBubbleContent(index, audioDuration, isMine)
-                else
-                  Text(
-                    body,
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      height: 1.35,
-                      color: isMine ? Colors.white : _textBlack,
-                      fontWeight: FontWeight.w500,
-                    ),
+          GestureDetector(
+            onLongPress:
+                isDeletedAll ? null : () => _showMessageActionsSheet(m, index),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.76,
+              ),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+              decoration: BoxDecoration(
+                color: isDeletedAll
+                    ? _surfaceGrey
+                    : (isMine ? _chatBlue : _surfaceGrey),
+                borderRadius: borderRadius,
+                boxShadow: [
+                  BoxShadow(
+                    color: isMine && !isDeletedAll
+                        ? _chatBlue.withValues(alpha: 0.14)
+                        : Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isAudio)
+                    _buildAudioBubbleContent(index, audioDuration, isMine)
+                  else
                     Text(
-                      timeStr,
+                      body,
                       style: TextStyle(
-                        fontSize: 11,
-                        color: isMine ? Colors.white70 : _textSubtle,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 14.5,
+                        height: 1.35,
+                        fontStyle:
+                            isDeletedAll ? FontStyle.italic : FontStyle.normal,
+                        color: isDeletedAll
+                            ? _textMuted
+                            : (isMine ? Colors.white : _textBlack),
+                        fontWeight:
+                            isDeletedAll ? FontWeight.w400 : FontWeight.w500,
                       ),
                     ),
-                    if (isMine) ...[
-                      const SizedBox(width: 4),
-                      Icon(
-                        m['_pending'] == true
-                            ? CupertinoIcons.clock
-                            : m['read'] == true
-                                ? Icons.done_all_rounded
-                                : Icons.done_rounded,
-                        size: 14,
-                        color: Colors.white,
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isEdited && !isDeletedAll) ...[
+                        Text(
+                          _state.s.tr('معدّلة · ', 'modifié · ', 'edited · '),
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: isMine ? Colors.white60 : _textSubtle,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDeletedAll
+                              ? _textSubtle
+                              : (isMine ? Colors.white70 : _textSubtle),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
+                      if (isMine && !isDeletedAll) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          m['_pending'] == true
+                              ? CupertinoIcons.clock
+                              : m['read'] == true
+                                  ? Icons.done_all_rounded
+                                  : Icons.done_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -806,114 +1032,182 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Start `+` button in circular soft grey container
-          GestureDetector(
-            onTap: _mediaUnavailable,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: _surfaceGrey,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                CupertinoIcons.plus,
-                color: _textBlack,
-                size: 19,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Pill Text Field (`Type a message...`)
-          Expanded(
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+          if (_editingMessage != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: _surfaceGrey,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
                 children: [
+                  const Icon(CupertinoIcons.pencil,
+                      size: 15, color: _textBlack),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: TextField(
-                      key: const Key('chat-draft'),
-                      controller: _msgCtrl,
-                      focusNode: _focus,
-                      textCapitalization: TextCapitalization.sentences,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendText(),
+                    child: Text(
+                      _state.s.tr('تعديل الرسالة', 'Modifier le message',
+                          'Editing message'),
                       style: const TextStyle(
-                        fontSize: 14.5,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
                         color: _textBlack,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: _state.s.tr('اكتب رسالة...',
-                            'Écrire un message...', 'Type a message...'),
-                        hintStyle: const TextStyle(
-                          color: _textSubtle,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
                       ),
                     ),
                   ),
-                  if (!canSend) ...[
-                    GestureDetector(
-                      onTap: _mediaUnavailable,
-                      child: const Icon(
-                        CupertinoIcons.camera,
-                        color: _textMuted,
-                        size: 19,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Media integration is not available; tapping explains the limitation.
-                    GestureDetector(
-                      onTap: _mediaUnavailable,
-                      child: const Icon(
-                        CupertinoIcons.mic_fill,
-                        color: _chatBlue,
-                        size: 19,
-                      ),
-                    ),
-                  ],
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _editingMessage = null;
+                        _editingMessageKey = null;
+                        _msgCtrl.clear();
+                      });
+                    },
+                    child: const Icon(CupertinoIcons.xmark_circle_fill,
+                        size: 18, color: _textMuted),
+                  ),
                 ],
               ),
             ),
-          ),
-
-          // Sky-Blue Send Button
-          if (canSend) ...[
-            const SizedBox(width: 8),
-            GestureDetector(
-              key: const Key('chat-send'),
-              onTap: _sending ? null : () => _sendText(),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: _chatBlue,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  CupertinoIcons.arrow_up,
-                  color: Colors.white,
-                  size: 19,
+          Row(
+            children: [
+              // Start `+` button in circular soft grey container
+              GestureDetector(
+                onTap: _mediaUnavailable,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: const BoxDecoration(
+                    color: _surfaceGrey,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    CupertinoIcons.plus,
+                    color: _textBlack,
+                    size: 19,
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+
+              // Clean Single-Frame Pill Text Field (no inner border)
+              Expanded(
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: _surfaceGrey,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Theme(
+                          data: Theme.of(context).copyWith(
+                            inputDecorationTheme: const InputDecorationTheme(
+                              filled: false,
+                              fillColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          child: TextField(
+                            key: const Key('chat-draft'),
+                            controller: _msgCtrl,
+                            focusNode: _focus,
+                            minLines: 1,
+                            maxLines: 4,
+                            textCapitalization: TextCapitalization.sentences,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => _sendText(),
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              color: _textBlack,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              filled: false,
+                              fillColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              hintText: _state.s.tr('اكتب رسالة...',
+                                  'Écrire un message...', 'Type a message...'),
+                              hintStyle: const TextStyle(
+                                color: _textSubtle,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              isDense: true,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 11),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (!canSend) ...[
+                        GestureDetector(
+                          onTap: _mediaUnavailable,
+                          child: const Icon(
+                            CupertinoIcons.camera,
+                            color: _textMuted,
+                            size: 19,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // Media integration is not available; tapping explains the limitation.
+                        GestureDetector(
+                          onTap: _mediaUnavailable,
+                          child: const Icon(
+                            CupertinoIcons.mic_fill,
+                            color: _chatBlue,
+                            size: 19,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // Monochrome Send / Save Edit Button
+              if (canSend) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  key: const Key('chat-send'),
+                  onTap: _sending ? null : () => _sendText(),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: const BoxDecoration(
+                      color: _chatBlue,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      _editingMessage != null
+                          ? Icons.check_rounded
+                          : CupertinoIcons.arrow_up,
+                      color: Colors.white,
+                      size: 19,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );

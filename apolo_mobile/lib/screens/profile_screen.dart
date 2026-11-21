@@ -798,6 +798,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: AppImage(url: imgUrl, fit: BoxFit.cover),
                             ),
                             PositionedDirectional(
+                              top: 8,
+                              end: 8,
+                              child: GestureDetector(
+                                onTap: () => _showAdQuickActions(ad, isAr),
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.94),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.12),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    CupertinoIcons.ellipsis,
+                                    color: _ink,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            PositionedDirectional(
                               bottom: 10,
                               end: 10,
                               child: GestureDetector(
@@ -1482,20 +1511,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Container(
+                width: 38,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1D5DB),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
               ListTile(
-                leading: const Icon(CupertinoIcons.bolt_fill, color: _primary),
+                leading: const Icon(CupertinoIcons.pencil, color: _ink),
                 title: Text(
-                    isAr ? 'تمويل الإعلان (Boost)' : 'Booster cette annonce'),
+                  isAr ? 'تعديل الإعلان' : 'Modifier l’annonce',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _ink,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PostAdScreen(initialAd: ad),
+                    ),
+                  ).then((_) => _loadProfileData());
+                },
+              ),
+              ListTile(
+                leading: const Icon(CupertinoIcons.bolt_fill, color: _ink),
+                title: Text(
+                  isAr ? 'تمويل الإعلان (Boost)' : 'Booster cette annonce',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _ink,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _openBoostModal(adId: adId, adTitle: title);
                 },
               ),
               ListTile(
-                leading: const Icon(CupertinoIcons.trash, color: _primary),
+                leading: const Icon(
+                  CupertinoIcons.trash,
+                  color: Color(0xFFE31B23),
+                ),
                 title: Text(
                   isAr ? 'حذف الإعلان' : 'Supprimer l’annonce',
-                  style: const TextStyle(color: _primary),
+                  style: const TextStyle(
+                    color: Color(0xFFE31B23),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 onTap: () async {
                   Navigator.pop(ctx);

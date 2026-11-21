@@ -1560,27 +1560,16 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             Row(
               children: [
                 Container(
-                  width: 26,
-                  height: 26,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1A84FF), _fbBlue],
-                    ),
+                    color: _ink,
                     borderRadius: BorderRadius.circular(9),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _fbBlue.withValues(alpha: 0.28),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
                   alignment: Alignment.center,
                   child: const Icon(
                     CupertinoIcons.chat_bubble_fill,
-                    size: 13,
+                    size: 13.5,
                     color: Colors.white,
                   ),
                 ),
@@ -1599,11 +1588,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3.5,
+                    horizontal: 9,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEBF5FF),
+                    color: _surface,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -1611,7 +1600,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     style: const TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
-                      color: _fbBlue,
+                      color: _ink,
                     ),
                   ),
                 ),
@@ -1624,42 +1613,59 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 46),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 6,
+                      horizontal: 16,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF3F5F8),
-                      borderRadius: BorderRadius.circular(23),
-                      border: Border.all(
-                        color: const Color(0xFFE5E8EE),
-                        width: 1,
-                      ),
+                      color: _surface,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                     alignment: AlignmentDirectional.centerStart,
-                    child: TextField(
-                      key: const Key('detail-quick-msg'),
-                      controller: _quickMsgCtrl,
-                      minLines: 1,
-                      maxLines: 2,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: _ink,
-                        height: 1.3,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 4),
-                        hintText: s.tr(
-                          'اكتب رسالتك هنا...',
-                          'Écrivez votre message...',
-                          'Write a message...',
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        inputDecorationTheme: const InputDecorationTheme(
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
                         ),
-                        hintStyle: const TextStyle(
+                      ),
+                      child: TextField(
+                        key: const Key('detail-quick-msg'),
+                        controller: _quickMsgCtrl,
+                        minLines: 1,
+                        maxLines: 2,
+                        style: const TextStyle(
                           fontSize: 13.5,
-                          color: _mutedText,
+                          color: _ink,
+                          height: 1.3,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          isDense: true,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 8),
+                          hintText: s.tr(
+                            'اكتب رسالتك هنا...',
+                            'Écrivez votre message...',
+                            'Write a message...',
+                          ),
+                          hintStyle: const TextStyle(
+                            fontSize: 13.5,
+                            color: _mutedText,
+                          ),
                         ),
                       ),
                     ),
@@ -1675,23 +1681,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     );
                   },
                   child: Container(
-                    height: 44,
-                    constraints: const BoxConstraints(minWidth: 76),
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    height: 46,
+                    constraints: const BoxConstraints(minWidth: 78),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF1A7BFF), Color(0xFF0055E5)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _fbBlue.withValues(alpha: 0.26),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                      color: _ink,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                     alignment: Alignment.center,
                     child: Text(
