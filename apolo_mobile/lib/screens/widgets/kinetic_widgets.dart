@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/perceived_performance.dart';
 
 /// Spring-physics entrance + scroll-staggered reveal widget.
 /// Ensures screens feel alive as the user scrolls through sections and cards.
@@ -79,19 +81,27 @@ class _ScrollRevealState extends State<ScrollReveal>
   }
 }
 
-/// Tactile pressable wrapper with spring-back micro-interaction.
+/// Rule 1 ("REACT AT ONCE") & Rule 3 ("MOVE WITH EASE"):
+/// Tactile pressable wrapper with instant `<16ms` touch-down feedback:
+/// - Scales down to `95%` (`0.95`) and changes opacity to `0.82` on `onTapDown` (before API call starts).
+/// - Triggers immediate haptic feedback (`HapticFeedback.lightImpact()`) on touch down.
+/// - Animates over `220ms` (200-300ms micro-interaction window) with `cubic-bezier(0.22, 1, 0.36, 1)`.
 class PressableScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final double pressedScale;
+  final double pressedOpacity;
+  final bool enableHaptic;
 
   const PressableScale({
     super.key,
     required this.child,
     this.onTap,
     this.onLongPress,
-    this.pressedScale = 0.965,
+    this.pressedScale = ApoloMotion.pressedScale,
+    this.pressedOpacity = ApoloMotion.pressedOpacity,
+    this.enableHaptic = true,
   });
 
   @override
@@ -103,11 +113,21 @@ class _PressableScaleState extends State<PressableScale> {
 
   @override
   Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : ApoloMotion.microDuration;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onLongPress: widget.onLongPress,
-      onTapDown:
-          widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
+      onTapDown: widget.onTap != null
+          ? (_) {
+              if (widget.enableHaptic) {
+                HapticFeedback.lightImpact();
+              }
+              setState(() => _pressed = true);
+            }
+          : null,
       onTapUp: widget.onTap != null
           ? (_) {
               setState(() => _pressed = false);
@@ -118,11 +138,14 @@ class _PressableScaleState extends State<PressableScale> {
           widget.onTap != null ? () => setState(() => _pressed = false) : null,
       child: AnimatedScale(
         scale: _pressed ? widget.pressedScale : 1.0,
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 150),
-        curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-        child: widget.child,
+        duration: duration,
+        curve: ApoloMotion.easeOutCurve,
+        child: AnimatedOpacity(
+          opacity: _pressed ? widget.pressedOpacity : 1.0,
+          duration: duration,
+          curve: ApoloMotion.easeOutCurve,
+          child: widget.child,
+        ),
       ),
     );
   }

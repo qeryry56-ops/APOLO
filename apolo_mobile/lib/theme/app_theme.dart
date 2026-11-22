@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
+import '../widgets/perceived_performance.dart';
 import 'app_typography.dart';
 
 /// Centralized theme builder for Apolo.ma with dynamic typography integration
@@ -94,6 +95,16 @@ class AppTheme {
     );
 
     return baseTheme.copyWith(
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: SpringPageTransitionsBuilder(),
+          TargetPlatform.iOS: SpringPageTransitionsBuilder(),
+          TargetPlatform.macOS: SpringPageTransitionsBuilder(),
+          TargetPlatform.windows: SpringPageTransitionsBuilder(),
+          TargetPlatform.linux: SpringPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: SpringPageTransitionsBuilder(),
+        },
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: appBarBg,
         foregroundColor: textPrimary,

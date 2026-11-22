@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/state/app_state.dart';
+import '../../widgets/perceived_performance.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
@@ -35,11 +36,15 @@ class ExploreListingCard extends StatefulWidget {
   State<ExploreListingCard> createState() => _ExploreListingCardState();
 }
 
-class _ExploreListingCardState extends State<ExploreListingCard> {
+class _ExploreListingCardState extends State<ExploreListingCard>
+    with SingleTickerProviderStateMixin {
   final AppState _state = AppState();
   final PageController _pageController = PageController();
   int _activePage = 0;
   bool? _localFavoriteOverride;
+  bool _isFavPressed = false;
+  late final AnimationController _heartBounceCtrl;
+  late final Animation<double> _heartBounceScale;
 
   static const Color _ink = Color(0xFF0F172A);
   static const Color _muted = Color(0xFF64748B);
@@ -47,7 +52,30 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
   static const Color _starAmber = Color(0xFFF59E0B);
 
   @override
+  void initState() {
+    super.initState();
+    // Rule 3: 260ms ease-out heart bounce (cubic-bezier(0.22, 1, 0.36, 1))
+    _heartBounceCtrl = AnimationController(
+      vsync: this,
+      duration: ApoloMotion.bounceDuration,
+    );
+    _heartBounceScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.26)
+            .chain(CurveTween(curve: ApoloMotion.easeOutCurve)),
+        weight: 55,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.26, end: 1.0)
+            .chain(CurveTween(curve: ApoloMotion.easeOutCurve)),
+        weight: 45,
+      ),
+    ]).animate(_heartBounceCtrl);
+  }
+
+  @override
   void dispose() {
+    _heartBounceCtrl.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -69,11 +97,13 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
   }
 
   Future<void> _handleFavoriteTap() async {
-    HapticFeedback.lightImpact();
+    // Rule 2 (Show Result First) & Rule 3 (Move with Ease):
+    // Optimistically fill heart & trigger ease-out bounce immediately before background sync.
     final nextState = !_isFavorited;
     setState(() {
       _localFavoriteOverride = nextState;
     });
+    _heartBounceCtrl.forward(from: 0.0);
     widget.onFavoriteChanged?.call(nextState);
 
     if (_adId > 0 && _state.isLoggedIn) {
@@ -99,10 +129,11 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
     if (catId != null) {
       _state.recordCategoryInterest(catId, weight: 2);
     }
+    // Rule 3: Use 450ms spring/ease-out transition instead of linear slide
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => AdDetailScreen(
+      SpringPageRoute(
+        page: AdDetailScreen(
           adId: _adId,
           initialAd: widget.ad,
         ),
@@ -714,6 +745,8 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
                     ),
 
                     // Top-end 32x32 Favorite Button inside 44x44 HIG touch target
+                    // Rule 1 (React at Once): 95% scale + 0.82 opacity + haptic on touch down (<16ms)
+                    // Rule 2 & 3: Instant heart fill + 260ms ease-out bounce animation
                     PositionedDirectional(
                       top: 6,
                       end: 6,
@@ -722,39 +755,68 @@ class _ExploreListingCardState extends State<ExploreListingCard> {
                         label: 'Favorite listing',
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: _handleFavoriteTap,
+                          onTapDown: (_) {
+                            HapticFeedback.lightImpact();
+                            setState(() => _isFavPressed = true);
+                          },
+                          onTapUp: (_) {
+                            setState(() => _isFavPressed = false);
+                            _handleFavoriteTap();
+                          },
+                          onTapCancel: () {
+                            if (_isFavPressed) {
+                              setState(() => _isFavPressed = false);
+                            }
+                          },
                           child: SizedBox(
                             width: 44,
                             height: 44,
                             child: Center(
-                              child: ClipOval(
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 8,
-                                    sigmaY: 8,
-                                  ),
-                                  child: Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.25),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.25),
-                                        width: 0.7,
+                              child: AnimatedScale(
+                                scale: _isFavPressed
+                                    ? ApoloMotion.pressedScale
+                                    : 1.0,
+                                duration: ApoloMotion.microDuration,
+                                curve: ApoloMotion.easeOutCurve,
+                                child: AnimatedOpacity(
+                                  opacity: _isFavPressed
+                                      ? ApoloMotion.pressedOpacity
+                                      : 1.0,
+                                  duration: ApoloMotion.microDuration,
+                                  curve: ApoloMotion.easeOutCurve,
+                                  child: ClipOval(
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 8,
+                                        sigmaY: 8,
                                       ),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Icon(
-                                      isFav
-                                          ? CupertinoIcons.heart_fill
-                                          : CupertinoIcons.heart,
-                                      size: 16.5,
-                                      color: isFav
-                                          ? const Color(0xFFFF3B5C)
-                                          : Colors.white,
+                                      child: Container(
+                                        width: 32,
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.25),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.25),
+                                            width: 0.7,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: ScaleTransition(
+                                          scale: _heartBounceScale,
+                                          child: Icon(
+                                            isFav
+                                                ? CupertinoIcons.heart_fill
+                                                : CupertinoIcons.heart,
+                                            size: 16.5,
+                                            color: isFav
+                                                ? const Color(0xFFFF3B5C)
+                                                : Colors.white,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),

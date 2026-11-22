@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'perceived_performance.dart';
 import 'voice_recorder.dart';
 
 /// Type of staged attachment in [ChatInput].
@@ -92,6 +93,7 @@ class _ChatInputState extends State<ChatInput> {
   FocusNode? _internalFocusNode;
   final ScrollController _inputScrollController = ScrollController();
   bool _isVoiceRecorderActive = false;
+  bool _isSendPressed = false;
 
   FocusNode get _effectiveFocusNode =>
       widget.focusNode ?? (_internalFocusNode ??= FocusNode());
@@ -450,7 +452,9 @@ class _ChatInputState extends State<ChatInput> {
 
                 if (!_isVoiceRecorderActive) ...[
                   const SizedBox(width: 4),
-                  // Rule 6: Send button stays visible at all times (min 44x44px touch target)
+                  // Rule 1 ("REACT AT ONCE") & Rule 3 ("MOVE WITH EASE"):
+                  // Send button reacts on touch down (<16ms) with 95% scale, 0.82 opacity, and haptic feedback,
+                  // using 220ms cubic-bezier(0.22, 1, 0.36, 1) ease-out curve.
                   Semantics(
                     button: true,
                     enabled: canSend,
@@ -458,30 +462,59 @@ class _ChatInputState extends State<ChatInput> {
                     child: GestureDetector(
                       key: const Key('chat-send'),
                       behavior: HitTestBehavior.opaque,
-                      onTap: _triggerSend,
+                      onTapDown: (_) {
+                        HapticFeedback.lightImpact();
+                        setState(() => _isSendPressed = true);
+                      },
+                      onTapUp: (_) {
+                        setState(() => _isSendPressed = false);
+                        _triggerSend();
+                      },
+                      onTapCancel: () {
+                        if (_isSendPressed) {
+                          setState(() => _isSendPressed = false);
+                        }
+                      },
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
                           minWidth: 44,
                           minHeight: 44,
                         ),
                         child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: canSend
-                                  ? ChatInput._ink
-                                  : const Color(0xFFD1D5DB),
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Icon(
-                              widget.editingBannerText != null
-                                  ? Icons.check_rounded
-                                  : CupertinoIcons.arrow_up,
-                              color: Colors.white,
-                              size: 19,
+                          child: AnimatedScale(
+                            key: const Key('chat-send-scale'),
+                            scale: _isSendPressed
+                                ? ApoloMotion.pressedScale
+                                : 1.0,
+                            duration: ApoloMotion.microDuration,
+                            curve: ApoloMotion.easeOutCurve,
+                            child: AnimatedOpacity(
+                              key: const Key('chat-send-opacity'),
+                              opacity: _isSendPressed
+                                  ? ApoloMotion.pressedOpacity
+                                  : 1.0,
+                              duration: ApoloMotion.microDuration,
+                              curve: ApoloMotion.easeOutCurve,
+                              child: AnimatedContainer(
+                                duration: ApoloMotion.microDuration,
+                                curve: ApoloMotion.easeOutCurve,
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: canSend
+                                      ? ChatInput._ink
+                                      : const Color(0xFFD1D5DB),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  widget.editingBannerText != null
+                                      ? Icons.check_rounded
+                                      : CupertinoIcons.arrow_up,
+                                  color: Colors.white,
+                                  size: 19,
+                                ),
+                              ),
                             ),
                           ),
                         ),
