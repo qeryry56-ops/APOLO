@@ -135,8 +135,11 @@ class AccountAuth {
         root['requires_otp'] == true ||
         data['requires_otp'] == true ||
         !isVerified;
-    final otpSent =
-        registration || root['otp_sent'] == true || data['otp_sent'] == true;
+    final hasExplicitOtpSent =
+        root.containsKey('otp_sent') || data.containsKey('otp_sent');
+    final otpSent = hasExplicitOtpSent
+        ? (root['otp_sent'] == true || data['otp_sent'] == true)
+        : registration;
     return AccountSession(
       token,
       Map<String, dynamic>.from(user),
@@ -402,6 +405,17 @@ String accountError(Object error, bool ar) {
       return ar
           ? 'تحقق من البيانات المدخلة. قد يكون البريد أو رقم الهاتف مستخدماً بالفعل.'
           : 'Vérifiez les informations. Cet e-mail ou numéro est peut-être déjà utilisé.';
+    }
+    if (status != null && status >= 500) {
+      if (serverMsg != null &&
+          serverMsg.isNotEmpty &&
+          !serverMsg.startsWith('<') &&
+          serverMsg.length < 220) {
+        return serverMsg;
+      }
+      return ar
+          ? 'حدث خطأ مؤقت في الخادم. يرجى المحاولة بعد قليل.'
+          : 'Erreur temporaire du serveur. Veuillez réessayer dans un instant.';
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||

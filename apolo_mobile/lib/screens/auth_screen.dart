@@ -117,7 +117,7 @@ class _AuthScreenState extends State<AuthScreen>
 
   Future<void> _launchGoogleSignIn() async {
     HapticFeedback.lightImpact();
-    final googleAuthUri = Uri.parse('${AppConfig.prodBaseUrl}/auth/google');
+    final googleAuthUri = Uri.parse(AppConfig.googleAuthUrl);
     try {
       final launched = await launchUrl(
         googleAuthUri,
