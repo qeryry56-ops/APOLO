@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/notification_badge.dart';
 import 'ad_detail_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
@@ -329,52 +330,40 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
               child: Column(
                 children: [
-                  // Avatar with Online Badge and Verified Blue Seal
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Container(
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: _border, width: 2.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _ink.withValues(alpha: 0.08),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: widget.sellerAvatar != null &&
-                                  widget.sellerAvatar!.isNotEmpty
-                              ? AppImage(
-                                  url: widget.sellerAvatar!,
-                                  fit: BoxFit.cover,
-                                  fallback: _buildAvatarFallback(),
-                                )
-                              : _buildAvatarFallback(),
-                        ),
-                      ),
-                      if (widget.isOnline)
-                        Positioned(
-                          bottom: 2,
-                          right: 2,
-                          child: Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: _emerald,
-                              shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: Colors.white, width: 2.5),
-                            ),
+                  // Avatar with Green Online Status Dot
+                  NotificationBadge(
+                    count: widget.isOnline ? 1 : 0,
+                    type: NotificationBadgeType.dot,
+                    variant: NotificationBadgeVariant.green,
+                    top: 2,
+                    right: 2,
+                    dotSize: 16,
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _border, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _ink.withValues(alpha: 0.08),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                    ],
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: widget.sellerAvatar != null &&
+                                widget.sellerAvatar!.isNotEmpty
+                            ? AppImage(
+                                url: widget.sellerAvatar!,
+                                fit: BoxFit.cover,
+                                fallback: _buildAvatarFallback(),
+                              )
+                            : _buildAvatarFallback(),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
 

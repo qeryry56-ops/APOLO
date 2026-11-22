@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/state/app_state.dart';
+import '../features/bug_report/services/bug_report_controller.dart';
+import '../features/bug_report/ui/bug_report_strings.dart';
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
@@ -157,6 +159,93 @@ class _SupportScreenState extends State<SupportScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Technical Bug Report CTA Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _cardBg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: _red.withValues(alpha: 0.10),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.bug_report_outlined,
+                                size: 21,
+                                color: _red,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    BugReportStrings(s).entryTitle,
+                                    style: const TextStyle(
+                                      fontSize: 15.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: _ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    BugReportStrings(s).supportCardSubtitle,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: _muted,
+                                      height: 1.45,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          height: 46,
+                          child: ElevatedButton.icon(
+                            key: const Key('support-report-bug-cta'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _red,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              BugReportController.instance
+                                  .openBugReporter(context: context);
+                            },
+                            icon: const Icon(Icons.bug_report_outlined, size: 19),
+                            label: Text(
+                              BugReportStrings(s).entryPrimaryCta,
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                       ],

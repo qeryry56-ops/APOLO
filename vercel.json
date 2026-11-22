@@ -84,6 +84,10 @@
       "destination": "https://apolo.ma/api/v1/:path*"
     },
     {
+      "source": "/api/support/:path*",
+      "destination": "https://apolo.ma/api/support/:path*"
+    },
+    {
       "source": "/apolo-staging-api/:path*",
       "destination": "https://staging.apolo.ma/api/v1/:path*"
     },

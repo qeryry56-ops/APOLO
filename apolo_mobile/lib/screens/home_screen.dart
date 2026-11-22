@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/notification_badge.dart';
 import 'notifications_screen.dart';
 import 'post_ad_screen.dart';
 import 'profile_screen.dart';
@@ -443,47 +444,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                // Bare Notification Bell Icon (no gray background circle)
+                                // Notification Bell Icon with accessible capped red badge
                                 PressableScale(
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const NotificationsScreen(),
-                                    ),
-                                  ),
+                                  key: const Key('home-notifications-bell'),
+                                  onTap: () {
+                                    _state.clearUnreadNotificationsOptimistically(
+                                      syncRemote: false,
+                                    );
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const NotificationsScreen(),
+                                      ),
+                                    );
+                                  },
                                   child: SizedBox(
                                     width: 40,
                                     height: 40,
                                     child: Center(
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          const Icon(
-                                            CupertinoIcons.bell,
-                                            size: 23,
-                                            color: _ink,
-                                          ),
-                                          if (_state.unreadNotificationsCount >
-                                              0)
-                                            Positioned(
-                                              top: 0,
-                                              right: 0,
-                                              child: Container(
-                                                width: 8.5,
-                                                height: 8.5,
-                                                decoration: BoxDecoration(
-                                                  color: _primary,
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: Colors.white,
-                                                    width: 1.5,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
+                                      child: NotificationBadge(
+                                        count: _state.unreadNotificationsCount,
+                                        type: NotificationBadgeType.number,
+                                        variant: NotificationBadgeVariant.red,
+                                        top: -7,
+                                        right: -9,
+                                        child: const Icon(
+                                          CupertinoIcons.bell,
+                                          size: 23,
+                                          color: _ink,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -876,7 +866,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Badge
+                      // Marketing tagline pill (no decorative badge dot — Rule 7)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -889,33 +879,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: Colors.white.withValues(alpha: 0.35),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                isAr
-                                    ? 'سوقك الأول فالمغرب 🇲🇦'
-                                    : 'Marketplace #1 au Maroc 🇲🇦',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          isAr
+                              ? 'سوقك الأول فالمغرب 🇲🇦'
+                              : 'Marketplace #1 au Maroc 🇲🇦',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),

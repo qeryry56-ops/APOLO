@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../features/bug_report/services/bug_report_controller.dart';
 import '../features/bug_report/ui/bug_report_strings.dart';
+import '../widgets/notification_badge.dart';
 import 'account_security_screen.dart';
 import 'auth_screen.dart';
 import 'notifications_screen.dart';
@@ -35,7 +36,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const Color _sectionLabel = Color(0xFF6B7280);
   static const Color _trailingMuted = Color(0xFF8E8E93);
   static const Color _divider = Color(0xFFF1F2F6);
-  static const Color _blueDot = Color(0xFF0A0A0A);
   static const Color _red = Color(0xFFE31B23);
   static const Color _lightRedBg = Color(0xFFFDE8E8);
 
@@ -253,10 +253,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               'Notifications',
                               'Notifications',
                             ),
-                            trailingLabel: _state.unreadNotificationsCount > 0
-                                ? '${_state.unreadNotificationsCount}'
-                                : null,
-                            onTap: () => _open(const NotificationsScreen()),
+                            trailingBadge: NotificationBadge(
+                              count: _state.unreadNotificationsCount,
+                              type: NotificationBadgeType.number,
+                              variant: NotificationBadgeVariant.red,
+                            ),
+                            onTap: () {
+                              _state.clearUnreadNotificationsOptimistically(
+                                syncRemote: false,
+                              );
+                              _open(const NotificationsScreen());
+                            },
                           ),
                         ],
                       ),
@@ -530,7 +537,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     required VoidCallback? onTap,
     String? trailingLabel,
-    bool showBlueDot = false,
+    Widget? trailingBadge,
     bool isDanger = false,
     bool showChevron = true,
   }) {
@@ -568,16 +575,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              if (showBlueDot) ...[
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: _blueDot,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 10),
+              if (trailingBadge != null) ...[
+                const SizedBox(width: 8),
+                trailingBadge,
+                const SizedBox(width: 8),
               ],
               if (trailingLabel != null) ...[
                 const SizedBox(width: 8),

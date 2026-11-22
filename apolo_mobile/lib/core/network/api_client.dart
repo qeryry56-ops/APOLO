@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/bug_report/services/bug_report_log_service.dart';
 import '../config/app_config.dart';
 
 class ApiClient {
@@ -62,6 +63,15 @@ class ApiClient {
             options.headers['Authorization'] = 'Bearer $_token';
           }
           return handler.next(options);
+        },
+        onError: (err, handler) {
+          BugReportLogService.instance.recordApiError(
+            method: err.requestOptions.method,
+            path: err.requestOptions.path,
+            statusCode: err.response?.statusCode,
+            errorType: err.type.name,
+          );
+          return handler.next(err);
         },
       ),
     );

@@ -6,6 +6,7 @@ import '../../theme/app_typography.dart';
 class AppConfig {
   static const String appName = 'Apolo.ma';
   static const String appVersion = '1.0.0';
+  static const String appBuildNumber = '1';
   static const String stagingBaseUrl = 'https://staging.apolo.ma/api/v1';
   static const String prodBaseUrl = 'https://apolo.ma/api/v1';
 

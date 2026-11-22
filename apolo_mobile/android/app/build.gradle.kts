@@ -26,7 +26,7 @@ android {
 
     defaultConfig {
         applicationId = "ma.apolo.apolo_mobile"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName

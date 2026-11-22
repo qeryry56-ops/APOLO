@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/notification_badge.dart';
 import 'call_screen.dart';
 import 'chat_room_screen.dart';
 import 'post_ad_screen.dart';
@@ -44,6 +45,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   static const Color _chatBlueSoft = Color(0xFFF2F3F7);
 
   List<Map<String, dynamic>> _conversations = [];
+  final Map<String, int> _optimisticallyReadAtMs = {};
   final Set<int> _pinnedIds = {};
   final Set<int> _mutedIds = {};
   bool _isLoading = true;
@@ -58,18 +60,41 @@ class _ChatListScreenState extends State<ChatListScreen> {
   StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
   String? _lastHandledCallId;
   int? _subscribedUserId;
+  String? _loadedAuthKey;
+
+  String? get _currentAuthKey =>
+      _state.isLoggedIn ? '${_state.currentUser?['id'] ?? ''}' : null;
 
   @override
   void initState() {
     super.initState();
+    _loadedAuthKey = _currentAuthKey;
     _state.addListener(_onStateChanged);
     _loadConversations();
   }
 
   void _onStateChanged() {
-    if (mounted) {
+    if (!mounted) return;
+    final nextKey = _currentAuthKey;
+    if (nextKey != _loadedAuthKey) {
+      _loadedAuthKey = nextKey;
+      _optimisticallyReadAtMs.clear();
       _loadConversations();
     }
+  }
+
+  String _convKey(Map<String, dynamic> conv) =>
+      (conv['firestore_doc_id'] ?? conv['id'] ?? '').toString();
+
+  int _effectiveUnread(Map<String, dynamic> conv) {
+    final rawUnread = int.tryParse('${conv['unread_count'] ?? 0}') ?? 0;
+    if (rawUnread <= 0) return 0;
+    final readAtMs = _optimisticallyReadAtMs[_convKey(conv)];
+    if (readAtMs != null) {
+      final updatedMs = int.tryParse('${conv['updated_at_ms'] ?? 0}') ?? 0;
+      if (updatedMs <= readAtMs) return 0;
+    }
+    return rawUnread;
   }
 
   @override
@@ -221,7 +246,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       'peer_avatar':
           (raw['peer_avatar'] ?? peer['avatar_url'] ?? peer['avatar'] ?? '')
               .toString(),
-      'peer_online': raw['peer_online'] ?? true,
+      'peer_online': raw['peer_online'] == true,
       'last_message': lastBody.isNotEmpty ? lastBody : 'Hello! How are you?',
       'last_message_time':
           (raw['last_message_time'] ?? raw['updated_at_human'] ?? '12:30 PM')
@@ -241,8 +266,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         }
       }
       if (_selectedFilterIndex == 1) {
-        final unread = int.tryParse('${conv['unread_count'] ?? 0}') ?? 0;
-        return unread > 0;
+        return _effectiveUnread(conv) > 0;
       }
       return true;
     }).toList();
@@ -253,8 +277,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
       final bPinned = _pinnedIds.contains(b['id']);
       if (aPinned != bPinned) return aPinned ? -1 : 1;
       if (_unreadFirst) {
-        final aUnread = (int.tryParse('${a['unread_count'] ?? 0}') ?? 0) > 0;
-        final bUnread = (int.tryParse('${b['unread_count'] ?? 0}') ?? 0) > 0;
+        final aUnread = _effectiveUnread(a) > 0;
+        final bUnread = _effectiveUnread(b) > 0;
         if (aUnread != bUnread) return aUnread ? -1 : 1;
       }
       return 0;
@@ -1147,17 +1171,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final String lastMsg = (conv['last_message'] ?? '').toString();
     final String lastTime = (conv['last_message_time'] ?? '').toString();
     final String? avatarUrl = conv['peer_avatar']?.toString();
-    final int unread = int.tryParse('${conv['unread_count'] ?? 0}') ?? 0;
+    final int unread = _effectiveUnread(conv);
+    final bool isOnline = conv['peer_online'] == true;
     final bool isPinned = _pinnedIds.contains(convId);
     final bool isMuted = _mutedIds.contains(convId);
 
     return InkWell(
       onTap: () {
         HapticFeedback.lightImpact();
+        final prevUnread = _effectiveUnread(conv);
+        final updatedMs = int.tryParse('${conv['updated_at_ms'] ?? 0}') ?? 0;
+        _optimisticallyReadAtMs[_convKey(conv)] = updatedMs;
         setState(() {
           conv['unread_count'] = 0;
           _activeWebConversation = conv;
         });
+        _state.decrementUnreadChatCountOptimistically(prevUnread);
 
         Navigator.push(
           context,
@@ -1186,25 +1215,32 @@ class _ChatListScreenState extends State<ChatListScreen> {
         padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
         child: Row(
           children: [
-            // Avatar (46x46)
-            Container(
-              width: 46,
-              height: 46,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: _surfaceGrey,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: avatarUrl != null && avatarUrl.isNotEmpty
-                    ? AppImage(
-                        url: avatarUrl,
-                        width: 46,
-                        height: 46,
-                        fit: BoxFit.cover,
-                        fallback: _buildAvatarFallback(peerName),
-                      )
-                    : _buildAvatarFallback(peerName),
+            // Avatar (46x46) with optional Green Online Status Dot
+            NotificationBadge(
+              count: isOnline ? 1 : 0,
+              type: NotificationBadgeType.dot,
+              variant: NotificationBadgeVariant.green,
+              top: 0,
+              right: 0,
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _surfaceGrey,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? AppImage(
+                          url: avatarUrl,
+                          width: 46,
+                          height: 46,
+                          fit: BoxFit.cover,
+                          fallback: _buildAvatarFallback(peerName),
+                        )
+                      : _buildAvatarFallback(peerName),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -1279,27 +1315,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                if (unread > 0)
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 18),
-                    height: 18,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      color: _chatBlue,
-                      borderRadius: BorderRadius.circular(999),
+                SizedBox(
+                  height: 20,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: NotificationBadge(
+                      count: unread,
+                      type: NotificationBadgeType.number,
+                      variant: NotificationBadgeVariant.red,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      unread > 99 ? '99+' : '$unread',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 18),
+                  ),
+                ),
               ],
             ),
           ],

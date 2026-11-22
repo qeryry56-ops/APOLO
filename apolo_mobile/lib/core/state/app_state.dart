@@ -20,11 +20,20 @@ class AppState extends ChangeNotifier {
   List<dynamic> cities = [];
   Set<int> favoriteAdIds = {};
   int unreadNotificationsCount = 0;
+  int _notificationsClearEpoch = 0;
+  int _rawUnreadChatCount = 0;
+  int _dismissedChatUnreadBaseline = 0;
+  bool _chatTabDismissed = false;
   bool isInitialized = false;
   final ValueNotifier<int> tabReselectCounter = ValueNotifier<int>(0);
 
   void notifyTabReselected() {
     tabReselectCounter.value++;
+  }
+
+  int get unreadChatCount {
+    if (!_chatTabDismissed) return _rawUnreadChatCount;
+    return (_rawUnreadChatCount - _dismissedChatUnreadBaseline).clamp(0, 999999);
   }
 
   // Smart Personalization & Recommendation State (2026 Feed Engine)
@@ -701,6 +710,10 @@ class AppState extends ChangeNotifier {
         await _persistCurrentUser();
         favoriteAdIds.clear();
         unreadNotificationsCount = 0;
+        _notificationsClearEpoch++;
+        _rawUnreadChatCount = 0;
+        _dismissedChatUnreadBaseline = 0;
+        _chatTabDismissed = false;
         await api.setToken(null);
         notifyListeners();
       }
@@ -709,34 +722,198 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  static bool _hasPositiveId(dynamic raw) => (int.tryParse('$raw') ?? 0) > 0;
+
+  /// Rule 7: Only badge items requiring user action/decision; ignore marketing or informational alerts.
+  static bool isActionableNotification(Map<dynamic, dynamic> item) {
+    if (item['requires_action'] == true || item['actionable'] == true) {
+      return true;
+    }
+    if (item['requires_action'] == false ||
+        item['actionable'] == false ||
+        item['is_marketing'] == true ||
+        item['is_promotional'] == true ||
+        item['is_informational'] == true) {
+      return false;
+    }
+
+    final type = (item['type'] ?? item['category'] ?? item['kind'] ?? '')
+        .toString()
+        .toLowerCase()
+        .trim();
+
+    const rejectedTokens = <String>[
+      'marketing',
+      'promo',
+      'promotion',
+      'newsletter',
+      'announcement',
+      'broadcast',
+      'news',
+      'info',
+      'informational',
+      'tip',
+      'digest',
+      'welcome',
+      'update',
+      'campaign',
+      'milestone',
+      'views',
+      'system_info',
+    ];
+    for (final token in rejectedTokens) {
+      if (type.contains(token)) return false;
+    }
+
+    const actionableTokens = <String>[
+      'chat',
+      'message',
+      'offer',
+      'bid',
+      'order',
+      'inquiry',
+      'reply',
+      'call',
+      'missed_call',
+      'approval',
+      'action',
+      'review',
+      'moderation',
+      'verification',
+      'payment',
+      'رسال',
+      'عرض',
+      'طلب',
+      'محادث',
+      'مكالم',
+    ];
+    for (final token in actionableTokens) {
+      if (type.contains(token)) return true;
+    }
+
+    final data = item['data'] is Map ? item['data'] as Map : null;
+    if (_hasPositiveId(item['conversation_id'] ?? data?['conversation_id']) ||
+        _hasPositiveId(item['offer_id'] ?? data?['offer_id']) ||
+        _hasPositiveId(item['order_id'] ?? data?['order_id'])) {
+      return true;
+    }
+
+    if ((type.isEmpty || type == 'unknown') &&
+        _hasPositiveId(item['ad_id'] ?? data?['ad_id'])) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static int countActionableUnreadNotifications(List<dynamic> items) {
+    int count = 0;
+    for (final item in items) {
+      if (item is! Map) continue;
+      final bool isUnread = item.containsKey('is_read')
+          ? item['is_read'] != true
+          : item['read_at'] == null;
+      if (isUnread && isActionableNotification(item)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  void setUnreadNotificationsCount(int count) {
+    final clamped = count < 0 ? 0 : count;
+    if (unreadNotificationsCount != clamped) {
+      unreadNotificationsCount = clamped;
+      notifyListeners();
+    }
+  }
+
+  /// Rule 5: Clear notification badge optimistically on open without waiting for API.
+  void clearUnreadNotificationsOptimistically({bool syncRemote = true}) {
+    _notificationsClearEpoch++;
+    final changed = unreadNotificationsCount != 0;
+    unreadNotificationsCount = 0;
+    if (changed) {
+      notifyListeners();
+    }
+    if (syncRemote && api.isAuthenticated) {
+      unawaited(
+        api.dio
+            .post('/notifications/read-all')
+            .then<void>((_) {}, onError: (_) {}),
+      );
+    }
+  }
+
+  void syncUnreadChatCount(
+    int totalUnread, {
+    bool isMessagesTabActive = false,
+    bool notify = true,
+  }) {
+    final normalized = totalUnread < 0 ? 0 : totalUnread;
+    final prev = unreadChatCount;
+    _rawUnreadChatCount = normalized;
+    if (isMessagesTabActive) {
+      _dismissedChatUnreadBaseline = normalized;
+      _chatTabDismissed = true;
+    } else if (_chatTabDismissed) {
+      if (normalized <= _dismissedChatUnreadBaseline) {
+        _dismissedChatUnreadBaseline = normalized;
+      }
+      if (_dismissedChatUnreadBaseline == 0 && normalized > 0) {
+        _chatTabDismissed = false;
+      }
+    }
+    if (notify && unreadChatCount != prev) {
+      notifyListeners();
+    }
+  }
+
+  /// Rule 5: Clear Messages tab badge optimistically when the user opens the tab.
+  void clearUnreadChatTabOptimistically() {
+    final prev = unreadChatCount;
+    _dismissedChatUnreadBaseline = _rawUnreadChatCount;
+    _chatTabDismissed = true;
+    if (unreadChatCount != prev) {
+      notifyListeners();
+    }
+  }
+
+  void decrementUnreadChatCountOptimistically(int amount) {
+    if (amount <= 0) return;
+    final prev = unreadChatCount;
+    _rawUnreadChatCount = (_rawUnreadChatCount - amount).clamp(0, 999999);
+    _dismissedChatUnreadBaseline =
+        (_dismissedChatUnreadBaseline - amount).clamp(0, _rawUnreadChatCount);
+    if (unreadChatCount != prev) {
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchUnreadNotificationsCount() async {
     if (!api.isAuthenticated) return;
     final revision = _sessionRevision;
+    final epoch = _notificationsClearEpoch;
     try {
       final res = await api.dio.get('/notifications');
-      if (revision != _sessionRevision) return;
+      if (revision != _sessionRevision || epoch != _notificationsClearEpoch) {
+        return;
+      }
       final body = res.data;
       if (body is Map && body['status'] == 'success') {
+        final dynamic rawList = body['notifications'] ?? body['data'];
+        final List items = rawList is List ? rawList : const [];
         int count;
-        final rawUnread = body['unread_count'];
-        if (rawUnread is int) {
-          count = rawUnread;
-        } else if (rawUnread != null &&
-            int.tryParse(rawUnread.toString()) != null) {
-          count = int.parse(rawUnread.toString());
+        if (items.isNotEmpty) {
+          count = countActionableUnreadNotifications(items);
         } else {
-          final List items =
-              (body['notifications'] ?? body['data'] ?? []) as List;
-          count = items.where((item) {
-            if (item is! Map) return false;
-            if (item.containsKey('is_read')) return item['is_read'] != true;
-            return item['read_at'] == null;
-          }).length;
+          final rawUnread =
+              body['actionable_unread_count'] ?? body['unread_count'];
+          count = rawUnread is int
+              ? rawUnread
+              : (int.tryParse('${rawUnread ?? 0}') ?? 0);
         }
-        if (unreadNotificationsCount != count) {
-          unreadNotificationsCount = count;
-          notifyListeners();
-        }
+        setUnreadNotificationsCount(count);
       }
     } catch (_) {}
   }
@@ -838,6 +1015,11 @@ class AppState extends ChangeNotifier {
     }
     _sessionRevision++;
     favoriteAdIds.clear();
+    unreadNotificationsCount = 0;
+    _notificationsClearEpoch++;
+    _rawUnreadChatCount = 0;
+    _dismissedChatUnreadBaseline = 0;
+    _chatTabDismissed = false;
     await api.setToken(token);
     currentUser = Map<String, dynamic>.from(user);
     await _persistCurrentUser();
@@ -856,6 +1038,10 @@ class AppState extends ChangeNotifier {
     await _persistCurrentUser();
     favoriteAdIds.clear();
     unreadNotificationsCount = 0;
+    _notificationsClearEpoch++;
+    _rawUnreadChatCount = 0;
+    _dismissedChatUnreadBaseline = 0;
+    _chatTabDismissed = false;
     notifyListeners();
   }
 }

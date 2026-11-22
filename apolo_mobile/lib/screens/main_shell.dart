@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/services/media_rtc_bridge.dart';
 import '../core/state/app_state.dart';
+import '../features/bug_report/services/bug_report_route_observer.dart';
+import '../widgets/notification_badge.dart';
 import 'call_screen.dart';
 import 'chat_room_screen.dart';
 import 'home_screen.dart';
@@ -32,7 +34,6 @@ class _MainShellState extends State<MainShell>
   bool _searchChromeVisible = true;
 
   // Global Real-time Alerts (Messages, App Notifications & Incoming Calls)
-  int _unreadChatCount = 0;
   int _lastNotifCount = 0;
   int? _alertUserId;
   bool _initialConvSnapshotDone = false;
@@ -55,9 +56,10 @@ class _MainShellState extends State<MainShell>
   @override
   void initState() {
     super.initState();
-    _state.addListener(_onStateChanged);
+    _syncTabRoute(_currentIndex);
     _lastNotifCount = _state.unreadNotificationsCount;
-    _bindGlobalAlerts();
+    _bindGlobalAlerts(allowNotify: false);
+    _state.addListener(_onStateChanged);
     _squashCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 360),
@@ -108,8 +110,8 @@ class _MainShellState extends State<MainShell>
     super.dispose();
   }
 
-  void _bindGlobalAlerts() {
-    if (!_state.isLoggedIn || !FirebaseChatService.instance.isReady) {
+  void _bindGlobalAlerts({bool allowNotify = true}) {
+    if (!_state.isLoggedIn) {
       _globalConvSub?.cancel();
       _globalConvSub = null;
       _globalCallSub?.cancel();
@@ -117,9 +119,17 @@ class _MainShellState extends State<MainShell>
       _alertUserId = null;
       _initialConvSnapshotDone = false;
       _lastSeenConvMs.clear();
-      if (_unreadChatCount != 0 && mounted) {
-        setState(() => _unreadChatCount = 0);
-      }
+      _state.syncUnreadChatCount(0, notify: allowNotify);
+      return;
+    }
+    if (!FirebaseChatService.instance.isReady) {
+      _globalConvSub?.cancel();
+      _globalConvSub = null;
+      _globalCallSub?.cancel();
+      _globalCallSub = null;
+      _alertUserId = null;
+      _initialConvSnapshotDone = false;
+      _lastSeenConvMs.clear();
       return;
     }
 
@@ -161,9 +171,10 @@ class _MainShellState extends State<MainShell>
 
       _initialConvSnapshotDone = true;
 
-      if (totalUnread != _unreadChatCount) {
-        setState(() => _unreadChatCount = totalUnread);
-      }
+      _state.syncUnreadChatCount(
+        totalUnread,
+        isMessagesTabActive: _currentIndex == 3,
+      );
 
       if (newestIncoming != null) {
         final sender = (newestIncoming['peer_name'] ?? 'Apolo').toString();
@@ -259,6 +270,43 @@ class _MainShellState extends State<MainShell>
     }
   }
 
+  String _tabRouteName(int index) {
+    return switch (index) {
+      0 => 'main_shell/home',
+      1 => 'main_shell/post_ad',
+      2 => 'main_shell/explore',
+      3 => 'main_shell/messages',
+      4 => 'main_shell/profile',
+      _ => 'main_shell/tab_$index',
+    };
+  }
+
+  void _syncTabRoute(int index) {
+    BugReportRouteObserver.instance.setActiveTab(_tabRouteName(index));
+  }
+
+  void _switchTab(
+    int index, {
+    int? pillSlot,
+    bool updateSearchCategory = false,
+    int? searchCategory,
+  }) {
+    if (index == 3) {
+      _state.clearUnreadChatTabOptimistically();
+    }
+    setState(() {
+      if (updateSearchCategory) {
+        _searchInitialCategory = searchCategory;
+      }
+      _searchChromeVisible = true;
+      _currentIndex = index;
+      if (pillSlot != null) {
+        _lastPillSlot = pillSlot;
+      }
+    });
+    _syncTabRoute(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
@@ -270,30 +318,23 @@ class _MainShellState extends State<MainShell>
             _state.recordCategoryInterest(catId, weight: 3);
           }
           _triggerSquashStretch();
-          setState(() {
-            _searchInitialCategory = catId;
-            _searchChromeVisible = true;
-            _currentIndex = 2;
-            _lastPillSlot = 1;
-          });
+          _switchTab(
+            2,
+            pillSlot: 1,
+            updateSearchCategory: true,
+            searchCategory: catId,
+          );
         },
         onOpenPostAd: () {
           _triggerSquashStretch();
-          setState(() {
-            _searchChromeVisible = true;
-            _currentIndex = 1;
-          });
+          _switchTab(1);
         },
       ),
       PostAdScreen(
         key: ValueKey('post-ad-${_state.currentUser?['id'] ?? 'guest'}'),
         onSuccess: () {
           _triggerSquashStretch();
-          setState(() {
-            _searchChromeVisible = true;
-            _currentIndex = 0;
-            _lastPillSlot = 0;
-          });
+          _switchTab(0, pillSlot: 0);
         },
       ),
       SearchScreen(
@@ -304,11 +345,7 @@ class _MainShellState extends State<MainShell>
       ChatListScreen(
         onExploreAds: () {
           _triggerSquashStretch();
-          setState(() {
-            _searchChromeVisible = true;
-            _currentIndex = 2;
-            _lastPillSlot = 1;
-          });
+          _switchTab(2, pillSlot: 1);
         },
       ),
       const ProfileScreen(),
@@ -612,14 +649,10 @@ class _MainShellState extends State<MainShell>
                                                             _state
                                                                 .notifyTabReselected();
                                                           } else {
-                                                            setState(() {
-                                                              _searchChromeVisible =
-                                                                  true;
-                                                              _currentIndex =
-                                                                  item.pageIndex;
-                                                              _lastPillSlot =
-                                                                  idx;
-                                                            });
+                                                            _switchTab(
+                                                              item.pageIndex,
+                                                              pillSlot: idx,
+                                                            );
                                                           }
                                                         },
                                                         child: ConstrainedBox(
@@ -650,61 +683,23 @@ class _MainShellState extends State<MainShell>
                                                                       1.0,
                                                                       0.36,
                                                                       1.0),
-                                                                  child: Stack(
-                                                                    clipBehavior:
-                                                                        Clip.none,
-                                                                    children: [
-                                                                      Icon(
-                                                                        selected
-                                                                            ? item
-                                                                                .activeIcon
-                                                                            : item
-                                                                                .icon,
-                                                                        size:
-                                                                            22.5,
-                                                                        color: selected
-                                                                            ? _ink
-                                                                            : _inactive,
-                                                                      ),
-                                                                      if (item.pageIndex ==
-                                                                              3 &&
-                                                                          _unreadChatCount >
-                                                                              0)
-                                                                        Positioned(
-                                                                          top:
-                                                                              -5,
-                                                                          right:
-                                                                              -7,
-                                                                          child:
-                                                                              Container(
-                                                                            constraints:
-                                                                                const BoxConstraints(minWidth: 16),
-                                                                            height:
-                                                                                16,
-                                                                            padding:
-                                                                                const EdgeInsets.symmetric(horizontal: 4),
-                                                                            decoration:
-                                                                                BoxDecoration(
-                                                                              color:
-                                                                                  const Color(0xFFE31B23),
-                                                                              borderRadius:
-                                                                                  BorderRadius.circular(999),
-                                                                            ),
-                                                                            alignment:
-                                                                                Alignment.center,
-                                                                            child:
-                                                                                Text(
-                                                                              _unreadChatCount > 99 ? '99+' : '$_unreadChatCount',
-                                                                              style:
-                                                                                  const TextStyle(
-                                                                                color: Colors.white,
-                                                                                fontSize: 9.5,
-                                                                                fontWeight: FontWeight.w800,
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                    ],
+                                                                  child: NotificationBadge(
+                                                                    count: item.pageIndex == 3
+                                                                        ? _state.unreadChatCount
+                                                                        : 0,
+                                                                    type: NotificationBadgeType.number,
+                                                                    variant: NotificationBadgeVariant.red,
+                                                                    top: -6,
+                                                                    right: -9,
+                                                                    child: Icon(
+                                                                      selected
+                                                                          ? item.activeIcon
+                                                                          : item.icon,
+                                                                      size: 22.5,
+                                                                      color: selected
+                                                                          ? _ink
+                                                                          : _inactive,
+                                                                    ),
                                                                   ),
                                                                 ),
                                                               ),
@@ -735,10 +730,7 @@ class _MainShellState extends State<MainShell>
                                 if (_currentIndex == 1) {
                                   _state.notifyTabReselected();
                                 } else {
-                                  setState(() {
-                                    _searchChromeVisible = true;
-                                    _currentIndex = 1;
-                                  });
+                                  _switchTab(1);
                                 }
                               },
                               child: Semantics(

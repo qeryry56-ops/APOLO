@@ -1314,50 +1314,39 @@ class _SearchScreenState extends State<SearchScreen>
                     label: s.tr('تصفية', 'Filtrer', 'Filter'),
                     child: PressableScale(
                       onTap: _openFilterModal,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: 46,
-                            height: 46,
-                            decoration: BoxDecoration(
-                              color: filterCount > 0 ? _red : _surface,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Icon(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        height: 46,
+                        constraints: const BoxConstraints(minWidth: 46),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: filterCount > 0 ? 14 : 0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: filterCount > 0 ? _red : _surface,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
                               CupertinoIcons.slider_horizontal_3,
                               size: 19,
                               color: filterCount > 0 ? Colors.white : _ink,
                             ),
-                          ),
-                          if (filterCount > 0)
-                            Positioned(
-                              top: -2,
-                              right: -2,
-                              child: Container(
-                                width: 18,
-                                height: 18,
-                                decoration: BoxDecoration(
-                                  color: _ink,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  '$filterCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                            if (filterCount > 0) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                '$filterCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
-                            ),
-                        ],
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   );

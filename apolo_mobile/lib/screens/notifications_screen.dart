@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/state/app_state.dart';
+import '../widgets/notification_badge.dart';
 import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
 import 'chat_room_screen.dart';
@@ -35,7 +37,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   static const Color _cardBg = Colors.white;
   static const Color _ink = Color(0xFF0A0A0A);
   static const Color _red = Color(0xFFE31B23);
-  static const Color _blueDot = Color(0xFF0866FF);
   static const Color _surface = Color(0xFFF5F6F8);
   static const Color _muted = Color(0xFF6B7280);
   static const Color _timeMuted = Color(0xFF8E8E93);
@@ -45,6 +46,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _isOffline = widget.initialSimulateOffline;
+    // Rule 5: Clear badge immediately on screen open without waiting for API.
+    _state.clearUnreadNotificationsOptimistically(syncRemote: false);
     _state.addListener(_onStateChanged);
     _loadNotifications();
   }
@@ -83,15 +86,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (res.data is Map && res.data['status'] == 'success') {
         final list = (res.data['notifications'] ?? res.data['data'] ?? [])
             as List<dynamic>;
+        final parsed = list
+            .whereType<Map>()
+            .map((e) => _normalizeNotification(Map<String, dynamic>.from(e)))
+            .toList();
         setState(() {
-          _items = list
-              .whereType<Map>()
-              .map((e) => _normalizeNotification(Map<String, dynamic>.from(e)))
-              .toList();
+          _items = parsed;
           _isLoading = false;
           _isOffline = false;
         });
-        _updateUnreadBadge();
+        if (parsed.any((e) => e['unread'] == true)) {
+          unawaited(
+            _state.api.dio
+                .post('/notifications/read-all')
+                .then<void>((_) {}, onError: (_) {}),
+          );
+        }
         return;
       }
       setState(() {
@@ -121,6 +131,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return {
       'id': raw['id'] ?? DateTime.now().millisecondsSinceEpoch,
       'category': category,
+      'actionable': AppState.isActionableNotification(raw),
       'unread': raw['is_read'] != true && raw['read_at'] == null,
       'title':
           (raw['title'] ?? raw['data']?['title'] ?? 'إشعار جديد').toString(),
@@ -163,11 +174,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _updateUnreadBadge() {
-    int unread = 0;
-    for (final it in _items) {
-      if (it['unread'] == true) unread++;
-    }
-    _state.unreadNotificationsCount = unread;
+    // Global badge stays cleared optimistically once the user opens NotificationsScreen.
+    _state.setUnreadNotificationsCount(0);
   }
 
   List<Map<String, dynamic>> get _filteredItems {
@@ -304,7 +312,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 onPressed: _markAllRead,
                 icon: const Icon(
                   CupertinoIcons.checkmark_alt_circle,
-                  color: _blueDot,
+                  color: _ink,
                   size: 22,
                 ),
               ),
@@ -525,6 +533,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildNotificationRow(Map<String, dynamic> item, bool isAr) {
     final bool unread = item['unread'] == true;
+    final bool showActionBadge = unread && (item['actionable'] == true);
     final bool hasLink = (int.tryParse('${item['ad_id'] ?? ''}') ?? 0) > 0 ||
         (int.tryParse('${item['conversation_id'] ?? ''}') ?? 0) > 0;
 
@@ -548,7 +557,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
       child: Material(
-        color: unread ? _blueDot.withValues(alpha: 0.03) : Colors.transparent,
+        color: showActionBadge
+            ? NotificationBadge.actionRedDotColor.withValues(alpha: 0.04)
+            : Colors.transparent,
         child: InkWell(
           onTap: () => _openNotification(item),
           child: Padding(
@@ -556,23 +567,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  padding: const EdgeInsets.all(7),
-                  decoration: const BoxDecoration(
-                    color: _surface,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Image.asset(
-                    item['asset'] as String,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      item['category'] == 1
-                          ? CupertinoIcons.chat_bubble_fill
-                          : CupertinoIcons.bell_fill,
-                      color: item['category'] == 1 ? _blueDot : _ink,
-                      size: 20,
+                NotificationBadge(
+                  count: showActionBadge ? 1 : 0,
+                  type: NotificationBadgeType.dot,
+                  variant: NotificationBadgeVariant.red,
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    padding: const EdgeInsets.all(7),
+                    decoration: const BoxDecoration(
+                      color: _surface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Image.asset(
+                      item['asset'] as String,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(
+                        item['category'] == 1
+                            ? CupertinoIcons.chat_bubble_fill
+                            : CupertinoIcons.bell_fill,
+                        color: item['category'] == 1 ? _red : _ink,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ),
@@ -618,18 +636,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                if (unread)
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: _blueDot,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
                 if (hasLink) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Icon(
                     isAr
                         ? CupertinoIcons.chevron_left

@@ -1,17 +1,37 @@
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/config/app_config.dart';
 import 'core/services/firebase_chat_service.dart';
 import 'core/state/app_state.dart';
+import 'features/bug_report/services/bug_report_controller.dart';
+import 'features/bug_report/services/bug_report_log_service.dart';
+import 'features/bug_report/services/bug_report_route_observer.dart';
+import 'features/bug_report/services/bug_report_screenshot_service.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_typography.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final originalFlutterOnError = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    BugReportLogService.instance.recordFlutterError(details);
+    originalFlutterOnError?.call(details);
+  };
+
+  final originalPlatformOnError = PlatformDispatcher.instance.onError;
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    BugReportLogService.instance.recordPlatformError(error, stack);
+    return originalPlatformOnError?.call(error, stack) ?? false;
+  };
+
   await FirebaseChatService.instance.initialize();
   await AppState().initialize(loadRemote: false);
+  await BugReportController.instance.initialize();
 
   runApp(const ApoloMobileApp());
   unawaited(AppState().refreshRemote());
@@ -50,16 +70,35 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
     final fontFallback = AppTypography.resolveFontFamilyFallback(_state.locale);
 
     return MaterialApp(
+      navigatorKey: BugReportController.navigatorKey,
+      navigatorObservers: [BugReportRouteObserver.instance],
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       locale: _state.locale,
       builder: (context, child) {
-        return DefaultTextStyle.merge(
-          style: TextStyle(
-            fontFamily: fontFamily,
-            fontFamilyFallback: fontFallback,
+        return CallbackShortcuts(
+          bindings: <ShortcutActivator, VoidCallback>{
+            const SingleActivator(
+              LogicalKeyboardKey.keyB,
+              control: true,
+              shift: true,
+            ): () => BugReportController.instance.openBugReporter(),
+            const SingleActivator(
+              LogicalKeyboardKey.keyB,
+              meta: true,
+              shift: true,
+            ): () => BugReportController.instance.openBugReporter(),
+          },
+          child: RepaintBoundary(
+            key: BugReportScreenshotService.instance.boundaryKey,
+            child: DefaultTextStyle.merge(
+              style: TextStyle(
+                fontFamily: fontFamily,
+                fontFamilyFallback: fontFallback,
+              ),
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
-          child: child ?? const SizedBox.shrink(),
         );
       },
       supportedLocales: const [
