@@ -286,7 +286,26 @@ class AccountAuth {
     }
   }
 
-  Future<void> resetPasswordWithToken({
+  Future<void> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  }) async {
+    final trimmedCode = code.trim();
+    if (!AccountValidation.email(email) || trimmedCode.length < 4) {
+      throw const AccountFailure('validation');
+    }
+    final res = await dio.post('/auth/password/verify-code', data: {
+      'email': email.trim(),
+      'code': trimmedCode,
+      'token': trimmedCode,
+    });
+    final root = _payload(res);
+    if (!_isSuccess(root)) {
+      throw AccountFailure('verification', root['message']?.toString());
+    }
+  }
+
+  Future<AccountSession?> resetPasswordWithToken({
     required String email,
     required String token,
     required String password,
@@ -305,17 +324,36 @@ class AccountAuth {
       'password': password,
       'password_confirmation': confirmation,
     };
+    Response<dynamic> res;
     try {
-      final res = await dio.post('/auth/password/reset', data: payload);
-      _payload(res);
+      res = await dio.post('/auth/password/reset', data: payload);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        final res = await dio.post('/auth/reset-password', data: payload);
-        _payload(res);
+        res = await dio.post('/auth/reset-password', data: payload);
       } else {
         rethrow;
       }
     }
+    final root = _payload(res);
+    final data = root['data'] is Map
+        ? Map<String, dynamic>.from(root['data'] as Map)
+        : root;
+    final authToken = data['token'] ??
+        data['access_token'] ??
+        root['token'] ??
+        root['access_token'];
+    final user = data['user'] ?? root['user'];
+    if (authToken is String &&
+        authToken.trim().isNotEmpty &&
+        user is Map &&
+        user['id'] != null) {
+      return AccountSession(
+        authToken,
+        Map<String, dynamic>.from(user),
+        requiresOtp: false,
+      );
+    }
+    return null;
   }
 
   Future<void> updatePassword({
