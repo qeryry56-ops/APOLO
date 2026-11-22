@@ -141,12 +141,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String get _displayHandle =>
       _state.currentUser?['username']?.toString() ?? 'profil';
   String _displayBio(bool isAr) => _state.currentUser?['bio']?.toString() ?? '';
-  void _showError(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1990,7 +1984,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await _deleteAd(adId, isAr);
+                  await _deleteAd(ad, adId, isAr);
                 },
               ),
             ],
@@ -2000,43 +1994,387 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _deleteAd(int adId, bool isAr) async {
+  Future<void> _deleteAd(
+    Map<String, dynamic> ad,
+    int adId,
+    bool isAr,
+  ) async {
     if (!_state.isLoggedIn || _deletingAds.contains(adId)) return;
     final identity = _identity;
     _deletingAds.add(adId);
+
+    final adTitle = (ad['title'] ?? '').toString().trim();
+    final adPrice = (ad['price_formatted'] ?? '').toString().trim();
+    final adImage = (ad['main_image'] ??
+            (ad['images'] is List && (ad['images'] as List).isNotEmpty
+                ? (ad['images'] as List).first
+                : ''))
+        .toString()
+        .trim();
+
+    bool deleting = false;
+    String? dialogError;
+
     try {
-      final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-                title:
-                    Text(isAr ? 'حذف الإعلان؟' : 'Supprimer cette annonce ?'),
-                content: Text(isAr
-                    ? 'لا يمكن التراجع عن الحذف.'
-                    : 'Cette action est irréversible.'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: Text(isAr ? 'إلغاء' : 'Annuler')),
-                  TextButton(
-                      key: const Key('profile-confirm-delete'),
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: Text(isAr ? 'حذف' : 'Supprimer')),
-                ],
-              ));
-      if (confirmed != true || !mounted || identity != _identity) return;
-      final response = await _state.api.dio.delete('/ads/$adId');
-      if (response.statusCode != 204 &&
-          (response.data is! Map || response.data['status'] != 'success')) {
-        throw StateError('Deletion not confirmed');
-      }
-      if (!mounted || identity != _identity) return;
-      setState(() =>
-          _myAds.removeWhere((ad) => ad['id'].toString() == adId.toString()));
-    } catch (_) {
-      if (identity == _identity) {
-        _showError(isAr
-            ? 'تعذر حذف الإعلان. حاول مجدداً.'
-            : 'Suppression impossible. Réessayez.');
+      final deleted = await showGeneralDialog<bool>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: isAr ? 'إغلاق' : 'Fermer',
+        barrierColor: Colors.black.withValues(alpha: 0.48),
+        transitionDuration: const Duration(milliseconds: 240),
+        pageBuilder: (dialogCtx, animation, secondaryAnimation) {
+          return StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              Future<void> confirmDelete() async {
+                if (deleting) return;
+                HapticFeedback.mediumImpact();
+                setDialogState(() {
+                  deleting = true;
+                  dialogError = null;
+                });
+
+                try {
+                  final response = await _state.api.dio.delete('/ads/$adId');
+                  final ok = response.statusCode == 204 ||
+                      (response.statusCode != null &&
+                          response.statusCode! >= 200 &&
+                          response.statusCode! < 300 &&
+                          (response.data is! Map ||
+                              response.data['status'] == null ||
+                              response.data['status'] == 'success'));
+                  if (!ok) {
+                    throw StateError('Deletion not confirmed');
+                  }
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop(true);
+                  }
+                } catch (e) {
+                  HapticFeedback.vibrate();
+                  if (ctx.mounted) {
+                    setDialogState(() {
+                      deleting = false;
+                      dialogError = isAr
+                          ? 'تعذر حذف الإعلان حالياً. حاول مرة أخرى.'
+                          : 'Impossible de supprimer l’annonce. Réessayez.';
+                    });
+                  }
+                }
+              }
+
+              return PopScope(
+                canPop: !deleting,
+                child: Directionality(
+                  textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: Material(
+                          color: Colors.white,
+                          elevation: 0,
+                          borderRadius: BorderRadius.circular(28),
+                          clipBehavior: Clip.antiAlias,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.14),
+                                  blurRadius: 32,
+                                  offset: const Offset(0, 14),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.fromLTRB(22, 26, 22, 20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Soft Crimson Icon Badge
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(0xFFFECACA),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      CupertinoIcons.trash_fill,
+                                      color: Color(0xFFE31B23),
+                                      size: 26,
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                // Headline
+                                Text(
+                                  isAr
+                                      ? 'حذف هذا الإعلان؟'
+                                      : 'Supprimer cette annonce ?',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w800,
+                                    color: _ink,
+                                    height: 1.25,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Reassuring Warning Subtitle
+                                Text(
+                                  isAr
+                                      ? 'سيتم حذف الإعلان نهائياً من حسابك ومن نتائج البحث ولا يمكن التراجع عن هذه العملية.'
+                                      : 'Cette annonce sera définitivement retirée de votre profil et des résultats. Cette action est irréversible.',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFF6B7280),
+                                    height: 1.45,
+                                  ),
+                                ),
+
+                                // Compact Ad Preview Card
+                                if (adTitle.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF9FAFB),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: const Color(0xFFE5E7EB),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          child: adImage.isNotEmpty
+                                              ? AppImage(
+                                                  url: adImage,
+                                                  width: 44,
+                                                  height: 44,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Container(
+                                                  width: 44,
+                                                  height: 44,
+                                                  color:
+                                                      const Color(0xFFE5E7EB),
+                                                  child: const Icon(
+                                                    CupertinoIcons.photo,
+                                                    size: 18,
+                                                    color: Color(0xFF9CA3AF),
+                                                  ),
+                                                ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                adTitle,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: _ink,
+                                                ),
+                                              ),
+                                              if (adPrice.isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  adPrice,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFFE31B23),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+
+                                // Inline Error Banner (if server fails)
+                                if (dialogError != null) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 9,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF2F2),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFFFCA5A5),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      dialogError!,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFB91C1C),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+
+                                const SizedBox(height: 20),
+
+                                // Primary Destructive Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 50,
+                                  child: ElevatedButton(
+                                    key: const Key('profile-confirm-delete'),
+                                    onPressed: deleting ? null : confirmDelete,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFE31B23),
+                                      disabledBackgroundColor:
+                                          const Color(0xFFE31B23)
+                                              .withValues(alpha: 0.65),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: const StadiumBorder(),
+                                    ),
+                                    child: deleting
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(
+                                            isAr
+                                                ? 'نعم، احذف الإعلان'
+                                                : 'Supprimer définitivement',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                // Secondary Cancel Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: TextButton(
+                                    onPressed: deleting
+                                        ? null
+                                        : () => Navigator.of(ctx).pop(false),
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: const Color(0xFFF3F4F6),
+                                      foregroundColor: _ink,
+                                      shape: const StadiumBorder(),
+                                    ),
+                                    child: Text(
+                                      isAr ? 'إلغاء' : 'Annuler',
+                                      style: const TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      );
+
+      if (deleted == true && mounted && identity == _identity) {
+        setState(() {
+          _myAds.removeWhere((item) => item['id'].toString() == adId.toString());
+        });
+        _state.favoriteAdIds.remove(adId);
+        HapticFeedback.lightImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF10B981),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            content: Row(
+              children: [
+                const Icon(
+                  CupertinoIcons.check_mark_circled_solid,
+                  color: Colors.white,
+                  size: 19,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    isAr
+                        ? 'تم حذف الإعلان بنجاح'
+                        : 'Annonce supprimée avec succès',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       }
     } finally {
       _deletingAds.remove(adId);
