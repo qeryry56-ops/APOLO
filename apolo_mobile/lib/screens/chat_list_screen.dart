@@ -8,6 +8,7 @@ import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/notification_badge.dart';
+import '../widgets/pull_to_refresh.dart';
 import 'call_screen.dart';
 import 'chat_room_screen.dart';
 import 'post_ad_screen.dart';
@@ -1120,16 +1121,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             ),
                           ),
                         )
-                      : ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                            final conv = filtered[index];
-                            final isSelected = isDesktop &&
-                                _activeWebConversation?['id'] == conv['id'];
-                            return _buildChatRow(conv, isSelected, isDesktop);
-                          },
+                      : PullToRefresh(
+                          onRefresh: _loadConversations,
+                          child: ListView.builder(
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
+                            ),
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final conv = filtered[index];
+                              final isSelected = isDesktop &&
+                                  _activeWebConversation?['id'] == conv['id'];
+                              return _buildChatRow(conv, isSelected, isDesktop);
+                            },
+                          ),
                         ),
         ),
       ],

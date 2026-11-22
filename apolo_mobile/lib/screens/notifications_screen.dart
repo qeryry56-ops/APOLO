@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../core/state/app_state.dart';
 import '../widgets/notification_badge.dart';
+import '../widgets/pull_to_refresh.dart';
 import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
 import 'chat_room_screen.dart';
@@ -322,8 +323,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
-              child: RefreshIndicator(
-                color: _red,
+              child: PullToRefresh(
+                brandColor: _red,
                 backgroundColor: _cardBg,
                 onRefresh: _loadNotifications,
                 child: ListView(
