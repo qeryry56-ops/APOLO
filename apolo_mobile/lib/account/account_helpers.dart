@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../core/config/app_config.dart';
 
 /// Website origin only: no undocumented account route is guessed.
@@ -146,6 +147,32 @@ class AccountAuth {
       requiresOtp: requiresOtp,
       otpSent: otpSent,
     );
+  }
+
+  /// Builds the Google OAuth URL that redirects back directly into this app
+  /// (Vercel/Web origin or mobile deep link) instead of staying on apolo.ma.
+  static Uri buildGoogleAuthUri() {
+    final base = Uri.parse(AppConfig.googleAuthUrl);
+    final returnUrl = kIsWeb ? Uri.base.origin : 'apolo://auth/callback';
+    return base.replace(
+      queryParameters: {
+        ...base.queryParameters,
+        'app_return_url': returnUrl,
+      },
+    );
+  }
+
+  /// Exchanges the one-time `google_auth_code` returned by apolo.ma OAuth
+  /// callback for an authenticated Sanctum session.
+  Future<AccountSession> exchangeGoogleCode(String code) async {
+    final trimmed = code.trim();
+    if (trimmed.length < 20) {
+      throw const AccountFailure('validation');
+    }
+    final res = await dio.post('/auth/google/exchange', data: {
+      'code': trimmed,
+    });
+    return _session(res);
   }
 
   Future<AccountSession> login(String login, String password) async {

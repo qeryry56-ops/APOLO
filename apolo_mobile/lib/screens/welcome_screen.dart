@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../account/account_helpers.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'auth_screen.dart';
@@ -77,23 +80,43 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  void _openGoogleAuth() {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        transitionDuration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-        reverseTransitionDuration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-        pageBuilder: (_, animation, secondaryAnimation) => AuthScreen(
-          initialIsLogin: true,
-          autoTriggerGoogle: true,
-          onSuccess: _enterMainApp,
-        ),
-        transitionsBuilder: (_, animation, secondaryAnimation, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
+  Future<void> _openGoogleAuth() async {
+    HapticFeedback.lightImpact();
+    final googleAuthUri = AccountAuth.buildGoogleAuthUri();
+    try {
+      final launched = await launchUrl(
+        googleAuthUri,
+        mode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+        webOnlyWindowName: kIsWeb ? '_self' : null,
+      );
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _state.s.tr(
+                'تعذر فتح تسجيل الدخول عبر Google حالياً.',
+                'Impossible d’ouvrir la connexion Google pour le moment.',
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _state.s.tr(
+                'تعذر بدء تسجيل الدخول عبر Google حالياً.',
+                'Impossible de démarrer la connexion Google.',
+              ),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _openPrivacy() {

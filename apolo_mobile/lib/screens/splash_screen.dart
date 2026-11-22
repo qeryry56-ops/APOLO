@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../account/account_helpers.dart';
 import '../core/state/app_state.dart';
 import 'main_shell.dart';
 import 'welcome_screen.dart';
@@ -43,7 +45,29 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _navigateTimer = Timer(widget.duration, _proceedToNext);
+    final googleCode = kIsWeb
+        ? Uri.base.queryParameters['google_auth_code']?.trim()
+        : null;
+    if (googleCode != null && googleCode.isNotEmpty) {
+      _completeGoogleCallback(googleCode);
+    } else {
+      _navigateTimer = Timer(widget.duration, _proceedToNext);
+    }
+  }
+
+  Future<void> _completeGoogleCallback(String code) async {
+    final auth = AccountAuth(locale: AppState().locale.languageCode);
+    try {
+      final session = await auth.exchangeGoogleCode(code);
+      await AppState().setAuthSession(session.token, session.user);
+      if (!mounted) return;
+      _proceedToNext();
+    } catch (_) {
+      if (!mounted) return;
+      _proceedToNext();
+    } finally {
+      auth.close();
+    }
   }
 
   @override

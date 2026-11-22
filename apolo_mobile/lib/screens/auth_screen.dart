@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -117,17 +118,20 @@ class _AuthScreenState extends State<AuthScreen>
 
   Future<void> _launchGoogleSignIn() async {
     HapticFeedback.lightImpact();
-    final googleAuthUri = Uri.parse(AppConfig.googleAuthUrl);
+    final googleAuthUri = AccountAuth.buildGoogleAuthUri();
     try {
       final launched = await launchUrl(
         googleAuthUri,
-        mode: LaunchMode.externalApplication,
+        mode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+        webOnlyWindowName: kIsWeb ? '_self' : null,
       );
       if (!launched && mounted) {
         setState(() {
           _notice = _state.s.tr(
-            'تعذر فتح صفحة الدخول عبر Google. افتح الموقع apolo.ma.',
-            'Impossible d’ouvrir Google sign-in. Ouvrez apolo.ma.',
+            'تعذر فتح صفحة الدخول عبر Google حالياً.',
+            'Impossible d’ouvrir Google sign-in pour le moment.',
           );
         });
       }
