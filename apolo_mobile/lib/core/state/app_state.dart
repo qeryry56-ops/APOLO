@@ -60,12 +60,47 @@ class AppState extends ChangeNotifier {
   static String _normalizeLanguageCode(String code) =>
       supportedLanguageCodes.contains(code) ? code : 'ar';
 
+  static const String _cachedUserPrefsKey = 'apolo_cached_user_v1';
+
   Future<void> initialize({bool loadRemote = true}) async {
     await api.init();
     _locale = Locale(_normalizeLanguageCode(api.locale));
     await _loadPersonalizationPrefs();
+    if (api.isAuthenticated) {
+      await _loadCachedUser();
+    }
     if (loadRemote) await refreshRemote();
     isInitialized = true;
+    notifyListeners();
+  }
+
+  Future<void> _loadCachedUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cachedUserPrefsKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map && decoded['id'] != null) {
+          currentUser = Map<String, dynamic>.from(decoded);
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistCurrentUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (currentUser == null) {
+        await prefs.remove(_cachedUserPrefsKey);
+      } else {
+        await prefs.setString(_cachedUserPrefsKey, jsonEncode(currentUser));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> updateCurrentUser(Map<String, dynamic> user) async {
+    currentUser = Map<String, dynamic>.from(user);
+    await _persistCurrentUser();
     notifyListeners();
   }
 
@@ -632,11 +667,16 @@ class AppState extends ChangeNotifier {
     if (!api.isAuthenticated) return;
     final revision = _sessionRevision;
     try {
-      final response = await api.dio.get('/auth/profile');
+      final response = await api.dio.get(
+        '/auth/profile',
+        queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+        options: Options(headers: {'Cache-Control': 'no-cache'}),
+      );
       if (revision != _sessionRevision) return;
       final body = response.data;
       if (body is Map && body['status'] == 'success' && body['user'] is Map) {
         currentUser = Map<String, dynamic>.from(body['user'] as Map);
+        await _persistCurrentUser();
         if (preferredCityId == null) {
           final userCityId = int.tryParse(
             (currentUser?['preferred_city_id'] ?? currentUser?['city_id'] ?? '')
@@ -658,6 +698,7 @@ class AppState extends ChangeNotifier {
       if (revision == _sessionRevision && error.response?.statusCode == 401) {
         _sessionRevision++;
         currentUser = null;
+        await _persistCurrentUser();
         favoriteAdIds.clear();
         unreadNotificationsCount = 0;
         await api.setToken(null);
@@ -799,6 +840,7 @@ class AppState extends ChangeNotifier {
     favoriteAdIds.clear();
     await api.setToken(token);
     currentUser = Map<String, dynamic>.from(user);
+    await _persistCurrentUser();
     await fetchFavoritesIds();
     notifyListeners();
   }
@@ -811,6 +853,7 @@ class AppState extends ChangeNotifier {
     await api.setToken(null);
     await _clearUserScopedPrefsAndState();
     currentUser = null;
+    await _persistCurrentUser();
     favoriteAdIds.clear();
     unreadNotificationsCount = 0;
     notifyListeners();

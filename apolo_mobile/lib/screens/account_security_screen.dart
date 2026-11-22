@@ -97,13 +97,14 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         throw AccountFailure('server', data['message']?.toString());
       }
       if (data is Map && data['user'] is Map) {
-        _state.currentUser = Map<String, dynamic>.from(data['user'] as Map);
+        await _state
+            .updateCurrentUser(Map<String, dynamic>.from(data['user'] as Map));
       } else if (_state.currentUser != null) {
-        _state.currentUser = {
+        await _state.updateCurrentUser({
           ..._state.currentUser!,
           'email': email,
           if (normalizedPhone != null) 'phone': normalizedPhone,
-        };
+        });
       }
       if (mounted) {
         setState(() => _successMessage = s.tr(

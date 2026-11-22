@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../features/bug_report/services/bug_report_controller.dart';
+import '../features/bug_report/ui/bug_report_strings.dart';
 import 'account_security_screen.dart';
 import 'auth_screen.dart';
 import 'notifications_screen.dart';
@@ -114,7 +116,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _resolveHandle() {
     final raw = (_state.currentUser?['username'] ?? '').toString().trim();
-    if (raw.isNotEmpty && raw.toLowerCase() != 'amine') {
+    if (raw.isNotEmpty) {
       return raw.startsWith('@') ? raw : '@$raw';
     }
     return '@apolo_user';
@@ -136,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: _bg,
               elevation: 0,
               scrolledUnderElevation: 0,
-              toolbarHeight: 44,
+              toolbarHeight: 54,
               centerTitle: true,
               leading: IconButton(
                 icon: Icon(
@@ -162,13 +164,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 480),
                   child: ListView(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 36),
                     children: [
                       // Group 1: Account & Apolo Store Controls
                       _buildSectionHeader(
                         s.tr('الحساب والمتجر', 'Compte et boutique',
                             'Account & Store'),
+                        isFirst: true,
                       ),
                       _buildCard(
                         isAr: isAr,
@@ -335,6 +337,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           _buildRow(
                             isAr: isAr,
+                            icon: Icons.bug_report_outlined,
+                            title: BugReportStrings(s).settingsRowTitle,
+                            onTap: () => BugReportController.instance
+                                .openBugReporter(context: context),
+                          ),
+                          _buildRow(
+                            isAr: isAr,
                             icon: CupertinoIcons.refresh,
                             title: s.tr(
                               'تحديث بيانات التطبيق',
@@ -372,12 +381,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 28),
 
                       // Bottom Pill Button (LOGIN / LOGOUT)
                       Container(
                         width: double.infinity,
-                        height: 52,
+                        height: 54,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                         child: TextButton(
                           key: ValueKey(_state.isLoggedIn
@@ -409,7 +418,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 20),
                       Center(
                         child: Text(
                           '${AppConfig.appName} · v${AppConfig.appVersion}',
@@ -461,15 +470,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {bool isFirst = false}) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, right: 4, top: 10, bottom: 5),
+      padding: EdgeInsets.only(
+        left: 6,
+        right: 6,
+        top: isFirst ? 6 : 24,
+        bottom: 10,
+      ),
       child: Text(
         title,
         style: const TextStyle(
           color: _sectionLabel,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
         ),
       ),
     );
@@ -485,7 +500,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (i < children.length - 1) {
         list.add(
           const Padding(
-            padding: EdgeInsetsDirectional.only(start: 48, end: 14),
+            padding: EdgeInsetsDirectional.only(start: 64, end: 16),
             child: Divider(height: 1, thickness: 1, color: _divider),
           ),
         );
@@ -495,7 +510,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       decoration: BoxDecoration(
         color: _cardBg,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: list),
@@ -514,16 +536,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     final textColor = isDanger ? _red : _textDark;
     final iconColor = isDanger ? _red : _textDark;
+    final iconBg = isDanger ? const Color(0xFFFEF2F2) : const Color(0xFFF3F4F6);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: _busy ? null : onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9.5),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14.5),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: iconColor),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: iconColor),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
@@ -533,7 +564,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: textColor,
                     fontSize: 15,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -549,6 +580,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(width: 10),
               ],
               if (trailingLabel != null) ...[
+                const SizedBox(width: 8),
                 Text(
                   trailingLabel,
                   textDirection: trailingLabel.startsWith('@')
@@ -556,11 +588,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : null,
                   style: const TextStyle(
                     color: _trailingMuted,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
               ],
               if (showChevron)
                 Icon(

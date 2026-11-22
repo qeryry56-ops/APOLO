@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1378,12 +1380,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final identity = _identity;
     if (identity == null) return;
     final nameCtrl = TextEditingController(text: _displayName(isAr));
-    final usernameCtrl = TextEditingController(text: _displayHandle);
+    final initialHandle = _displayHandle.replaceAll('@', '').toLowerCase();
+    final usernameCtrl = TextEditingController(text: initialHandle);
     final bioCtrl = TextEditingController(text: _displayBio(isAr));
     String selectedAvatar =
         (_state.currentUser?['avatar'] ?? '').toString().trim();
     bool saving = false;
     String? error;
+
+    // Instagram-style live unique @username check state
+    Timer? usernameDebounce;
+    bool checkingUsername = false;
+    bool? usernameAvailable; // null = unchanged, true = available, false = taken/invalid
+    String? usernameStatusMsg;
+    List<String> usernameSuggestions = [];
+    int checkSeq = 0;
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
@@ -1716,8 +1727,193 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     FilteringTextInputFormatter.allow(
                                       RegExp(r'[a-zA-Z0-9._]'),
                                     ),
+                                    LengthLimitingTextInputFormatter(30),
                                   ],
+                                  suffixIcon: checkingUsername
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(13),
+                                          child: SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: _muted,
+                                            ),
+                                          ),
+                                        )
+                                      : (usernameAvailable == true
+                                          ? const Icon(
+                                              CupertinoIcons
+                                                  .check_mark_circled_solid,
+                                              color: Color(0xFF10B981),
+                                              size: 20,
+                                            )
+                                          : (usernameAvailable == false
+                                              ? const Icon(
+                                                  CupertinoIcons
+                                                      .xmark_circle_fill,
+                                                  color: Color(0xFFE31B23),
+                                                  size: 20,
+                                                )
+                                              : null)),
+                                  onChanged: (raw) {
+                                    usernameDebounce?.cancel();
+                                    final clean = raw
+                                        .trim()
+                                        .replaceAll('@', '')
+                                        .toLowerCase();
+                                    if (clean == initialHandle &&
+                                        clean.length >= 3) {
+                                      update(() {
+                                        checkingUsername = false;
+                                        usernameAvailable = null;
+                                        usernameStatusMsg = null;
+                                        usernameSuggestions = [];
+                                      });
+                                      return;
+                                    }
+                                    if (clean.length < 3) {
+                                      update(() {
+                                        checkingUsername = false;
+                                        usernameAvailable = false;
+                                        usernameStatusMsg = isAr
+                                            ? 'يجب أن يكون 3 أحرف على الأقل'
+                                            : 'Minimum 3 caractères requis';
+                                        usernameSuggestions = [];
+                                      });
+                                      return;
+                                    }
+                                    final seq = ++checkSeq;
+                                    update(() {
+                                      checkingUsername = true;
+                                      usernameAvailable = null;
+                                      usernameStatusMsg = null;
+                                      usernameSuggestions = [];
+                                      error = null;
+                                    });
+                                    usernameDebounce = Timer(
+                                      const Duration(milliseconds: 420),
+                                      () async {
+                                        try {
+                                          final res = await _state.api.dio.get(
+                                            '/auth/username/check',
+                                            queryParameters: {
+                                              'username': clean
+                                            },
+                                          );
+                                          if (!ctx.mounted || seq != checkSeq) {
+                                            return;
+                                          }
+                                          final data = res.data is Map
+                                              ? res.data as Map
+                                              : const {};
+                                          final avail =
+                                              data['available'] == true;
+                                          final msg =
+                                              data['message']?.toString();
+                                          final rawSugg = data['suggestions'];
+                                          final sugg = rawSugg is List
+                                              ? rawSugg
+                                                  .map((e) => e.toString())
+                                                  .where((e) => e.isNotEmpty)
+                                                  .toList()
+                                              : <String>[];
+                                          update(() {
+                                            checkingUsername = false;
+                                            usernameAvailable = avail;
+                                            usernameStatusMsg = avail
+                                                ? (isAr
+                                                    ? 'اسم المستخدم @$clean متاح!'
+                                                    : '@$clean est disponible !')
+                                                : (msg ??
+                                                    (isAr
+                                                        ? 'اسم المستخدم محجوز بالفعل.'
+                                                        : 'Déjà utilisé.'));
+                                            usernameSuggestions = sugg;
+                                          });
+                                        } catch (_) {
+                                          if (!ctx.mounted || seq != checkSeq) {
+                                            return;
+                                          }
+                                          update(() {
+                                            checkingUsername = false;
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
                                 ),
+                                if (usernameStatusMsg != null) ...[
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: Text(
+                                      usernameStatusMsg!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: usernameAvailable == true
+                                            ? const Color(0xFF059669)
+                                            : const Color(0xFFE31B23),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                if (usernameSuggestions.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 6,
+                                      children: usernameSuggestions.map((sugg) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            HapticFeedback.selectionClick();
+                                            usernameDebounce?.cancel();
+                                            usernameCtrl.text = sugg;
+                                            usernameCtrl.selection =
+                                                TextSelection.fromPosition(
+                                              TextPosition(offset: sugg.length),
+                                            );
+                                            update(() {
+                                              checkingUsername = false;
+                                              usernameAvailable = true;
+                                              usernameStatusMsg = isAr
+                                                  ? 'اسم المستخدم @$sugg متاح!'
+                                                  : '@$sugg est disponible !';
+                                              usernameSuggestions = [];
+                                              error = null;
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF3F4F6),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                              border: Border.all(
+                                                color: const Color(0xFFE5E7EB),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              '@$sugg',
+                                              textDirection: TextDirection.ltr,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: _ink,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 14),
                                 _buildEditField(
                                   label: isAr
@@ -1771,10 +1967,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           .trim()
                                           .replaceAll('@', '')
                                           .toLowerCase();
-                                      if (cleanUsername.isEmpty) {
+                                      if (cleanUsername.length < 3) {
                                         update(() => error = isAr
-                                            ? 'اسم المستخدم مطلوب.'
-                                            : 'Nom d’utilisateur requis.');
+                                            ? 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل.'
+                                            : 'Le nom d’utilisateur doit contenir au moins 3 caractères.');
+                                        return;
+                                      }
+                                      if (usernameAvailable == false) {
+                                        update(() => error = usernameStatusMsg ??
+                                            (isAr
+                                                ? 'اسم المستخدم هذا محجوز بالفعل، اختر اسماً آخر.'
+                                                : 'Ce nom d’utilisateur est déjà pris.'));
                                         return;
                                       }
                                       final values = <String, dynamic>{
@@ -1801,7 +2004,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           return;
                                         }
                                         final user = response.data['user'];
-                                        _state.currentUser = {
+                                        final returnedAvatar = (user is Map
+                                                ? (user['avatar_url'] ??
+                                                    user['avatar'])
+                                                : null)
+                                            ?.toString();
+                                        await _state.updateCurrentUser({
                                           ...?_state.currentUser,
                                           ...values,
                                           if (user is Map)
@@ -1809,18 +2017,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           'name': nameCtrl.text.trim(),
                                           'username': cleanUsername,
                                           'bio': bioCtrl.text.trim(),
-                                          'avatar': selectedAvatar,
-                                        };
+                                          'avatar': (returnedAvatar != null &&
+                                                  returnedAvatar.isNotEmpty)
+                                              ? returnedAvatar
+                                              : selectedAvatar,
+                                        });
+                                        if (!mounted || identity != _identity) {
+                                          return;
+                                        }
                                         setState(() {});
                                         if (ctx.mounted) {
                                           update(() => saving = false);
                                           Navigator.pop(ctx);
                                         }
-                                      } catch (_) {
+                                      } catch (e) {
+                                        String errText = isAr
+                                            ? 'تعذر حفظ التغييرات. حاول مجدداً.'
+                                            : 'Enregistrement impossible. Réessayez.';
+                                        if (e is DioException &&
+                                            e.response?.data is Map) {
+                                          final serverMsg = e.response!
+                                              .data['message']
+                                              ?.toString()
+                                              .trim();
+                                          if (serverMsg != null &&
+                                              serverMsg.isNotEmpty) {
+                                            errText = serverMsg;
+                                          }
+                                        }
                                         if (ctx.mounted) {
-                                          update(() => error = isAr
-                                              ? 'تعذر حفظ التغييرات. حاول مجدداً.'
-                                              : 'Enregistrement impossible. Réessayez.');
+                                          update(() => error = errText);
                                         }
                                       } finally {
                                         if (ctx.mounted) {
@@ -1852,6 +2078,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+    usernameDebounce?.cancel();
     await Future<void>.delayed(const Duration(milliseconds: 300));
     nameCtrl.dispose();
     usernameCtrl.dispose();
@@ -1865,6 +2092,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     int maxLines = 1,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    ValueChanged<String>? onChanged,
+    Widget? suffixIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1883,6 +2112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
+          onChanged: onChanged,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -1890,6 +2120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, size: 18, color: _muted),
+            suffixIcon: suffixIcon,
             filled: true,
             fillColor: _surface,
             contentPadding:
