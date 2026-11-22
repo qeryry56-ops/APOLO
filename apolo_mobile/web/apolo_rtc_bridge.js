@@ -11,6 +11,10 @@
   let _activeAudio = null;
   let _activeAudioId = null;
   let _progressInterval = null;
+  let _analyser = null;
+  let _analyserData = null;
+  let _micSourceNode = null;
+  let _playbackRate = 1.0;
 
   function pickAudioMime() {
     if (typeof MediaRecorder === 'undefined') return '';
@@ -29,6 +33,12 @@
   }
 
   function stopMicStream() {
+    if (_micSourceNode) {
+      try { _micSourceNode.disconnect(); } catch (_) {}
+      _micSourceNode = null;
+    }
+    _analyser = null;
+    _analyserData = null;
     if (_micStream) {
       _micStream.getTracks().forEach((t) => {
         try { t.stop(); } catch (_) {}
@@ -53,6 +63,16 @@
         stopMicStream();
         _audioChunks = [];
         _micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        try {
+          const ctx = getAudioCtx();
+          if (ctx) {
+            _micSourceNode = ctx.createMediaStreamSource(_micStream);
+            _analyser = ctx.createAnalyser();
+            _analyser.fftSize = 256;
+            _analyserData = new Uint8Array(_analyser.fftSize);
+            _micSourceNode.connect(_analyser);
+          }
+        } catch (_) {}
         const mime = pickAudioMime();
         const opts = mime ? { mimeType: mime, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 };
         _mediaRecorder = new MediaRecorder(_micStream, opts);
@@ -65,6 +85,22 @@
       } catch (e) {
         stopMicStream();
         return false;
+      }
+    },
+
+    getAmplitude: function () {
+      if (!_analyser || !_analyserData) return -1;
+      try {
+        _analyser.getByteTimeDomainData(_analyserData);
+        let sumSquares = 0;
+        for (let i = 0; i < _analyserData.length; i++) {
+          const norm = (_analyserData[i] - 128) / 128;
+          sumSquares += norm * norm;
+        }
+        const rms = Math.sqrt(sumSquares / _analyserData.length);
+        return Math.min(1, Math.max(0, rms * 3.2));
+      } catch (_) {
+        return -1;
       }
     },
 
@@ -114,7 +150,7 @@
       stopMicStream();
     },
 
-    play: function (id, base64, mime, onProgress, onEnded) {
+    play: function (id, base64, mime, onProgress, onEnded, initialProgress, playbackRate) {
       window.ApoloVoice.pause();
       try {
         const safeMime = (typeof mime === 'string' && /^audio\/(webm|ogg|mp4|mpeg|wav|aac|x-m4a|3gpp)$/i.test(mime.trim()))
@@ -122,8 +158,20 @@
           : 'audio/webm';
         const src = 'data:' + safeMime + ';base64,' + base64;
         const audio = new Audio(src);
+        if (typeof playbackRate === 'number' && playbackRate > 0) {
+          _playbackRate = playbackRate;
+        }
+        audio.playbackRate = _playbackRate;
         _activeAudio = audio;
         _activeAudioId = id;
+
+        if (typeof initialProgress === 'number' && initialProgress > 0 && initialProgress < 1) {
+          audio.addEventListener('loadedmetadata', function () {
+            if (_activeAudio === audio && audio.duration && isFinite(audio.duration)) {
+              audio.currentTime = initialProgress * audio.duration;
+            }
+          }, { once: true });
+        }
 
         audio.onended = function () {
           clearInterval(_progressInterval);
@@ -147,13 +195,34 @@
             const p = Math.min(1, Math.max(0, _activeAudio.currentTime / _activeAudio.duration));
             if (onProgress) onProgress(p);
           }
-        }, 120);
+        }, 80);
 
         audio.play().catch(function () {
           if (onEnded) onEnded();
         });
       } catch (_) {
         if (onEnded) onEnded();
+      }
+    },
+
+    seek: function (id, progress) {
+      if (!_activeAudio) return;
+      if (id && _activeAudioId && _activeAudioId !== id) return;
+      try {
+        if (_activeAudio.duration && isFinite(_activeAudio.duration) && _activeAudio.duration > 0) {
+          const clamped = Math.min(1, Math.max(0, Number(progress) || 0));
+          _activeAudio.currentTime = clamped * _activeAudio.duration;
+        }
+      } catch (_) {}
+    },
+
+    setPlaybackRate: function (rate) {
+      const nextRate = (typeof rate === 'number' && rate > 0) ? rate : 1.0;
+      _playbackRate = nextRate;
+      if (_activeAudio) {
+        try {
+          _activeAudio.playbackRate = nextRate;
+        } catch (_) {}
       }
     },
 

@@ -20,15 +20,23 @@ class MediaRtcBridge {
 
   static Future<void> cancelVoiceRecording() async {}
 
+  static double? getVoiceAmplitude() => null;
+
   static Future<void> playVoiceMessage(
     String id,
     String base64,
     String mime, {
+    double initialProgress = 0.0,
+    double playbackRate = 1.0,
     void Function(double progress)? onProgress,
     void Function()? onEnded,
   }) async {
     onEnded?.call();
   }
+
+  static void seekVoiceMessage(String id, double progress) {}
+
+  static void setVoicePlaybackRate(double rate) {}
 
   static void pauseVoiceMessage() {}
 

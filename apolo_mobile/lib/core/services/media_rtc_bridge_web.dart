@@ -75,10 +75,23 @@ class MediaRtcBridge {
     } catch (_) {}
   }
 
+  static double? getVoiceAmplitude() {
+    try {
+      final res = _voice?.callMethod<JSNumber?>('getAmplitude'.toJS);
+      if (res == null) return null;
+      final val = res.toDartDouble;
+      return val >= 0 ? val.clamp(0.0, 1.0) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> playVoiceMessage(
     String id,
     String base64,
     String mime, {
+    double initialProgress = 0.0,
+    double playbackRate = 1.0,
     void Function(double progress)? onProgress,
     void Function()? onEnded,
   }) async {
@@ -93,11 +106,31 @@ class MediaRtcBridge {
           mime.toJS,
           progressCb.toJS,
           endedCb.toJS,
+          initialProgress.toJS,
+          playbackRate.toJS,
         ],
       );
     } catch (_) {
       onEnded?.call();
     }
+  }
+
+  static void seekVoiceMessage(String id, double progress) {
+    try {
+      _voice?.callMethodVarArgs<JSAny?>(
+        'seek'.toJS,
+        <JSAny?>[id.toJS, progress.clamp(0.0, 1.0).toJS],
+      );
+    } catch (_) {}
+  }
+
+  static void setVoicePlaybackRate(double rate) {
+    try {
+      _voice?.callMethodVarArgs<JSAny?>(
+        'setPlaybackRate'.toJS,
+        <JSAny?>[rate.toJS],
+      );
+    } catch (_) {}
   }
 
   static void pauseVoiceMessage() {

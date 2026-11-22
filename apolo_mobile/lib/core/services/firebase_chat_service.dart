@@ -225,7 +225,8 @@ class FirebaseChatService {
           'peer_name':
               (peerMeta['name'] ?? 'Apolo User').toString().trim(),
           'peer_avatar': (peerMeta['avatar'] ?? '').toString(),
-          'peer_online': true,
+          'peer_online':
+              peerMeta['is_online'] == true || data['peer_online'] == true,
           'last_message': displayLastMsg,
           'last_sender_id': (data['last_sender_id'] ?? '').toString(),
           'last_message_time': timeLabel,
@@ -304,6 +305,10 @@ class FirebaseChatService {
           'audio_base64': (data['audio_base64'] ?? '').toString(),
           'audio_mime': (data['audio_mime'] ?? 'audio/webm').toString(),
           'audio_duration': (data['audio_duration'] ?? '0:01').toString(),
+          if (data['audio_waveform'] is List)
+            'audio_waveform': (data['audio_waveform'] as List)
+                .map((e) => double.tryParse('$e') ?? 0.35)
+                .toList(),
           'is_mine': isMine,
           'read': isReadByPeer,
           'reactions': reactions,
@@ -571,6 +576,7 @@ class FirebaseChatService {
     required String audioBase64,
     required String audioMime,
     required String audioDuration,
+    List<double> audioWaveform = const <double>[],
     int adId = 0,
     String adTitle = '',
     String adPrice = '',
@@ -621,6 +627,7 @@ class FirebaseChatService {
       'audio_base64': audioBase64,
       'audio_mime': audioMime,
       'audio_duration': audioDuration,
+      if (audioWaveform.isNotEmpty) 'audio_waveform': audioWaveform,
       'created_at_ms': nowMs,
       'read_by': [myKey],
       'edited': false,
