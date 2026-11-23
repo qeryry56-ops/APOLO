@@ -30,6 +30,8 @@ import 'widgets/chat_utils.dart';
 /// 6. Composer Behavior (auto-expands 1..5 lines then scrolls, attachments above input, always-visible send button)
 class ChatRoomScreen extends StatefulWidget {
   final int conversationId;
+  final int? backendConversationId;
+  final int? adId;
   final String? firestoreDocId;
   final String peerName;
   final int? peerId;
@@ -38,6 +40,7 @@ class ChatRoomScreen extends StatefulWidget {
   final String? adImage;
   final String? adPrice;
   final String? initialDraft;
+  final bool autoSendInitialDraft;
   final List<String> initialTypingUsers;
   final List<ChatAttachment> initialAttachments;
   final List<Map<String, dynamic>>? initialMessages;
@@ -45,6 +48,8 @@ class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({
     super.key,
     required this.conversationId,
+    this.backendConversationId,
+    this.adId,
     this.firestoreDocId,
     required this.peerName,
     this.peerId,
@@ -53,6 +58,7 @@ class ChatRoomScreen extends StatefulWidget {
     this.adImage,
     this.adPrice,
     this.initialDraft,
+    this.autoSendInitialDraft = false,
     this.initialTypingUsers = const <String>[],
     this.initialAttachments = const <ChatAttachment>[],
     this.initialMessages,
@@ -104,8 +110,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
   String? _lastHandledCallId;
   Object? _accountId;
+  String? _resolvedFirestoreDocId;
+  int _resolvedBackendConvId = 0;
+  int? _resolvedPeerId;
+  int? _resolvedAdId;
 
   int get _myUserId => int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
+
+  int get _effectivePeerId => _resolvedPeerId ?? widget.peerId ?? 0;
+
+  int get _effectiveAdId => _resolvedAdId ?? widget.adId ?? 0;
 
   String get _myDisplayName => (_state.currentUser?['name'] ??
           _state.currentUser?['full_name'] ??
@@ -117,7 +131,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ?.toString();
 
   String get _peerBlockKey {
-    final pid = widget.peerId ?? 0;
+    final pid = _effectivePeerId;
     return pid > 0 ? '$pid' : widget.peerName.trim();
   }
 
@@ -125,14 +139,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       FirebaseChatService.instance.isBlocked(_peerBlockKey);
 
   String? get _activeFirestoreDocId {
-    final explicit = widget.firestoreDocId?.trim();
+    final explicit =
+        (_resolvedFirestoreDocId ?? widget.firestoreDocId)?.trim();
     if (explicit != null && explicit.isNotEmpty) return explicit;
     if (FirebaseChatService.instance.isReady &&
         _myUserId > 0 &&
-        (widget.peerId ?? 0) > 0) {
+        _effectivePeerId > 0) {
       return FirebaseChatService.instance.buildConversationDocId(
         myUserId: _myUserId,
-        peerUserId: widget.peerId!,
+        peerUserId: _effectivePeerId,
+        adId: _effectiveAdId,
       );
     }
     return null;
@@ -157,6 +173,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _accountId = _state.currentUser?['id'];
+    _resolvedFirestoreDocId = widget.firestoreDocId?.trim();
+    _resolvedPeerId = widget.peerId;
+    _resolvedAdId = widget.adId;
+    _resolvedBackendConvId = widget.backendConversationId ??
+        ((widget.firestoreDocId == null || widget.firestoreDocId!.isEmpty)
+            ? widget.conversationId
+            : 0);
     _state.addListener(_onAccountChanged);
 
     if (widget.initialDraft != null) _msgCtrl.text = widget.initialDraft!;
@@ -185,9 +208,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _loading = false;
     } else if (_useFirestore) {
       _bindFirestoreStreams();
+      _resolveBestFirestoreDocIfNeeded();
+      if (_resolvedBackendConvId > 0) {
+        unawaited(_loadBackendMessagesIntoFirestoreIfNeeded());
+      }
     } else {
       _loadMessages(scrollToBottom: true);
       _startPolling();
+    }
+
+    if (widget.autoSendInitialDraft &&
+        widget.initialDraft != null &&
+        widget.initialDraft!.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _msgCtrl.text.trim().isNotEmpty) {
+          _sendText();
+        }
+      });
     }
   }
 
@@ -259,6 +296,77 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
+  Future<void> _resolveBestFirestoreDocIfNeeded() async {
+    if (!FirebaseChatService.instance.isReady || _myUserId <= 0) return;
+    if ((widget.firestoreDocId ?? '').trim().isNotEmpty) return;
+    if (_effectivePeerId <= 0) return;
+    final bestDocId =
+        await FirebaseChatService.instance.resolveBestConversationDocId(
+      myUserId: _myUserId,
+      peerUserId: _effectivePeerId,
+      adId: _effectiveAdId,
+    );
+    if (!mounted) return;
+    if (bestDocId.isNotEmpty && bestDocId != _activeFirestoreDocId) {
+      setState(() {
+        _resolvedFirestoreDocId = bestDocId;
+      });
+      _bindFirestoreStreams();
+    }
+  }
+
+  Future<void> _loadBackendMessagesIntoFirestoreIfNeeded() async {
+    final convId = _resolvedBackendConvId;
+    if (convId <= 0 || !_state.isLoggedIn) return;
+    try {
+      final res =
+          await _state.api.dio.get('/chat/conversations/$convId/messages');
+      if (!mounted || res.data is! Map || res.data['status'] != 'success') {
+        return;
+      }
+      final dynamic raw = res.data['messages'] ?? res.data['data'];
+      final dynamic incoming = raw is Map ? raw['data'] : raw;
+      if (incoming is! List || incoming.isEmpty) return;
+      final parsed = incoming
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      if (_messages.isEmpty && parsed.isNotEmpty && mounted) {
+        setState(() {
+          _messages = parsed;
+          _loading = false;
+        });
+        _scrollToEnd();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _mirrorTextMessageToBackend(String text) async {
+    if (!_state.isLoggedIn || text.trim().isEmpty) return;
+    try {
+      int convId = _resolvedBackendConvId;
+      if (convId <= 0 && _effectiveAdId > 0) {
+        final startRes = await _state.api.dio.post(
+          '/chat/start',
+          data: {'ad_id': _effectiveAdId},
+        );
+        if (startRes.data is Map && startRes.data['status'] == 'success') {
+          final conv = startRes.data['conversation'];
+          if (conv is Map) {
+            convId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
+            _resolvedBackendConvId = convId;
+          }
+        }
+      }
+      if (convId > 0) {
+        await _state.api.dio.post(
+          '/chat/conversations/$convId/messages',
+          data: {'body': text, 'message': text},
+        );
+      }
+    } catch (_) {}
+  }
+
   void _bindFirestoreStreams() {
     _pollTimer?.cancel();
     _messagesSub?.cancel();
@@ -277,20 +385,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         .watchMessages(docId, _myUserId)
         .listen((incoming) {
       if (!mounted) return;
+      final effectiveIncoming =
+          (incoming.isEmpty && _messages.isNotEmpty) ? _messages : incoming;
       final prevLen = _messages.length;
-      final diffCount = incoming.length - prevLen;
+      final diffCount = effectiveIncoming.length - prevLen;
       final wasAlreadyLoaded = !_loading;
       final wasReadingHistory =
           wasAlreadyLoaded && _scrollCtrl.hasClients && !_isNearBottom;
 
       setState(() {
-        _messages = incoming;
+        _messages = effectiveIncoming;
         _pending.removeWhere((p) => p['_failed'] != true);
         _loading = false;
         _loadError = null;
         if (wasAlreadyLoaded && diffCount > 0 && wasReadingHistory) {
           _isUserReadingHistory = true;
-          final incomingFromPeer = incoming
+          final incomingFromPeer = effectiveIncoming
               .skip(prevLen)
               .where((m) => m['is_mine'] != true)
               .length;
@@ -511,6 +621,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
+
+      if (_effectivePeerId <= 0) {
+        final convMap = res.data['conversation'] is Map
+            ? res.data['conversation'] as Map
+            : null;
+        final otherUser = convMap?['other_user'] is Map
+            ? convMap!['other_user'] as Map
+            : (convMap?['peer'] is Map ? convMap!['peer'] as Map : null);
+        int discoveredPeer = int.tryParse(
+                '${otherUser?['id'] ?? convMap?['peer_id'] ?? ''}') ??
+            0;
+        if (discoveredPeer <= 0 || discoveredPeer == _myUserId) {
+          for (final m in parsed) {
+            final sid = int.tryParse('${m['sender_id'] ?? m['user_id'] ?? ''}') ?? 0;
+            if (sid > 0 && sid != _myUserId) {
+              discoveredPeer = sid;
+              break;
+            }
+          }
+        }
+        final discoveredAdId =
+            int.tryParse('${convMap?['ad_id'] ?? convMap?['ad']?['id'] ?? ''}') ?? 0;
+        if (discoveredPeer > 0) {
+          _resolvedPeerId = discoveredPeer;
+          if (discoveredAdId > 0 && _effectiveAdId <= 0) {
+            _resolvedAdId = discoveredAdId;
+          }
+        }
+      }
+
       final prevLen = _messages.length;
       final diffCount = parsed.length - prevLen;
       final wasLoaded = !_loading;
@@ -1222,7 +1362,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     if (_useFirestore) {
       final docId = _activeFirestoreDocId!;
-      final peerId = widget.peerId ?? 0;
+      final peerId = _effectivePeerId;
       try {
         if (tempMsg['type'] == 'image' &&
             (tempMsg['image_base64'] ?? '').toString().isNotEmpty) {
@@ -1236,6 +1376,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             peerAvatar: widget.peerAvatar ?? '',
             imageBase64: tempMsg['image_base64'].toString(),
             caption: text,
+            adId: _effectiveAdId,
             adTitle: widget.adTitle,
             adPrice: widget.adPrice ?? '',
             adImage: widget.adImage ?? '',
@@ -1250,10 +1391,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             peerName: widget.peerName,
             peerAvatar: widget.peerAvatar ?? '',
             body: text,
+            adId: _effectiveAdId,
             adTitle: widget.adTitle,
             adPrice: widget.adPrice ?? '',
             adImage: widget.adImage ?? '',
           );
+          unawaited(_mirrorTextMessageToBackend(text));
         }
         if (mounted) {
           setState(() {
@@ -1261,6 +1404,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           });
         }
       } catch (_) {
+        // Fallback: if Firestore failed, try sending via REST backend before marking failed
+        try {
+          await _mirrorTextMessageToBackend(text);
+          if (_resolvedBackendConvId > 0 && mounted) {
+            setState(() {
+              tempMsg['_pending'] = false;
+              tempMsg['_failed'] = false;
+              _pending.remove(tempMsg);
+              _messages.add(tempMsg);
+            });
+            return;
+          }
+        } catch (_) {}
         // Rule 3: Mark bubble as failed with inline retry button; NEVER show a toast.
         if (mounted) {
           setState(() {

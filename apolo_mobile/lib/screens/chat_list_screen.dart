@@ -46,6 +46,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
   static const Color _chatBlueSoft = Color(0xFFF2F3F7);
 
   List<Map<String, dynamic>> _conversations = [];
+  List<Map<String, dynamic>> _firestoreConversations = [];
+  List<Map<String, dynamic>> _backendConversations = [];
   final Map<String, int> _optimisticallyReadAtMs = {};
   final Set<int> _pinnedIds = {};
   final Set<int> _mutedIds = {};
@@ -107,6 +109,75 @@ class _ChatListScreenState extends State<ChatListScreen> {
     super.dispose();
   }
 
+  List<Map<String, dynamic>> _mergeFirestoreAndBackendConversations(
+    List<Map<String, dynamic>> firestoreList,
+    List<Map<String, dynamic>> backendList,
+  ) {
+    if (backendList.isEmpty) return List<Map<String, dynamic>>.from(firestoreList);
+    if (firestoreList.isEmpty) return List<Map<String, dynamic>>.from(backendList);
+
+    final merged = List<Map<String, dynamic>>.from(firestoreList);
+    for (final bConv in backendList) {
+      final bPeerId = int.tryParse('${bConv['peer_id'] ?? 0}') ?? 0;
+      final bAdId = int.tryParse('${bConv['ad_id'] ?? 0}') ?? 0;
+      final bConvId = int.tryParse('${bConv['id'] ?? 0}') ?? 0;
+
+      final existingIdx = merged.indexWhere((fConv) {
+        final fPeerId = int.tryParse('${fConv['peer_id'] ?? 0}') ?? 0;
+        final fAdId = int.tryParse('${fConv['ad_id'] ?? 0}') ?? 0;
+        if (bPeerId > 0 && fPeerId == bPeerId) {
+          if (bAdId <= 0 || fAdId <= 0 || bAdId == fAdId) return true;
+        }
+        return false;
+      });
+
+      if (existingIdx >= 0) {
+        final existing = Map<String, dynamic>.from(merged[existingIdx]);
+        if (bConvId > 0) {
+          existing['backend_id'] = bConvId;
+        }
+        if ((existing['last_message'] ?? '').toString().trim().isEmpty &&
+            (bConv['last_message'] ?? '').toString().trim().isNotEmpty) {
+          existing['last_message'] = bConv['last_message'];
+        }
+        merged[existingIdx] = existing;
+      } else {
+        merged.add({
+          ...bConv,
+          if (bConvId > 0) 'backend_id': bConvId,
+        });
+      }
+    }
+    return merged;
+  }
+
+  Future<void> _fetchBackendConversationsInBackground() async {
+    if (!_state.isLoggedIn) return;
+    try {
+      final res = await _state.api.dio.get('/chat/conversations');
+      if (!mounted) return;
+      if (res.data is Map && res.data['status'] == 'success') {
+        final rawList = (res.data['conversations'] ?? res.data['data'] ?? [])
+            as List<dynamic>;
+        final parsed = rawList
+            .whereType<Map>()
+            .map((e) =>
+                _normalizeBackendConversation(Map<String, dynamic>.from(e)))
+            .toList();
+        setState(() {
+          _backendConversations = parsed;
+          _conversations = _mergeFirestoreAndBackendConversations(
+            _firestoreConversations,
+            _backendConversations,
+          );
+          _activeWebConversation ??=
+              _conversations.isNotEmpty ? _conversations.first : null;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadConversations() async {
     if (!_state.isLoggedIn) {
       _convSub?.cancel();
@@ -117,6 +188,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
       if (mounted) {
         setState(() {
           _conversations = [];
+          _firestoreConversations = [];
+          _backendConversations = [];
           _activeWebConversation = null;
           _isLoading = false;
         });
@@ -126,6 +199,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     final myUserId = int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
     if (FirebaseChatService.instance.isReady && myUserId > 0) {
+      unawaited(_fetchBackendConversationsInBackground());
       if (_subscribedUserId == myUserId && _convSub != null) {
         return;
       }
@@ -139,17 +213,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
           .listen((list) {
         if (!mounted) return;
         setState(() {
-          _conversations = list;
+          _firestoreConversations = list;
+          _conversations = _mergeFirestoreAndBackendConversations(
+            _firestoreConversations,
+            _backendConversations,
+          );
           if (_activeWebConversation != null) {
             final activeDocId =
                 _activeWebConversation!['firestore_doc_id']?.toString();
-            final updated = list.where(
+            final updated = _conversations.where(
               (c) => c['firestore_doc_id']?.toString() == activeDocId,
             );
-            _activeWebConversation =
-                updated.isNotEmpty ? updated.first : (list.isNotEmpty ? list.first : null);
+            _activeWebConversation = updated.isNotEmpty
+                ? updated.first
+                : (_conversations.isNotEmpty ? _conversations.first : null);
           } else {
-            _activeWebConversation = list.isNotEmpty ? list.first : null;
+            _activeWebConversation =
+                _conversations.isNotEmpty ? _conversations.first : null;
           }
           _isLoading = false;
         });
@@ -675,6 +755,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       conversationId:
                           int.tryParse('${_activeWebConversation!['id']}') ??
                               101,
+                      backendConversationId: int.tryParse(
+                          '${_activeWebConversation!['backend_id'] ?? ''}'),
+                      adId: int.tryParse(
+                          '${_activeWebConversation!['ad_id'] ?? ''}'),
                       firestoreDocId: _activeWebConversation!['firestore_doc_id']
                           ?.toString(),
                       peerId: int.tryParse(
@@ -1201,6 +1285,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
               key: ValueKey(
                   'chat_${conv['firestore_doc_id'] ?? convId}_${DateTime.now().millisecondsSinceEpoch}'),
               conversationId: convId,
+              backendConversationId:
+                  int.tryParse('${conv['backend_id'] ?? ''}'),
+              adId: int.tryParse('${conv['ad_id'] ?? ''}'),
               firestoreDocId: conv['firestore_doc_id']?.toString(),
               peerId: int.tryParse('${conv['peer_id'] ?? ''}'),
               peerName: peerName,

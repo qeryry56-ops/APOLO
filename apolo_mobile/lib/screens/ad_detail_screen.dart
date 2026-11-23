@@ -305,7 +305,26 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     );
   }
 
-  Future<void> _openInAppChat({String? presetMessage}) async {
+  int _extractSellerIdFromAdMap(Map<String, dynamic>? ad) {
+    if (ad == null) return 0;
+    final direct = int.tryParse(
+            '${ad['user_id'] ?? ad['seller_id'] ?? ad['seller']?['id'] ?? ad['user']?['id'] ?? ad['store']?['user_id'] ?? ''}') ??
+        0;
+    if (direct > 0) return direct;
+    // Fallback: Apolo ad slugs end with `-<sellerId>-<seq>` (e.g. `tissot-watch-black-685-1`)
+    final slug = (ad['slug'] ?? '').toString().trim();
+    final match = RegExp(r'-(\d+)-\d+$').firstMatch(slug);
+    if (match != null) {
+      final fromSlug = int.tryParse(match.group(1) ?? '') ?? 0;
+      if (fromSlug > 0) return fromSlug;
+    }
+    return 0;
+  }
+
+  Future<void> _openInAppChat({
+    String? presetMessage,
+    bool autoSendPreset = false,
+  }) async {
     if (_openingChat) return;
     HapticFeedback.selectionClick();
     if (!_state.isLoggedIn) {
@@ -317,32 +336,88 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
 
     _openingChat = true;
-    final peerName = (_ad?['store']?['name'] ??
-            _ad?['seller_name'] ??
-            _ad?['seller']?['name'] ??
-            _ad?['user']?['name'] ??
-            'Apolo Seller')
-        .toString();
-    final peerAvatar = (_ad?['store']?['logo_url'] ??
-            _ad?['seller_avatar'] ??
-            _ad?['seller']?['avatar_url'] ??
-            _ad?['seller']?['avatar'] ??
-            _ad?['user']?['avatar_url'] ??
-            _ad?['user']?['avatar'])
-        ?.toString();
-    final adTitle = (_ad?['title'] ?? '').toString();
-    final adPrice =
-        (_ad?['price_formatted'] ?? '${_ad?['price'] ?? ''} MAD').toString();
-    final adImage = chatAdImage(_ad);
-
-    final myUserId = int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
-    final rawPeerId = int.tryParse(
-            '${_ad?['user_id'] ?? _ad?['seller_id'] ?? _ad?['seller']?['id'] ?? _ad?['user']?['id'] ?? _ad?['store']?['user_id'] ?? ''}') ??
-        0;
-    final peerId = rawPeerId > 0 ? rawPeerId : (1000000 + widget.adId);
-
     try {
-      // Primary path: Real-time Firebase Firestore Chat
+      // Ensure full ad details (including seller.id) are loaded if opened from a feed card
+      if (_extractSellerIdFromAdMap(_ad) <= 0) {
+        await _fetchDetails();
+      }
+
+      String peerName = (_ad?['store']?['name'] ??
+              _ad?['seller_name'] ??
+              _ad?['seller']?['name'] ??
+              _ad?['user']?['name'] ??
+              'Apolo Seller')
+          .toString();
+      String? peerAvatar = (_ad?['store']?['logo_url'] ??
+              _ad?['seller_avatar'] ??
+              _ad?['seller']?['avatar_url'] ??
+              _ad?['seller']?['avatar'] ??
+              _ad?['user']?['avatar_url'] ??
+              _ad?['user']?['avatar'])
+          ?.toString();
+      final adTitle = (_ad?['title'] ?? '').toString();
+      final adPrice =
+          (_ad?['price_formatted'] ?? '${_ad?['price'] ?? ''} MAD').toString();
+      final adImage = chatAdImage(_ad);
+
+      final myUserId = int.tryParse('${_state.currentUser?['id'] ?? ''}') ?? 0;
+      int rawPeerId = _extractSellerIdFromAdMap(_ad);
+      int backendConvId = 0;
+
+      // Also start/sync conversation on the Laravel backend so both REST and Firestore stay in sync
+      try {
+        final res = await _state.api.dio
+            .post('/chat/start', data: {'ad_id': widget.adId});
+        if (res.data is Map && res.data['status'] == 'success') {
+          final conv = res.data['conversation'];
+          if (conv is Map) {
+            backendConvId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
+            final otherUser = conv['other_user'] is Map
+                ? conv['other_user'] as Map
+                : (conv['peer'] is Map ? conv['peer'] as Map : null);
+            final backendPeerId =
+                int.tryParse('${otherUser?['id'] ?? conv['peer_id'] ?? ''}') ??
+                    0;
+            if (backendPeerId > 0 && backendPeerId != myUserId) {
+              rawPeerId = backendPeerId;
+            }
+            final backendPeerName =
+                (otherUser?['name'] ?? '').toString().trim();
+            if (backendPeerName.isNotEmpty) {
+              peerName = backendPeerName;
+            }
+            final backendPeerAvatar =
+                (otherUser?['avatar_url'] ?? otherUser?['avatar'] ?? '')
+                    .toString()
+                    .trim();
+            if (backendPeerAvatar.isNotEmpty) {
+              peerAvatar = backendPeerAvatar;
+            }
+          }
+        }
+      } catch (_) {}
+
+      int peerId = rawPeerId > 0 ? rawPeerId : (1000000 + widget.adId);
+
+      // If the seller clicked Chat on their own ad, open the latest buyer conversation for this ad
+      // instead of creating an empty self-chat (u_685_685).
+      if (FirebaseChatService.instance.isReady &&
+          myUserId > 0 &&
+          peerId == myUserId) {
+        final buyerConv =
+            await FirebaseChatService.instance.findLatestBuyerConversationForAd(
+          sellerUserId: myUserId,
+          adId: widget.adId,
+        );
+        if (buyerConv != null && (buyerConv['peer_id'] as int? ?? 0) > 0) {
+          peerId = buyerConv['peer_id'] as int;
+          peerName = (buyerConv['peer_name'] ?? peerName).toString();
+          final bAvatar = (buyerConv['peer_avatar'] ?? '').toString();
+          if (bAvatar.isNotEmpty) peerAvatar = bAvatar;
+        }
+      }
+
+      // Primary path: Real-time Firebase Firestore Chat (dual-synced with backend)
       if (FirebaseChatService.instance.isReady && myUserId > 0) {
         final myName = (_state.currentUser?['name'] ??
                 _state.currentUser?['full_name'] ??
@@ -364,12 +439,44 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           adPrice: adPrice,
           adImage: adImage ?? '',
         );
+
+        final trimmedPreset = (presetMessage ?? '').trim();
+        bool sentImmediately = false;
+        if (autoSendPreset && trimmedPreset.isNotEmpty && peerId != myUserId) {
+          await FirebaseChatService.instance.sendTextMessage(
+            docId: docId,
+            myUserId: myUserId,
+            myName: myName,
+            myAvatar: myAvatar,
+            peerUserId: peerId,
+            peerName: peerName,
+            peerAvatar: peerAvatar ?? '',
+            body: trimmedPreset,
+            adId: widget.adId,
+            adTitle: adTitle,
+            adPrice: adPrice,
+            adImage: adImage ?? '',
+          );
+          sentImmediately = true;
+          if (backendConvId > 0) {
+            try {
+              await _state.api.dio.post(
+                '/chat/conversations/$backendConvId/messages',
+                data: {'body': trimmedPreset, 'message': trimmedPreset},
+              );
+            } catch (_) {}
+          }
+        }
+
         if (mounted) {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => ChatRoomScreen(
-                conversationId: docId.hashCode.abs(),
+                conversationId:
+                    backendConvId > 0 ? backendConvId : docId.hashCode.abs(),
+                backendConversationId: backendConvId > 0 ? backendConvId : null,
+                adId: widget.adId,
                 firestoreDocId: docId,
                 peerId: peerId,
                 peerName: peerName,
@@ -377,7 +484,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 peerAvatar: peerAvatar,
                 adImage: adImage,
                 adPrice: adPrice,
-                initialDraft: presetMessage,
+                initialDraft: sentImmediately ? null : presetMessage,
               ),
             ),
           );
@@ -385,30 +492,26 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         }
       }
 
-      final res = await _state.api.dio
-          .post('/chat/start', data: {'ad_id': widget.adId});
-      if (res.data is Map && res.data['status'] == 'success') {
-        final conv = res.data['conversation'] ?? {};
-        final int convId = int.tryParse(conv['id'].toString()) ?? 0;
-        if (mounted && convId > 0) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChatRoomScreen(
-                conversationId: convId,
-                peerId: peerId,
-                peerName: (conv['other_user']?['name'] ?? peerName).toString(),
-                adTitle: adTitle,
-                peerAvatar: (conv['other_user']?['avatar_url'] ?? peerAvatar)
-                    ?.toString(),
-                adImage: adImage,
-                adPrice: adPrice,
-                initialDraft: presetMessage,
-              ),
+      if (mounted && backendConvId > 0) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatRoomScreen(
+              conversationId: backendConvId,
+              backendConversationId: backendConvId,
+              adId: widget.adId,
+              peerId: peerId,
+              peerName: peerName,
+              adTitle: adTitle,
+              peerAvatar: peerAvatar,
+              adImage: adImage,
+              adPrice: adPrice,
+              initialDraft: presetMessage,
+              autoSendInitialDraft: autoSendPreset,
             ),
-          );
-          return;
-        }
+          ),
+        );
+        return;
       }
     } catch (_) {
       // Do not invent a conversation identifier when chat creation fails.
@@ -1759,6 +1862,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     final draft = _quickMsgCtrl.text.trim();
                     _openInAppChat(
                       presetMessage: draft.isNotEmpty ? draft : null,
+                      autoSendPreset: draft.isNotEmpty,
                     );
                   },
                   child: Container(

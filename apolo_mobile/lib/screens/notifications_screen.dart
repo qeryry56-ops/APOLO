@@ -142,6 +142,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       'ad_id': raw['ad_id'] ?? raw['data']?['ad_id'],
       'conversation_id':
           raw['conversation_id'] ?? raw['data']?['conversation_id'],
+      'sender_id': raw['sender_id'] ??
+          raw['data']?['sender_id'] ??
+          raw['from_user_id'] ??
+          raw['data']?['from_user_id'],
+      'sender_name':
+          raw['sender_name'] ?? raw['data']?['sender_name'] ?? '',
+      'firestore_doc_id':
+          raw['firestore_doc_id'] ?? raw['data']?['firestore_doc_id'],
       'asset': _assetForNotification(raw),
       'accent': category == 1 ? _red : _ink,
     };
@@ -204,20 +212,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     final int? adId = int.tryParse('${item['ad_id'] ?? ''}');
     final int? convId = int.tryParse('${item['conversation_id'] ?? ''}');
+    final int? senderId = int.tryParse('${item['sender_id'] ?? ''}');
+    final String senderName = (item['sender_name'] ?? '').toString().trim();
+    final String? firestoreDocId = item['firestore_doc_id']?.toString();
+    final bool isChatNotif = item['category'] == 1;
 
-    if (adId != null && adId > 0) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => AdDetailScreen(adId: adId)),
-      );
-    } else if (convId != null && convId > 0) {
+    if ((convId != null && convId > 0) ||
+        (isChatNotif && senderId != null && senderId > 0)) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => ChatRoomScreen(
-            conversationId: convId,
-            peerName: item['title'].toString(),
+            conversationId: convId ?? senderId!,
+            backendConversationId: (convId != null && convId > 0) ? convId : null,
+            adId: adId,
+            peerId: senderId,
+            firestoreDocId: firestoreDocId,
+            peerName:
+                senderName.isNotEmpty ? senderName : item['title'].toString(),
             adTitle: '',
+          ),
+        ),
+      );
+    } else if (adId != null && adId > 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdDetailScreen(
+            adId: adId,
+            openChatOnLoad: isChatNotif,
           ),
         ),
       );

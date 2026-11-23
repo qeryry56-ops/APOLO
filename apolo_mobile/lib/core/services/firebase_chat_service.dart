@@ -74,6 +74,111 @@ class FirebaseChatService {
     return 'dm_u_${low}_$high';
   }
 
+  /// Always keeps `participants` in deterministic `[low, high]` order so
+  /// Firestore security rules (`request.resource.data.participants == resource.data.participants`)
+  /// never reject replies or updates from the second participant.
+  List<String> _sortedParticipants(int userA, int userB) {
+    final low = userA <= userB ? userA : userB;
+    final high = userA <= userB ? userB : userA;
+    return <String>['$low', '$high'];
+  }
+
+  /// Finds the most recent existing conversation document between [myUserId] and [peerUserId]
+  /// (including any `ad_<adId>_u_<low>_<high>` document when [adId] wasn't passed),
+  /// or falls back to [buildConversationDocId].
+  Future<String> resolveBestConversationDocId({
+    required int myUserId,
+    required int peerUserId,
+    int adId = 0,
+  }) async {
+    final defaultDocId = buildConversationDocId(
+      myUserId: myUserId,
+      peerUserId: peerUserId,
+      adId: adId,
+    );
+    if (!_isReady || myUserId <= 0 || peerUserId <= 0) {
+      return defaultDocId;
+    }
+    if (adId > 0) {
+      return defaultDocId;
+    }
+    try {
+      final myKey = '$myUserId';
+      final peerKey = '$peerUserId';
+      final snap = await _conversations
+          .where('participants', arrayContains: myKey)
+          .get();
+      String? bestDocId;
+      int bestUpdatedMs = -1;
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final parts = (data['participants'] is List)
+            ? (data['participants'] as List).map((e) => '$e').toList()
+            : const <String>[];
+        if (parts.contains(peerKey) && (myKey != peerKey || parts.where((p) => p == myKey).length >= 2)) {
+          final updatedMs =
+              int.tryParse('${data['updated_at_ms'] ?? 0}') ?? 0;
+          if (updatedMs > bestUpdatedMs) {
+            bestUpdatedMs = updatedMs;
+            bestDocId = doc.id;
+          }
+        }
+      }
+      return bestDocId ?? defaultDocId;
+    } catch (_) {
+      return defaultDocId;
+    }
+  }
+
+  /// When a seller taps "Chat" on their own ad, finds the most recent buyer conversation for [adId].
+  Future<Map<String, dynamic>?> findLatestBuyerConversationForAd({
+    required int sellerUserId,
+    required int adId,
+  }) async {
+    if (!_isReady || sellerUserId <= 0 || adId <= 0) return null;
+    try {
+      final sellerKey = '$sellerUserId';
+      final snap = await _conversations
+          .where('participants', arrayContains: sellerKey)
+          .get();
+      Map<String, dynamic>? bestConv;
+      int bestMs = -1;
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final docAdId = int.tryParse('${data['ad_id'] ?? 0}') ?? 0;
+        final parts = (data['participants'] is List)
+            ? (data['participants'] as List).map((e) => '$e').toList()
+            : const <String>[];
+        final buyerKey = parts.firstWhere(
+          (p) => p != sellerKey,
+          orElse: () => '',
+        );
+        if (buyerKey.isEmpty) continue;
+        if (docAdId == adId || doc.id.startsWith('ad_${adId}_')) {
+          final updatedMs = int.tryParse('${data['updated_at_ms'] ?? 0}') ?? 0;
+          if (updatedMs > bestMs) {
+            bestMs = updatedMs;
+            final metaMap = data['participants_meta'] is Map
+                ? Map<String, dynamic>.from(data['participants_meta'] as Map)
+                : const <String, dynamic>{};
+            final buyerMeta = metaMap[buyerKey] is Map
+                ? Map<String, dynamic>.from(metaMap[buyerKey] as Map)
+                : const <String, dynamic>{};
+            bestConv = {
+              'firestore_doc_id': doc.id,
+              'peer_id': int.tryParse(buyerKey) ?? 0,
+              'peer_name': (buyerMeta['name'] ?? 'Apolo User').toString(),
+              'peer_avatar': (buyerMeta['avatar'] ?? '').toString(),
+            };
+          }
+        }
+      }
+      return bestConv;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Ensures a conversation document exists in Firestore and returns its docId.
   Future<String> ensureConversation({
     required int myUserId,
@@ -95,12 +200,13 @@ class FirebaseChatService {
     final docRef = _conversations.doc(docId);
     final myKey = '$myUserId';
     final peerKey = '$peerUserId';
+    final sortedParts = _sortedParticipants(myUserId, peerUserId);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
 
     final snap = await docRef.get();
     if (!snap.exists) {
       await docRef.set({
-        'participants': [myKey, peerKey],
+        'participants': sortedParts,
         'participants_meta': {
           myKey: {
             'id': myUserId,
@@ -212,6 +318,10 @@ class FirebaseChatService {
         }
 
         final peerIdInt = int.tryParse('${peerMeta['id'] ?? peerKey}') ?? 0;
+        // Skip empty self-conversations created when a seller clicked chat on their own ad
+        if (peerKey == myKey && displayLastMsg.isEmpty) {
+          continue;
+        }
         final syntheticIntId = doc.id.hashCode.abs();
 
         list.add({
@@ -344,12 +454,13 @@ class FirebaseChatService {
 
     final myKey = '$myUserId';
     final peerKey = '$peerUserId';
+    final sortedParts = _sortedParticipants(myUserId, peerUserId);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final convRef = _conversations.doc(docId);
 
     // Ensure conversation doc exists & update summary atomically
     await convRef.set({
-      'participants': [myKey, peerKey],
+      'participants': sortedParts,
       'participants_meta': {
         myKey: {
           'id': myUserId,
@@ -410,11 +521,12 @@ class FirebaseChatService {
   }) async {
     final myKey = '$myUserId';
     final peerKey = '$peerUserId';
+    final sortedParts = _sortedParticipants(myUserId, peerUserId);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final convRef = _conversations.doc(docId);
 
     await convRef.set({
-      'participants': [myKey, peerKey],
+      'participants': sortedParts,
       'participants_meta': {
         myKey: {
           'id': myUserId,
@@ -584,11 +696,12 @@ class FirebaseChatService {
   }) async {
     final myKey = '$myUserId';
     final peerKey = '$peerUserId';
+    final sortedParts = _sortedParticipants(myUserId, peerUserId);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final convRef = _conversations.doc(docId);
 
     await convRef.set({
-      'participants': [myKey, peerKey],
+      'participants': sortedParts,
       'participants_meta': {
         myKey: {
           'id': myUserId,
