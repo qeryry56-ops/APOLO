@@ -11,6 +11,7 @@ import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
 import 'chat_room_screen.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/skeleton_loader.dart';
 
 /// Grouped iOS-style Notifications Screen matching SettingsScreen (#F2F3F7 canvas + white cards):
 /// - Real backend integration with `GET /notifications`
@@ -445,17 +446,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       )
                     // 3. Loading State
                     else if (_isLoading)
-                      _buildStateCard(
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 64),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: _red,
-                              strokeWidth: 2.5,
-                            ),
-                          ),
-                        ),
-                      )
+                      const NotificationsSkeleton()
                     // 4. Empty Notifications State
                     else if (filtered.isEmpty)
                       _buildStateCard(

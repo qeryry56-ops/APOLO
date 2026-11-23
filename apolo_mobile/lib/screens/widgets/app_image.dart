@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'skeleton_loader.dart';
 
 class AppImage extends StatelessWidget {
   final String? url;
@@ -150,17 +151,10 @@ class AppImage extends StatelessWidget {
         loadingBuilder: (ctx, child, progress) {
           if (progress == null) return child;
           if (isPriority) return child;
-          return Container(
+          return ShimmerBox(
             width: width,
             height: height,
-            color: const Color(0xFFF8FAFC),
-            alignment: Alignment.center,
-            child: const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Color(0xFF0A0A0A)),
-            ),
+            borderRadius: 0,
           );
         },
       );
@@ -173,17 +167,10 @@ class AppImage extends StatelessWidget {
       fit: fit,
       memCacheWidth: targetMemWidth,
       memCacheHeight: targetMemHeight,
-      placeholder: (_, __) => Container(
+      placeholder: (_, __) => ShimmerBox(
         width: width,
         height: height,
-        color: const Color(0xFFF8FAFC),
-        alignment: Alignment.center,
-        child: const SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(
-              strokeWidth: 2, color: Color(0xFF0A0A0A)),
-        ),
+        borderRadius: 0,
       ),
       errorWidget: (_, __, ___) => defaultFallback,
     );

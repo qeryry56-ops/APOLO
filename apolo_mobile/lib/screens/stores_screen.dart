@@ -5,6 +5,7 @@ import '../theme/app_typography.dart';
 import 'store_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/skeleton_loader.dart';
 
 class StoresScreen extends StatefulWidget {
   const StoresScreen({super.key});
@@ -348,7 +349,7 @@ class _StoresScreenState extends State<StoresScreen> {
             // Store Cards List
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: _ink))
+                  ? const StoresListSkeleton()
                   : visible.isEmpty
                       ? Center(
                           child: Column(
@@ -390,17 +391,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                 const SizedBox(height: 12),
                             itemBuilder: (context, idx) {
                               if (idx >= visible.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 20),
-                                  child: Center(
-                                    child: SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: _ink),
-                                    ),
-                                  ),
-                                );
+                                return const StoreCardSkeleton();
                               }
                               final store = visible[idx];
                               final logo = store['logo_url'] ?? store['logo'];

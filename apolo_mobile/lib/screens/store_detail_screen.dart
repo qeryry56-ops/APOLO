@@ -10,6 +10,7 @@ import 'widgets/ad_card.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/skeleton_loader.dart';
 
 class StoreDetailScreen extends StatefulWidget {
   final String subdomain;
@@ -318,7 +319,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     if (_loading) {
       return const Scaffold(
         backgroundColor: Color(0xFFF2F3F7),
-        body: Center(child: CircularProgressIndicator(color: _red)),
+        body: StoreDetailSkeleton(),
       );
     }
     final store = _store;

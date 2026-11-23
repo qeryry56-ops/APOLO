@@ -14,6 +14,7 @@ import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/skeleton_loader.dart';
 
 /// Apple Human Interface Guidelines (HIG) 2026 Public Seller Profile:
 /// - 8pt baseline grid with exact Apple whitespace & margins (16pt / 20pt padding).
@@ -740,11 +741,18 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   // ───────────────────────── TAB 1: ADS GRID ─────────────────────────
   Widget _buildAdsTab(bool isAr) {
     if (_isLoading) {
-      return const SliverToBoxAdapter(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 40),
-          child: Center(
-            child: CupertinoActivityIndicator(radius: 12),
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 0.74,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (_, __) => const AdGridCardSkeleton(),
+            childCount: 4,
           ),
         ),
       );

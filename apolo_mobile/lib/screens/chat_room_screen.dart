@@ -19,6 +19,7 @@ import 'seller_profile_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
+import 'widgets/skeleton_loader.dart';
 
 /// Clean, low-noise Real-time Chat Room powered by Firebase Firestore (with REST fallback),
 /// implementing all 6 Chat UX rules:
@@ -1738,9 +1739,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ),
               Expanded(
                 child: _loading
-                    ? const Center(
-                        child: CupertinoActivityIndicator(radius: 12),
-                      )
+                    ? const ChatRoomSkeleton()
                     : Stack(
                         children: [
                           GestureDetector(

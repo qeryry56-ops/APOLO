@@ -7,6 +7,7 @@ import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../theme/app_typography.dart';
 import 'kinetic_widgets.dart';
+import 'skeleton_loader.dart';
 
 class BoostSheet extends StatefulWidget {
   final int adId;
@@ -209,9 +210,7 @@ class _BoostSheetState extends State<BoostSheet> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: _loading
-          ? const SizedBox(
-              height: 220,
-              child: Center(child: CircularProgressIndicator(color: _red)))
+          ? const BoostPlansSkeleton()
           : Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

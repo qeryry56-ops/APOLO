@@ -11,6 +11,7 @@ import 'auth_screen.dart';
 import 'seller_profile_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
+import 'widgets/skeleton_loader.dart';
 
 /// Photo-first discovery. Every action maps to a real listing or account flow.
 class AdReelsScreen extends StatefulWidget {
@@ -230,8 +231,7 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
               )),
           Expanded(
               child: _loading
-                  ? const Center(
-                      child: CupertinoActivityIndicator(color: Colors.white))
+                  ? const AdReelsSkeleton()
                   : _failed || ads.isEmpty
                       ? Center(
                           child: SingleChildScrollView(

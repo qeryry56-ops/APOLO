@@ -960,8 +960,8 @@ class _SearchScreenState extends State<SearchScreen>
                   const SizedBox(height: 14),
                   if (loadingRemote)
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 28),
-                      child: Center(child: CupertinoActivityIndicator()),
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: SavedFavoritesSkeleton(),
                     )
                   else if (remoteFavs.isEmpty)
                     Padding(
@@ -1584,15 +1584,7 @@ class _SearchScreenState extends State<SearchScreen>
                           itemCount: _ads.length + (_loadingMore ? 2 : 0),
                           itemBuilder: (context, idx) {
                             if (idx >= _ads.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: _red,
-                                    strokeWidth: 2.5,
-                                  ),
-                                ),
-                              );
+                              return const AdGridCardSkeleton();
                             }
                             final ad = _ads[idx];
                             return RepaintBoundary(
@@ -1611,15 +1603,7 @@ class _SearchScreenState extends State<SearchScreen>
                               const SizedBox(height: 16),
                           itemBuilder: (context, idx) {
                             if (idx >= _ads.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: _red,
-                                    strokeWidth: 2.5,
-                                  ),
-                                ),
-                              );
+                              return const SearchListCardSkeleton();
                             }
                             final ad = _ads[idx];
                             return RepaintBoundary(

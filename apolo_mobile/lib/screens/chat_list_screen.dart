@@ -16,6 +16,7 @@ import 'auth_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/skeleton_loader.dart';
 
 /// 2026 Production Chats Screen with Apolo Brand Styling & Desktop/Web Split-View:
 /// - Apolo Brand Red palette (`#E31B23`) for accents, pills, unread badges & buttons.
@@ -1062,9 +1063,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         // 5. Borderless Chat Items List
         Expanded(
           child: _isLoading
-              ? const Center(
-                  child: CupertinoActivityIndicator(radius: 12),
-                )
+              ? const ChatListSkeleton()
               : !_state.isLoggedIn
                   ? Center(
                       child: Padding(
