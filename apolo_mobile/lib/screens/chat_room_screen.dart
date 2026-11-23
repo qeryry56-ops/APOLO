@@ -1364,7 +1364,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       final docId = _activeFirestoreDocId!;
       final peerId = _effectivePeerId;
       try {
-        if (tempMsg['type'] == 'image' &&
+        if (tempMsg['type'] == 'audio') {
+          final rawWave = tempMsg['audio_waveform'];
+          final waveform = rawWave is List
+              ? rawWave.map((e) => double.tryParse('$e') ?? 0.35).toList()
+              : const <double>[];
+          await FirebaseChatService.instance.sendAudioMessage(
+            docId: docId,
+            myUserId: _myUserId,
+            myName: _myDisplayName,
+            myAvatar: _myAvatarUrl ?? '',
+            peerUserId: peerId,
+            peerName: widget.peerName,
+            peerAvatar: widget.peerAvatar ?? '',
+            audioBase64: (tempMsg['audio_base64'] ?? '').toString(),
+            audioMime: (tempMsg['audio_mime'] ?? 'audio/webm').toString(),
+            audioDuration: (tempMsg['audio_duration'] ?? '0:01').toString(),
+            audioWaveform: waveform,
+            adId: _effectiveAdId,
+            adTitle: widget.adTitle,
+            adPrice: widget.adPrice ?? '',
+            adImage: widget.adImage ?? '',
+          );
+          unawaited(_mirrorTextMessageToBackend(
+            '🎤 ${(tempMsg['audio_duration'] ?? '0:01')}',
+          ));
+        } else if (tempMsg['type'] == 'image' &&
             (tempMsg['image_base64'] ?? '').toString().isNotEmpty) {
           await FirebaseChatService.instance.sendImageMessage(
             docId: docId,
@@ -1548,6 +1573,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Future<void> _handleSendVoiceRecording(VoiceRecordingData recording) async {
     if (!mounted) return;
+    if (MediaRtcBridge.isVoiceSupported &&
+        _useFirestore &&
+        recording.audioBase64.isEmpty) {
+      _notice(_state.s.tr(
+        'تعذر حفظ التسجيل الصوتي. تأكد من السماح للميكروفون وجرب مرة أخرى.',
+        'Impossible d\'enregistrer l\'audio. Autorisez le microphone et réessayez.',
+        'Could not capture audio. Please allow microphone access and try again.',
+      ));
+      return;
+    }
+    if (recording.audioBase64.length > 900 * 1024) {
+      _notice(_state.s.tr(
+        'الرسالة الصوتية طويلة جداً. حاول تسجيل رسالة أقصر.',
+        'Message vocal trop long. Essayez un enregistrement plus court.',
+        'Voice message is too long. Please record a shorter message.',
+      ));
+      return;
+    }
+
     final now = DateTime.now();
     final tempId = 'voice_${now.microsecondsSinceEpoch}_${_optimisticSeq++}';
 
@@ -1566,37 +1610,54 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       'read': false,
       'created_at_ms': now.millisecondsSinceEpoch,
       'created_at_time': formatChatClock(now),
-      '_pending': false,
+      '_pending': _useFirestore,
       '_failed': false,
     };
 
     setState(() {
-      _messages.add(voiceMsg);
+      if (_useFirestore) {
+        _pending.add(voiceMsg);
+      } else {
+        _messages.add(voiceMsg);
+      }
       _isUserReadingHistory = false;
       _unreadIncomingCount = 0;
     });
     _scrollToEnd();
 
-    if (_useFirestore && recording.audioBase64.isNotEmpty) {
-      if (recording.audioBase64.length > 900 * 1024) return;
+    if (_useFirestore) {
       try {
         await FirebaseChatService.instance.sendAudioMessage(
           docId: _activeFirestoreDocId!,
           myUserId: _myUserId,
           myName: _myDisplayName,
           myAvatar: _myAvatarUrl ?? '',
-          peerUserId: widget.peerId ?? 0,
+          peerUserId: _effectivePeerId,
           peerName: widget.peerName,
           peerAvatar: widget.peerAvatar ?? '',
           audioBase64: recording.audioBase64,
           audioMime: recording.audioMime,
           audioDuration: recording.formattedDuration,
           audioWaveform: recording.waveform,
+          adId: _effectiveAdId,
           adTitle: widget.adTitle,
           adPrice: widget.adPrice ?? '',
           adImage: widget.adImage ?? '',
         );
-      } catch (_) {}
+        unawaited(_mirrorTextMessageToBackend('🎤 ${recording.formattedDuration}'));
+        if (mounted) {
+          setState(() {
+            _pending.remove(voiceMsg);
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            voiceMsg['_pending'] = false;
+            voiceMsg['_failed'] = true;
+          });
+        }
+      }
     }
   }
 

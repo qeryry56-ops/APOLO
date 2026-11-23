@@ -8,6 +8,8 @@
   let _audioChunks = [];
   let _micStream = null;
   let _recordStartMs = 0;
+  let _startRecordingPromise = null;
+  let _cancelRequested = false;
   let _activeAudio = null;
   let _activeAudioId = null;
   let _progressInterval = null;
@@ -58,34 +60,43 @@
     },
 
     startRecording: async function () {
-      try {
-        window.ApoloVoice.pause();
-        stopMicStream();
-        _audioChunks = [];
-        _micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      _cancelRequested = false;
+      const run = (async () => {
         try {
-          const ctx = getAudioCtx();
-          if (ctx) {
-            _micSourceNode = ctx.createMediaStreamSource(_micStream);
-            _analyser = ctx.createAnalyser();
-            _analyser.fftSize = 256;
-            _analyserData = new Uint8Array(_analyser.fftSize);
-            _micSourceNode.connect(_analyser);
+          window.ApoloVoice.pause();
+          stopMicStream();
+          _audioChunks = [];
+          _micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          if (_cancelRequested) {
+            stopMicStream();
+            return false;
           }
-        } catch (_) {}
-        const mime = pickAudioMime();
-        const opts = mime ? { mimeType: mime, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 };
-        _mediaRecorder = new MediaRecorder(_micStream, opts);
-        _mediaRecorder.ondataavailable = function (e) {
-          if (e.data && e.data.size > 0) _audioChunks.push(e.data);
-        };
-        _recordStartMs = Date.now();
-        _mediaRecorder.start(200);
-        return true;
-      } catch (e) {
-        stopMicStream();
-        return false;
-      }
+          try {
+            const ctx = getAudioCtx();
+            if (ctx) {
+              _micSourceNode = ctx.createMediaStreamSource(_micStream);
+              _analyser = ctx.createAnalyser();
+              _analyser.fftSize = 256;
+              _analyserData = new Uint8Array(_analyser.fftSize);
+              _micSourceNode.connect(_analyser);
+            }
+          } catch (_) {}
+          const mime = pickAudioMime();
+          const opts = mime ? { mimeType: mime, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 };
+          _mediaRecorder = new MediaRecorder(_micStream, opts);
+          _mediaRecorder.ondataavailable = function (e) {
+            if (e.data && e.data.size > 0) _audioChunks.push(e.data);
+          };
+          _recordStartMs = Date.now();
+          _mediaRecorder.start(150);
+          return true;
+        } catch (e) {
+          stopMicStream();
+          return false;
+        }
+      })();
+      _startRecordingPromise = run;
+      return run;
     },
 
     getAmplitude: function () {
@@ -104,7 +115,10 @@
       }
     },
 
-    stopRecording: function () {
+    stopRecording: async function () {
+      if (_startRecordingPromise) {
+        try { await _startRecordingPromise; } catch (_) {}
+      }
       return new Promise((resolve) => {
         if (!_mediaRecorder || _mediaRecorder.state === 'inactive') {
           stopMicStream();
@@ -112,11 +126,16 @@
           return;
         }
         const durationSec = Math.max(1, Math.round((Date.now() - _recordStartMs) / 1000));
-        const mime = _mediaRecorder.mimeType || 'audio/webm';
+        const rawMime = _mediaRecorder.mimeType || 'audio/webm';
+        const mime = rawMime.split(';')[0].trim() || 'audio/webm';
         _mediaRecorder.onstop = function () {
           stopMicStream();
           const blob = new Blob(_audioChunks, { type: mime });
           _audioChunks = [];
+          if (!blob || blob.size === 0) {
+            resolve('');
+            return;
+          }
           const reader = new FileReader();
           reader.onloadend = function () {
             const dataUrl = reader.result || '';
@@ -130,6 +149,9 @@
           reader.readAsDataURL(blob);
         };
         try {
+          if (_mediaRecorder.state === 'recording') {
+            try { _mediaRecorder.requestData(); } catch (_) {}
+          }
           _mediaRecorder.stop();
         } catch (_) {
           stopMicStream();
@@ -139,6 +161,7 @@
     },
 
     cancelRecording: function () {
+      _cancelRequested = true;
       try {
         if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
           _mediaRecorder.onstop = null;
