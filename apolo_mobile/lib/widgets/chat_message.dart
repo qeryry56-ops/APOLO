@@ -68,6 +68,7 @@ class ChatMessage extends StatefulWidget {
   final VoidCallback? onOpenActions;
   final String retryLabel;
   final bool useRichTextForBody;
+  final bool showSenderName;
 
   const ChatMessage({
     super.key,
@@ -98,7 +99,26 @@ class ChatMessage extends StatefulWidget {
     this.onOpenActions,
     this.retryLabel = 'Retry',
     this.useRichTextForBody = false,
+    this.showSenderName = false,
   });
+
+  /// Detects natural reading direction (RTL for Arabic/Hebrew, LTR for Latin/digits)
+  /// so mixed-script messages ("Tissot watch black", "DH 110.00", Arabic text) render cleanly.
+  static TextDirection detectTextDirection(
+    String text, {
+    TextDirection fallback = TextDirection.rtl,
+  }) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return fallback;
+    final rtlRegex = RegExp(r'[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]');
+    final ltrRegex = RegExp(r'[A-Za-z]');
+    for (final rune in trimmed.runes) {
+      final ch = String.fromCharCode(rune);
+      if (rtlRegex.hasMatch(ch)) return TextDirection.rtl;
+      if (ltrRegex.hasMatch(ch)) return TextDirection.ltr;
+    }
+    return fallback;
+  }
 
   /// Rule 1: Maximum time window (2 minutes) to group consecutive messages from the same sender.
   static const Duration groupingWindow = Duration(minutes: 2);
@@ -376,6 +396,12 @@ class _ChatMessageState extends State<ChatMessage> {
             ? ChatMessage._errorRed
             : (isMine ? Colors.white : ChatMessage._ink);
 
+    final contextDir = Directionality.of(context);
+    final bodyTextDir = ChatMessage.detectTextDirection(
+      widget.body,
+      fallback: contextDir,
+    );
+
     final semanticStatus = isFailed
         ? ', Send failed, double tap to retry'
         : (widget.status == ChatMessageStatus.sending ? ', Sending' : '');
@@ -443,12 +469,33 @@ class _ChatMessageState extends State<ChatMessage> {
                                     color: ChatMessage._errorRed
                                         .withValues(alpha: 0.45),
                                   )
-                                : null,
+                                : (!isMine
+                                    ? Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                        width: 0.9,
+                                      )
+                                    : null),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (!isMine &&
+                                  widget.showSenderName &&
+                                  widget.isFirstInGroup &&
+                                  widget.senderName.trim().isNotEmpty) ...[
+                                Text(
+                                  widget.senderName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: ChatMessage._textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                              ],
                               if (widget.customContent != null)
                                 widget.customContent!
                               else if (widget.imageBytes != null) ...[
@@ -472,6 +519,7 @@ class _ChatMessageState extends State<ChatMessage> {
                                   const SizedBox(height: 6),
                                   Text(
                                     widget.body,
+                                    textDirection: bodyTextDir,
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: textColor,
@@ -481,6 +529,7 @@ class _ChatMessageState extends State<ChatMessage> {
                                 ],
                               ] else if (widget.useRichTextForBody)
                                 RichText(
+                                  textDirection: bodyTextDir,
                                   text: TextSpan(
                                     text: widget.body,
                                     style: TextStyle(
@@ -494,6 +543,7 @@ class _ChatMessageState extends State<ChatMessage> {
                               else
                                 Text(
                                   widget.body,
+                                  textDirection: bodyTextDir,
                                   style: TextStyle(
                                     fontSize: 14.5,
                                     height: 1.35,
@@ -506,6 +556,26 @@ class _ChatMessageState extends State<ChatMessage> {
                                         : FontWeight.w500,
                                   ),
                                 ),
+                              if (isMine && !isDeleted && !isFailed) ...[
+                                const SizedBox(height: 3),
+                                Align(
+                                  alignment: AlignmentDirectional.centerEnd,
+                                  child: Icon(
+                                    widget.status == ChatMessageStatus.sending
+                                        ? CupertinoIcons.clock
+                                        : widget.status == ChatMessageStatus.read
+                                            ? Icons.done_all_rounded
+                                            : Icons.done_rounded,
+                                    key: Key(
+                                        'chat-status-${widget.messageKey}'),
+                                    size: 13,
+                                    color:
+                                        widget.status == ChatMessageStatus.read
+                                            ? const Color(0xFF60A5FA)
+                                            : Colors.white60,
+                                  ),
+                                ),
+                              ],
                               if (widget.isPinned ||
                                   widget.isStarred ||
                                   (widget.isEdited && !isDeleted)) ...[

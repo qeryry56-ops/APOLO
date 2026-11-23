@@ -224,8 +224,10 @@ class VoiceRecorderState extends State<VoiceRecorder> {
 
     final dx = event.position.dx - _pressOrigin.dx;
     final dy = event.position.dy - _pressOrigin.dy;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
-    final nextSlideLeft = (-dx).clamp(0.0, 240.0);
+    // Support inward slide-to-cancel in both LTR (slide left: -dx) and RTL (slide right: +dx)
+    final nextSlideLeft = (isRtl ? dx : -dx).clamp(0.0, 240.0);
     final nextSlideUp = (-dy).clamp(0.0, 180.0);
 
     // Rule 3: Slide up past threshold locks recording mode hands-free

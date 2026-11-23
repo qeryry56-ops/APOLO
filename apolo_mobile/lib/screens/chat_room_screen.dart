@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../core/services/chat_realtime_client.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/services/media_rtc_bridge.dart';
 import '../core/state/app_state.dart';
@@ -15,6 +16,7 @@ import '../widgets/chat_message.dart';
 import '../widgets/notification_badge.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/voice_recorder.dart';
+import 'ad_detail_screen.dart';
 import 'call_screen.dart';
 import 'seller_profile_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
@@ -111,6 +113,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   StreamSubscription<List<Map<String, dynamic>>>? _messagesSub;
   StreamSubscription<Map<String, dynamic>?>? _convMetaSub;
   StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
+  StreamSubscription<Map<String, dynamic>>? _wsMessageSub;
+  StreamSubscription<Map<String, dynamic>>? _wsAckSub;
+  StreamSubscription<Map<String, dynamic>>? _wsSyncSub;
+  StreamSubscription<PeerPresenceState>? _wsPresenceSub;
+  StreamSubscription<bool>? _wsConnSub;
+  PeerPresenceState? _peerPresence;
   String? _lastHandledCallId;
   Object? _accountId;
   String? _resolvedFirestoreDocId;
@@ -234,6 +242,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _startPolling();
     }
 
+    if (widget.initialMessages == null && _state.isLoggedIn && _myUserId > 0) {
+      unawaited(_initRealtimeWebSocket());
+    }
+
     if (widget.autoSendInitialDraft &&
         widget.initialDraft != null &&
         widget.initialDraft!.trim().isNotEmpty) {
@@ -242,6 +254,131 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           _sendText();
         }
       });
+    }
+  }
+
+  String get _realtimeChannelId {
+    final docId = _activeFirestoreDocId;
+    if (docId != null && docId.isNotEmpty) return docId;
+    if (_resolvedBackendConvId > 0) return 'conv_$_resolvedBackendConvId';
+    if (widget.conversationId > 0) return 'conv_${widget.conversationId}';
+    return 'dm_${_myUserId}_${_effectivePeerId}_$_effectiveAdId';
+  }
+
+  Future<void> _initRealtimeWebSocket() async {
+    final ws = ChatRealtimeClient.instance;
+    final peerId = _effectivePeerId;
+    if (peerId > 0) {
+      final cached = ws.cachedPresence(peerId);
+      if (cached != null && mounted) {
+        setState(() => _peerPresence = cached);
+      }
+    }
+
+    _wsPresenceSub?.cancel();
+    _wsPresenceSub = ws.presenceUpdates.listen((state) {
+      if (!mounted) return;
+      if (state.userId == _effectivePeerId) {
+        setState(() => _peerPresence = state);
+      }
+    });
+
+    _wsMessageSub?.cancel();
+    _wsMessageSub = ws.incomingMessages.listen((msg) {
+      if (!mounted) return;
+      if ((msg['channel_id'] ?? '').toString() != _realtimeChannelId) return;
+      _mergeRealtimeMessage(msg);
+    });
+
+    _wsAckSub?.cancel();
+    _wsAckSub = ws.messageAcks.listen((ack) {
+      if (!mounted) return;
+      if ((ack['channel_id'] ?? '').toString() != _realtimeChannelId) return;
+      final clientId = (ack['client_message_id'] ?? '').toString();
+      final serverId = (ack['message_id'] ?? '').toString();
+      if (clientId.isEmpty) return;
+      setState(() {
+        for (final p in _pending) {
+          if ((p['client_message_id'] ?? p['local_id'] ?? '').toString() ==
+              clientId) {
+            p['message_id'] = serverId;
+            p['_pending'] = false;
+            p['_failed'] = false;
+          }
+        }
+      });
+    });
+
+    _wsSyncSub?.cancel();
+    _wsSyncSub = ws.syncResponses.listen((sync) {
+      if (!mounted) return;
+      if ((sync['channel_id'] ?? '').toString() != _realtimeChannelId) return;
+      final list = sync['messages'];
+      if (list is List) {
+        for (final item in list) {
+          if (item is Map) {
+            _mergeRealtimeMessage(Map<String, dynamic>.from(item));
+          }
+        }
+      }
+    });
+
+    _wsConnSub?.cancel();
+    _wsConnSub = ws.connectionState.listen((connected) {
+      if (!mounted || !connected) return;
+      if (_effectivePeerId > 0) ws.subscribePresence(_effectivePeerId);
+      unawaited(ws.requestChannelSync(_realtimeChannelId));
+    });
+
+    final connected = await ws.connect(
+      userId: _myUserId,
+      userName: _myDisplayName,
+    );
+    if (connected && mounted) {
+      if (peerId > 0) ws.subscribePresence(peerId);
+      unawaited(ws.requestChannelSync(_realtimeChannelId));
+    }
+  }
+
+  void _mergeRealtimeMessage(Map<String, dynamic> raw) {
+    final senderId = int.tryParse('${raw['sender_id'] ?? 0}') ?? 0;
+    final createdIso = (raw['created_at'] ?? '').toString();
+    final createdDt = DateTime.tryParse(createdIso)?.toLocal() ?? DateTime.now();
+    final normalized = <String, dynamic>{
+      'id': (raw['message_id'] ?? raw['id'] ?? '').toString(),
+      'message_id': (raw['message_id'] ?? '').toString(),
+      'client_message_id': (raw['client_message_id'] ?? '').toString(),
+      'sender_id': '$senderId',
+      'sender_name': (raw['sender_name'] ?? '').toString(),
+      'is_mine': senderId == _myUserId,
+      'type': (raw['type'] ?? 'text').toString(),
+      'body': (raw['body'] ?? '').toString(),
+      'created_at_ms': createdDt.millisecondsSinceEpoch,
+      'created_at_time': formatChatClock(createdDt),
+      'read': false,
+      if (raw['metadata'] is Map) ...Map<String, dynamic>.from(raw['metadata']),
+    };
+
+    setState(() {
+      final clientId = normalized['client_message_id'].toString();
+      if (clientId.isNotEmpty) {
+        _pending.removeWhere(
+          (p) =>
+              (p['client_message_id'] ?? p['local_id'] ?? '').toString() ==
+              clientId,
+        );
+      }
+      _messages = ChatRealtimeClient.deduplicateMessages([
+        ..._messages,
+        normalized,
+      ]);
+      _loading = false;
+    });
+
+    if (!_isUserReadingHistory) {
+      _scrollToEnd();
+    } else if (senderId != _myUserId) {
+      setState(() => _unreadIncomingCount++);
     }
   }
 
@@ -512,6 +649,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final isBackgrounded = state != AppLifecycleState.resumed;
+    ChatRealtimeClient.instance.setBackgrounded(isBackgrounded);
+    if (!isBackgrounded && ChatRealtimeClient.instance.isConnected) {
+      unawaited(ChatRealtimeClient.instance.requestChannelSync(_realtimeChannelId));
+    }
+
     if (_useFirestore || widget.initialMessages != null) return;
     if (state == AppLifecycleState.resumed) {
       _startPolling();
@@ -539,6 +682,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _messagesSub?.cancel();
     _convMetaSub?.cancel();
     _incomingCallSub?.cancel();
+    _wsMessageSub?.cancel();
+    _wsAckSub?.cancel();
+    _wsSyncSub?.cancel();
+    _wsPresenceSub?.cancel();
+    _wsConnSub?.cancel();
     _typingTimer?.cancel();
     _recordTimer?.cancel();
     if (_isRecordingVoice) {
@@ -1309,6 +1457,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final tempMsg = <String, dynamic>{
       'id': tempId,
       'local_id': tempId,
+      'client_message_id': tempId,
       'body': text.isNotEmpty
           ? text
           : (attachmentsToSend.isNotEmpty ? attachmentsToSend.first.name : ''),
@@ -1360,6 +1509,38 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final text = (tempMsg['body'] ?? '').toString();
     final conversationId = widget.conversationId;
     final userId = _state.currentUser?['id'];
+    final clientMsgId =
+        (tempMsg['client_message_id'] ?? tempMsg['local_id'] ?? '').toString();
+
+    // Primary bidirectional WebSocket path when Stateful Chat Server is connected
+    if (ChatRealtimeClient.instance.isConnected && _effectivePeerId > 0) {
+      ChatRealtimeClient.instance.sendMessage(
+        channelId: _realtimeChannelId,
+        recipientIds: [_effectivePeerId],
+        clientMessageId: clientMsgId,
+        type: (tempMsg['type'] ?? 'text').toString(),
+        body: text,
+        metadata: {
+          if (tempMsg['type'] == 'audio') ...{
+            'audio_base64': (tempMsg['audio_base64'] ?? '').toString(),
+            'audio_mime': (tempMsg['audio_mime'] ?? 'audio/webm').toString(),
+            'audio_duration': (tempMsg['audio_duration'] ?? '').toString(),
+            if (tempMsg['audio_waveform'] != null)
+              'audio_waveform': tempMsg['audio_waveform'],
+          },
+          if (tempMsg['image_base64'] != null)
+            'image_base64': tempMsg['image_base64'],
+        },
+        adContext: widget.adTitle.trim().isNotEmpty
+            ? {
+                'ad_id': _effectiveAdId,
+                'ad_title': widget.adTitle.trim(),
+                'ad_price': (widget.adPrice ?? '').trim(),
+                'ad_image': (widget.adImage ?? '').trim(),
+              }
+            : null,
+      );
+    }
 
     if (_useFirestore) {
       final docId = _activeFirestoreDocId!;
@@ -1703,7 +1884,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   @override
   Widget build(BuildContext context) {
-    final allRaw = [..._messages, ..._pending];
+    final allRaw = ChatRealtimeClient.deduplicateMessages([
+      ..._messages,
+      ..._pending,
+    ]);
     final visibleMessages = <Map<String, dynamic>>[];
     final visibleKeys = <String>[];
     for (int i = 0; i < allRaw.length; i++) {
@@ -2112,62 +2296,128 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final title = widget.adTitle.trim();
     final price = (widget.adPrice ?? '').trim();
     final img = (widget.adImage ?? '').trim();
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 2),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
+    final adId = _effectiveAdId;
+    final canOpenAd = adId > 0;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+      child: Material(
         color: _surfaceGrey,
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          if (img.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                width: 34,
-                height: 34,
-                child: AppImage(
-                  url: img,
-                  width: 34,
-                  height: 34,
-                  fit: BoxFit.cover,
-                ),
-              ),
+        child: InkWell(
+          key: const Key('chat-ad-context-banner'),
+          borderRadius: BorderRadius.circular(14),
+          onTap: canOpenAd
+              ? () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AdDetailScreen(adId: adId),
+                    ),
+                  );
+                }
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
             ),
-            const SizedBox(width: 10),
-          ],
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: _textBlack,
-              ),
+            child: Row(
+              children: [
+                if (img.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: AppImage(
+                        url: img,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textDirection: ChatMessage.detectTextDirection(
+                      title,
+                      fallback: Directionality.of(context),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _textBlack,
+                    ),
+                  ),
+                ),
+                if (price.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      price,
+                      key: const Key('chat-ad-context-price'),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: _chatBlue,
+                      ),
+                    ),
+                  ),
+                ],
+                if (canOpenAd) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    isRtl
+                        ? CupertinoIcons.chevron_left
+                        : CupertinoIcons.chevron_right,
+                    size: 14,
+                    color: _textMuted,
+                  ),
+                ],
+              ],
             ),
           ),
-          if (price.isNotEmpty) ...[
-            const SizedBox(width: 8),
-            Text(
-              price,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _chatBlue,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
+  }
+
+  String _formatPresenceSubtitle() {
+    final presence = _peerPresence;
+    if (presence != null) {
+      if (presence.isOnline) {
+        return _state.s.tr('متصل الآن', 'En ligne', 'Online');
+      }
+      final last = presence.lastActiveAt;
+      if (last != null) {
+        final clock = formatChatClock(last);
+        return _state.s.tr(
+          'آخر ظهور $clock',
+          'Vu à $clock',
+          'Last seen $clock',
+        );
+      }
+      return _state.s.tr('غير متصل', 'Hors ligne', 'Offline');
+    }
+    return _useFirestore
+        ? _state.s.tr('غير متصل', 'Hors ligne', 'Offline')
+        : _state.s.tr('غير متصل', 'Hors ligne', 'Offline');
   }
 
   Widget _buildHeader() {
     final topInset = MediaQuery.of(context).padding.top;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isPeerOnline = _peerPresence?.isOnline == true;
     return Container(
       padding: EdgeInsetsDirectional.fromSTEB(6, topInset + 4, 14, 10),
       decoration: const BoxDecoration(
@@ -2195,7 +2445,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ? _openPeerProfile
                 : null,
             child: NotificationBadge(
-              count: _useFirestore ? 1 : 0,
+              count: isPeerOnline ? 1 : 0,
               type: NotificationBadgeType.dot,
               variant: NotificationBadgeVariant.green,
               top: 0,
@@ -2248,18 +2498,38 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                   ),
                   const SizedBox(height: 1.5),
                   // Rule 5: Typing indicator is rendered inline in flow, never floating at top header
-                  Text(
-                    _useFirestore
-                        ? _state.s.tr('متصل الآن', 'En ligne', 'Online')
-                        : _state.s.tr(
-                            'حالة الاتصال غير متاحة', 'Statut indisponible'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: _textMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isPeerOnline) ...[
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      Flexible(
+                        child: Text(
+                          _formatPresenceSubtitle(),
+                          key: const Key('chat-peer-presence-text'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isPeerOnline
+                                ? const Color(0xFF059669)
+                                : _textMuted,
+                            fontWeight: isPeerOnline
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
