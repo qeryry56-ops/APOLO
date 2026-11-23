@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../screens/widgets/app_image.dart';
 import '../screens/widgets/chat_utils.dart';
+import 'typing_indicator.dart';
 
 /// Delivery status for a [ChatMessage] bubble (Rule 3: Optimistic UI).
 enum ChatMessageStatus {
@@ -814,16 +815,8 @@ class ChatTypingIndicator extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      '...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF6B7280),
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
+                    const TypingIndicatorDots(),
+                    const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         label,

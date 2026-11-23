@@ -13,6 +13,7 @@ import '../theme/app_typography.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/chat_message.dart';
 import '../widgets/notification_badge.dart';
+import '../widgets/typing_indicator.dart';
 import '../widgets/voice_recorder.dart';
 import 'call_screen.dart';
 import 'seller_profile_screen.dart';
@@ -106,6 +107,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Timer? _focusScrollTimer;
   Timer? _typingTimer;
   Timer? _recordTimer;
+  TypingIndicatorController? _typingController;
   StreamSubscription<List<Map<String, dynamic>>>? _messagesSub;
   StreamSubscription<Map<String, dynamic>?>? _convMetaSub;
   StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
@@ -188,6 +190,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _stagedAttachments.addAll(widget.initialAttachments);
 
     _scrollCtrl.addListener(_handleScrollPosition);
+
+    _typingController = TypingIndicatorController(
+      memberCount: 2,
+      onEmit: (payload) {
+        if (!mounted || !_useFirestore) return;
+        final docId = _activeFirestoreDocId;
+        if (docId == null) return;
+        FirebaseChatService.instance.setTyping(
+          docId: docId,
+          myUserId: _myUserId,
+          isTyping: payload['typing'] == true,
+        );
+      },
+    );
 
     _msgCtrl.addListener(() {
       if (mounted) setState(() {});
@@ -276,25 +292,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   void _handleTypingActivity() {
     if (!_useFirestore) return;
-    final docId = _activeFirestoreDocId!;
-    final hasText = _msgCtrl.text.trim().isNotEmpty;
-    FirebaseChatService.instance.setTyping(
-      docId: docId,
-      myUserId: _myUserId,
-      isTyping: hasText,
-    );
-    _typingTimer?.cancel();
-    if (hasText) {
-      _typingTimer = Timer(const Duration(milliseconds: 2500), () {
-        if (mounted && _useFirestore) {
-          FirebaseChatService.instance.setTyping(
-            docId: docId,
-            myUserId: _myUserId,
-            isTyping: false,
-          );
-        }
-      });
-    }
+    _typingController?.onTextChanged(_msgCtrl.text);
   }
 
   Future<void> _resolveBestFirestoreDocIfNeeded() async {
@@ -537,6 +535,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         isTyping: false,
       );
     }
+    _typingController?.dispose();
     _messagesSub?.cancel();
     _convMetaSub?.cancel();
     _incomingCallSub?.cancel();
@@ -1335,6 +1334,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     setState(() {
       _pending.add(tempMsg);
       if (preset == null) {
+        _typingController?.onMessageSent();
         _msgCtrl.clear();
         _stagedAttachments.clear();
       }
