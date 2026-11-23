@@ -1033,11 +1033,16 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
             : VoiceRecorder.formatDuration(_totalSeconds));
     final speedLabel = VoiceMessagePlayer.formatSpeedLabel(_playbackSpeed);
 
+    // Exact Apple iOS 26 `MessageAudio` colors (`2052:1051`):
+    // Outgoing on blue gradient: solid white play circle (#0088FF glyph) + crisp white fine waveform
+    // Incoming on gray fill: solid #0088FF play circle (white glyph) + obsidian waveform
     final fgActive = isMine ? Colors.white : const Color(0xFF0A0A0A);
     final fgInactive = isMine
-        ? Colors.white.withValues(alpha: 0.38)
-        : const Color(0xFF0A0A0A).withValues(alpha: 0.25);
-    final subTextColor = isMine ? Colors.white70 : const Color(0xFF6B7280);
+        ? Colors.white.withValues(alpha: progress > 0 ? 0.45 : 0.88)
+        : const Color(0xFF0A0A0A).withValues(alpha: progress > 0 ? 0.28 : 0.72);
+    final subTextColor = isMine
+        ? Colors.white.withValues(alpha: 0.70)
+        : const Color(0x993C3C43);
 
     return Semantics(
       container: true,
@@ -1049,7 +1054,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Play / Pause button (min 44x44px touch target)
+            // Exact Apple iOS 26 Play / Pause button (min 44x44px touch target)
             Semantics(
               button: true,
               label: _isPlaying ? 'Pause voice message' : 'Play voice message',
@@ -1064,12 +1069,10 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                   ),
                   child: Center(
                     child: Container(
-                      width: 36,
-                      height: 36,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: isMine
-                            ? Colors.white.withValues(alpha: 0.2)
-                            : const Color(0xFF0A0A0A),
+                        color: isMine ? Colors.white : const Color(0xFF0088FF),
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
@@ -1077,8 +1080,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                         _isPlaying
                             ? CupertinoIcons.pause_fill
                             : CupertinoIcons.play_fill,
-                        color: Colors.white,
-                        size: 16,
+                        color: isMine ? const Color(0xFF0088FF) : Colors.white,
+                        size: 15,
                       ),
                     ),
                   ),
@@ -1087,7 +1090,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
             ),
             const SizedBox(width: 6),
 
-            // Scrubbable waveform + duration (min 44px touch target height)
+            // Scrubbable fine-bar Apple waveform + duration (min 44px touch target height)
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -1114,7 +1117,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SizedBox(
-                              height: 22,
+                              height: 28,
                               child: Stack(
                                 alignment: Alignment.centerLeft,
                                 children: [
@@ -1129,20 +1132,20 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                                           (index + 1) / _bars.length;
                                       final isFilled =
                                           progress > 0 && ratio <= progress;
-                                      final barH = (5.0 +
+                                      final barH = (4.0 +
                                               _bars[index].clamp(0.1, 1.0) *
-                                                  15.0)
-                                          .clamp(5.0, 20.0);
+                                                  22.0)
+                                          .clamp(4.0, 26.0);
                                       return AnimatedContainer(
                                         duration:
                                             const Duration(milliseconds: 60),
-                                        width: 3,
+                                        width: 2.2,
                                         height: barH,
                                         decoration: BoxDecoration(
                                           color:
                                               isFilled ? fgActive : fgInactive,
                                           borderRadius:
-                                              BorderRadius.circular(999),
+                                              BorderRadius.circular(10),
                                         ),
                                       );
                                     }),

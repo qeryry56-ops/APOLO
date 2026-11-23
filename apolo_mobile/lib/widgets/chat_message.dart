@@ -73,6 +73,7 @@ class ChatMessage extends StatefulWidget {
   final bool hideAvatarGutter;
   final String? deliveryLabel;
   final double swipeRevealProgress;
+  final bool isBorderlessCustomContent;
 
   const ChatMessage({
     super.key,
@@ -107,6 +108,7 @@ class ChatMessage extends StatefulWidget {
     this.hideAvatarGutter = false,
     this.deliveryLabel,
     this.swipeRevealProgress = 0.0,
+    this.isBorderlessCustomContent = false,
   });
 
   /// Detects natural reading direction (RTL for Arabic/Hebrew, LTR for Latin/digits)
@@ -409,7 +411,20 @@ class _ChatMessageState extends State<ChatMessage> {
         widget.swipeRevealProgress > 0.05 && widget.timestamp.trim().isNotEmpty;
 
     Widget bubbleCore;
-    if (isPureImageBubble) {
+    if (widget.isBorderlessCustomContent &&
+        widget.customContent != null &&
+        !isDeleted) {
+      // Authentic iOS iMessage Die-Cut Sticker: floats cleanly with no bubble box
+      bubbleCore = GestureDetector(
+        key: Key('chat-bubble-${widget.messageKey}'),
+        onLongPress: _handleLongPress,
+        onSecondaryTap: widget.onOpenActions,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: widget.customContent!,
+        ),
+      );
+    } else if (isPureImageBubble) {
       // Exact Figma OtherChat3: photo itself gets 18px corners + curved iMessage tail
       bubbleCore = GestureDetector(
         key: Key('chat-bubble-${widget.messageKey}'),
@@ -450,6 +465,9 @@ class _ChatMessageState extends State<ChatMessage> {
         child: CustomPaint(
           painter: IMessageBubblePainter(
             color: bubbleBg,
+            gradient: (isMine && !isDeleted && !isFailed)
+                ? Ios26IMessageTokens.bubbleMineGradient
+                : null,
             borderColor: isFailed
                 ? Ios26IMessageTokens.errorRed.withValues(alpha: 0.45)
                 : null,

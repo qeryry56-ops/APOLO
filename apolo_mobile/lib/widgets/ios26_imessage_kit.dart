@@ -16,40 +16,49 @@ class Ios26IMessageTokens {
   static const Color edgeMistTint = Color(0xFFF4F5F7); // Figma subtle edge frost
   static const Color tabGlassInk = Color(0xFF0A0A0A);
 
-  // Bubbles (exact hexes from Figma SVG `fill="#0088FF"` & `fill="#D0D2D5"`)
+  // Official Apple iOS 26 Bubbles (from Figma `0:151` `Chat` & `2051:10899` `Bubble`)
+  // Outgoing: vertical luminous sky-to-cobalt gradient `#4EBAFF` -> `#0088FF` + white text
+  // Incoming: `--fills/secondary` `rgba(120, 120, 128, 0.16)` (#E9E9EB on white) + pure black text
+  static const Color bubbleMineTop = Color(0xFF4EBAFF);
   static const Color bubbleMine = Color(0xFF0088FF);
-  static const Color bubbleMineText = Color(0xFFF2F2F7);
-  static const Color bubbleOther = Color(0xFFD0D2D5);
-  static const Color bubbleOtherText = Color(0xFF333333);
+  static const LinearGradient bubbleMineGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [bubbleMineTop, bubbleMine],
+  );
+  static const Color bubbleMineText = Color(0xFFFFFFFF);
+  static const Color bubbleOther = Color(0x29787880); // rgba(120,120,128,0.16)
+  static const Color bubbleOtherText = Color(0xFF000000);
 
-  // Labels & Controls (exact Figma variables)
+  // Labels & Controls (official Apple iOS 26 tokens)
   static const Color labelPrimary = Color(0xFF000000);
+  static const Color labelSecondary = Color(0x993C3C43); // rgba(60,60,67,0.60)
   static const Color controlIconPrimary = Color(0xFF0A0A0A);
-  static const Color chevronTertiary = Color(0xFFBFBFBF);
-  static const Color dateGray = Color(0xFF8E8E93);
-  static const Color placeholderGray = Color(0xFFCCCCCC);
+  static const Color chevronTertiary = Color(0x993C3C43);
+  static const Color dateGray = Color(0x993C3C43); // Figma Time Stamp rgba(60,60,67,0.6)
+  static const Color placeholderGray = Color(0xFFD9D9D9); // Figma #d9d9d9
   static const Color onlineGreen = Color(0xFF34C759);
   static const Color errorRed = Color(0xFFFF3B30);
 
-  // Tapback Reaction Badge (Figma 4:1047)
+  // Tapback Reaction Badge
   static const Color tapbackBlue = Color(0xFF0088FF);
 
-  // Dimensions (exact Figma geometry)
-  static const double controlCircleSize = 45.0;
-  static const double controlRadius = 22.5;
-  static const double composerMinHeight = 45.0;
-  static const double avatarSize = 62.0;
-  static const double namePillHeight = 29.0;
+  // Dimensions (official Apple iOS 26 Figma geometry)
+  static const double controlCircleSize = 44.0;
+  static const double controlRadius = 22.0;
+  static const double composerMinHeight = 42.0;
+  static const double avatarSize = 60.0; // Figma size-[60px]
+  static const double namePillHeight = 32.0; // Figma h-[32px]
   static const double bubbleRadius = 18.0;
-  static const double bubbleTailDrop = 6.0; // Exact SVG drop: 36 -> 42px
+  static const double bubbleTailDrop = 6.0;
 
-  // Typography (exact Figma SF Pro specs)
-  static const double messageFontSize = 15.2;
-  static const double messageLineHeight = 22.0 / 15.2;
-  static const double messageTracking = -0.43;
-  static const double dateFontSize = 12.0;
+  // Typography (official Apple SF Pro specs from Figma `0:151`)
+  static const double messageFontSize = 16.5;
+  static const double messageLineHeight = 22.0 / 16.5;
+  static const double messageTracking = -0.35;
+  static const double dateFontSize = 11.0; // Figma text-[11px]
   static const double composerFontSize = 17.0;
-  static const double nameFontSize = 16.0;
+  static const double nameFontSize = 17.0; // Figma Bold 17px
 }
 
 /// Floating Liquid Glass surface matching Apolo's Tab Bar (`main_shell.dart`):
@@ -368,9 +377,11 @@ Path buildIMessageBubblePath(
   return leftPath.transform(mirror.storage);
 }
 
-/// CustomPainter for solid iOS 26 iMessage bubbles (`#0088FF` / `#D0D2D5`).
+/// CustomPainter for official Apple iOS 26 iMessage bubbles:
+/// Supports both vertical `#4EBAFF -> #0088FF` gradient (outgoing) and solid fills (incoming).
 class IMessageBubblePainter extends CustomPainter {
   final Color color;
+  final Gradient? gradient;
   final Color? borderColor;
   final bool tailOnRight;
   final bool showTail;
@@ -378,6 +389,7 @@ class IMessageBubblePainter extends CustomPainter {
 
   const IMessageBubblePainter({
     required this.color,
+    this.gradient,
     this.borderColor,
     required this.tailOnRight,
     required this.showTail,
@@ -394,9 +406,16 @@ class IMessageBubblePainter extends CustomPainter {
     );
 
     final fillPaint = Paint()
-      ..color = color
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
+
+    if (gradient != null) {
+      fillPaint.shader =
+          gradient!.createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    } else {
+      fillPaint.color = color;
+    }
+
     canvas.drawPath(path, fillPaint);
 
     if (borderColor != null) {
@@ -412,6 +431,7 @@ class IMessageBubblePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant IMessageBubblePainter oldDelegate) {
     return oldDelegate.color != color ||
+        oldDelegate.gradient != gradient ||
         oldDelegate.borderColor != borderColor ||
         oldDelegate.tailOnRight != tailOnRight ||
         oldDelegate.showTail != showTail ||

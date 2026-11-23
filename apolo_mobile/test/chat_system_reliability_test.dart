@@ -103,6 +103,21 @@ void main() {
       // Sender and receiver bubbles rendered distinctly
       expect(find.text('السلام عليكم، واش الساعة باقية؟'), findsOneWidget);
       expect(find.text('Yes, Tissot watch black is available!'), findsOneWidget);
+
+      // Tap '+' opens iOS 26 Half-Height Liquid Glass Apps & Stickers Drawer
+      await tester.tap(find.byKey(const Key('chat-attach-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('ios26-imessage-drawer')), findsOneWidget);
+      expect(find.byKey(const Key('ios26-app-photos')), findsOneWidget);
+      expect(find.byKey(const Key('ios26-app-camera')), findsOneWidget);
+      expect(find.byKey(const Key('ios26-app-stickers')), findsOneWidget);
+      expect(find.byKey(const Key('ios26-app-offer')), findsOneWidget);
+
+      // Switch to 3-column Sticker Pack Grid
+      await tester.tap(find.byKey(const Key('ios26-drawer-tab-stickers')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('ios26-sticker-salam')), findsOneWidget);
+      expect(find.byKey(const Key('ios26-sticker-deal')), findsOneWidget);
     },
   );
 }

@@ -56,6 +56,8 @@ class ChatInput extends StatefulWidget {
   final String recordingText;
   final int minLines;
   final int maxLines;
+  final bool isDrawerOpen;
+  final bool hasBottomSheetBelow;
 
   const ChatInput({
     super.key,
@@ -79,6 +81,8 @@ class ChatInput extends StatefulWidget {
     this.recordingText = 'Recording...',
     this.minLines = 1,
     this.maxLines = 5,
+    this.isDrawerOpen = false,
+    this.hasBottomSheetBelow = false,
   });
 
   static const Color _ink = Color(0xFF0A0A0A);
@@ -273,7 +277,12 @@ class _ChatInputState extends State<ChatInput> {
     return FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
       child: Container(
-        padding: EdgeInsets.fromLTRB(16, 6, 16, bottomInset + 10),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          6,
+          16,
+          widget.hasBottomSheetBelow ? 10 : bottomInset + 10,
+        ),
         color: Colors.transparent,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -337,11 +346,16 @@ class _ChatInputState extends State<ChatInput> {
                         Ios26IMessageTokens.controlRadius,
                       ),
                       onTap: widget.onAttachTap,
-                      child: const Center(
-                        child: Icon(
-                          CupertinoIcons.plus,
-                          color: Ios26IMessageTokens.labelPrimary,
-                          size: 20,
+                      child: Center(
+                        child: AnimatedRotation(
+                          turns: widget.isDrawerOpen ? 0.125 : 0.0,
+                          duration: ApoloMotion.microDuration,
+                          curve: ApoloMotion.easeOutCurve,
+                          child: const Icon(
+                            CupertinoIcons.plus,
+                            color: Ios26IMessageTokens.labelPrimary,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),

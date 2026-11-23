@@ -13,6 +13,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/chat_message.dart';
+import '../widgets/ios26_imessage_drawer.dart';
 import '../widgets/ios26_imessage_kit.dart';
 import '../widgets/notification_badge.dart';
 import '../widgets/typing_indicator.dart';
@@ -110,6 +111,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   // Classic iOS iMessage horizontal swipe-to-reveal timestamps
   double _swipeRevealProgress = 0.0;
+
+  // Official Apple iOS 26 Half-Height `+` Apps & Stickers Drawer (`0:99`)
+  bool _isDrawerOpen = false;
+  Ios26DrawerTab _drawerTab = Ios26DrawerTab.apps;
 
   Timer? _pollTimer;
   Timer? _focusScrollTimer;
@@ -223,10 +228,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     });
 
     _focus.addListener(() {
-      if (_focus.hasFocus && !_isUserReadingHistory) {
-        _focusScrollTimer?.cancel();
-        _focusScrollTimer =
-            Timer(const Duration(milliseconds: 300), _scrollToEnd);
+      if (_focus.hasFocus) {
+        if (_isDrawerOpen && mounted) {
+          setState(() => _isDrawerOpen = false);
+        }
+        if (!_isUserReadingHistory) {
+          _focusScrollTimer?.cancel();
+          _focusScrollTimer =
+              Timer(const Duration(milliseconds: 300), _scrollToEnd);
+        }
       }
     });
 
@@ -1714,12 +1724,73 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  Future<void> _pickAndStageImage() async {
+  void _toggleIMessageDrawer([Ios26DrawerTab? preferredTab]) {
+    HapticFeedback.selectionClick();
+    if (_isDrawerOpen && (preferredTab == null || preferredTab == _drawerTab)) {
+      setState(() => _isDrawerOpen = false);
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _showCallMenu = false;
+      if (preferredTab != null) _drawerTab = preferredTab;
+      _isDrawerOpen = true;
+    });
+    _scrollToEnd();
+  }
+
+  Future<void> _sendSticker(IMessageStickerItem item) async {
+    setState(() => _isDrawerOpen = false);
+    await _sendText('[sticker:${item.id}]');
+  }
+
+  Future<void> _sendLocationMessage() async {
+    setState(() => _isDrawerOpen = false);
+    final city = _state.activeZoneCityLabel(_state.s).trim();
+    final userCity = (_state.currentUser?['city'] ?? '').toString().trim();
+    final resolvedCity = city.isNotEmpty
+        ? city
+        : (userCity.isNotEmpty
+            ? userCity
+            : _state.s.tr('المغرب', 'Maroc', 'Morocco'));
+    final msg = _state.s.tr(
+      '📍 موقعي الحالي: $resolvedCity',
+      '📍 Ma position : $resolvedCity',
+      '📍 My location: $resolvedCity',
+    );
+    await _sendText(msg);
+  }
+
+  Future<void> _sendOfferMessage(String rawAmount) async {
+    final cleaned = rawAmount.replaceAll(RegExp(r'[^0-9.,]'), '').trim();
+    if (cleaned.isEmpty) return;
+    setState(() => _isDrawerOpen = false);
+    final title = widget.adTitle.trim();
+    final msg = title.isNotEmpty
+        ? _state.s.tr(
+            '💰 عرض ثمن على "$title": $cleaned DH',
+            '💰 Offre pour "$title" : $cleaned DH',
+            '💰 Price offer for "$title": DH $cleaned',
+          )
+        : _state.s.tr(
+            '💰 عرض ثمن: $cleaned DH',
+            '💰 Offre de prix : $cleaned DH',
+            '💰 Price offer: DH $cleaned',
+          );
+    await _sendText(msg);
+  }
+
+  Future<void> _pickAndStageImage({
+    ImageSource source = ImageSource.gallery,
+  }) async {
     if (_uploadingMedia) return;
+    if (_isDrawerOpen && mounted) {
+      setState(() => _isDrawerOpen = false);
+    }
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 960,
         imageQuality: 65,
       );
@@ -1942,8 +2013,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final topInset = MediaQuery.paddingOf(context).top;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final hasAdContext = widget.adTitle.trim().isNotEmpty;
-    final double headerTopClearance = topInset + (hasAdContext ? 168.0 : 114.0);
-    final double composerBottomClearance = bottomInset + 84.0;
+    final double headerTopClearance = topInset + (hasAdContext ? 172.0 : 118.0);
+    final double drawerHeightOffset = _isDrawerOpen ? 342.0 : 0.0;
+    final double composerBottomClearance =
+        bottomInset + 84.0 + drawerHeightOffset;
 
     return Scaffold(
       backgroundColor: Ios26IMessageTokens.canvasWhite,
@@ -1962,8 +2035,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 : GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTap: () {
-                      if (_showCallMenu) {
-                        setState(() => _showCallMenu = false);
+                      if (_showCallMenu || _isDrawerOpen) {
+                        setState(() {
+                          _showCallMenu = false;
+                          _isDrawerOpen = false;
+                        });
                       }
                       FocusScope.of(context).unfocus();
                     },
@@ -2181,12 +2257,42 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               ),
             ),
 
-          // Layer 4: Floating iOS 26 Liquid Glass Bottom Composer (`Navigation`)
+          // Layer 4: Floating iOS 26 Liquid Glass Bottom Composer + Half-Height `+` Apps/Stickers Sheet (`0:99`)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: _buildComposerSection(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildComposerSection(),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 260),
+                  curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+                  alignment: Alignment.bottomCenter,
+                  child: _isDrawerOpen
+                      ? Ios26IMessageDrawer(
+                          initialTab: _drawerTab,
+                          lang: _state.s.lang,
+                          hasListingContext: hasAdContext,
+                          listingPrice: (widget.adPrice ?? '').trim(),
+                          onClose: () => setState(() => _isDrawerOpen = false),
+                          onPickPhoto: () =>
+                              _pickAndStageImage(source: ImageSource.gallery),
+                          onTakePhoto: () =>
+                              _pickAndStageImage(source: ImageSource.camera),
+                          onStartVoice: () {
+                            setState(() => _isDrawerOpen = false);
+                            _startVoiceRecording();
+                          },
+                          onSendLocation: _sendLocationMessage,
+                          onSendOffer: _sendOfferMessage,
+                          onSendSticker: _sendSticker,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
 
           // Layer 5: Floating Liquid Glass Call & Safety Popover
@@ -2282,10 +2388,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
     }
 
+    // Detect die-cut iMessage sticker payload `[sticker:<id>]`
+    IMessageStickerItem? stickerItem;
+    if (!isDeletedAll && !isAudio && !isImage) {
+      final stickerMatch =
+          RegExp(r'^\[sticker:([a-z0-9_]+)\]$').firstMatch(body.trim());
+      if (stickerMatch != null) {
+        stickerItem = IMessageStickerItem.findById(stickerMatch.group(1)!);
+      }
+    }
+
     return ChatMessage(
       key: ValueKey<String>(msgKey),
       messageKey: msgKey,
-      body: body,
+      body: stickerItem != null
+          ? '${stickerItem.emoji} ${stickerItem.labelFor(_state.s.lang)}'
+          : body,
       isMine: isMine,
       senderName: senderName,
       senderAvatar: senderAvatar,
@@ -2295,6 +2413,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       hideAvatarGutter: !widget.showInlineAvatars,
       deliveryLabel: deliveryLabel,
       swipeRevealProgress: _swipeRevealProgress,
+      isBorderlessCustomContent: stickerItem != null,
       isFirstInGroup: meta.isFirstInGroup,
       isLastInGroup: meta.isLastInGroup,
       topSpacing: meta.topSpacing,
@@ -2306,9 +2425,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       isStarred: isStarred,
       reactions: reactionEmojis,
       imageBytes: imageBytes,
-      customContent: isAudio
-          ? _buildAudioBubbleContent(m, msgKey, audioDuration, isMine)
-          : null,
+      customContent: stickerItem != null
+          ? IMessageDieCutSticker(
+              emoji: stickerItem.emoji,
+              label: stickerItem.labelFor(_state.s.lang),
+              tint: stickerItem.tint,
+              tiltDeg: stickerItem.tiltDeg,
+              size: 108,
+            )
+          : (isAudio
+              ? _buildAudioBubbleContent(m, msgKey, audioDuration, isMine)
+              : null),
       onRetry: status == ChatMessageStatus.failed
           ? () => _retryMessage(m)
           : null,
@@ -2536,13 +2663,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final topInset = MediaQuery.of(context).padding.top;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final isPeerOnline = _peerPresence?.isOnline == true;
+    final unreadCount = _state.unreadChatCount;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(18, topInset + 8, 18, 2),
+      padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left: 45x45 Liquid Glass Back Circle (Figma `1:2618`)
+          // Left: Official Apple iOS 26 Back Glass Pill (`< 2` when unread > 0, else 44x44 circle)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Semantics(
@@ -2550,30 +2678,61 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               label: 'Back',
               child: LiquidGlassSurface(
                 key: const Key('chat-ios26-back-button'),
-                width: Ios26IMessageTokens.controlCircleSize,
+                width: unreadCount > 0 ? null : Ios26IMessageTokens.controlCircleSize,
                 height: Ios26IMessageTokens.controlCircleSize,
                 borderRadius: BorderRadius.circular(
                   Ios26IMessageTokens.controlRadius,
                 ),
+                padding: unreadCount > 0
+                    ? const EdgeInsets.symmetric(horizontal: 11)
+                    : EdgeInsets.zero,
                 onTap: () {
                   if (Navigator.canPop(context)) {
                     Navigator.pop(context);
                   }
                 },
-                child: Center(
-                  child: Icon(
-                    isRtl
-                        ? CupertinoIcons.chevron_forward
-                        : CupertinoIcons.chevron_back,
-                    color: Ios26IMessageTokens.controlIconPrimary,
-                    size: 20,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isRtl
+                          ? CupertinoIcons.chevron_forward
+                          : CupertinoIcons.chevron_back,
+                      color: Ios26IMessageTokens.controlIconPrimary,
+                      size: 20,
+                    ),
+                    if (unreadCount > 0) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 20,
+                          minHeight: 20,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3A3A3C),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            height: 1.0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
           ),
 
-          // Center: Floating Avatar + Overlapping Liquid Glass Name Pill (Figma `1:2620`)
+          // Center: Official Apple 60x60 Avatar + Overlapping Bold 17px Liquid Glass Name Pill (`Alejandra >`)
           Expanded(
             child: Center(
               child: GestureDetector(
@@ -2585,12 +2744,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                      height: 82,
+                      height: 85,
                       child: Stack(
                         alignment: Alignment.topCenter,
                         clipBehavior: Clip.none,
                         children: [
-                          // 62x62 Circular Avatar with soft Liquid Glass halo
                           NotificationBadge(
                             count: isPeerOnline ? 1 : 0,
                             type: NotificationBadgeType.dot,
@@ -2606,13 +2764,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 color: Colors.white,
                                 border: Border.all(
                                   color: Colors.white.withValues(alpha: 0.92),
-                                  width: 2.2,
+                                  width: 2.0,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.10),
-                                    blurRadius: 18,
-                                    offset: const Offset(0, 6),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
@@ -2632,21 +2790,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               ),
                             ),
                           ),
-
-                          // Overlapping Liquid Glass Name Pill (Figma `1:2714` & `1:2608`)
-                          // Uses identical Tab Bar glass material + squash & stretch press feel
                           Positioned(
                             bottom: 0,
                             child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 196),
+                              constraints: const BoxConstraints(maxWidth: 204),
                               child: LiquidGlassSurface(
                                 height: Ios26IMessageTokens.namePillHeight,
                                 borderRadius: BorderRadius.circular(
                                   Ios26IMessageTokens.controlRadius,
                                 ),
-                                fillAlpha: 0.82,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
+                                fillAlpha: 0.84,
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 14,
+                                  end: 9,
                                 ),
                                 onTap: widget.peerId != null && widget.peerId! > 0
                                     ? _openPeerProfile
@@ -2662,25 +2818,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                         style: TextStyle(
                                           fontSize:
                                               Ios26IMessageTokens.nameFontSize,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w700,
                                           color:
                                               Ios26IMessageTokens.labelPrimary,
                                           letterSpacing:
                                               AppTypography.trackingForContext(
                                             context,
-                                            -0.3,
+                                            -0.35,
                                           ),
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 3),
+                                    const SizedBox(width: 4),
                                     Icon(
                                       isRtl
                                           ? CupertinoIcons.chevron_left
                                           : CupertinoIcons.chevron_right,
-                                      size: 11,
-                                      color:
-                                          Ios26IMessageTokens.chevronTertiary,
+                                      size: 13,
+                                      color: Ios26IMessageTokens.labelSecondary,
                                     ),
                                   ],
                                 ),
@@ -2904,7 +3059,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       focusNode: _focus,
       attachments: _stagedAttachments,
       onSend: (_) => _sendText(),
-      onAttachTap: _pickAndStageImage,
+      onAttachTap: _toggleIMessageDrawer,
+      isDrawerOpen: _isDrawerOpen,
+      hasBottomSheetBelow: _isDrawerOpen,
       onRemoveAttachment: (att) {
         setState(() {
           _stagedAttachments.removeWhere((a) => a.id == att.id);
