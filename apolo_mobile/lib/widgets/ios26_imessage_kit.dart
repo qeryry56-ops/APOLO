@@ -6,43 +6,42 @@ import 'package:flutter/services.dart';
 import 'perceived_performance.dart';
 
 /// Exact design tokens extracted from Figma `iOS 26 (Community)` — iMessage
-/// screens (`1:2` and `4:1052`, file key `2KKhnxTaSWpI8CQhUz7f8J`).
+/// screens (`1:2` & `4:1052`, SVGs `44a4c.svg`, `62e36.svg`, `557c3.svg`)
+/// unified with Apolo's Tab Bar Liquid Glass material (`main_shell.dart`).
 class Ios26IMessageTokens {
   Ios26IMessageTokens._();
 
-  // Canvas & Surfaces
+  // Canvas & Surfaces (sampled directly from Figma screenshot `media_0.png`)
   static const Color canvasWhite = Color(0xFFFFFFFF);
-  static const Color glassFillBase = Color(0xADFFFFFF); // rgba(255,255,255,0.68)
-  static const Color glassNamePillFill = Color(0xCCFFFFFF); // rgba(255,255,255,0.80)
-  static const Color glassBorderHighlight = Color(0xE6FFFFFF);
-  static const Color glassBorderOuter = Color(0x14000000);
+  static const Color edgeMistTint = Color(0xFFF4F5F7); // Figma subtle edge frost
+  static const Color tabGlassInk = Color(0xFF0A0A0A);
 
-  // Bubbles (exact Figma hexes)
-  static const Color bubbleMine = Color(0xFF0088FF); // Figma #08f
-  static const Color bubbleMineText = Color(0xFFF2F2F7); // Figma --grays/gray-6
-  static const Color bubbleOther = Color(0xFFCFD1D4); // Figma #cfd1d4
-  static const Color bubbleOtherText = Color(0xFF333333); // Figma --labels---vibrant/primary
+  // Bubbles (exact hexes from Figma SVG `fill="#0088FF"` & `fill="#D0D2D5"`)
+  static const Color bubbleMine = Color(0xFF0088FF);
+  static const Color bubbleMineText = Color(0xFFF2F2F7);
+  static const Color bubbleOther = Color(0xFFD0D2D5);
+  static const Color bubbleOtherText = Color(0xFF333333);
 
-  // Labels & Controls
+  // Labels & Controls (exact Figma variables)
   static const Color labelPrimary = Color(0xFF000000);
-  static const Color controlIconPrimary = Color(0xFF404040); // Figma #404040
-  static const Color chevronTertiary = Color(0xFFBFBFBF); // Figma #bfbfbf
-  static const Color dateGray = Color(0xFF8E8E93); // Figma --grays/gray
-  static const Color placeholderGray = Color(0xFFCCCCCC); // Figma --fills---vibrant/primary
-  static const Color onlineGreen = Color(0xFF34C759); // iOS System Green
+  static const Color controlIconPrimary = Color(0xFF0A0A0A);
+  static const Color chevronTertiary = Color(0xFFBFBFBF);
+  static const Color dateGray = Color(0xFF8E8E93);
+  static const Color placeholderGray = Color(0xFFCCCCCC);
+  static const Color onlineGreen = Color(0xFF34C759);
   static const Color errorRed = Color(0xFFFF3B30);
 
   // Tapback Reaction Badge (Figma 4:1047)
   static const Color tapbackBlue = Color(0xFF0088FF);
 
   // Dimensions (exact Figma geometry)
-  static const double controlCircleSize = 45.0; // Figma size-[45px]
-  static const double controlRadius = 22.5; // Figma rounded-[22.5px]
-  static const double composerMinHeight = 45.0; // Figma h-[45px]
-  static const double avatarSize = 62.0; // Figma Photo profil circle
-  static const double namePillHeight = 29.0; // Figma h-[29px]
-  static const double bubbleRadius = 18.0; // Figma rounded-[18px]
-  static const double bubbleTailWidth = 6.5;
+  static const double controlCircleSize = 45.0;
+  static const double controlRadius = 22.5;
+  static const double composerMinHeight = 45.0;
+  static const double avatarSize = 62.0;
+  static const double namePillHeight = 29.0;
+  static const double bubbleRadius = 18.0;
+  static const double bubbleTailDrop = 6.0; // Exact SVG drop: 36 -> 42px
 
   // Typography (exact Figma SF Pro specs)
   static const double messageFontSize = 15.2;
@@ -53,9 +52,13 @@ class Ios26IMessageTokens {
   static const double nameFontSize = 16.0;
 }
 
-/// Authentic iOS 26 **Liquid Glass — Clear/Light** surface matching the Figma
-/// `LiquidGlassClearLight` component used on the Back button, Call button,
-/// floating Name pill, `+` button, and `iMessage` input capsule.
+/// Floating Liquid Glass surface matching Apolo's Tab Bar (`main_shell.dart`):
+/// - `BackdropFilter(sigmaX: 24, sigmaY: 24)`
+/// - Borderless translucent fill `Colors.white.withValues(alpha: 0.78)`
+/// - Pure luminous white edge `Colors.white.withValues(alpha: 0.72)` (no dark stroke)
+/// - Exact ambient diffuse shadow `BoxShadow(alpha: 0.09, blurRadius: 22, offset: (0, 7))`
+/// - Exact Tab Bar **Squash & Stretch Jelly Physics** (`360ms`) + `0.88` press-down
+///   scale + `0.82` press opacity + `HapticFeedback.selectionClick()`.
 class LiquidGlassSurface extends StatefulWidget {
   final Widget child;
   final double? width;
@@ -64,9 +67,10 @@ class LiquidGlassSurface extends StatefulWidget {
   final BorderRadius borderRadius;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
-  final Color tintColor;
+  final double fillAlpha;
   final double blurSigma;
   final bool elevated;
+  final double pressedScale;
 
   const LiquidGlassSurface({
     super.key,
@@ -78,24 +82,85 @@ class LiquidGlassSurface extends StatefulWidget {
         const BorderRadius.all(Radius.circular(Ios26IMessageTokens.controlRadius)),
     this.padding,
     this.onTap,
-    this.tintColor = Ios26IMessageTokens.glassFillBase,
-    this.blurSigma = 22.0,
+    this.fillAlpha = 0.78,
+    this.blurSigma = 24.0,
     this.elevated = true,
+    this.pressedScale = 0.88,
   });
 
   @override
   State<LiquidGlassSurface> createState() => _LiquidGlassSurfaceState();
 }
 
-class _LiquidGlassSurfaceState extends State<LiquidGlassSurface> {
+class _LiquidGlassSurfaceState extends State<LiquidGlassSurface>
+    with SingleTickerProviderStateMixin {
   bool _pressed = false;
+  late final AnimationController _squashCtrl;
+  late final Animation<double> _scaleX;
+  late final Animation<double> _scaleY;
+
+  @override
+  void initState() {
+    super.initState();
+    // Exact 360ms Tab Bar squash & stretch curve from `main_shell.dart`
+    _squashCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+    );
+    _scaleX = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.18)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.18, end: 0.94)
+            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.94, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 30,
+      ),
+    ]).animate(_squashCtrl);
+    _scaleY = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.85)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.85, end: 1.06)
+            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.06, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 30,
+      ),
+    ]).animate(_squashCtrl);
+  }
+
+  @override
+  void dispose() {
+    _squashCtrl.dispose();
+    super.dispose();
+  }
+
+  void _triggerSquashStretch() {
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      _squashCtrl.forward(from: 0.0);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final disableAnim = MediaQuery.disableAnimationsOf(context);
-    final duration = disableAnim ? Duration.zero : ApoloMotion.microDuration;
+    final pressDuration = disableAnim ? Duration.zero : ApoloMotion.microDuration;
 
-    Widget surface = Container(
+    Widget glassBody = Container(
       width: widget.width,
       height: widget.height,
       constraints: widget.constraints,
@@ -104,14 +169,13 @@ class _LiquidGlassSurfaceState extends State<LiquidGlassSurface> {
         boxShadow: widget.elevated
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.09),
-                  blurRadius: 20,
-                  spreadRadius: -2,
-                  offset: const Offset(0, 6),
+                  color: Ios26IMessageTokens.tabGlassInk.withValues(alpha: 0.10),
+                  blurRadius: 22,
+                  offset: const Offset(0, 7),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 4,
+                  color: Ios26IMessageTokens.tabGlassInk.withValues(alpha: 0.04),
+                  blurRadius: 5,
                   offset: const Offset(0, 1),
                 ),
               ]
@@ -124,29 +188,19 @@ class _LiquidGlassSurfaceState extends State<LiquidGlassSurface> {
             sigmaX: widget.blurSigma,
             sigmaY: widget.blurSigma,
           ),
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
             padding: widget.padding,
             decoration: BoxDecoration(
-              borderRadius: widget.borderRadius,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white.withValues(alpha: 0.88),
-                  widget.tintColor,
-                  Colors.white.withValues(alpha: 0.80),
-                ],
-                stops: const [0.0, 0.52, 1.0],
+              color: Colors.white.withValues(
+                alpha: _pressed
+                    ? (widget.fillAlpha + 0.12).clamp(0.0, 0.96)
+                    : widget.fillAlpha,
               ),
-              border: Border.all(
-                color: Ios26IMessageTokens.glassBorderOuter,
-                width: 0.8,
-              ),
-            ),
-            foregroundDecoration: BoxDecoration(
               borderRadius: widget.borderRadius,
               border: Border.all(
-                color: Ios26IMessageTokens.glassBorderHighlight,
+                color: Colors.white.withValues(alpha: 0.78),
                 width: 1.0,
               ),
             ),
@@ -156,133 +210,165 @@ class _LiquidGlassSurfaceState extends State<LiquidGlassSurface> {
       ),
     );
 
-    if (widget.onTap == null) return surface;
+    if (widget.onTap == null) return glassBody;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) {
-        HapticFeedback.lightImpact();
+        HapticFeedback.selectionClick();
         setState(() => _pressed = true);
       },
       onTapUp: (_) {
         setState(() => _pressed = false);
+        _triggerSquashStretch();
         widget.onTap?.call();
       },
       onTapCancel: () {
         if (_pressed) setState(() => _pressed = false);
       },
-      child: AnimatedScale(
-        scale: _pressed ? 0.93 : 1.0,
-        duration: duration,
-        curve: ApoloMotion.easeOutCurve,
-        child: surface,
+      child: AnimatedBuilder(
+        animation: _squashCtrl,
+        builder: (context, child) {
+          final sx = _squashCtrl.isAnimating ? _scaleX.value : 1.0;
+          final sy = _squashCtrl.isAnimating ? _scaleY.value : 1.0;
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.diagonal3Values(sx, sy, 1.0),
+            child: child,
+          );
+        },
+        child: AnimatedScale(
+          scale: _pressed ? widget.pressedScale : 1.0,
+          duration: pressDuration,
+          curve: ApoloMotion.easeOutCurve,
+          child: AnimatedOpacity(
+            opacity: _pressed ? ApoloMotion.pressedOpacity : 1.0,
+            duration: pressDuration,
+            curve: ApoloMotion.easeOutCurve,
+            child: glassBody,
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Builds the exact iOS 26 iMessage speech-bubble path with a smooth curved
-/// swooping tail on the bottom-outer corner (matching Figma `Union` / `Vector 3` / `Vector 4`).
+/// Exact Figma SVG speech-bubble path (`44a4c.svg`, `62e36.svg`, `557c3.svg`).
+///
+/// The rounded capsule occupies `[0 .. bodyH]` with radius `18px`, and when
+/// `showTail == true`, the iconic delicate iMessage tail dips `6px` BELOW the
+/// capsule corner (`y: bodyH -> bodyH + 6`) — mirrored horizontally for outgoing.
 Path buildIMessageBubblePath(
   Size size, {
   required bool tailOnRight,
   required bool showTail,
   double radius = Ios26IMessageTokens.bubbleRadius,
-  double tailWidth = Ios26IMessageTokens.bubbleTailWidth,
+  double tailDrop = Ios26IMessageTokens.bubbleTailDrop,
 }) {
   final w = size.width;
-  final h = size.height;
-  final r = radius.clamp(0.0, (h / 2).clamp(0.0, radius));
-  final tw = showTail ? tailWidth : 0.0;
+  final totalH = size.height;
+  final bodyH = showTail ? (totalH - tailDrop).clamp(radius * 2, totalH) : totalH;
+  final r = radius.clamp(0.0, (bodyH / 2).clamp(0.0, radius));
 
-  if (!showTail) {
+  if (!showTail || w < 36) {
     return Path()
       ..addRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, w, h),
+          Rect.fromLTWH(0, 0, w, bodyH),
           Radius.circular(r),
         ),
       );
   }
 
-  final path = Path();
+  // Exact left-tail path from Figma SVG `d="M(W-18) 0 ..."` normalized to (w, bodyH)
+  final leftPath = Path();
+  leftPath.moveTo(w - r, 0);
+  // Top-right corner
+  leftPath.cubicTo(
+    w - r + r * 0.5523,
+    0,
+    w,
+    r - r * 0.5523,
+    w,
+    r,
+  );
+  leftPath.lineTo(w, bodyH - r);
+  // Bottom-right corner
+  leftPath.cubicTo(
+    w,
+    bodyH - r + r * 0.5523,
+    w - r + r * 0.5523,
+    bodyH,
+    w - r,
+    bodyH,
+  );
+  // Bottom edge running left to tail root (x = 18.87)
+  leftPath.lineTo(18.87.clamp(0.0, w - r), bodyH);
+  // Exact Figma tail outer sweep down to (7.27, bodyH + 5.67)
+  leftPath.cubicTo(
+    13.51,
+    bodyH + 4.15,
+    10.83,
+    bodyH + 6.11,
+    7.40,
+    bodyH + 5.99,
+  );
+  leftPath.cubicTo(
+    7.24,
+    bodyH + 5.99,
+    7.16,
+    bodyH + 5.79,
+    7.27,
+    bodyH + 5.67,
+  );
+  // Exact Figma tail inner curve back up into bottom-left arc
+  leftPath.cubicTo(
+    9.48,
+    bodyH + 3.16,
+    10.22,
+    bodyH + 1.88,
+    10.0,
+    bodyH + 0.94,
+  );
+  leftPath.cubicTo(
+    9.85,
+    bodyH - 0.06,
+    7.94,
+    bodyH - 2.58,
+    6.67,
+    bodyH - 4.00,
+  );
+  // Blend into bottom-left rounded edge
+  leftPath.cubicTo(
+    2.56,
+    bodyH - 7.40,
+    0,
+    bodyH - 12.40,
+    0,
+    bodyH - r,
+  );
+  leftPath.lineTo(0, r);
+  // Top-left corner
+  leftPath.cubicTo(
+    0,
+    r - r * 0.5523,
+    r - r * 0.5523,
+    0,
+    r,
+    0,
+  );
+  leftPath.close();
 
-  if (tailOnRight) {
-    // Outgoing/right-aligned bubble: body sits in [0 .. w - tw], tail swoops out to x = w at bottom-right.
-    final bodyRight = (w - tw).clamp(r * 2, w);
-    path.moveTo(r, 0);
-    path.lineTo(bodyRight - r, 0);
-    path.quadraticBezierTo(bodyRight, 0, bodyRight, r);
-    path.lineTo(bodyRight, h - 11.5);
-    // Smooth organic iMessage tail curve pointing bottom-right
-    path.cubicTo(
-      bodyRight,
-      h - 5.0,
-      bodyRight + tw * 0.48,
-      h - 1.2,
-      w,
-      h,
-    );
-    path.cubicTo(
-      bodyRight + tw * 0.15,
-      h + 0.3,
-      bodyRight - 3.8,
-      h - 0.8,
-      bodyRight - 8.2,
-      h - 3.6,
-    );
-    // Smooth merge into bottom edge
-    path.quadraticBezierTo(
-      bodyRight - 12.2,
-      h,
-      (bodyRight - 17.0).clamp(r, bodyRight),
-      h,
-    );
-    path.lineTo(r, h);
-    path.quadraticBezierTo(0, h, 0, h - r);
-    path.lineTo(0, r);
-    path.quadraticBezierTo(0, 0, r, 0);
-    path.close();
-  } else {
-    // Incoming/left-aligned bubble: body sits in [tw .. w], tail swoops out to x = 0 at bottom-left.
-    final bodyLeft = tw.clamp(0.0, (w - r * 2).clamp(0.0, w));
-    path.moveTo(bodyLeft + r, 0);
-    path.lineTo(w - r, 0);
-    path.quadraticBezierTo(w, 0, w, r);
-    path.lineTo(w, h - r);
-    path.quadraticBezierTo(w, h, w - r, h);
-    path.lineTo((bodyLeft + 17.0).clamp(bodyLeft, w - r), h);
-    path.quadraticBezierTo(
-      bodyLeft + 12.2,
-      h,
-      bodyLeft + 8.2,
-      h - 3.6,
-    );
-    path.cubicTo(
-      bodyLeft + 3.8,
-      h - 0.8,
-      bodyLeft - tw * 0.15,
-      h + 0.3,
-      0,
-      h,
-    );
-    path.cubicTo(
-      bodyLeft - tw * 0.48,
-      h - 1.2,
-      bodyLeft,
-      h - 5.0,
-      bodyLeft,
-      h - 11.5,
-    );
-    path.lineTo(bodyLeft, r);
-    path.quadraticBezierTo(bodyLeft, 0, bodyLeft + r, 0);
-    path.close();
-  }
+  if (!tailOnRight) return leftPath;
 
-  return path;
+  // Mirror horizontally (`x -> w - x`) for right-tail outgoing bubbles (`MyChat`)
+  final mirror = Matrix4.identity()
+    ..translateByDouble(w, 0.0, 0.0, 1.0)
+    ..scaleByDouble(-1.0, 1.0, 1.0, 1.0);
+  return leftPath.transform(mirror.storage);
 }
 
-/// CustomPainter for solid iOS 26 iMessage bubbles (`#0088FF` / `#CFD1D4`).
+/// CustomPainter for solid iOS 26 iMessage bubbles (`#0088FF` / `#D0D2D5`).
 class IMessageBubblePainter extends CustomPainter {
   final Color color;
   final Color? borderColor;
@@ -334,7 +420,7 @@ class IMessageBubblePainter extends CustomPainter {
 }
 
 /// CustomClipper for photo message bubbles (`OtherChat3` in Figma — photo itself
-/// gets the rounded 18px corners + curved iMessage tail at the bottom corner).
+/// gets the 18px corners + delicate curved tail dipping underneath).
 class IMessageBubbleClipper extends CustomClipper<Path> {
   final bool tailOnRight;
   final bool showTail;
@@ -364,9 +450,12 @@ class IMessageBubbleClipper extends CustomClipper<Path> {
   }
 }
 
-/// Exact Figma `Dégardé` (`4:1051` / `1:2708`) top progressive white fade
-/// sitting directly underneath the floating Liquid Glass header so messages
-/// glide seamlessly behind the top controls.
+/// Real multi-stage **iOS 26 Progressive Blur + Soft Mist Veil (`Dégardé`)** at the top edge.
+///
+/// As messages scroll upward under the floating Liquid Glass header, they pass
+/// through progressively stronger `BackdropFilter` blur bands (`2.5 -> 7 -> 16`)
+/// blended with Figma's luminous cool-white mist (`#F4F5F7` -> `#FFFFFF` -> transparent),
+/// giving floating white glass controls true depth & shadow separation.
 class Ios26TopEdgeFade extends StatelessWidget {
   final double height;
 
@@ -375,27 +464,71 @@ class Ios26TopEdgeFade extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: Container(
+      child: SizedBox(
         height: height,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFFFFFFF), // 100% opaque white at top
-              Color(0xE6FFFFFF), // 90%
-              Color(0xB3FFFFFF), // 70%
-              Color(0x05FFFFFF), // 2% transparent bottom edge
-            ],
-            stops: [0.0, 0.42, 0.74, 1.0],
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Band 1 (full height): gentle blur entry
+            ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                child: const SizedBox.expand(),
+              ),
+            ),
+            // Band 2 (upper 68%): medium frosted blur
+            Align(
+              alignment: Alignment.topCenter,
+              child: FractionallySizedBox(
+                heightFactor: 0.68,
+                widthFactor: 1.0,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 7.5, sigmaY: 7.5),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+            ),
+            // Band 3 (upper 40%): deep frosted glass blur behind top controls
+            Align(
+              alignment: Alignment.topCenter,
+              child: FractionallySizedBox(
+                heightFactor: 0.40,
+                widthFactor: 1.0,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+            ),
+            // Exact Figma 4-stop luminous mist veil (`#F4F5F7` -> `#FFFFFF` -> transparent)
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xF5F4F5F7), // Soft luminous Figma mist at top
+                    Color(0xD9F7F8FA), // 85%
+                    Color(0x99FFFFFF), // 60%
+                    Color(0x00FFFFFF), // Smooth transparent blend into messages
+                  ],
+                  stops: [0.0, 0.36, 0.70, 1.0],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Soft progressive bottom fade behind the floating Liquid Glass composer bar.
+/// Real progressive bottom blur + Figma `#F5F5F7` edge frost behind the floating
+/// Liquid Glass `+` & `iMessage` composer so white glass controls & shadows pop.
 class Ios26BottomEdgeFade extends StatelessWidget {
   final double height;
 
@@ -404,20 +537,46 @@ class Ios26BottomEdgeFade extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: Container(
+      child: SizedBox(
         height: height,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0x00FFFFFF),
-              Color(0xCCFFFFFF),
-              Color(0xF5FFFFFF),
-              Color(0xFFFFFFFF),
-            ],
-            stops: [0.0, 0.45, 0.78, 1.0],
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+                child: const SizedBox.expand(),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: 0.62,
+                widthFactor: 1.0,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x00FFFFFF),
+                    Color(0xB8F6F7F9),
+                    Color(0xE8F4F5F7),
+                    Color(0xFAF3F4F6),
+                  ],
+                  stops: [0.0, 0.38, 0.72, 1.0],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -461,8 +620,8 @@ class Ios26TapbackBadge extends StatelessWidget {
           border: Border.all(color: Colors.white, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 16,
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 20,
               offset: const Offset(0, 2),
             ),
           ],

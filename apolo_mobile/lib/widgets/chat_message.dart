@@ -371,7 +371,7 @@ class _ChatMessageState extends State<ChatMessage> {
     // Outgoing bubble aligns to trailing edge (right in LTR, left in RTL).
     final tailOnRight = isRtl ? !isMine : isMine;
     final showTail = widget.isLastInGroup && !isDeleted;
-    final tailPad = showTail ? Ios26IMessageTokens.bubbleTailWidth : 0.0;
+    final tailDrop = showTail ? Ios26IMessageTokens.bubbleTailDrop : 0.0;
 
     final bubbleBg = isDeleted
         ? const Color(0xFFE5E5EA)
@@ -434,11 +434,13 @@ class _ChatMessageState extends State<ChatMessage> {
         ),
       );
     } else {
+      // Exact Figma SVG capsule padding: text centers inside the 36px body while
+      // the delicate iMessage tail dips 6px below the bottom edge (`tailDrop`).
       final EdgeInsets bubblePadding = EdgeInsets.only(
-        left: 14 + (!tailOnRight ? tailPad : 0),
-        right: 14 + (tailOnRight ? tailPad : 0),
-        top: 9,
-        bottom: 9,
+        left: 14,
+        right: 14,
+        top: 8,
+        bottom: 8 + tailDrop,
       );
 
       bubbleCore = GestureDetector(
@@ -457,7 +459,7 @@ class _ChatMessageState extends State<ChatMessage> {
           child: Container(
             key: Key('chat-bubble-${widget.messageKey}'),
             constraints: BoxConstraints(
-              minHeight: 36,
+              minHeight: 36 + tailDrop,
               maxWidth: maxBubbleWidth,
             ),
             padding: bubblePadding,

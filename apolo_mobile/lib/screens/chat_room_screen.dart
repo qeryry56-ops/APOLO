@@ -1226,7 +1226,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         children: [
                           LiquidGlassSurface(
                             borderRadius: BorderRadius.circular(999),
-                            tintColor: const Color(0xE0FFFFFF),
+                            fillAlpha: 0.86,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 8,
@@ -1314,7 +1314,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           LiquidGlassSurface(
                             width: 248,
                             borderRadius: BorderRadius.circular(22),
-                            tintColor: const Color(0xE8FFFFFF),
+                            fillAlpha: 0.88,
                             child: Material(
                               color: Colors.transparent,
                               child: Column(
@@ -2431,7 +2431,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       child: LiquidGlassSurface(
         key: const Key('chat-ad-context-banner'),
         borderRadius: BorderRadius.circular(18),
-        tintColor: Ios26IMessageTokens.glassNamePillFill,
+        fillAlpha: 0.78,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         onTap: canOpenAd
             ? () {
@@ -2634,6 +2634,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           ),
 
                           // Overlapping Liquid Glass Name Pill (Figma `1:2714` & `1:2608`)
+                          // Uses identical Tab Bar glass material + squash & stretch press feel
                           Positioned(
                             bottom: 0,
                             child: ConstrainedBox(
@@ -2643,10 +2644,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 borderRadius: BorderRadius.circular(
                                   Ios26IMessageTokens.controlRadius,
                                 ),
-                                tintColor: Ios26IMessageTokens.glassNamePillFill,
+                                fillAlpha: 0.82,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                 ),
+                                onTap: widget.peerId != null && widget.peerId! > 0
+                                    ? _openPeerProfile
+                                    : null,
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -2722,7 +2726,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ),
           ),
 
-          // Right: 45x45 Liquid Glass FaceTime Video/Call Circle (Figma `1:2619`)
+          // Right: 45x45 Liquid Glass Normal Call Circle (Tab Bar glass + squash-stretch press)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Semantics(
@@ -2740,11 +2744,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 },
                 child: Center(
                   child: Icon(
-                    CupertinoIcons.video_camera,
+                    CupertinoIcons.phone,
                     color: _showCallMenu
                         ? Ios26IMessageTokens.bubbleMine
                         : Ios26IMessageTokens.controlIconPrimary,
-                    size: 25,
+                    size: 21,
                   ),
                 ),
               ),
@@ -2760,7 +2764,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     return LiquidGlassSurface(
       width: 244,
       borderRadius: BorderRadius.circular(22),
-      tintColor: const Color(0xE0FFFFFF),
+      fillAlpha: 0.86,
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Material(
         color: Colors.transparent,
@@ -2788,29 +2792,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ),
               ),
               onTap: () => _startCall(isVideo: false),
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            ListTile(
-              dense: true,
-              leading: const Icon(
-                CupertinoIcons.videocam_fill,
-                color: Ios26IMessageTokens.bubbleMine,
-                size: 20,
-              ),
-              title: Text(
-                liveCalls
-                    ? _state.s.tr('مكالمة فيديو', 'Appel vidéo', 'Video Call')
-                    : _state.s.tr(
-                        'مكالمة فيديو — غير متاحة',
-                        'Appel vidéo — indisponible',
-                      ),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Ios26IMessageTokens.labelPrimary,
-                ),
-              ),
-              onTap: () => _startCall(isVideo: true),
             ),
             const Divider(height: 1, indent: 16, endIndent: 16),
             ListTile(
