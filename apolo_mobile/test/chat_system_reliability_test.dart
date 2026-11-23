@@ -91,6 +91,12 @@ void main() {
       expect(find.byKey(const Key('chat-ad-context-price')), findsOneWidget);
       expect(find.text('DH 110.00'), findsOneWidget);
 
+      // iOS 26 iMessage floating Liquid Glass controls & composer
+      expect(find.byKey(const Key('chat-ios26-back-button')), findsOneWidget);
+      expect(find.byKey(const Key('chat-ios26-call-button')), findsOneWidget);
+      expect(find.byKey(const Key('chat-attach-button')), findsOneWidget);
+      expect(find.byKey(const Key('chat-draft')), findsOneWidget);
+
       // Clean presence status subtitle (does not fake online when no presence event arrived)
       expect(find.byKey(const Key('chat-peer-presence-text')), findsOneWidget);
 

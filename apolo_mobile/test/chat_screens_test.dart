@@ -243,10 +243,10 @@ void main() {
       expect(find.text('Casa Oliva Villa'), findsOneWidget);
       expect(find.text('212 MAD'), findsOneWidget);
       expect(find.text('Online'), findsNothing);
-      expect(find.text('حالة الاتصال غير متاحة'), findsOneWidget);
+      expect(find.text('غير متصل'), findsOneWidget);
       expect(find.text('السلام عليكم، واش باقي متوفر؟'), findsOneWidget);
       expect(find.text('وعليكم السلام، نعم متوفر'), findsOneWidget);
-      expect(find.byIcon(CupertinoIcons.mic_fill), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.mic), findsOneWidget);
 
       // Typing shows sky-blue send button and sends POST request
       await tester.enterText(find.byKey(const Key('chat-draft')), 'Tamam');

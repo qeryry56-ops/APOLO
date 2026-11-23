@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../screens/widgets/app_image.dart';
 import '../screens/widgets/chat_utils.dart';
+import 'ios26_imessage_kit.dart';
 import 'typing_indicator.dart';
 
 /// Delivery status for a [ChatMessage] bubble (Rule 3: Optimistic UI).
@@ -69,6 +70,9 @@ class ChatMessage extends StatefulWidget {
   final String retryLabel;
   final bool useRichTextForBody;
   final bool showSenderName;
+  final bool hideAvatarGutter;
+  final String? deliveryLabel;
+  final double swipeRevealProgress;
 
   const ChatMessage({
     super.key,
@@ -100,6 +104,9 @@ class ChatMessage extends StatefulWidget {
     this.retryLabel = 'Retry',
     this.useRichTextForBody = false,
     this.showSenderName = false,
+    this.hideAvatarGutter = false,
+    this.deliveryLabel,
+    this.swipeRevealProgress = 0.0,
   });
 
   /// Detects natural reading direction (RTL for Arabic/Hebrew, LTR for Latin/digits)
@@ -135,11 +142,7 @@ class ChatMessage extends StatefulWidget {
   /// Gap between avatar column and message bubble.
   static const double avatarGap = 8.0;
 
-  static const Color _ink = Color(0xFF0A0A0A);
   static const Color _surfaceGrey = Color(0xFFF2F3F7);
-  static const Color _textMuted = Color(0xFF6B7280);
-  static const Color _textSubtle = Color(0xFF9CA3AF);
-  static const Color _errorRed = Color(0xFFD9261C);
 
   /// Extracts a [DateTime] from a raw message map if available.
   static DateTime? parseTimestamp(
@@ -361,52 +364,262 @@ class _ChatMessageState extends State<ChatMessage> {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isDesktop = screenWidth >= 700;
     final maxBubbleWidth =
-        isDesktop ? 520.0 : (screenWidth * 0.74).clamp(200.0, 420.0);
-
-    final borderRadius = BorderRadiusDirectional.only(
-      topStart: Radius.circular(
-        !isMine && !widget.isFirstInGroup ? 6 : 18,
-      ),
-      topEnd: Radius.circular(
-        isMine && !widget.isFirstInGroup ? 6 : 18,
-      ),
-      bottomStart: Radius.circular(
-        isMine ? 18 : (widget.isLastInGroup ? 4 : 6),
-      ),
-      bottomEnd: Radius.circular(
-        isMine ? (widget.isLastInGroup ? 4 : 6) : 18,
-      ),
-    );
-
-    final uniqueEmojis = widget.reactions
-        .where((e) => e.trim().isNotEmpty)
-        .toSet()
-        .take(4)
-        .join(' ');
-
-    final bubbleBg = isDeleted
-        ? ChatMessage._surfaceGrey
-        : isFailed
-            ? const Color(0xFFFEF2F2)
-            : (isMine ? ChatMessage._ink : ChatMessage._surfaceGrey);
-
-    final textColor = isDeleted
-        ? ChatMessage._textMuted
-        : isFailed
-            ? ChatMessage._errorRed
-            : (isMine ? Colors.white : ChatMessage._ink);
+        isDesktop ? 480.0 : (screenWidth * 0.74).clamp(180.0, 340.0);
 
     final contextDir = Directionality.of(context);
+    final isRtl = contextDir == TextDirection.rtl;
+    // Outgoing bubble aligns to trailing edge (right in LTR, left in RTL).
+    final tailOnRight = isRtl ? !isMine : isMine;
+    final showTail = widget.isLastInGroup && !isDeleted;
+    final tailPad = showTail ? Ios26IMessageTokens.bubbleTailWidth : 0.0;
+
+    final bubbleBg = isDeleted
+        ? const Color(0xFFE5E5EA)
+        : isFailed
+            ? const Color(0xFFFEF2F2)
+            : (isMine
+                ? Ios26IMessageTokens.bubbleMine
+                : Ios26IMessageTokens.bubbleOther);
+
+    final textColor = isDeleted
+        ? Ios26IMessageTokens.dateGray
+        : isFailed
+            ? Ios26IMessageTokens.errorRed
+            : (isMine
+                ? Ios26IMessageTokens.bubbleMineText
+                : Ios26IMessageTokens.bubbleOtherText);
+
     final bodyTextDir = ChatMessage.detectTextDirection(
       widget.body,
       fallback: contextDir,
     );
+
+    final bool isPureImageBubble = widget.customContent == null &&
+        widget.imageBytes != null &&
+        widget.body.trim().isEmpty &&
+        !isDeleted;
 
     final semanticStatus = isFailed
         ? ', Send failed, double tap to retry'
         : (widget.status == ChatMessageStatus.sending ? ', Sending' : '');
     final semanticTime =
         widget.timestamp.isNotEmpty ? ', ${widget.timestamp}' : '';
+
+    final bool showSwipeTimestamp =
+        widget.swipeRevealProgress > 0.05 && widget.timestamp.trim().isNotEmpty;
+
+    Widget bubbleCore;
+    if (isPureImageBubble) {
+      // Exact Figma OtherChat3: photo itself gets 18px corners + curved iMessage tail
+      bubbleCore = GestureDetector(
+        key: Key('chat-bubble-${widget.messageKey}'),
+        onTap: widget.onImageTap,
+        onLongPress: _handleLongPress,
+        onSecondaryTap: widget.onOpenActions,
+        child: ClipPath(
+          clipper: IMessageBubbleClipper(
+            tailOnRight: tailOnRight,
+            showTail: showTail,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 210,
+              maxHeight: 260,
+            ),
+            child: Image.memory(
+              widget.imageBytes!,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+      );
+    } else {
+      final EdgeInsets bubblePadding = EdgeInsets.only(
+        left: 14 + (!tailOnRight ? tailPad : 0),
+        right: 14 + (tailOnRight ? tailPad : 0),
+        top: 9,
+        bottom: 9,
+      );
+
+      bubbleCore = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: _handleLongPress,
+        onSecondaryTap: widget.onOpenActions,
+        child: CustomPaint(
+          painter: IMessageBubblePainter(
+            color: bubbleBg,
+            borderColor: isFailed
+                ? Ios26IMessageTokens.errorRed.withValues(alpha: 0.45)
+                : null,
+            tailOnRight: tailOnRight,
+            showTail: showTail,
+          ),
+          child: Container(
+            key: Key('chat-bubble-${widget.messageKey}'),
+            constraints: BoxConstraints(
+              minHeight: 36,
+              maxWidth: maxBubbleWidth,
+            ),
+            padding: bubblePadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isMine &&
+                    widget.showSenderName &&
+                    widget.isFirstInGroup &&
+                    widget.senderName.trim().isNotEmpty) ...[
+                  Text(
+                    widget.senderName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Ios26IMessageTokens.dateGray,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                ],
+                if (widget.customContent != null)
+                  widget.customContent!
+                else if (widget.imageBytes != null) ...[
+                  GestureDetector(
+                    onTap: widget.onImageTap,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: 220,
+                          maxHeight: 250,
+                        ),
+                        child: Image.memory(
+                          widget.imageBytes!,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.body.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.body,
+                      textDirection: bodyTextDir,
+                      style: TextStyle(
+                        fontSize: Ios26IMessageTokens.messageFontSize,
+                        height: Ios26IMessageTokens.messageLineHeight,
+                        letterSpacing: Ios26IMessageTokens.messageTracking,
+                        color: textColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ] else if (widget.useRichTextForBody)
+                  RichText(
+                    textDirection: bodyTextDir,
+                    text: TextSpan(
+                      text: widget.body,
+                      style: TextStyle(
+                        fontSize: Ios26IMessageTokens.messageFontSize,
+                        height: Ios26IMessageTokens.messageLineHeight,
+                        letterSpacing: Ios26IMessageTokens.messageTracking,
+                        color: textColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                else
+                  Text(
+                    widget.body,
+                    textDirection: bodyTextDir,
+                    style: TextStyle(
+                      fontSize: Ios26IMessageTokens.messageFontSize,
+                      height: Ios26IMessageTokens.messageLineHeight,
+                      letterSpacing: Ios26IMessageTokens.messageTracking,
+                      fontStyle:
+                          isDeleted ? FontStyle.italic : FontStyle.normal,
+                      color: textColor,
+                      fontWeight:
+                          isDeleted ? FontWeight.w400 : FontWeight.w500,
+                    ),
+                  ),
+                if (widget.isPinned ||
+                    widget.isStarred ||
+                    (widget.isEdited && !isDeleted)) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.isPinned) ...[
+                        Icon(
+                          CupertinoIcons.pin_fill,
+                          size: 11,
+                          color: isMine
+                              ? Colors.white70
+                              : Ios26IMessageTokens.dateGray,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (widget.isStarred) ...[
+                        Icon(
+                          CupertinoIcons.star_fill,
+                          size: 11,
+                          color: isMine
+                              ? const Color(0xFFFDE047)
+                              : const Color(0xFFF59E0B),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (widget.isEdited && !isDeleted)
+                        Text(
+                          'Edited',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: isMine
+                                ? Colors.white70
+                                : Ios26IMessageTokens.dateGray,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Wrap bubble with floating Figma Tapback badge (`4:1047`) when reactions exist
+    Widget bubbleWithTapback = widget.reactions.isEmpty
+        ? bubbleCore
+        : Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: bubbleCore,
+              ),
+              PositionedDirectional(
+                bottom: 0,
+                end: isMine ? null : -6,
+                start: isMine ? -6 : null,
+                child: Ios26TapbackBadge(
+                  reactions: widget.reactions,
+                  onTap: widget.onOpenActions,
+                ),
+              ),
+            ],
+          );
+
+    // Subtle opacity feedback while message is still sending (optimistic UI)
+    if (widget.status == ChatMessageStatus.sending && isMine) {
+      bubbleWithTapback = Opacity(
+        opacity: 0.78,
+        child: bubbleWithTapback,
+      );
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -431,9 +644,9 @@ class _ChatMessageState extends State<ChatMessage> {
             child: Row(
               mainAxisAlignment:
                   isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (!isMine) ...[
+                if (!isMine && !widget.hideAvatarGutter) ...[
                   if (widget.showAvatar)
                     _buildAvatar()
                   else
@@ -450,182 +663,36 @@ class _ChatMessageState extends State<ChatMessage> {
                         : CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onLongPress: _handleLongPress,
-                        onSecondaryTap: widget.onOpenActions,
-                        child: Container(
-                          key: Key('chat-bubble-${widget.messageKey}'),
-                          constraints: BoxConstraints(maxWidth: maxBubbleWidth),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 9,
+                      bubbleWithTapback,
+
+                      // Subtle iOS iMessage delivery status under latest outgoing message
+                      if (isMine &&
+                          !isDeleted &&
+                          !isFailed &&
+                          widget.deliveryLabel != null &&
+                          widget.deliveryLabel!.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: 3,
+                            right: tailOnRight ? 8 : 4,
+                            left: !tailOnRight ? 8 : 4,
                           ),
-                          decoration: BoxDecoration(
-                            color: bubbleBg,
-                            borderRadius: borderRadius,
-                            border: isFailed
-                                ? Border.all(
-                                    color: ChatMessage._errorRed
-                                        .withValues(alpha: 0.45),
-                                  )
-                                : (!isMine
-                                    ? Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                        width: 0.9,
-                                      )
-                                    : null),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!isMine &&
-                                  widget.showSenderName &&
-                                  widget.isFirstInGroup &&
-                                  widget.senderName.trim().isNotEmpty) ...[
-                                Text(
-                                  widget.senderName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: ChatMessage._textMuted,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                              ],
-                              if (widget.customContent != null)
-                                widget.customContent!
-                              else if (widget.imageBytes != null) ...[
-                                GestureDetector(
-                                  onTap: widget.onImageTap,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 230,
-                                        maxHeight: 260,
-                                      ),
-                                      child: Image.memory(
-                                        widget.imageBytes!,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                if (widget.body.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    widget.body,
-                                    textDirection: bodyTextDir,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: textColor,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ] else if (widget.useRichTextForBody)
-                                RichText(
-                                  textDirection: bodyTextDir,
-                                  text: TextSpan(
-                                    text: widget.body,
-                                    style: TextStyle(
-                                      fontSize: 14.5,
-                                      height: 1.35,
-                                      color: textColor,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                )
-                              else
-                                Text(
-                                  widget.body,
-                                  textDirection: bodyTextDir,
-                                  style: TextStyle(
-                                    fontSize: 14.5,
-                                    height: 1.35,
-                                    fontStyle: isDeleted
-                                        ? FontStyle.italic
-                                        : FontStyle.normal,
-                                    color: textColor,
-                                    fontWeight: isDeleted
-                                        ? FontWeight.w400
-                                        : FontWeight.w500,
-                                  ),
-                                ),
-                              if (isMine && !isDeleted && !isFailed) ...[
-                                const SizedBox(height: 3),
-                                Align(
-                                  alignment: AlignmentDirectional.centerEnd,
-                                  child: Icon(
-                                    widget.status == ChatMessageStatus.sending
-                                        ? CupertinoIcons.clock
-                                        : widget.status == ChatMessageStatus.read
-                                            ? Icons.done_all_rounded
-                                            : Icons.done_rounded,
-                                    key: Key(
-                                        'chat-status-${widget.messageKey}'),
-                                    size: 13,
-                                    color:
-                                        widget.status == ChatMessageStatus.read
-                                            ? const Color(0xFF60A5FA)
-                                            : Colors.white60,
-                                  ),
-                                ),
-                              ],
-                              if (widget.isPinned ||
-                                  widget.isStarred ||
-                                  (widget.isEdited && !isDeleted)) ...[
-                                const SizedBox(height: 3),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (widget.isPinned) ...[
-                                      Icon(
-                                        CupertinoIcons.pin_fill,
-                                        size: 11,
-                                        color: isMine
-                                            ? Colors.white70
-                                            : ChatMessage._textSubtle,
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    if (widget.isStarred) ...[
-                                      Icon(
-                                        CupertinoIcons.star_fill,
-                                        size: 11,
-                                        color: isMine
-                                            ? const Color(0xFFFBBF24)
-                                            : const Color(0xFFF59E0B),
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    if (widget.isEdited && !isDeleted)
-                                      Text(
-                                        'edited',
-                                        style: TextStyle(
-                                          fontSize: 10.5,
-                                          color: isMine
-                                              ? Colors.white60
-                                              : ChatMessage._textSubtle,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ],
+                          child: Text(
+                            widget.deliveryLabel!,
+                            key: Key('chat-status-${widget.messageKey}'),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Ios26IMessageTokens.dateGray,
+                            ),
                           ),
                         ),
-                      ),
 
-                      // Rule 2: Precision on demand — exact timestamp only shown on hover or long-press
+                      // Rule 2: Precision on demand — exact timestamp on hover or long-press
                       if (_shouldShowTimestamp)
                         Padding(
-                          padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
+                          padding:
+                              const EdgeInsets.only(top: 3, left: 6, right: 6),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -634,11 +701,12 @@ class _ChatMessageState extends State<ChatMessage> {
                                 key: Key('chat-timestamp-${widget.messageKey}'),
                                 style: const TextStyle(
                                   fontSize: 11,
-                                  color: ChatMessage._textMuted,
+                                  color: Ios26IMessageTokens.dateGray,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              if (widget.onOpenActions != null && !isDeleted) ...[
+                              if (widget.onOpenActions != null &&
+                                  !isDeleted) ...[
                                 const SizedBox(width: 6),
                                 GestureDetector(
                                   key: Key('chat-actions-${widget.messageKey}'),
@@ -646,7 +714,7 @@ class _ChatMessageState extends State<ChatMessage> {
                                   child: const Icon(
                                     CupertinoIcons.ellipsis,
                                     size: 14,
-                                    color: ChatMessage._textMuted,
+                                    color: Ios26IMessageTokens.dateGray,
                                   ),
                                 ),
                               ],
@@ -654,7 +722,7 @@ class _ChatMessageState extends State<ChatMessage> {
                           ),
                         ),
 
-                      // Rule 3: Optimistic UI — inline retry button on failed bubble (no toast, no spinner)
+                      // Rule 3: Optimistic UI — inline retry pill on failed bubble
                       if (isFailed)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
@@ -678,62 +746,21 @@ class _ChatMessageState extends State<ChatMessage> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(
-                                      CupertinoIcons.refresh_bold,
-                                      size: 12,
-                                      color: ChatMessage._errorRed,
+                                      CupertinoIcons.exclamationmark_circle_fill,
+                                      size: 13,
+                                      color: Ios26IMessageTokens.errorRed,
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
                                       widget.retryLabel,
                                       style: const TextStyle(
                                         fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: ChatMessage._errorRed,
+                                        fontWeight: FontWeight.w600,
+                                        color: Ios26IMessageTokens.errorRed,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      if (widget.reactions.isNotEmpty)
-                        Transform.translate(
-                          offset: const Offset(0, -4),
-                          child: GestureDetector(
-                            onTap: widget.onOpenActions,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2.5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    uniqueEmojis,
-                                    style: const TextStyle(fontSize: 12.5),
-                                  ),
-                                  if (widget.reactions.length > 1) ...[
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${widget.reactions.length}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: ChatMessage._ink,
-                                      ),
-                                    ),
-                                  ],
-                                ],
                               ),
                             ),
                           ),
@@ -741,7 +768,7 @@ class _ChatMessageState extends State<ChatMessage> {
                     ],
                   ),
                 ),
-                if (isMine) ...[
+                if (isMine && !widget.hideAvatarGutter) ...[
                   const SizedBox(width: ChatMessage.avatarGap),
                   if (widget.showAvatar)
                     _buildAvatar()
@@ -751,6 +778,23 @@ class _ChatMessageState extends State<ChatMessage> {
                       height: 1,
                     ),
                 ],
+                // Classic iMessage swipe-to-reveal inline timestamp
+                if (showSwipeTimestamp)
+                  AnimatedOpacity(
+                    opacity: widget.swipeRevealProgress.clamp(0.0, 1.0),
+                    duration: Duration.zero,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 8),
+                      child: Text(
+                        widget.timestamp,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Ios26IMessageTokens.dateGray,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -760,7 +804,8 @@ class _ChatMessageState extends State<ChatMessage> {
   }
 }
 
-/// Rule 2: Date divider shown only when the calendar date changes between messages.
+/// Exact Figma iOS 26 Date Separator (`4:1050` / `4:1246`):
+/// Clean centered `#8E8E93` `12px` Medium (`510`) label directly on white canvas.
 class ChatDateDivider extends StatelessWidget {
   final String label;
 
@@ -769,24 +814,19 @@ class ChatDateDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.only(top: 14, bottom: 10),
       child: Center(
         child: Semantics(
           header: true,
           label: label,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F3F7),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280),
-              ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: Ios26IMessageTokens.dateFontSize,
+              fontWeight: FontWeight.w500,
+              color: Ios26IMessageTokens.dateGray,
+              letterSpacing: -0.1,
             ),
           ),
         ),

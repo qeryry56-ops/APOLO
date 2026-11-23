@@ -784,7 +784,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                             color: _isRecording
                                 ? (_isPastCancelThreshold
                                     ? VoiceRecorder._dangerRed
-                                    : VoiceRecorder._ink)
+                                    : const Color(0xFF0088FF))
                                 : Colors.transparent,
                             shape: BoxShape.circle,
                           ),
@@ -792,10 +792,10 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                           child: Icon(
                             _isPastCancelThreshold
                                 ? CupertinoIcons.trash_fill
-                                : CupertinoIcons.mic_fill,
+                                : CupertinoIcons.mic,
                             color: _isRecording
                                 ? Colors.white
-                                : VoiceRecorder._textMuted,
+                                : const Color(0xFF8E8E93),
                             size: 20,
                           ),
                         ),

@@ -179,6 +179,7 @@ void main() {
             conversationId: 10,
             peerName: 'Maya',
             initialMessages: msgs,
+            showInlineAvatars: true,
           ),
         ),
       );
