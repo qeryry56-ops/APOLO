@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -106,187 +108,201 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
         final palette = ApoloDlPalette.of(context);
         final backIcon =
             isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+        final mediaPadding = MediaQuery.paddingOf(context);
+        final screenHeight = MediaQuery.sizeOf(context).height;
+        final headerHeight = math.max(104.0, mediaPadding.top + 60.0);
+        final bottomInset = screenHeight >= 700
+            ? math.max(34.0, mediaPadding.bottom)
+            : mediaPadding.bottom;
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           child: Scaffold(
             backgroundColor: palette.bg,
-            body: SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 56,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              ApoloDlIconCircleButton(
-                                key: const Key('share-profile-back-btn'),
-                                icon: backIcon,
-                                tooltip: MaterialLocalizations.of(context)
-                                    .backButtonTooltip,
-                                onPressed: () =>
-                                    Navigator.of(context).maybePop(),
-                              ),
-                              const Spacer(),
-                              Material(
-                                color: Colors.transparent,
-                                shape: const CircleBorder(),
-                                clipBehavior: Clip.antiAlias,
-                                child: InkWell(
-                                  key: const Key('share-profile-native-btn'),
-                                  onTap: _shareNative,
-                                  customBorder: const CircleBorder(),
-                                  child: Tooltip(
-                                    message: s.tr(
-                                      'مشاركة الرابط',
-                                      'Partager le lien',
-                                      'Share link',
-                                    ),
-                                    child: SizedBox(
-                                      width: 40,
-                                      height: 40,
-                                      child: Center(
-                                        child: Icon(
-                                          CupertinoIcons
-                                              .arrowshape_turn_up_right_fill,
-                                          size: 22,
-                                          color: palette.ink,
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 375),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      key: const Key('share-profile-header'),
+                      height: headerHeight,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: SizedBox(
+                          height: 60,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                ApoloDlIconCircleButton(
+                                  key: const Key('share-profile-back-btn'),
+                                  icon: backIcon,
+                                  tooltip: MaterialLocalizations.of(context)
+                                      .backButtonTooltip,
+                                  onPressed: () =>
+                                      Navigator.of(context).maybePop(),
+                                ),
+                                const Spacer(),
+                                Material(
+                                  color: Colors.transparent,
+                                  shape: const CircleBorder(),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    key: const Key('share-profile-native-btn'),
+                                    onTap: _shareNative,
+                                    customBorder: const CircleBorder(),
+                                    child: Tooltip(
+                                      message: s.tr(
+                                        'مشاركة الرابط',
+                                        'Partager le lien',
+                                        'Share link',
+                                      ),
+                                      child: SizedBox(
+                                        width: 40,
+                                        height: 40,
+                                        child: Center(
+                                          child: Icon(
+                                            CupertinoIcons
+                                                .arrowshape_turn_up_right_fill,
+                                            size: 22,
+                                            color: palette.ink,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight,
-                                ),
-                                child: Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        24, 12, 24, 20),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: _copyProfileLink,
-                                          child: ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              maxWidth: 276,
-                                            ),
-                                            child: Container(
-                                              key: const Key(
-                                                  'share-profile-qr-card'),
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      22, 22, 22, 20),
-                                              decoration: BoxDecoration(
-                                                color: palette.groupCard,
-                                                borderRadius:
-                                                    BorderRadius.circular(24),
-                                              ),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  AspectRatio(
-                                                    aspectRatio: 1,
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              16),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(16),
-                                                      ),
-                                                      child: ApoloDlQrCode(
-                                                        key: const Key(
-                                                            'share-profile-qr-code'),
-                                                        data: widget.profileUrl,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 18),
-                                                  Text(
-                                                    widget.displayName.trim(),
-                                                    textAlign: TextAlign.center,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: palette.ink,
-                                                      height: 1.25,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 3),
-                                                  Text(
-                                                    _normalizedHandle,
-                                                    textAlign: TextAlign.center,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    textDirection:
-                                                        TextDirection.ltr,
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w400,
-                                                      color: palette.muted,
-                                                      height: 1.3,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 22),
-                                        ConstrainedBox(
+                    ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight,
+                              ),
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 12,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: _copyProfileLink,
+                                        child: ConstrainedBox(
                                           constraints: const BoxConstraints(
-                                            maxWidth: 288,
+                                            maxWidth: 272,
                                           ),
-                                          child: Text(
-                                            s.tr(
-                                              'رمز QR الخاص بك خاص. إذا شاركته مع شخص ما، يمكنه مسحه بالكاميرا للوصول إلى ملفك الشخصي.',
-                                              'Votre code QR est privé. Si vous le partagez, la personne pourra le scanner avec sa caméra pour voir votre profil.',
-                                              'Your QR code is private. If you share it with someone, that person can scan it with their camera to view your profile.',
+                                          child: Container(
+                                            key: const Key(
+                                                'share-profile-qr-card'),
+                                            padding: const EdgeInsets.fromLTRB(
+                                                24, 24, 24, 22),
+                                            decoration: BoxDecoration(
+                                              color: palette.groupCard,
+                                              borderRadius:
+                                                  BorderRadius.circular(24),
                                             ),
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              height: 1.48,
-                                              color: palette.muted,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                AspectRatio(
+                                                  aspectRatio: 1,
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            16),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16),
+                                                    ),
+                                                    child: ApoloDlQrCode(
+                                                      key: const Key(
+                                                          'share-profile-qr-code'),
+                                                      data: widget.profileUrl,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 18),
+                                                Text(
+                                                  widget.displayName.trim(),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: palette.ink,
+                                                    height: 1.35,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  _normalizedHandle,
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  textDirection:
+                                                      TextDirection.ltr,
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w400,
+                                                    color: palette.muted,
+                                                    height: 1.35,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 32),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 311,
+                                        ),
+                                        child: Text(
+                                          s.tr(
+                                            'رمز QR الخاص بك خاص. إذا شاركته مع شخص ما، يمكنه مسحه بالكاميرا للوصول إلى ملفك الشخصي.',
+                                            'Votre code QR est privé. Si vous le partagez, la personne pourra le scanner avec sa caméra pour voir votre profil.',
+                                            'Your QR code is private. If you share it with someone, that person can scan it with their camera to view your profile.',
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            height: 1.45,
+                                            color: palette.muted,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    ),
+                    SizedBox(
+                      key: const Key('share-profile-bottom-bar'),
+                      height: 144,
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
                         child: Center(
                           child: ApoloDlButton(
                             key: const Key('share-profile-scan-btn'),
@@ -305,8 +321,9 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    if (bottomInset > 0) SizedBox(height: bottomInset),
+                  ],
                 ),
               ),
             ),

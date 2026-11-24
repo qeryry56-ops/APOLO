@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -437,11 +439,11 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
 
     return ConstrainedBox(
       key: const Key('scan-code-viewfinder'),
-      constraints: const BoxConstraints(maxWidth: 332),
+      constraints: const BoxConstraints(maxWidth: 311),
       child: AspectRatio(
         aspectRatio: 1,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           child: ColoredBox(
             color: palette.groupCard,
             child: inner,
@@ -477,30 +479,34 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
             onPressed: _toggleTorch,
           );
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-      child: Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            flashControl,
-            const SizedBox(width: 28),
-            _ConcentricShutterButton(
-              key: const Key('scan-code-shutter-btn'),
-              ringColor: palette.ink,
-              innerColor: palette.ink,
-              onPressed: _onShutterPressed,
-            ),
-            const SizedBox(width: 28),
-            _ScannerCircleControl(
-              key: const Key('scan-code-gallery-btn'),
-              icon: Icons.image_outlined,
-              backgroundColor: palette.pill,
-              iconColor: palette.ink,
-              onPressed: _pickImageAndAnalyze,
-            ),
-          ],
+    return SizedBox(
+      key: const Key('scan-code-controls-bar'),
+      height: 144,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              flashControl,
+              const SizedBox(width: 32),
+              _ConcentricShutterButton(
+                key: const Key('scan-code-shutter-btn'),
+                ringColor: palette.ink,
+                innerColor: palette.ink,
+                onPressed: _onShutterPressed,
+              ),
+              const SizedBox(width: 32),
+              _ScannerCircleControl(
+                key: const Key('scan-code-gallery-btn'),
+                icon: Icons.image_outlined,
+                backgroundColor: palette.pill,
+                iconColor: palette.ink,
+                onPressed: _pickImageAndAnalyze,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -516,85 +522,107 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
         final palette = ApoloDlPalette.of(context);
         final backIcon =
             isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+        final mediaPadding = MediaQuery.paddingOf(context);
+        final screenHeight = MediaQuery.sizeOf(context).height;
+        final headerHeight = math.max(104.0, mediaPadding.top + 60.0);
+        final bottomInset = screenHeight >= 700
+            ? math.max(34.0, mediaPadding.bottom)
+            : mediaPadding.bottom;
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           child: Scaffold(
             backgroundColor: palette.bg,
-            body: SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 56,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              ApoloDlIconCircleButton(
-                                key: const Key('scan-code-back-btn'),
-                                icon: backIcon,
-                                tooltip: MaterialLocalizations.of(context)
-                                    .backButtonTooltip,
-                                onPressed: () =>
-                                    Navigator.of(context).maybePop(),
-                              ),
-                              const Spacer(),
-                            ],
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 375),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      key: const Key('scan-code-header'),
+                      height: headerHeight,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: SizedBox(
+                          height: 60,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                ApoloDlIconCircleButton(
+                                  key: const Key('scan-code-back-btn'),
+                                  icon: backIcon,
+                                  tooltip: MaterialLocalizations.of(context)
+                                      .backButtonTooltip,
+                                  onPressed: () =>
+                                      Navigator.of(context).maybePop(),
+                                ),
+                                const Spacer(),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight,
+                    ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final topGap =
+                              ((constraints.maxHeight - 363.0) * (121.0 / 167.0))
+                                  .clamp(0.0, double.infinity);
+
+                          return SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight,
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  32,
+                                  topGap,
+                                  32,
+                                  16,
                                 ),
-                                child: Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        24, 12, 24, 16),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _buildViewfinder(palette, s),
-                                        const SizedBox(height: 20),
-                                        ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            maxWidth: 288,
+                                child: Align(
+                                  alignment: Alignment.topCenter,
+                                  child: Column(
+                                    key: const Key('scan-code-content'),
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildViewfinder(palette, s),
+                                      const SizedBox(height: 32),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 311,
+                                        ),
+                                        child: Text(
+                                          s.tr(
+                                            'ضع الرمز في المنطقة العلوية.',
+                                            'Placez le code dans la zone supérieure.',
+                                            'Place the code in the upper area.',
                                           ),
-                                          child: Text(
-                                            s.tr(
-                                              'ضع الرمز في المنطقة العلوية.',
-                                              'Placez le code dans la zone supérieure.',
-                                              'Place the code in the upper area.',
-                                            ),
-                                            key: const Key('scan-code-hint'),
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              height: 1.4,
-                                              color: palette.muted,
-                                            ),
+                                          key: const Key('scan-code-hint'),
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            height: 20.0 / 14.0,
+                                            color: palette.muted,
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                      _buildBottomControls(palette),
-                    ],
-                  ),
+                    ),
+                    _buildBottomControls(palette),
+                    if (bottomInset > 0) SizedBox(height: bottomInset),
+                  ],
                 ),
               ),
             ),
@@ -629,12 +657,12 @@ class _ScannerCircleControl extends StatelessWidget {
         onTap: onPressed,
         customBorder: const CircleBorder(),
         child: SizedBox(
-          width: 46,
-          height: 46,
+          width: 48,
+          height: 48,
           child: Center(
             child: Icon(
               icon,
-              size: 21,
+              size: 22,
               color: iconColor,
             ),
           ),
@@ -677,14 +705,14 @@ class _ConcentricShutterButtonState extends State<_ConcentricShutterButton> {
         duration: const Duration(milliseconds: 90),
         curve: Curves.easeOut,
         child: Container(
-          width: 66,
-          height: 66,
-          padding: const EdgeInsets.all(3.5),
+          width: 80,
+          height: 80,
+          padding: const EdgeInsets.all(4.5),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
               color: widget.ringColor,
-              width: 2,
+              width: 2.5,
             ),
           ),
           child: DecoratedBox(

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/profile_screen.dart';
@@ -11,6 +10,7 @@ import 'package:apolo_mobile/theme/app_theme.dart';
 import 'package:apolo_mobile/widgets/dl_qr_code.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,6 +44,14 @@ ResponseBody _jsonReply(Object payload, [int statusCode = 200]) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    try {
+      final interRegular = rootBundle.load('assets/fonts/Inter-Regular.ttf');
+      final loader = FontLoader('Inter')..addFont(interRegular);
+      await loader.load();
+    } catch (_) {}
+  });
 
   final state = AppState();
   late Dio originalDio;
@@ -351,6 +359,99 @@ void main() {
       expect(find.byType(SellerProfileScreen), findsOneWidget);
       expect(find.byKey(const Key('seller-follow-btn')), findsOneWidget);
       expect(find.text('Alex Michael Smith'), findsNWidgets(2));
+    });
+
+    testWidgets('ScanProfileCodeScreen matches Figma 375x812 dimensions cleanly',
+        (tester) async {
+      await pumpScreen(
+        tester,
+        const ScanProfileCodeScreen(enableLiveCamera: false),
+        viewport: const Size(375, 812),
+      );
+      expect(tester.takeException(), isNull);
+
+      final headerRect =
+          tester.getRect(find.byKey(const Key('scan-code-header')));
+      final viewfinderRect =
+          tester.getRect(find.byKey(const Key('scan-code-viewfinder')));
+      final hintRect = tester.getRect(find.byKey(const Key('scan-code-hint')));
+      final contentRect =
+          tester.getRect(find.byKey(const Key('scan-code-content')));
+      final controlsBarRect =
+          tester.getRect(find.byKey(const Key('scan-code-controls-bar')));
+      final flashRect =
+          tester.getRect(find.byKey(const Key('scan-code-flash-btn')));
+      final shutterRect =
+          tester.getRect(find.byKey(const Key('scan-code-shutter-btn')));
+      final galleryRect =
+          tester.getRect(find.byKey(const Key('scan-code-gallery-btn')));
+
+      expect(headerRect.top, 0);
+      expect(headerRect.width, 375);
+      expect(headerRect.height, 104);
+
+      expect(viewfinderRect.width, 311);
+      expect(viewfinderRect.height, 311);
+      expect(viewfinderRect.top, closeTo(225, 2));
+      expect(hintRect.top - viewfinderRect.bottom, closeTo(32, 1));
+      expect(contentRect.height, closeTo(363, 2));
+
+      expect(controlsBarRect.top, 634);
+      expect(controlsBarRect.width, 375);
+      expect(controlsBarRect.height, 144);
+
+      expect(shutterRect.width, 80);
+      expect(shutterRect.height, 80);
+      expect(flashRect.width, 48);
+      expect(flashRect.height, 48);
+      expect(galleryRect.width, 48);
+      expect(galleryRect.height, 48);
+      expect(shutterRect.left - flashRect.right, closeTo(32, 1));
+      expect(galleryRect.left - shutterRect.right, closeTo(32, 1));
+    });
+
+    testWidgets(
+        'ShareProfileScreen matches Figma 375x812 dimensions and fits compact 360x640',
+        (tester) async {
+      await pumpScreen(
+        tester,
+        const ShareProfileScreen(
+          userId: 77,
+          displayName: 'Alex Michael Smith',
+          handle: '@alexsmith',
+          profileUrl: 'https://apolo.ma/users/77',
+          enableLiveCamera: false,
+        ),
+        viewport: const Size(375, 812),
+      );
+      expect(tester.takeException(), isNull);
+
+      final headerRect =
+          tester.getRect(find.byKey(const Key('share-profile-header')));
+      final bottomBarRect =
+          tester.getRect(find.byKey(const Key('share-profile-bottom-bar')));
+
+      expect(headerRect.top, 0);
+      expect(headerRect.width, 375);
+      expect(headerRect.height, 104);
+      expect(bottomBarRect.top, 634);
+      expect(bottomBarRect.width, 375);
+      expect(bottomBarRect.height, 144);
+
+      await pumpScreen(
+        tester,
+        const ShareProfileScreen(
+          userId: 77,
+          displayName: 'Alex Michael Smith',
+          handle: '@alexsmith',
+          profileUrl: 'https://apolo.ma/users/77',
+          enableLiveCamera: false,
+        ),
+        viewport: const Size(360, 640),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('share-profile-qr-card')), findsOneWidget);
+      expect(find.byKey(const Key('share-profile-scan-btn')), findsOneWidget);
     });
   });
 }
