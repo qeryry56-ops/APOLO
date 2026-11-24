@@ -375,6 +375,10 @@ void main() {
 
       final headerRect =
           tester.getRect(find.byKey(const Key('scan-code-header')));
+      final topWrapperRect =
+          tester.getRect(find.byKey(const Key('scan-code-top-wrapper')));
+      final titleRect =
+          tester.getRect(find.byKey(const Key('scan-code-title')));
       final viewfinderRect =
           tester.getRect(find.byKey(const Key('scan-code-viewfinder')));
       final hintRect = tester.getRect(find.byKey(const Key('scan-code-hint')));
@@ -386,29 +390,49 @@ void main() {
           tester.getRect(find.byKey(const Key('scan-code-flash-btn')));
       final shutterRect =
           tester.getRect(find.byKey(const Key('scan-code-shutter-btn')));
+      final shutterRingWhiteRect =
+          tester.getRect(find.byKey(const Key('scan-code-shutter-ring-white')));
+      final shutterCoreRect =
+          tester.getRect(find.byKey(const Key('scan-code-shutter-core')));
       final galleryRect =
           tester.getRect(find.byKey(const Key('scan-code-gallery-btn')));
 
       expect(headerRect.top, 0);
       expect(headerRect.width, 375);
       expect(headerRect.height, 104);
+      expect(topWrapperRect.width, 375);
+      expect(topWrapperRect.height, 56);
+      expect(titleRect.width, 231);
+      expect(titleRect.height, 24);
 
       expect(viewfinderRect.width, 311);
       expect(viewfinderRect.height, 311);
       expect(viewfinderRect.top, closeTo(225, 2));
+      expect(hintRect.width, 311);
+      expect(hintRect.height, 20);
       expect(hintRect.top - viewfinderRect.bottom, closeTo(32, 1));
-      expect(contentRect.height, closeTo(363, 2));
+      expect(contentRect.height, closeTo(363, 1));
 
       expect(controlsBarRect.top, 634);
       expect(controlsBarRect.width, 375);
       expect(controlsBarRect.height, 144);
 
+      expect(flashRect.width, 56);
+      expect(flashRect.height, 56);
+      expect(galleryRect.width, 56);
+      expect(galleryRect.height, 56);
+
       expect(shutterRect.width, 80);
       expect(shutterRect.height, 80);
-      expect(flashRect.width, 48);
-      expect(flashRect.height, 48);
-      expect(galleryRect.width, 48);
-      expect(galleryRect.height, 48);
+      expect(shutterRingWhiteRect.width, 72);
+      expect(shutterRingWhiteRect.height, 72);
+      expect(shutterRingWhiteRect.top - shutterRect.top, 4);
+      expect(shutterRingWhiteRect.left - shutterRect.left, 4.5);
+      expect(shutterCoreRect.width, 64);
+      expect(shutterCoreRect.height, 64);
+      expect(shutterCoreRect.top - shutterRect.top, 8);
+      expect(shutterCoreRect.left - shutterRect.left, 8.5);
+
       expect(shutterRect.left - flashRect.right, closeTo(32, 1));
       expect(galleryRect.left - shutterRect.right, closeTo(32, 1));
     });

@@ -9,6 +9,7 @@ import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../widgets/dl_share_top_nav.dart';
 import 'scan_profile_code_screen.dart';
 
 /// Dynamic Layer v5.1 `Share profile / Default` screen.
@@ -109,14 +110,8 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
         final s = _state.s;
         final isAr = s.isAr;
         final tokens = DlShareProfileTokens.of(context);
-        final backIcon =
-            isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
         final mediaPadding = MediaQuery.paddingOf(context);
         final screenHeight = MediaQuery.sizeOf(context).height;
-        final headerHeight = math.max(
-          DlShareProfileLayout.headerTotalHeight,
-          mediaPadding.top + DlShareProfileLayout.topNavHeight,
-        );
         final bottomInset = screenHeight >= 700
             ? math.max(DlShareProfileLayout.homeIndicatorHeight, mediaPadding.bottom)
             : mediaPadding.bottom;
@@ -132,86 +127,39 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                 ),
                 child: Column(
                   children: [
-                    SizedBox(
-                      key: const Key('share-profile-header'),
-                      height: headerHeight,
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: SizedBox(
-                          key: const Key('share-profile-top-wrapper'),
-                          width: double.infinity,
-                          height: DlShareProfileLayout.topNavHeight,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal:
-                                  DlShareProfileLayout.topNavHorizontalPadding,
+                    DlShareTopNavigation(
+                      tokens: tokens,
+                      headerKey: const Key('share-profile-header'),
+                      wrapperKey: const Key('share-profile-top-wrapper'),
+                      backButtonKey: const Key('share-profile-back-btn'),
+                      titleKey: const Key('share-profile-title'),
+                      title: widget.title,
+                      onBack: () => Navigator.of(context).maybePop(),
+                      trailing: Material(
+                        color: Colors.transparent,
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          key: const Key('share-profile-native-btn'),
+                          onTap: _shareNative,
+                          customBorder: const CircleBorder(),
+                          child: Tooltip(
+                            message: s.tr(
+                              'مشاركة الرابط',
+                              'Partager le lien',
+                              'Share link',
                             ),
-                            child: Row(
-                              children: [
-                                ApoloDlIconCircleButton(
-                                  key: const Key('share-profile-back-btn'),
-                                  icon: backIcon,
-                                  backgroundColor: tokens.pillBackground,
-                                  iconColor: tokens.ink,
-                                  tooltip: MaterialLocalizations.of(context)
-                                      .backButtonTooltip,
-                                  onPressed: () =>
-                                      Navigator.of(context).maybePop(),
+                            child: SizedBox(
+                              width: DlShareProfileLayout.topNavActionSize,
+                              height: DlShareProfileLayout.topNavActionSize,
+                              child: Center(
+                                child: Icon(
+                                  CupertinoIcons
+                                      .arrowshape_turn_up_right_fill,
+                                  size: 22,
+                                  color: tokens.ink,
                                 ),
-                                const SizedBox(
-                                  width: DlShareProfileLayout.topNavGap,
-                                ),
-                                Expanded(
-                                  child: SizedBox(
-                                    key: const Key('share-profile-title'),
-                                    height:
-                                        DlShareProfileLayout.topNavTitleHeight,
-                                    child: Center(
-                                      child: Text(
-                                        widget.title ?? '',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style: tokens.textBaseBold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(
-                                  width: DlShareProfileLayout.topNavGap,
-                                ),
-                                Material(
-                                  color: Colors.transparent,
-                                  shape: const CircleBorder(),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: InkWell(
-                                    key: const Key('share-profile-native-btn'),
-                                    onTap: _shareNative,
-                                    customBorder: const CircleBorder(),
-                                    child: Tooltip(
-                                      message: s.tr(
-                                        'مشاركة الرابط',
-                                        'Partager le lien',
-                                        'Share link',
-                                      ),
-                                      child: SizedBox(
-                                        width: DlShareProfileLayout
-                                            .topNavActionSize,
-                                        height: DlShareProfileLayout
-                                            .topNavActionSize,
-                                        child: Center(
-                                          child: Icon(
-                                            CupertinoIcons
-                                                .arrowshape_turn_up_right_fill,
-                                            size: 22,
-                                            color: tokens.ink,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),

@@ -9,21 +9,26 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../widgets/dl_share_top_nav.dart';
 import 'ad_detail_screen.dart';
 import 'seller_profile_screen.dart';
 
-/// Dynamic Layer v5.1 QR scanner screen (`Share profile / Default` scan view).
-/// Features a minimal top bar, large rounded 1:1 camera viewfinder, centered
-/// instruction caption, and bottom flash / concentric shutter / gallery controls.
+/// Dynamic Layer v5.1 QR scanner screen (`Share profile / Default` Camera Scan mode).
+/// Uses [DlShareProfileTokens], [DlShareProfileLayout], and [DlShareTopNavigation]
+/// to render a `311x311` (`roundedXl`) scan frame, `311x20` instruction text,
+/// `56x56` `Buttonicon` controls (`p_16`, `24x24` icons), and `80x80` capture frame.
 class ScanProfileCodeScreen extends StatefulWidget {
   const ScanProfileCodeScreen({
     super.key,
+    this.title,
     this.enableLiveCamera = true,
     this.onCodeScanned,
   });
 
+  final String? title;
   final bool enableLiveCamera;
   final void Function(String rawValue)? onCodeScanned;
 
@@ -384,12 +389,12 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     }
   }
 
-  Widget _buildCameraFallback(ApoloDlPalette palette, AppStrings s) {
+  Widget _buildCameraFallback(DlShareProfileTokens tokens, AppStrings s) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _openManualCodeSheet,
       child: ColoredBox(
-        color: palette.groupCard,
+        color: tokens.cardBackground,
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -399,7 +404,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
                 Icon(
                   CupertinoIcons.camera,
                   size: 32,
-                  color: palette.iconMuted,
+                  color: tokens.mutedInk,
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -409,11 +414,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
                     'Tap to enter a profile link',
                   ),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: palette.muted,
-                    height: 1.35,
-                  ),
+                  style: tokens.textSmRegular,
                 ),
               ],
             ),
@@ -423,29 +424,31 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     );
   }
 
-  Widget _buildViewfinder(ApoloDlPalette palette, AppStrings s) {
+  Widget _buildViewfinder(DlShareProfileTokens tokens, AppStrings s) {
     final Widget inner;
     if (_shouldUseLiveScanner && _controller != null) {
       inner = MobileScanner(
         controller: _controller!,
         fit: BoxFit.cover,
         onDetect: _onDetect,
-        placeholderBuilder: (_) => ColoredBox(color: palette.groupCard),
-        errorBuilder: (context, error) => _buildCameraFallback(palette, s),
+        placeholderBuilder: (_) => ColoredBox(color: tokens.cardBackground),
+        errorBuilder: (context, error) => _buildCameraFallback(tokens, s),
       );
     } else {
-      inner = ColoredBox(color: palette.groupCard);
+      inner = ColoredBox(color: tokens.cardBackground);
     }
 
     return ConstrainedBox(
       key: const Key('scan-code-viewfinder'),
-      constraints: const BoxConstraints(maxWidth: 311),
+      constraints: const BoxConstraints(
+        maxWidth: DlShareProfileLayout.scanFrameSize,
+      ),
       child: AspectRatio(
         aspectRatio: 1,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(tokens.radii.roundedXl),
           child: ColoredBox(
-            color: palette.groupCard,
+            color: tokens.cardBackground,
             child: inner,
           ),
         ),
@@ -453,7 +456,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     );
   }
 
-  Widget _buildBottomControls(ApoloDlPalette palette) {
+  Widget _buildBottomControls(DlShareProfileTokens tokens) {
     final controller = _controller;
 
     final Widget flashControl = controller != null
@@ -465,8 +468,11 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
                 key: const Key('scan-code-flash-btn'),
                 icon:
                     torchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                backgroundColor: torchOn ? palette.ink : palette.pill,
-                iconColor: torchOn ? palette.onInk : palette.ink,
+                backgroundColor:
+                    torchOn ? tokens.ink : tokens.pillBackground,
+                iconColor:
+                    torchOn ? tokens.scaffoldBackground : tokens.ink,
+                borderRadius: tokens.radii.roundedFull,
                 onPressed: _toggleTorch,
               );
             },
@@ -474,35 +480,39 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
         : _ScannerCircleControl(
             key: const Key('scan-code-flash-btn'),
             icon: Icons.flash_off_rounded,
-            backgroundColor: palette.pill,
-            iconColor: palette.ink,
+            backgroundColor: tokens.pillBackground,
+            iconColor: tokens.ink,
+            borderRadius: tokens.radii.roundedFull,
             onPressed: _toggleTorch,
           );
 
     return SizedBox(
       key: const Key('scan-code-controls-bar'),
-      height: 144,
+      height: DlShareProfileLayout.bottomBarHeight,
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(DlShareProfileLayout.bottomBarPadding),
         child: Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               flashControl,
-              const SizedBox(width: 32),
+              const SizedBox(width: DlShareProfileLayout.cameraControlsGap),
               _ConcentricShutterButton(
                 key: const Key('scan-code-shutter-btn'),
-                ringColor: palette.ink,
-                innerColor: palette.ink,
+                outerColor: tokens.captureOuterColor,
+                gapColor: tokens.captureGapColor,
+                innerColor: tokens.captureInnerColor,
+                borderRadius: tokens.radii.roundedFull,
                 onPressed: _onShutterPressed,
               ),
-              const SizedBox(width: 32),
+              const SizedBox(width: DlShareProfileLayout.cameraControlsGap),
               _ScannerCircleControl(
                 key: const Key('scan-code-gallery-btn'),
-                icon: Icons.image_outlined,
-                backgroundColor: palette.pill,
-                iconColor: palette.ink,
+                icon: Icons.image_rounded,
+                backgroundColor: tokens.pillBackground,
+                iconColor: tokens.ink,
+                borderRadius: tokens.radii.roundedFull,
                 onPressed: _pickImageAndAnalyze,
               ),
             ],
@@ -519,57 +529,40 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
       builder: (context, _) {
         final s = _state.s;
         final isAr = s.isAr;
-        final palette = ApoloDlPalette.of(context);
-        final backIcon =
-            isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+        final tokens = DlShareProfileTokens.of(context);
         final mediaPadding = MediaQuery.paddingOf(context);
         final screenHeight = MediaQuery.sizeOf(context).height;
-        final headerHeight = math.max(104.0, mediaPadding.top + 60.0);
         final bottomInset = screenHeight >= 700
-            ? math.max(34.0, mediaPadding.bottom)
+            ? math.max(DlShareProfileLayout.homeIndicatorHeight, mediaPadding.bottom)
             : mediaPadding.bottom;
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           child: Scaffold(
-            backgroundColor: palette.bg,
+            backgroundColor: tokens.scaffoldBackground,
             body: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 375),
+                constraints: const BoxConstraints(
+                  maxWidth: DlShareProfileLayout.canvasWidth,
+                ),
                 child: Column(
                   children: [
-                    SizedBox(
-                      key: const Key('scan-code-header'),
-                      height: headerHeight,
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: SizedBox(
-                          height: 60,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              children: [
-                                ApoloDlIconCircleButton(
-                                  key: const Key('scan-code-back-btn'),
-                                  icon: backIcon,
-                                  tooltip: MaterialLocalizations.of(context)
-                                      .backButtonTooltip,
-                                  onPressed: () =>
-                                      Navigator.of(context).maybePop(),
-                                ),
-                                const Spacer(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                    DlShareTopNavigation(
+                      tokens: tokens,
+                      headerKey: const Key('scan-code-header'),
+                      wrapperKey: const Key('scan-code-top-wrapper'),
+                      backButtonKey: const Key('scan-code-back-btn'),
+                      titleKey: const Key('scan-code-title'),
+                      title: widget.title,
+                      onBack: () => Navigator.of(context).maybePop(),
                     ),
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          final topGap =
-                              ((constraints.maxHeight - 363.0) * (121.0 / 167.0))
-                                  .clamp(0.0, double.infinity);
+                          final topGap = ((constraints.maxHeight -
+                                      DlShareProfileLayout.scanGroupHeight) *
+                                  (121.0 / 167.0))
+                              .clamp(0.0, double.infinity);
 
                           return SingleChildScrollView(
                             physics: const BouncingScrollPhysics(),
@@ -579,9 +572,9 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
                               ),
                               child: Padding(
                                 padding: EdgeInsets.fromLTRB(
-                                  32,
+                                  DlShareProfileLayout.screenHorizontalPadding,
                                   topGap,
-                                  32,
+                                  DlShareProfileLayout.screenHorizontalPadding,
                                   16,
                                 ),
                                 child: Align(
@@ -590,24 +583,29 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
                                     key: const Key('scan-code-content'),
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      _buildViewfinder(palette, s),
-                                      const SizedBox(height: 32),
+                                      _buildViewfinder(tokens, s),
+                                      const SizedBox(
+                                        height:
+                                            DlShareProfileLayout.sectionGap,
+                                      ),
                                       ConstrainedBox(
                                         constraints: const BoxConstraints(
-                                          maxWidth: 311,
+                                          maxWidth: DlShareProfileLayout
+                                              .scanInstructionWidth,
+                                          minHeight: DlShareProfileLayout
+                                              .scanInstructionHeight,
                                         ),
-                                        child: Text(
-                                          s.tr(
-                                            'ضع الرمز في المنطقة العلوية.',
-                                            'Placez le code dans la zone supérieure.',
-                                            'Place the code in the upper area.',
-                                          ),
-                                          key: const Key('scan-code-hint'),
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            height: 20.0 / 14.0,
-                                            color: palette.muted,
+                                        child: SizedBox(
+                                          width: double.infinity,
+                                          child: Text(
+                                            s.tr(
+                                              'ضع الرمز في المنطقة العلوية.',
+                                              'Placez le code dans la zone supérieure.',
+                                              'Place the code in the upper area.',
+                                            ),
+                                            key: const Key('scan-code-hint'),
+                                            textAlign: TextAlign.center,
+                                            style: tokens.textSmRegular,
                                           ),
                                         ),
                                       ),
@@ -620,7 +618,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
                         },
                       ),
                     ),
-                    _buildBottomControls(palette),
+                    _buildBottomControls(tokens),
                     if (bottomInset > 0) SizedBox(height: bottomInset),
                   ],
                 ),
@@ -638,6 +636,7 @@ class _ScannerCircleControl extends StatelessWidget {
     required this.icon,
     required this.backgroundColor,
     required this.iconColor,
+    required this.borderRadius,
     required this.onPressed,
     super.key,
   });
@@ -645,25 +644,33 @@ class _ScannerCircleControl extends StatelessWidget {
   final IconData icon;
   final Color backgroundColor;
   final Color iconColor;
+  final double borderRadius;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: backgroundColor,
-      shape: const CircleBorder(),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Center(
-            child: Icon(
-              icon,
-              size: 22,
-              color: iconColor,
+        customBorder: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(DlShareProfileLayout.p16),
+          child: SizedBox(
+            width: DlShareProfileLayout.cameraIconSize,
+            height: DlShareProfileLayout.cameraIconSize,
+            child: Center(
+              child: Icon(
+                icon,
+                size: DlShareProfileLayout.cameraIconSize,
+                color: iconColor,
+              ),
             ),
           ),
         ),
@@ -674,14 +681,18 @@ class _ScannerCircleControl extends StatelessWidget {
 
 class _ConcentricShutterButton extends StatefulWidget {
   const _ConcentricShutterButton({
-    required this.ringColor,
+    required this.outerColor,
+    required this.gapColor,
     required this.innerColor,
+    required this.borderRadius,
     required this.onPressed,
     super.key,
   });
 
-  final Color ringColor;
+  final Color outerColor;
+  final Color gapColor;
   final Color innerColor;
+  final double borderRadius;
   final VoidCallback onPressed;
 
   @override
@@ -705,21 +716,41 @@ class _ConcentricShutterButtonState extends State<_ConcentricShutterButton> {
         duration: const Duration(milliseconds: 90),
         curve: Curves.easeOut,
         child: Container(
-          width: 80,
-          height: 80,
-          padding: const EdgeInsets.all(4.5),
+          width: DlShareProfileLayout.captureOuterSize,
+          height: DlShareProfileLayout.captureOuterSize,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: widget.ringColor,
-              width: 2.5,
-            ),
+            color: widget.outerColor,
+            borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: widget.innerColor,
-            ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: DlShareProfileLayout.captureWhiteTop,
+                left: DlShareProfileLayout.captureWhiteLeft,
+                width: DlShareProfileLayout.captureWhiteSize,
+                height: DlShareProfileLayout.captureWhiteSize,
+                child: Container(
+                  key: const Key('scan-code-shutter-ring-white'),
+                  decoration: BoxDecoration(
+                    color: widget.gapColor,
+                    borderRadius: BorderRadius.circular(widget.borderRadius),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: DlShareProfileLayout.captureInnerTop,
+                left: DlShareProfileLayout.captureInnerLeft,
+                width: DlShareProfileLayout.captureInnerSize,
+                height: DlShareProfileLayout.captureInnerSize,
+                child: Container(
+                  key: const Key('scan-code-shutter-core'),
+                  decoration: BoxDecoration(
+                    color: widget.innerColor,
+                    borderRadius: BorderRadius.circular(widget.borderRadius),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

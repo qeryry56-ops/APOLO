@@ -23,14 +23,18 @@ class DlShareProfileRadii {
   const DlShareProfileRadii({
     this.roundedXl = 16.0,
     this.rounded5Xl = 32.0,
+    this.roundedFull = 9999.0,
     this.pill = 999.0,
   });
 
-  /// `roundedXl` — used for the inner `220x220` pure white QR container.
+  /// `roundedXl` — used for the inner `220x220` QR container and scan frame (`16px`).
   final double roundedXl;
 
-  /// `rounded5Xl` — used for the outer `284x364` QR profile card.
+  /// `rounded5Xl` — used for the outer `284x364` QR profile card (`32px`).
   final double rounded5Xl;
+
+  /// `roundedFull` — used for `Buttonicon` circles and `# click-frame` capture rings.
+  final double roundedFull;
 
   /// Pill radius used for bottom CTA controls.
   final double pill;
@@ -91,10 +95,14 @@ abstract final class DlShareProfileLayout {
   static const double topNavActionSize = 40.0;
   static const double topNavTitleHeight = 24.0;
 
-  static const double screenHorizontalPadding = 32.0;
-  static const double sectionGap = 32.0;
+  static const double p0 = 0.0;
+  static const double p16 = 16.0;
+  static const double p32 = 32.0;
 
-  static const double outerCardPadding = 32.0;
+  static const double screenHorizontalPadding = p32;
+  static const double sectionGap = p32;
+
+  static const double outerCardPadding = p32;
   static const double innerQrSize = 220.0;
   static const double qrCodeOffset = 30.0;
   static const double qrCodeSize = 160.0;
@@ -103,12 +111,31 @@ abstract final class DlShareProfileLayout {
   static const double privacyMaxWidth = 311.0;
   static const double privacyMinHeight = 60.0;
 
+  // Mode 2 — Camera Scan (`Frame 1321319716` / `Frame 1321319711`)
+  static const double scanFrameSize = 311.0;
+  static const double scanFrameTop = 225.0;
+  static const double scanGroupHeight = 363.0;
+  static const double scanInstructionWidth = 311.0;
+  static const double scanInstructionHeight = 20.0;
+
+  static const double cameraIconButtonSize = 56.0;
+  static const double cameraIconSize = 24.0;
+  static const double cameraControlsGap = p32;
+
+  static const double captureOuterSize = 80.0;
+  static const double captureWhiteSize = 72.0;
+  static const double captureWhiteTop = 4.0;
+  static const double captureWhiteLeft = 4.5;
+  static const double captureInnerSize = 64.0;
+  static const double captureInnerTop = 8.0;
+  static const double captureInnerLeft = 8.5;
+
   static const double bottomBarHeight = 144.0;
-  static const double bottomBarPadding = 32.0;
+  static const double bottomBarPadding = p32;
   static const double homeIndicatorHeight = 34.0;
 }
 
-/// Modular token bundle for [ShareProfileScreen] adapting cleanly to Light/Dark mode.
+/// Modular token bundle for QR Share & Scan modes adapting cleanly to Light/Dark mode.
 @immutable
 class DlShareProfileTokens {
   const DlShareProfileTokens({
@@ -119,6 +146,9 @@ class DlShareProfileTokens {
     required this.ink,
     required this.mutedInk,
     required this.pillBackground,
+    required this.captureOuterColor,
+    required this.captureGapColor,
+    required this.captureInnerColor,
     this.radii = const DlShareProfileRadii(),
   });
 
@@ -129,6 +159,9 @@ class DlShareProfileTokens {
   final Color ink;
   final Color mutedInk;
   final Color pillBackground;
+  final Color captureOuterColor;
+  final Color captureGapColor;
+  final Color captureInnerColor;
   final DlShareProfileRadii radii;
 
   static const DlShareProfileTokens light = DlShareProfileTokens(
@@ -139,6 +172,9 @@ class DlShareProfileTokens {
     ink: DlShareProfileColors.colorGreyBlack,
     mutedInk: DlShareProfileColors.colorGrey500,
     pillBackground: DlShareProfileColors.colorGrey100,
+    captureOuterColor: DlShareProfileColors.colorGreyBlack,
+    captureGapColor: DlShareProfileColors.colorGreyWhite,
+    captureInnerColor: DlShareProfileColors.colorGreyBlack,
   );
 
   static final DlShareProfileTokens dark = DlShareProfileTokens(
@@ -149,6 +185,9 @@ class DlShareProfileTokens {
     ink: ApoloDlPalette.dark.ink,
     mutedInk: ApoloDlPalette.dark.muted,
     pillBackground: ApoloDlPalette.dark.pill,
+    captureOuterColor: ApoloDlPalette.dark.ink,
+    captureGapColor: ApoloDlPalette.dark.bg,
+    captureInnerColor: ApoloDlPalette.dark.ink,
   );
 
   static DlShareProfileTokens of(BuildContext context) {
