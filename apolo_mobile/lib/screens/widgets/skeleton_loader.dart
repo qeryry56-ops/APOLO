@@ -323,9 +323,9 @@ class AdReelsSkeleton extends StatelessWidget {
               highlightColor: Color(0xFF1F2937),
             ),
           ),
-          // Right-side vertical action rail
-          Positioned(
-            right: 14,
+          // Trailing vertical action rail
+          PositionedDirectional(
+            end: 14,
             bottom: 36,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -344,10 +344,10 @@ class AdReelsSkeleton extends StatelessWidget {
               ],
             ),
           ),
-          // Bottom-left listing metadata
-          const Positioned(
-            left: 16,
-            right: 78,
+          // Bottom-start listing metadata
+          const PositionedDirectional(
+            start: 16,
+            end: 78,
             bottom: 24,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,11 +365,23 @@ class AdReelsSkeleton extends StatelessWidget {
                 SizedBox(height: 14),
                 Row(
                   children: [
-                    ShimmerBox(
-                        width: 90, height: 32, borderRadius: 99, dark: true),
+                    Flexible(
+                      child: ShimmerBox(
+                        width: 90,
+                        height: 32,
+                        borderRadius: 99,
+                        dark: true,
+                      ),
+                    ),
                     SizedBox(width: 8),
-                    ShimmerBox(
-                        width: 110, height: 32, borderRadius: 99, dark: true),
+                    Flexible(
+                      child: ShimmerBox(
+                        width: 110,
+                        height: 32,
+                        borderRadius: 99,
+                        dark: true,
+                      ),
+                    ),
                   ],
                 ),
               ],

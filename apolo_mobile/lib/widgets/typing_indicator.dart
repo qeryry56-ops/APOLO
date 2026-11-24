@@ -240,7 +240,9 @@ class _TypingIndicatorDotsState extends State<TypingIndicatorDots>
           children: List.generate(3, (index) {
             final opacity = _opacityForDot(index, t);
             return Padding(
-              padding: EdgeInsets.only(right: index < 2 ? widget.spacing : 0),
+              padding: EdgeInsetsDirectional.only(
+                end: index < 2 ? widget.spacing : 0,
+              ),
               child: Opacity(
                 key: Key('typing-dot-$index'),
                 opacity: opacity.clamp(0.25, 1.0),

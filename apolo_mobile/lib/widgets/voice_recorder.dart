@@ -82,7 +82,6 @@ class VoiceRecorder extends StatefulWidget {
   }
 
   static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _surfaceGrey = Color(0xFFF2F3F7);
   static const Color _textMuted = Color(0xFF6B7280);
   static const Color _dangerRed = Color(0xFFE31B23);
   static const Color _warningAmber = Color(0xFFD97706);
@@ -96,9 +95,13 @@ class VoiceRecorderState extends State<VoiceRecorder> {
   static const int _flatWarningThresholdMs = 2000;
 
   Timer? _timer;
+  Timer? _previewTimer;
   bool _isRecording = false;
   bool _isPressingMic = false;
   bool _isLocked = false;
+  bool _isPausedForPreview = false;
+  bool _isPreviewPlaying = false;
+  double _previewProgress = 0.0;
   bool _isPastCancelThreshold = false;
   bool _isMicMutedWarning = false;
   bool _hasDetectedAudio = false;
@@ -116,6 +119,8 @@ class VoiceRecorderState extends State<VoiceRecorder> {
 
   bool get isRecording => _isRecording;
   bool get isLocked => _isLocked;
+  bool get isPausedForPreview => _isPausedForPreview;
+  bool get isPreviewPlaying => _isPreviewPlaying;
   bool get isPastCancelThreshold => _isPastCancelThreshold;
   bool get isMicMutedWarning => _isMicMutedWarning;
   bool get hasDetectedAudio => _hasDetectedAudio;
@@ -130,6 +135,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
   @override
   void dispose() {
     _timer?.cancel();
+    _previewTimer?.cancel();
     super.dispose();
   }
 
@@ -138,6 +144,126 @@ class VoiceRecorderState extends State<VoiceRecorder> {
       _isRecording = active;
       widget.onRecordingStateChanged?.call(active);
     }
+  }
+
+  /// Opens the native iOS iMessage Voice Message Capsule immediately in hands-free
+  /// recording mode (e.g. from tapping Audio in the `+` drawer or tapping the mic).
+  void startCapsuleRecording() {
+    if (_isRecording) return;
+    HapticFeedback.mediumImpact();
+    _timer?.cancel();
+    _previewTimer?.cancel();
+
+    setState(() {
+      _setRecordingState(true);
+      _isPressingMic = false;
+      _isLocked = true;
+      _isPausedForPreview = false;
+      _isPreviewPlaying = false;
+      _previewProgress = 0.0;
+      _isPastCancelThreshold = false;
+      _isMicMutedWarning = false;
+      _hasDetectedAudio = false;
+      _elapsedMs = 0;
+      _silentDurationMs = 0;
+      _tickCount = 0;
+      _slideLeftPx = 0.0;
+      _slideUpPx = 0.0;
+      _recordedAmplitudes.clear();
+      _liveWaveform =
+          List<double>.filled(widget.barCount, 0.04, growable: true);
+    });
+
+    if (MediaRtcBridge.isVoiceSupported) {
+      MediaRtcBridge.startVoiceRecording();
+    }
+    _startRecordingTicker();
+  }
+
+  void _startRecordingTicker() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: _tickMs), (_) {
+      if (!mounted || !_isRecording || _isPausedForPreview) return;
+      _tickCount++;
+      final amp = _sampleAmplitude();
+      final isSilent = amp < widget.silenceThreshold;
+
+      setState(() {
+        _elapsedMs += _tickMs;
+        _recordedAmplitudes.add(amp);
+        if (_liveWaveform.length >= widget.barCount) {
+          _liveWaveform.removeAt(0);
+        }
+        _liveWaveform.add(amp);
+
+        if (!isSilent) {
+          _hasDetectedAudio = true;
+          _silentDurationMs = 0;
+          _isMicMutedWarning = false;
+        } else {
+          _silentDurationMs += _tickMs;
+          // Rule 4: If waveform is flat for 2+ seconds, show "Mic muted" warning
+          if (_silentDurationMs >= _flatWarningThresholdMs) {
+            _isMicMutedWarning = true;
+          }
+        }
+      });
+    });
+  }
+
+  /// Native iOS Play/Pause toggle inside the voice capsule:
+  /// - While recording -> pauses capture so user can preview/scrub waveform.
+  /// - While paused -> plays/pauses waveform preview playback before sending.
+  void _toggleCapsulePlayPause() {
+    HapticFeedback.selectionClick();
+    if (!_isPausedForPreview) {
+      _timer?.cancel();
+      setState(() {
+        _isPausedForPreview = true;
+        _isPreviewPlaying = false;
+        _previewProgress = 0.0;
+      });
+      return;
+    }
+
+    if (_isPreviewPlaying) {
+      _previewTimer?.cancel();
+      setState(() => _isPreviewPlaying = false);
+      return;
+    }
+
+    _previewTimer?.cancel();
+    setState(() {
+      if (_previewProgress >= 1.0) _previewProgress = 0.0;
+      _isPreviewPlaying = true;
+    });
+
+    const tickMs = 50;
+    final totalMs = math.max(1000, _elapsedMs);
+    _previewTimer =
+        Timer.periodic(const Duration(milliseconds: tickMs), (timer) {
+      if (!mounted || !_isPreviewPlaying || !_isRecording) {
+        timer.cancel();
+        return;
+      }
+      final next = _previewProgress + (tickMs / totalMs);
+      if (next >= 1.0) {
+        timer.cancel();
+        setState(() {
+          _previewProgress = 0.0;
+          _isPreviewPlaying = false;
+        });
+      } else {
+        setState(() => _previewProgress = next);
+      }
+    });
+  }
+
+  void _scrubPreviewToLocalDx(double localDx, double maxWidth) {
+    if (!_isPausedForPreview || maxWidth <= 0) return;
+    setState(() {
+      _previewProgress = (localDx / maxWidth).clamp(0.0, 1.0);
+    });
   }
 
   double _sampleAmplitude() {
@@ -167,11 +293,15 @@ class VoiceRecorderState extends State<VoiceRecorder> {
 
     HapticFeedback.mediumImpact();
     _timer?.cancel();
+    _previewTimer?.cancel();
 
     setState(() {
       _setRecordingState(true);
       _isPressingMic = true;
       _isLocked = false;
+      _isPausedForPreview = false;
+      _isPreviewPlaying = false;
+      _previewProgress = 0.0;
       _isPastCancelThreshold = false;
       _isMicMutedWarning = false;
       _hasDetectedAudio = false;
@@ -190,33 +320,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
       MediaRtcBridge.startVoiceRecording();
     }
 
-    _timer = Timer.periodic(const Duration(milliseconds: _tickMs), (_) {
-      if (!mounted || !_isRecording) return;
-      _tickCount++;
-      final amp = _sampleAmplitude();
-      final isSilent = amp < widget.silenceThreshold;
-
-      setState(() {
-        _elapsedMs += _tickMs;
-        _recordedAmplitudes.add(amp);
-        if (_liveWaveform.length >= widget.barCount) {
-          _liveWaveform.removeAt(0);
-        }
-        _liveWaveform.add(amp);
-
-        if (!isSilent) {
-          _hasDetectedAudio = true;
-          _silentDurationMs = 0;
-          _isMicMutedWarning = false;
-        } else {
-          _silentDurationMs += _tickMs;
-          // Rule 4: If waveform is flat for 2+ seconds, show "Mic muted" warning
-          if (_silentDurationMs >= _flatWarningThresholdMs) {
-            _isMicMutedWarning = true;
-          }
-        }
-      });
-    });
+    _startRecordingTicker();
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
@@ -274,14 +378,17 @@ class VoiceRecorderState extends State<VoiceRecorder> {
       return;
     }
 
-    // Quick tap (< 100ms, 0 ticks) when voice bridge is unsupported: clean reset
-    if (_elapsedMs == 0 && !MediaRtcBridge.isVoiceSupported) {
-      _timer?.cancel();
+    // Quick tap (< 200ms) opens the interactive native iOS Voice Message Capsule
+    // hands-free so users on mobile & desktop can tap mic, see live waveform,
+    // pause/play preview, and press the blue upward-arrow Send button.
+    if (_elapsedMs < 200) {
+      HapticFeedback.selectionClick();
       setState(() {
+        _isLocked = true;
         _isPressingMic = false;
-        _setRecordingState(false);
+        _slideLeftPx = 0.0;
+        _slideUpPx = 0.0;
       });
-      widget.onUnsupportedTap?.call();
       return;
     }
 
@@ -297,6 +404,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
   /// Cancels the active recording and invokes [onCancel].
   Future<void> cancelRecording() async {
     _timer?.cancel();
+    _previewTimer?.cancel();
     HapticFeedback.lightImpact();
     if (MediaRtcBridge.isVoiceSupported) {
       await MediaRtcBridge.cancelVoiceRecording();
@@ -305,6 +413,9 @@ class VoiceRecorderState extends State<VoiceRecorder> {
     setState(() {
       _isPressingMic = false;
       _isLocked = false;
+      _isPausedForPreview = false;
+      _isPreviewPlaying = false;
+      _previewProgress = 0.0;
       _isPastCancelThreshold = false;
       _isMicMutedWarning = false;
       _hasDetectedAudio = false;
@@ -348,6 +459,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
     }
 
     _timer?.cancel();
+    _previewTimer?.cancel();
     HapticFeedback.lightImpact();
 
     final durationSec = math.max(1, (_elapsedMs / 1000).ceil());
@@ -369,6 +481,9 @@ class VoiceRecorderState extends State<VoiceRecorder> {
     setState(() {
       _isPressingMic = false;
       _isLocked = false;
+      _isPausedForPreview = false;
+      _isPreviewPlaying = false;
+      _previewProgress = 0.0;
       _isPastCancelThreshold = false;
       _isMicMutedWarning = false;
       _hasDetectedAudio = false;
@@ -426,34 +541,70 @@ class VoiceRecorderState extends State<VoiceRecorder> {
     return 'Recording voice message, $timeStr$mutedSuffix. Slide left to cancel, slide up to lock';
   }
 
-  Widget _buildWaveformBars() {
+  Widget _buildWaveformBars({required bool isDark}) {
+    final activeBarColor = _isPastCancelThreshold
+        ? VoiceRecorder._dangerRed.withValues(alpha: 0.45)
+        : (_isMicMutedWarning
+            ? VoiceRecorder._warningAmber
+            : (isDark ? Colors.white : const Color(0xFF0088FF)));
+    final inactiveBarColor = _isPastCancelThreshold
+        ? VoiceRecorder._dangerRed.withValues(alpha: 0.28)
+        : (_isMicMutedWarning
+            ? VoiceRecorder._warningAmber.withValues(alpha: 0.45)
+            : (isDark
+                ? Colors.white.withValues(alpha: 0.34)
+                : const Color(0xFF0A0A0A).withValues(alpha: 0.24)));
+
     return Semantics(
       key: const Key('voice-recorder-waveform'),
       label: _isMicMutedWarning
           ? 'Flat audio waveform, mic muted'
-          : 'Live audio waveform',
-      child: SizedBox(
-        height: 28,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: List.generate(_liveWaveform.length, (i) {
-            final amp = _liveWaveform[i].clamp(0.04, 1.0);
-            final barHeight = (4.0 + amp * 22.0).clamp(4.0, 26.0);
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 80),
-              width: 3,
-              height: barHeight,
-              decoration: BoxDecoration(
-                color: _isPastCancelThreshold
-                    ? VoiceRecorder._dangerRed.withValues(alpha: 0.45)
-                    : (_isMicMutedWarning
-                        ? VoiceRecorder._warningAmber
-                        : VoiceRecorder._ink),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            );
-          }),
+          : (_isPausedForPreview
+              ? 'Interactive audio preview waveform'
+              : 'Live audio waveform'),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          height: 32,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxW = constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : widget.barCount * 5.0;
+              final fitCount =
+                  (maxW / 5.0).floor().clamp(1, _liveWaveform.length);
+              final startIdx = _liveWaveform.length - fitCount;
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: _isPausedForPreview
+                    ? (d) => _scrubPreviewToLocalDx(d.localPosition.dx, maxW)
+                    : null,
+                onHorizontalDragUpdate: _isPausedForPreview
+                    ? (d) => _scrubPreviewToLocalDx(d.localPosition.dx, maxW)
+                    : null,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: List.generate(fitCount, (i) {
+                    final amp = _liveWaveform[startIdx + i].clamp(0.04, 1.0);
+                    final barHeight = (4.0 + amp * 22.0).clamp(4.0, 26.0);
+                    final ratio = (i + 1) / fitCount;
+                    final isHighlighted = !_isPausedForPreview ||
+                        (_previewProgress > 0 && ratio <= _previewProgress);
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 80),
+                      width: 2.6,
+                      height: barHeight,
+                      decoration: BoxDecoration(
+                        color: isHighlighted ? activeBarColor : inactiveBarColor,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    );
+                  }),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -495,9 +646,195 @@ class VoiceRecorderState extends State<VoiceRecorder> {
     );
   }
 
+  /// Genuine native iOS iMessage Voice Message Capsule (locked / interactive mode):
+  /// - Pill/capsule container (`#2C2C2E` dark / soft `#F2F2F7` light)
+  /// - Start: Close/Cancel (`✕`) + Play/Pause button
+  /// - Center: Live interactive audio frequency wave bars
+  /// - Duration label (`0:09`)
+  /// - End: Blue circular Send button (`#0088FF`) with upward arrow (`↑`)
+  Widget _buildIosVoiceCapsule({
+    required bool isDark,
+    required String formattedTime,
+  }) {
+    final capsuleBg =
+        isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
+    final capsuleBorder = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.08);
+    final iconBg = isDark
+        ? Colors.white.withValues(alpha: 0.14)
+        : Colors.black.withValues(alpha: 0.07);
+    final fgPrimary = isDark ? Colors.white : const Color(0xFF0A0A0A);
+    final fgMuted = isDark
+        ? Colors.white.withValues(alpha: 0.72)
+        : const Color(0xFF6B7280);
+
+    final bool showPauseGlyph = !_isPausedForPreview || _isPreviewPlaying;
+
+    return Container(
+      key: const Key('voice-recorder-active-bar'),
+      height: 48,
+      padding: const EdgeInsetsDirectional.only(start: 6, end: 5),
+      decoration: BoxDecoration(
+        color: capsuleBg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: capsuleBorder, width: 0.75),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        key: const Key('voice-recorder-locked-badge'),
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // 1. Start: Close / Cancel button (✕)
+          Semantics(
+            button: true,
+            label: 'Cancel voice recording',
+            child: GestureDetector(
+              key: const Key('voice-recorder-locked-cancel-button'),
+              behavior: HitTestBehavior.opaque,
+              onTap: cancelRecording,
+              child: SizedBox(
+                width: 38,
+                height: 44,
+                child: Center(
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: iconBg,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      CupertinoIcons.xmark,
+                      size: 13.5,
+                      color: fgMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // 2. Play / Pause button (pauses capture to preview or plays/pauses preview)
+          Semantics(
+            button: true,
+            label: showPauseGlyph
+                ? 'Pause voice recording or preview'
+                : 'Play voice preview',
+            child: GestureDetector(
+              key: const Key('voice-recorder-play-pause-button'),
+              behavior: HitTestBehavior.opaque,
+              onTap: _toggleCapsulePlayPause,
+              child: SizedBox(
+                width: 38,
+                height: 44,
+                child: Center(
+                  child: Icon(
+                    showPauseGlyph
+                        ? CupertinoIcons.pause_fill
+                        : CupertinoIcons.play_fill,
+                    size: 17,
+                    color: fgPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // 3. Center: Live interactive audio frequency wave bars
+          Expanded(child: _buildWaveformBars(isDark: isDark)),
+          const SizedBox(width: 8),
+
+          // 4. Duration label (e.g. `0:09`) with subtle live red indicator while recording
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!_isPausedForPreview) ...[
+                Container(
+                  key: const Key('voice-recorder-live-dot'),
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: VoiceRecorder._dangerRed,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                formattedTime,
+                key: const Key('voice-recorder-timer'),
+                textDirection: TextDirection.ltr,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: fgMuted,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 6),
+
+          // 5. End: Native iOS Blue Circular Send Button with upward arrow (↑)
+          Semantics(
+            button: true,
+            label: 'Send voice message',
+            child: GestureDetector(
+              key: const Key('voice-recorder-stop-button'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _attemptFinishAndSend(fromLockedStop: true),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: 44,
+                ),
+                child: Center(
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0088FF),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      CupertinoIcons.arrow_up,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final formattedTime = VoiceRecorder.formatDuration(recordSeconds);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final capsuleBg =
+        isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
+    final capsuleBorder = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.08);
+    final fgPrimary = isDark ? Colors.white : VoiceRecorder._ink;
+    final fgMuted = isDark
+        ? Colors.white.withValues(alpha: 0.68)
+        : VoiceRecorder._textMuted;
 
     return Semantics(
       container: true,
@@ -510,7 +847,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
           if (_isMicMutedWarning) _buildMicMutedWarningBanner(),
           if (_isRecording && !_isLocked)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6, right: 4),
+              padding: const EdgeInsetsDirectional.only(bottom: 6, end: 4),
               child: Transform.translate(
                 offset: Offset(0, -_slideUpPx * 0.35),
                 child: Container(
@@ -518,247 +855,180 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: VoiceRecorder._surfaceGrey,
+                    color: capsuleBg,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: capsuleBorder),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         CupertinoIcons.lock_fill,
                         size: 12,
-                        color: VoiceRecorder._ink,
+                        color: fgPrimary,
                       ),
-                      SizedBox(width: 3),
+                      const SizedBox(width: 3),
                       Icon(
                         CupertinoIcons.chevron_up,
                         size: 12,
-                        color: VoiceRecorder._textMuted,
+                        color: fgMuted,
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-          Row(
-            mainAxisSize:
-                (_isRecording || !widget.compactWhenIdle)
-                    ? MainAxisSize.max
-                    : MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (_isRecording)
-                Expanded(
-                  child: Container(
-                    key: const Key('voice-recorder-active-bar'),
-                    height: 48,
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: _isPastCancelThreshold
-                          ? const Color(0xFFFEF2F2)
-                          : VoiceRecorder._surfaceGrey,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
+
+          // Locked / Interactive mode renders the full unified Native iOS Voice Capsule
+          if (_isRecording && _isLocked)
+            _buildIosVoiceCapsule(
+              isDark: isDark,
+              formattedTime: formattedTime,
+            )
+          else
+            Row(
+              mainAxisSize: (_isRecording || !widget.compactWhenIdle)
+                  ? MainAxisSize.max
+                  : MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (_isRecording)
+                  Expanded(
+                    child: Container(
+                      key: const Key('voice-recorder-active-bar'),
+                      height: 48,
+                      margin: const EdgeInsetsDirectional.only(end: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
                         color: _isPastCancelThreshold
-                            ? VoiceRecorder._dangerRed.withValues(alpha: 0.45)
-                            : const Color(0xFFE2E8F0),
+                            ? const Color(0xFFFEF2F2)
+                            : capsuleBg,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: _isPastCancelThreshold
+                              ? VoiceRecorder._dangerRed.withValues(alpha: 0.45)
+                              : capsuleBorder,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        if (_isLocked)
-                          Semantics(
-                            button: true,
-                            label: 'Cancel voice recording',
-                            child: GestureDetector(
-                              key: const Key(
-                                  'voice-recorder-locked-cancel-button'),
-                              behavior: HitTestBehavior.opaque,
-                              onTap: cancelRecording,
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minWidth: 44,
-                                  minHeight: 44,
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    CupertinoIcons.trash_fill,
-                                    size: 18,
-                                    color: VoiceRecorder._dangerRed,
-                                  ),
-                                ),
+                      child: Row(
+                        children: [
+                          if (_isPastCancelThreshold)
+                            const Icon(
+                              CupertinoIcons.trash_fill,
+                              key: Key('voice-recorder-trash-icon'),
+                              size: 18,
+                              color: VoiceRecorder._dangerRed,
+                            )
+                          else
+                            Container(
+                              key: const Key('voice-recorder-red-dot'),
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: VoiceRecorder._dangerRed,
+                                shape: BoxShape.circle,
                               ),
                             ),
-                          )
-                        else if (_isPastCancelThreshold)
-                          const Icon(
-                            CupertinoIcons.trash_fill,
-                            key: Key('voice-recorder-trash-icon'),
-                            size: 18,
-                            color: VoiceRecorder._dangerRed,
-                          )
-                        else
-                          Container(
-                            key: const Key('voice-recorder-red-dot'),
-                            width: 10,
-                            height: 10,
-                            decoration: const BoxDecoration(
-                              color: VoiceRecorder._dangerRed,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        Text(
-                          formattedTime,
-                          key: const Key('voice-recorder-timer'),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: _isPastCancelThreshold
-                                ? VoiceRecorder._dangerRed
-                                : VoiceRecorder._ink,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(child: _buildWaveformBars()),
-                        const SizedBox(width: 10),
-                        if (!_isLocked)
-                          Transform.translate(
-                            offset: Offset(-_slideLeftPx * 0.12, 0),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  CupertinoIcons.chevron_left,
-                                  size: 13,
-                                  color: _isPastCancelThreshold
-                                      ? VoiceRecorder._dangerRed
-                                      : VoiceRecorder._textMuted,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  _isPastCancelThreshold
-                                      ? 'Release to cancel'
-                                      : 'Slide to cancel',
-                                  key: const Key('voice-recorder-cancel-label'),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: _isPastCancelThreshold
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: _isPastCancelThreshold
-                                        ? VoiceRecorder._dangerRed
-                                        : VoiceRecorder._textMuted,
-                                  ),
-                                ),
+                          const SizedBox(width: 8),
+                          Text(
+                            formattedTime,
+                            key: const Key('voice-recorder-timer'),
+                            textDirection: TextDirection.ltr,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: _isPastCancelThreshold
+                                  ? VoiceRecorder._dangerRed
+                                  : fgPrimary,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures()
                               ],
                             ),
-                          )
-                        else
-                          const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                CupertinoIcons.lock_fill,
-                                size: 13,
-                                color: VoiceRecorder._textMuted,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Locked',
-                                key: Key('voice-recorder-locked-badge'),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: VoiceRecorder._textMuted,
-                                ),
-                              ),
-                            ],
                           ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (!widget.compactWhenIdle)
-                Expanded(
-                  child: Container(
-                    height: 44,
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.centerLeft,
-                    decoration: BoxDecoration(
-                      color: VoiceRecorder._surfaceGrey,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: const Text(
-                      'Hold mic to record voice message',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: VoiceRecorder._textMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-
-              // Rule 3: When locked, replace mic button with explicit STOP button (min 44x44px).
-              // Otherwise keep the press-and-hold Mic button Listener mounted at the exact same slot.
-              if (_isRecording && _isLocked)
-                Semantics(
-                  button: true,
-                  label: 'Stop voice recording and send',
-                  child: GestureDetector(
-                    key: const Key('voice-recorder-stop-button'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _attemptFinishAndSend(fromLockedStop: true),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: VoiceRecorder._dangerRed,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              CupertinoIcons.stop_fill,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              'STOP',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 1,
+                            child: _buildWaveformBars(isDark: isDark),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            flex: 2,
+                            child: Transform.translate(
+                              offset: Offset(
+                                (isRtl ? 1 : -1) * _slideLeftPx * 0.12,
+                                0,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isRtl
+                                        ? CupertinoIcons.chevron_right
+                                        : CupertinoIcons.chevron_left,
+                                    size: 13,
+                                    color: _isPastCancelThreshold
+                                        ? VoiceRecorder._dangerRed
+                                        : fgMuted,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      _isPastCancelThreshold
+                                          ? 'Release to cancel'
+                                          : 'Slide to cancel',
+                                      key: const Key(
+                                          'voice-recorder-cancel-label'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: _isPastCancelThreshold
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: _isPastCancelThreshold
+                                            ? VoiceRecorder._dangerRed
+                                            : fgMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (!widget.compactWhenIdle)
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      margin: const EdgeInsetsDirectional.only(end: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      alignment: AlignmentDirectional.centerStart,
+                      decoration: BoxDecoration(
+                        color: capsuleBg,
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Text(
+                        'Hold mic to record voice message',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          color: fgMuted,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                   ),
-                )
-              else
+
+                // Press-and-hold (or tap to open capsule) Mic button Listener
                 Semantics(
                   button: true,
                   label: 'Record voice message',
                   hint:
-                      'Press and hold to record. Slide left to cancel, slide up to lock',
+                      'Tap or press and hold to record. Slide inward to cancel, slide up to lock',
                   child: Listener(
                     key: const Key('voice-recorder-mic-button'),
                     behavior: HitTestBehavior.opaque,
@@ -803,8 +1073,8 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                     ),
                   ),
                 ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
@@ -1048,188 +1318,217 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       container: true,
       label:
           'Voice message, duration $displayDuration, playback speed $speedLabel',
-      child: SizedBox(
-        key: Key('voice-message-player-${widget.messageKey}'),
-        width: 248,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Exact Apple iOS 26 Play / Pause button (min 44x44px touch target)
-            Semantics(
-              button: true,
-              label: _isPlaying ? 'Pause voice message' : 'Play voice message',
-              child: GestureDetector(
-                key: Key('voice-play-button-${widget.messageKey}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _togglePlay,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: isMine ? Colors.white : const Color(0xFF0088FF),
-                        shape: BoxShape.circle,
+      child: LayoutBuilder(
+        builder: (context, outerConstraints) {
+          final playerWidth = outerConstraints.maxWidth.isFinite
+              ? math.min(248.0, outerConstraints.maxWidth)
+              : 248.0;
+          return SizedBox(
+            key: Key('voice-message-player-${widget.messageKey}'),
+            width: playerWidth,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Exact Apple iOS 26 Play / Pause button (min 44x44px touch target)
+                Semantics(
+                  button: true,
+                  label:
+                      _isPlaying ? 'Pause voice message' : 'Play voice message',
+                  child: GestureDetector(
+                    key: Key('voice-play-button-${widget.messageKey}'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _togglePlay,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
                       ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        _isPlaying
-                            ? CupertinoIcons.pause_fill
-                            : CupertinoIcons.play_fill,
-                        color: isMine ? const Color(0xFF0088FF) : Colors.white,
-                        size: 15,
+                      child: Center(
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color:
+                                isMine ? Colors.white : const Color(0xFF0088FF),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            _isPlaying
+                                ? CupertinoIcons.pause_fill
+                                : CupertinoIcons.play_fill,
+                            color:
+                                isMine ? const Color(0xFF0088FF) : Colors.white,
+                            size: 15,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 6),
+                const SizedBox(width: 6),
 
-            // Scrubbable fine-bar Apple waveform + duration (min 44px touch target height)
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final width =
-                      constraints.maxWidth > 0 ? constraints.maxWidth : 120.0;
-                  return Semantics(
-                    slider: true,
-                    label: 'Voice message waveform scrubber',
-                    value: '${(progress * 100).round()}%',
-                    child: GestureDetector(
-                      key: Key('voice-waveform-scrubber-${widget.messageKey}'),
-                      behavior: HitTestBehavior.opaque,
-                      onTapDown: (d) =>
-                          _scrubToLocalDx(d.localPosition.dx, width),
-                      onHorizontalDragStart: (d) =>
-                          _scrubToLocalDx(d.localPosition.dx, width),
-                      onHorizontalDragUpdate: (d) =>
-                          _scrubToLocalDx(d.localPosition.dx, width),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 44),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              height: 28,
-                              child: Stack(
-                                alignment: Alignment.centerLeft,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children:
-                                        List.generate(_bars.length, (index) {
-                                      final ratio =
-                                          (index + 1) / _bars.length;
-                                      final isFilled =
-                                          progress > 0 && ratio <= progress;
-                                      final barH = (4.0 +
-                                              _bars[index].clamp(0.1, 1.0) *
-                                                  22.0)
-                                          .clamp(4.0, 26.0);
-                                      return AnimatedContainer(
-                                        duration:
-                                            const Duration(milliseconds: 60),
-                                        width: 2.2,
-                                        height: barH,
-                                        decoration: BoxDecoration(
-                                          color:
-                                              isFilled ? fgActive : fgInactive,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
+                // Scrubbable fine-bar Apple waveform + duration (min 44px touch target height)
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth > 0
+                          ? constraints.maxWidth
+                          : 120.0;
+                      return Semantics(
+                        slider: true,
+                        label: 'Voice message waveform scrubber',
+                        value: '${(progress * 100).round()}%',
+                        child: GestureDetector(
+                          key: Key(
+                              'voice-waveform-scrubber-${widget.messageKey}'),
+                          behavior: HitTestBehavior.opaque,
+                          onTapDown: (d) =>
+                              _scrubToLocalDx(d.localPosition.dx, width),
+                          onHorizontalDragStart: (d) =>
+                              _scrubToLocalDx(d.localPosition.dx, width),
+                          onHorizontalDragUpdate: (d) =>
+                              _scrubToLocalDx(d.localPosition.dx, width),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(minHeight: 44),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Audio playback progress runs LTR across locales so
+                                // waveform bars, scrubber thumb, and drag coordinates match.
+                                Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: SizedBox(
+                                    height: 28,
+                                    child: Stack(
+                                      alignment: Alignment.centerLeft,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: List.generate(_bars.length,
+                                              (index) {
+                                            final ratio =
+                                                (index + 1) / _bars.length;
+                                            final isFilled = progress > 0 &&
+                                                ratio <= progress;
+                                            final barH = (4.0 +
+                                                    _bars[index]
+                                                            .clamp(0.1, 1.0) *
+                                                        22.0)
+                                                .clamp(4.0, 26.0);
+                                            return AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 60),
+                                              width: 2.2,
+                                              height: barH,
+                                              decoration: BoxDecoration(
+                                                color: isFilled
+                                                    ? fgActive
+                                                    : fgInactive,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                            );
+                                          }),
                                         ),
-                                      );
-                                    }),
-                                  ),
-                                  Positioned(
-                                    left:
-                                        (progress * (width - 10)).clamp(0.0, width - 10),
-                                    child: Container(
-                                      key: Key(
-                                          'voice-scrubber-thumb-${widget.messageKey}'),
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        color: fgActive,
-                                        shape: BoxShape.circle,
-                                      ),
+                                        Positioned(
+                                          left: (progress * (width - 10))
+                                              .clamp(0.0, width - 10),
+                                          child: Container(
+                                            key: Key(
+                                                'voice-scrubber-thumb-${widget.messageKey}'),
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                              color: fgActive,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  displayDuration,
+                                  key:
+                                      Key('voice-duration-${widget.messageKey}'),
+                                  textDirection: TextDirection.ltr,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: subTextColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures()
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              displayDuration,
-                              key: Key('voice-duration-${widget.messageKey}'),
-                              style: TextStyle(
-                                color: subTextColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures()
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 4),
-
-            // Playback speed toggle button (1x, 1.5x, 2x) with min 44x44px touch target
-            Semantics(
-              button: true,
-              label: 'Playback speed $speedLabel, tap to change',
-              child: GestureDetector(
-                key: Key('voice-speed-button-${widget.messageKey}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: _cycleSpeed,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
+                      );
+                    },
                   ),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                ),
+                const SizedBox(width: 4),
+
+                // Playback speed toggle button (1x, 1.5x, 2x) with min 44x44px touch target
+                Semantics(
+                  button: true,
+                  label: 'Playback speed $speedLabel, tap to change',
+                  child: GestureDetector(
+                    key: Key('voice-speed-button-${widget.messageKey}'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _cycleSpeed,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
                       ),
-                      decoration: BoxDecoration(
-                        color: isMine
-                            ? Colors.white.withValues(alpha: 0.16)
-                            : const Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        speedLabel,
-                        style: TextStyle(
-                          color: isMine ? Colors.white : const Color(0xFF0A0A0A),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMine
+                                ? Colors.white.withValues(alpha: 0.16)
+                                : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            speedLabel,
+                            textDirection: TextDirection.ltr,
+                            style: TextStyle(
+                              color: isMine
+                                  ? Colors.white
+                                  : const Color(0xFF0A0A0A),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures()
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

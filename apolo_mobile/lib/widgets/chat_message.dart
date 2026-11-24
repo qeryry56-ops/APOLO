@@ -62,6 +62,7 @@ class ChatMessage extends StatefulWidget {
   final bool isStarred;
   final List<String> reactions;
   final Uint8List? imageBytes;
+  final String? imageUrl;
   final Widget? customContent;
   final VoidCallback? onRetry;
   final VoidCallback? onAvatarTap;
@@ -97,6 +98,7 @@ class ChatMessage extends StatefulWidget {
     this.isStarred = false,
     this.reactions = const <String>[],
     this.imageBytes,
+    this.imageUrl,
     this.customContent,
     this.onRetry,
     this.onAvatarTap,
@@ -111,8 +113,31 @@ class ChatMessage extends StatefulWidget {
     this.isBorderlessCustomContent = false,
   });
 
+  static final RegExp _rawMediaFilenameRegex = RegExp(
+    r'^[^\s/\\]+\.(png|jpe?g|webp|heic|heif|gif|bmp)$',
+    caseSensitive: false,
+  );
+
+  /// Returns `true` when [text] is an auto-generated raw image filename such as
+  /// `scaled_IMG_0865.png`, `IMG_1234.JPG`, or `image_picker_9921.jpeg`.
+  static bool isRawMediaFilename(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+    return _rawMediaFilenameRegex.hasMatch(trimmed);
+  }
+
+  /// Strips auto-generated media filenames when an image preview is rendered so
+  /// users never see raw strings like `scaled_IMG_0865.png`.
+  static String sanitizeCaption(String body, {required bool hasImage}) {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) return '';
+    if (hasImage && isRawMediaFilename(trimmed)) return '';
+    return body;
+  }
+
   /// Detects natural reading direction (RTL for Arabic/Hebrew, LTR for Latin/digits)
-  /// so mixed-script messages ("Tissot watch black", "DH 110.00", Arabic text) render cleanly.
+  /// so mixed-script messages ("Tissot watch black", "DH 110.00", "+212 600...", Arabic text)
+  /// render cleanly without BiDi scrambling.
   static TextDirection detectTextDirection(
     String text, {
     TextDirection fallback = TextDirection.rtl,
@@ -125,6 +150,9 @@ class ChatMessage extends StatefulWidget {
       final ch = String.fromCharCode(rune);
       if (rtlRegex.hasMatch(ch)) return TextDirection.rtl;
       if (ltrRegex.hasMatch(ch)) return TextDirection.ltr;
+    }
+    if (RegExp(r'[0-9٠-٩۰-۹]').hasMatch(trimmed)) {
+      return TextDirection.ltr;
     }
     return fallback;
   }
@@ -391,15 +419,41 @@ class _ChatMessageState extends State<ChatMessage> {
                 ? Ios26IMessageTokens.bubbleMineText
                 : Ios26IMessageTokens.bubbleOtherText);
 
-    final bodyTextDir = ChatMessage.detectTextDirection(
+    final trimmedImageUrl = widget.imageUrl?.trim() ?? '';
+    final bool hasImage =
+        !isDeleted && (widget.imageBytes != null || trimmedImageUrl.isNotEmpty);
+    final String displayBody = ChatMessage.sanitizeCaption(
       widget.body,
+      hasImage: hasImage,
+    );
+
+    final bodyTextDir = ChatMessage.detectTextDirection(
+      displayBody,
       fallback: contextDir,
     );
 
-    final bool isPureImageBubble = widget.customContent == null &&
-        widget.imageBytes != null &&
-        widget.body.trim().isEmpty &&
-        !isDeleted;
+    final bool isPureImageBubble =
+        widget.customContent == null && hasImage && displayBody.trim().isEmpty;
+
+    Widget buildMediaImage({
+      double? width,
+      double? height,
+    }) {
+      if (widget.imageBytes != null) {
+        return Image.memory(
+          widget.imageBytes!,
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+        );
+      }
+      return AppImage(
+        url: trimmedImageUrl,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+      );
+    }
 
     final semanticStatus = isFailed
         ? ', Send failed, double tap to retry'
@@ -425,35 +479,47 @@ class _ChatMessageState extends State<ChatMessage> {
         ),
       );
     } else if (isPureImageBubble) {
-      // Exact Figma OtherChat3: photo itself gets 18px corners + curved iMessage tail
+      // Native iOS inline image bubble: rounded-2xl (18px), object-fit cover, zero raw filename
       bubbleCore = GestureDetector(
         key: Key('chat-bubble-${widget.messageKey}'),
         onTap: widget.onImageTap,
         onLongPress: _handleLongPress,
         onSecondaryTap: widget.onOpenActions,
-        child: ClipPath(
-          clipper: IMessageBubbleClipper(
-            tailOnRight: tailOnRight,
-            showTail: showTail,
+        child: Container(
+          key: Key('chat-image-bubble-${widget.messageKey}'),
+          constraints: const BoxConstraints(
+            minWidth: 164,
+            maxWidth: 232,
+            minHeight: 140,
+            maxHeight: 272,
           ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 210,
-              maxHeight: 260,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F2F7),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: Colors.black.withValues(alpha: 0.08),
+              width: 0.5,
             ),
-            child: Image.memory(
-              widget.imageBytes!,
-              fit: BoxFit.cover,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(17.5),
+            child: buildMediaImage(width: 232),
           ),
         ),
       );
     } else {
       // Exact Figma SVG capsule padding: text centers inside the 36px body while
       // the delicate iMessage tail dips 6px below the bottom edge (`tailDrop`).
-      final EdgeInsets bubblePadding = EdgeInsets.only(
-        left: 14,
-        right: 14,
+      final EdgeInsetsDirectional bubblePadding = EdgeInsetsDirectional.only(
+        start: 14,
+        end: 14,
         top: 8,
         bottom: 8 + tailDrop,
       );
@@ -493,6 +559,10 @@ class _ChatMessageState extends State<ChatMessage> {
                     widget.senderName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    textDirection: ChatMessage.detectTextDirection(
+                      widget.senderName,
+                      fallback: contextDir,
+                    ),
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
@@ -503,27 +573,24 @@ class _ChatMessageState extends State<ChatMessage> {
                 ],
                 if (widget.customContent != null)
                   widget.customContent!
-                else if (widget.imageBytes != null) ...[
+                else if (hasImage) ...[
                   GestureDetector(
                     onTap: widget.onImageTap,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
-                          maxWidth: 220,
+                          maxWidth: 224,
                           maxHeight: 250,
                         ),
-                        child: Image.memory(
-                          widget.imageBytes!,
-                          fit: BoxFit.cover,
-                        ),
+                        child: buildMediaImage(width: 224),
                       ),
                     ),
                   ),
-                  if (widget.body.isNotEmpty) ...[
+                  if (displayBody.trim().isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
-                      widget.body,
+                      displayBody,
                       textDirection: bodyTextDir,
                       style: TextStyle(
                         fontSize: Ios26IMessageTokens.messageFontSize,
@@ -538,7 +605,7 @@ class _ChatMessageState extends State<ChatMessage> {
                   RichText(
                     textDirection: bodyTextDir,
                     text: TextSpan(
-                      text: widget.body,
+                      text: displayBody,
                       style: TextStyle(
                         fontSize: Ios26IMessageTokens.messageFontSize,
                         height: Ios26IMessageTokens.messageLineHeight,
@@ -550,7 +617,7 @@ class _ChatMessageState extends State<ChatMessage> {
                   )
                 else
                   Text(
-                    widget.body,
+                    displayBody,
                     textDirection: bodyTextDir,
                     style: TextStyle(
                       fontSize: Ios26IMessageTokens.messageFontSize,
@@ -692,14 +759,16 @@ class _ChatMessageState extends State<ChatMessage> {
                           widget.deliveryLabel != null &&
                           widget.deliveryLabel!.isNotEmpty)
                         Padding(
-                          padding: EdgeInsets.only(
+                          padding: EdgeInsetsDirectional.only(
                             top: 3,
-                            right: tailOnRight ? 8 : 4,
-                            left: !tailOnRight ? 8 : 4,
+                            end: isMine ? 8 : 4,
+                            start: isMine ? 4 : 8,
                           ),
                           child: Text(
                             widget.deliveryLabel!,
                             key: Key('chat-status-${widget.messageKey}'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
@@ -711,18 +780,25 @@ class _ChatMessageState extends State<ChatMessage> {
                       // Rule 2: Precision on demand — exact timestamp on hover or long-press
                       if (_shouldShowTimestamp)
                         Padding(
-                          padding:
-                              const EdgeInsets.only(top: 3, left: 6, right: 6),
+                          padding: const EdgeInsetsDirectional.only(
+                            top: 3,
+                            start: 6,
+                            end: 6,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 widget.timestamp,
                                 key: Key('chat-timestamp-${widget.messageKey}'),
+                                textDirection: TextDirection.ltr,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Ios26IMessageTokens.dateGray,
                                   fontWeight: FontWeight.w500,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                 ),
                               ),
                               if (widget.onOpenActions != null &&
@@ -771,12 +847,16 @@ class _ChatMessageState extends State<ChatMessage> {
                                       color: Ios26IMessageTokens.errorRed,
                                     ),
                                     const SizedBox(width: 5),
-                                    Text(
-                                      widget.retryLabel,
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: Ios26IMessageTokens.errorRed,
+                                    Flexible(
+                                      child: Text(
+                                        widget.retryLabel,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: Ios26IMessageTokens.errorRed,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -807,10 +887,12 @@ class _ChatMessageState extends State<ChatMessage> {
                       padding: const EdgeInsetsDirectional.only(start: 8),
                       child: Text(
                         widget.timestamp,
+                        textDirection: TextDirection.ltr,
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: Ios26IMessageTokens.dateGray,
+                          fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),

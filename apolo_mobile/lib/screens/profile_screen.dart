@@ -2431,7 +2431,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               ),
                                               if (adPrice.isNotEmpty) ...[
                                                 const SizedBox(height: 2),
-                                                Text(
+                                                PriceText(
                                                   adPrice,
                                                   maxLines: 1,
                                                   overflow:

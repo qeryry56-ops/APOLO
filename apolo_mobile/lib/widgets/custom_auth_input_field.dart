@@ -404,7 +404,11 @@ class _CustomAuthInputFieldState extends State<CustomAuthInputField> {
           ),
           if (hasError)
             Padding(
-              padding: const EdgeInsets.only(top: 5, left: 12, right: 12),
+              padding: const EdgeInsetsDirectional.only(
+                top: 5,
+                start: 12,
+                end: 12,
+              ),
               child: Text(
                 _error!,
                 style: const TextStyle(

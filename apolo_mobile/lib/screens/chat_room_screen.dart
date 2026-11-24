@@ -82,6 +82,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final TextEditingController _msgCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focus = FocusNode();
+  final GlobalKey<VoiceRecorderState> _voiceRecorderKey =
+      GlobalKey<VoiceRecorderState>();
 
   List<Map<String, dynamic>> _messages = [];
   final List<Map<String, dynamic>> _pending = [];
@@ -1046,7 +1048,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1241,27 +1243,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               horizontal: 12,
                               vertical: 8,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                for (final emoji in quickEmojis)
-                                  GestureDetector(
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      Navigator.pop(dialogCtx);
-                                      _toggleReaction(m, key, emoji);
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6.5,
-                                      ),
-                                      child: Text(
-                                        emoji,
-                                        style: const TextStyle(fontSize: 24),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  for (final emoji in quickEmojis)
+                                    GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        Navigator.pop(dialogCtx);
+                                        _toggleReaction(m, key, emoji);
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6.5,
+                                        ),
+                                        child: Text(
+                                          emoji,
+                                          style: const TextStyle(fontSize: 24),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -1293,6 +1299,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                     isAudio
                                         ? '🎤 ${(m['audio_duration'] ?? '0:01')}'
                                         : (body.isNotEmpty ? body : '📷 Photo'),
+                                    textDirection: isAudio
+                                        ? TextDirection.ltr
+                                        : ChatMessage.detectTextDirection(
+                                            body,
+                                            fallback:
+                                                Directionality.of(dialogCtx),
+                                          ),
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -1309,11 +1322,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                   const SizedBox(width: 10),
                                   Text(
                                     timeStr,
+                                    textDirection: TextDirection.ltr,
                                     style: TextStyle(
                                       color: isMine
                                           ? Colors.white70
                                           : Ios26IMessageTokens.dateGray,
                                       fontSize: 11.5,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures()
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -1486,21 +1503,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final attachmentsToSend =
         hasAttachments ? List<ChatAttachment>.from(_stagedAttachments) : const <ChatAttachment>[];
 
+    final isImageAttachment = attachmentsToSend.isNotEmpty &&
+        attachmentsToSend.first.type == ChatAttachmentType.image &&
+        attachmentsToSend.first.bytes != null;
+
     final tempMsg = <String, dynamic>{
       'id': tempId,
       'local_id': tempId,
       'client_message_id': tempId,
+      // Never inject raw auto-generated filenames (e.g. `scaled_IMG_0865.png`) into image message body
       'body': text.isNotEmpty
           ? text
-          : (attachmentsToSend.isNotEmpty ? attachmentsToSend.first.name : ''),
+          : (isImageAttachment
+              ? ''
+              : (attachmentsToSend.isNotEmpty
+                  ? attachmentsToSend.first.name
+                  : '')),
       'is_mine': true,
       'sender_id': '$_myUserId',
       'sender_name': _myDisplayName,
-      'type': attachmentsToSend.isNotEmpty &&
-              attachmentsToSend.first.type == ChatAttachmentType.image &&
-              attachmentsToSend.first.bytes != null
-          ? 'image'
-          : 'text',
+      'type': isImageAttachment ? 'image' : 'text',
       if (attachmentsToSend.isNotEmpty &&
           attachmentsToSend.first.bytes != null)
         'image_base64': base64Encode(attachmentsToSend.first.bytes!),
@@ -1754,7 +1776,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ? userCity
             : _state.s.tr('المغرب', 'Maroc', 'Morocco'));
     final msg = _state.s.tr(
-      '📍 موقعي الحالي: $resolvedCity',
+      '📍 موقعي الحالي: \u2068$resolvedCity\u2069',
       '📍 Ma position : $resolvedCity',
       '📍 My location: $resolvedCity',
     );
@@ -1768,12 +1790,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final title = widget.adTitle.trim();
     final msg = title.isNotEmpty
         ? _state.s.tr(
-            '💰 عرض ثمن على "$title": $cleaned DH',
+            '💰 عرض ثمن على "\u2068$title\u2069": \u2066$cleaned DH\u2069',
             '💰 Offre pour "$title" : $cleaned DH',
             '💰 Price offer for "$title": DH $cleaned',
           )
         : _state.s.tr(
-            '💰 عرض ثمن: $cleaned DH',
+            '💰 عرض ثمن: \u2066$cleaned DH\u2069',
             '💰 Offre de prix : $cleaned DH',
             '💰 Price offer: DH $cleaned',
           );
@@ -1835,10 +1857,30 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
+  void _openImageUrlPreview(String url) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.92),
+      builder: (ctx) => Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 4.0,
+            child: AppImage(url: url, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _startVoiceRecording() async {
-    if (!_useFirestore || !MediaRtcBridge.isVoiceSupported) {
-      return;
-    }
+    _voiceRecorderKey.currentState?.startCapsuleRecording();
   }
 
   Future<void> _cancelVoiceRecording() async {
@@ -2013,7 +2055,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final topInset = MediaQuery.paddingOf(context).top;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final hasAdContext = widget.adTitle.trim().isNotEmpty;
-    final double headerTopClearance = topInset + (hasAdContext ? 172.0 : 118.0);
+    final int adContextOffset = hasAdContext ? 1 : 0;
+    final int totalListCount = adContextOffset + totalFlowCount;
+    // Standard native iOS frosted header height (ad card now scrolls inside list)
+    final double headerTopClearance = topInset + 116.0;
     final double drawerHeightOffset = _isDrawerOpen ? 342.0 : 0.0;
     final double composerBottomClearance =
         bottomInset + 84.0 + drawerHeightOffset;
@@ -2022,7 +2067,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       backgroundColor: Ios26IMessageTokens.canvasWhite,
       body: Stack(
         children: [
-          // Layer 0: Full-bleed message stream gliding behind floating iOS 26 Liquid Glass bars
+          // Layer 0: Full-bleed message stream scrolling naturally beneath the clipped frosted header
           Positioned.fill(
             child: _loading
                 ? Padding(
@@ -2069,7 +2114,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               top: headerTopClearance,
                               bottom: composerBottomClearance,
                             ),
-                            child: _buildEmptyChatState(),
+                            child: _buildEmptyChatState(
+                              includeAdCard: hasAdContext,
+                            ),
                           )
                         : ListView.builder(
                             key: const Key('chat-virtual-list'),
@@ -2079,16 +2126,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             ),
                             addAutomaticKeepAlives: false,
                             addRepaintBoundaries: true,
-                            padding: EdgeInsets.fromLTRB(
+                            padding: EdgeInsetsDirectional.fromSTEB(
                               16,
-                              headerTopClearance,
+                              headerTopClearance + 8,
                               16,
                               composerBottomClearance,
                             ),
-                            itemCount: totalFlowCount,
+                            itemCount: totalListCount,
                             itemBuilder: (_, idx) {
+                              // Embedded initial product/ad context preview card at the
+                              // very start of the conversation (scrolls away naturally).
+                              if (hasAdContext && idx == 0) {
+                                return _buildEmbeddedAdContextCard();
+                              }
+                              final msgIdx = idx - adContextOffset;
                               // Rule 5: Typing indicator inline in flow where next message will appear
-                              if (idx == visibleMessages.length) {
+                              if (msgIdx == visibleMessages.length) {
                                 return ChatTypingIndicator(
                                   key: const Key('chat-typing-indicator-flow'),
                                   typingUsers: _typingUsers,
@@ -2096,28 +2149,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 );
                               }
                               return _buildChatMessageItem(
-                                visibleMessages[idx],
-                                visibleKeys[idx],
-                                groupMeta[idx],
-                                idx,
-                                isLastOutgoing: idx == lastOutgoingIdx,
+                                visibleMessages[msgIdx],
+                                visibleKeys[msgIdx],
+                                groupMeta[msgIdx],
+                                msgIdx,
+                                isLastOutgoing: msgIdx == lastOutgoingIdx,
                               );
                             },
                           ),
                   ),
           ),
 
-          // Layer 1a: Exact Figma `Dégardé` (`4:1051`) top progressive white fade
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Ios26TopEdgeFade(
-              height: topInset + (hasAdContext ? 186.0 : 148.0),
-            ),
-          ),
-
-          // Layer 1b: Soft bottom progressive white fade under floating Liquid Glass composer
+          // Layer 1: Soft bottom progressive white fade under floating Liquid Glass composer
           Positioned(
             bottom: 0,
             left: 0,
@@ -2127,37 +2170,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ),
           ),
 
-          // Layer 2: Floating iOS 26 Liquid Glass Header (`Controle`) + Listing Context Pill
+          // Layer 2: Native iOS Frosted Glass Navigation Header
+          // (`rgba(255,255,255,0.75)` + `blur(20px) saturate(180%)` + `0.5px` bottom border + `overflow: hidden`)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildHeader(),
-                if (hasAdContext) _buildAdContextBar(),
-                if (_loadError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: LiquidGlassSurface(
-                      borderRadius: BorderRadius.circular(999),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      onTap: () => _loadMessages(),
-                      child: Text(
-                        _loadError!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Ios26IMessageTokens.errorRed,
-                          fontWeight: FontWeight.w600,
+            child: Ios26FrostedHeaderBar(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeader(),
+                  if (_loadError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 6),
+                      child: LiquidGlassSurface(
+                        borderRadius: BorderRadius.circular(999),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        onTap: () => _loadMessages(),
+                        child: Text(
+                          _loadError!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Ios26IMessageTokens.errorRed,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -2319,7 +2364,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         _deletedForEveryoneKeys.contains(msgKey);
     final bool isEdited =
         m['_edited'] == true || _editedMessageBodies.containsKey(msgKey);
-    final String body = isDeletedAll
+    final String rawBody = isDeletedAll
         ? _state.s.tr(
             'تم حذف هذه الرسالة',
             'Ce message a été supprimé',
@@ -2328,18 +2373,44 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         : (_editedMessageBodies[msgKey] ?? m['body'] ?? '').toString();
     final String timeStr = (m['created_at_time'] ?? '').toString();
     final bool isAudio = !isDeletedAll && m['type'] == 'audio';
-    final bool isImage = !isDeletedAll &&
-        m['type'] == 'image' &&
-        (m['image_base64'] ?? '').toString().trim().isNotEmpty;
     final String audioDuration = (m['audio_duration'] ?? '').toString();
 
+    final String rawImageBase64 = (m['image_base64'] ?? '').toString().trim();
     Uint8List? imageBytes;
-    if (isImage) {
+    if (!isDeletedAll && rawImageBase64.isNotEmpty) {
       try {
-        imageBytes =
-            base64Decode((m['image_base64'] ?? '').toString().trim());
+        imageBytes = base64Decode(rawImageBase64);
       } catch (_) {}
     }
+
+    String resolvedImageUrl = (m['image_url'] ??
+            m['media_url'] ??
+            m['attachment_url'] ??
+            m['photo_url'] ??
+            '')
+        .toString()
+        .trim();
+    final bool looksLikeRawImageFilename =
+        !isDeletedAll && !isAudio && ChatMessage.isRawMediaFilename(rawBody);
+    if (!isDeletedAll &&
+        imageBytes == null &&
+        resolvedImageUrl.isEmpty &&
+        (m['type'] == 'image' ||
+            m['type'] == 'ad_share' ||
+            looksLikeRawImageFilename)) {
+      resolvedImageUrl =
+          (m['ad_image'] ?? widget.adImage ?? '').toString().trim();
+    }
+
+    final bool isImage =
+        !isDeletedAll && (imageBytes != null || resolvedImageUrl.isNotEmpty);
+    final String body = isDeletedAll
+        ? rawBody
+        : (isImage
+            ? ChatMessage.sanitizeCaption(rawBody, hasImage: true)
+            : (looksLikeRawImageFilename
+                ? _state.s.tr('📷 صورة', '📷 Photo', '📷 Photo')
+                : rawBody));
 
     final bool isPinned = !isDeletedAll &&
         (m['pinned'] == true || _pinnedMessageKeys.contains(msgKey));
@@ -2380,7 +2451,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final senderAvatar = isMine ? _myAvatarUrl : widget.peerAvatar;
 
     String? deliveryLabel;
-    if (isMine && isLastOutgoing && !isDeletedAll) {
+    if (isMine && (isLastOutgoing || isImage) && !isDeletedAll) {
       if (status == ChatMessageStatus.read) {
         deliveryLabel = _state.s.tr('تمت القراءة', 'Lu', 'Read');
       } else if (status == ChatMessageStatus.sent) {
@@ -2425,6 +2496,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       isStarred: isStarred,
       reactions: reactionEmojis,
       imageBytes: imageBytes,
+      imageUrl: resolvedImageUrl.isNotEmpty ? resolvedImageUrl : null,
       customContent: stickerItem != null
           ? IMessageDieCutSticker(
               emoji: stickerItem.emoji,
@@ -2440,22 +2512,29 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           ? () => _retryMessage(m)
           : null,
       onAvatarTap: !isMine ? _openPeerProfile : null,
-      onImageTap:
-          imageBytes != null ? () => _openImagePreview(imageBytes!) : null,
+      onImageTap: imageBytes != null
+          ? () => _openImagePreview(imageBytes!)
+          : (resolvedImageUrl.isNotEmpty
+              ? () => _openImageUrlPreview(resolvedImageUrl)
+              : null),
       onOpenActions:
           isDeletedAll ? null : () => _showMessageActionsSheet(m, index),
       useRichTextForBody: m['_use_rich_text'] == true,
     );
   }
 
-  Widget _buildEmptyChatState() {
+  Widget _buildEmptyChatState({bool includeAdCard = false}) {
     return Center(
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (includeAdCard) ...[
+              _buildEmbeddedAdContextCard(),
+              const SizedBox(height: 12),
+            ],
             Container(
               width: 68,
               height: 68,
@@ -2487,7 +2566,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             const SizedBox(height: 6),
             Text(
               widget.adTitle.isNotEmpty
-                  ? 'محادثة بخصوص: "${widget.adTitle}"'
+                  ? 'محادثة بخصوص: "\u2068${widget.adTitle}\u2069"'
                   : 'ابدأ المحادثة الآن واطرح استفساراتك مباشرة',
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -2545,92 +2624,139 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
-  Widget _buildAdContextBar() {
+  /// Native iOS rich preview card embedded inside the scrollable message list
+  /// (at the start of the conversation) so it scrolls away naturally with chat history.
+  Widget _buildEmbeddedAdContextCard() {
     final title = widget.adTitle.trim();
     final price = (widget.adPrice ?? '').trim();
     final img = (widget.adImage ?? '').trim();
     final adId = _effectiveAdId;
     final canOpenAd = adId > 0;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final contextDir = Directionality.of(context);
+    final isRtl = contextDir == TextDirection.rtl;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-      child: LiquidGlassSurface(
-        key: const Key('chat-ad-context-banner'),
-        borderRadius: BorderRadius.circular(18),
-        fillAlpha: 0.78,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        onTap: canOpenAd
-            ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AdDetailScreen(adId: adId),
-                  ),
-                );
-              }
-            : null,
-        child: Row(
-          children: [
-            if (img.isNotEmpty) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: SizedBox(
-                  width: 34,
-                  height: 34,
-                  child: AppImage(
-                    url: img,
-                    width: 34,
-                    height: 34,
-                    fit: BoxFit.cover,
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const Key('chat-ad-context-banner'),
+              borderRadius: BorderRadius.circular(18),
+              onTap: canOpenAd
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AdDetailScreen(adId: adId),
+                        ),
+                      );
+                    }
+                  : null,
+              child: Ink(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1C1C1E)
+                      : const Color(0xFFF2F2F7),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.10)
+                        : Colors.black.withValues(alpha: 0.06),
+                    width: 0.5,
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textDirection: ChatMessage.detectTextDirection(
-                  title,
-                  fallback: Directionality.of(context),
-                ),
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: Ios26IMessageTokens.labelPrimary,
-                  letterSpacing: -0.2,
+                child: Row(
+                  children: [
+                    // Clean native iOS square product thumbnail on the start/left
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        color: isDark
+                            ? const Color(0xFF2C2C2E)
+                            : Colors.white,
+                        child: img.isNotEmpty
+                            ? AppImage(
+                                url: img,
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                              )
+                            : const Center(
+                                child: Icon(
+                                  CupertinoIcons.tag_fill,
+                                  size: 22,
+                                  color: Ios26IMessageTokens.bubbleMine,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textDirection: ChatMessage.detectTextDirection(
+                              title,
+                              fallback: contextDir,
+                            ),
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.25,
+                              color: isDark
+                                  ? Colors.white
+                                  : Ios26IMessageTokens.labelPrimary,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          if (price.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: Text(
+                                price,
+                                key: const Key('chat-ad-context-price'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Ios26IMessageTokens.bubbleMine,
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (canOpenAd) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        isRtl
+                            ? CupertinoIcons.chevron_left
+                            : CupertinoIcons.chevron_right,
+                        size: 14,
+                        color: Ios26IMessageTokens.chevronTertiary,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-            if (price.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Directionality(
-                textDirection: TextDirection.ltr,
-                child: Text(
-                  price,
-                  key: const Key('chat-ad-context-price'),
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: Ios26IMessageTokens.bubbleMine,
-                  ),
-                ),
-              ),
-            ],
-            if (canOpenAd) ...[
-              const SizedBox(width: 4),
-              Icon(
-                isRtl
-                    ? CupertinoIcons.chevron_left
-                    : CupertinoIcons.chevron_right,
-                size: 13,
-                color: Ios26IMessageTokens.chevronTertiary,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -2646,7 +2772,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       if (last != null) {
         final clock = formatChatClock(last);
         return _state.s.tr(
-          'آخر ظهور $clock',
+          'آخر ظهور \u2066$clock\u2069',
           'Vu à $clock',
           'Last seen $clock',
         );
@@ -2656,21 +2782,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   /// Exact Figma iOS 26 iMessage floating Liquid Glass header (`Controle`, `1:2621` / `4:1060`):
-  /// - Left: 45×45 Liquid Glass circle Back button (`chevron.backward`, #404040)
-  /// - Center: 62×62 circular avatar with overlapping Liquid Glass `Name >` capsule (h=29, r=22.5)
-  /// - Right: 45×45 Liquid Glass circle FaceTime Video/Call button (`#404040`)
+  /// - Start: 45×45 Liquid Glass circle Back button (mirrored in RTL)
+  /// - Center: 60×60 circular avatar with overlapping Liquid Glass `Name >` capsule
+  /// - End: 45×45 Liquid Glass circle Call button
   Widget _buildHeader() {
     final topInset = MediaQuery.of(context).padding.top;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final maxNamePillWidth = (screenWidth - 156).clamp(120.0, 204.0);
+    final contextDir = Directionality.of(context);
+    final isRtl = contextDir == TextDirection.rtl;
     final isPeerOnline = _peerPresence?.isOnline == true;
     final unreadCount = _state.unreadChatCount;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 2),
+      padding: EdgeInsetsDirectional.fromSTEB(16, topInset + 8, 16, 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left: Official Apple iOS 26 Back Glass Pill (`< 2` when unread > 0, else 44x44 circle)
+          // Start: Official Apple iOS 26 Back Glass Pill (`< 2` when unread > 0, else 44x44 circle)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Semantics(
@@ -2717,11 +2846,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         alignment: Alignment.center,
                         child: Text(
                           unreadCount > 99 ? '99+' : '$unreadCount',
+                          textDirection: TextDirection.ltr,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             height: 1.0,
+                            fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
                       ),
@@ -2793,7 +2924,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           Positioned(
                             bottom: 0,
                             child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 204),
+                              constraints: BoxConstraints(
+                                maxWidth: maxNamePillWidth,
+                              ),
                               child: LiquidGlassSurface(
                                 height: Ios26IMessageTokens.namePillHeight,
                                 borderRadius: BorderRadius.circular(
@@ -2815,6 +2948,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                         widget.peerName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
+                                        textDirection:
+                                            ChatMessage.detectTextDirection(
+                                          widget.peerName,
+                                          fallback: contextDir,
+                                        ),
                                         style: TextStyle(
                                           fontSize:
                                               Ios26IMessageTokens.nameFontSize,
@@ -2860,17 +2998,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           ),
                           const SizedBox(width: 4),
                         ],
-                        Text(
-                          _formatPresenceSubtitle(),
-                          key: const Key('chat-peer-presence-text'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: isPeerOnline
-                                ? Ios26IMessageTokens.onlineGreen
-                                : Ios26IMessageTokens.dateGray,
-                            fontWeight: FontWeight.w500,
+                        Flexible(
+                          child: Text(
+                            _formatPresenceSubtitle(),
+                            key: const Key('chat-peer-presence-text'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: isPeerOnline
+                                  ? Ios26IMessageTokens.onlineGreen
+                                  : Ios26IMessageTokens.dateGray,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -2940,6 +3080,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         'مكالمة صوتية — غير متاحة',
                         'Appel vocal — indisponible',
                       ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -2962,6 +3104,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                   'Sécurité et signalement',
                   'Safety & Report',
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -3003,7 +3147,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     if (_isPeerBlocked) {
       return Container(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, bottomInset + 12),
+        padding: EdgeInsetsDirectional.fromSTEB(16, 12, 16, bottomInset + 12),
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
@@ -3057,6 +3201,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     return ChatInput(
       controller: _msgCtrl,
       focusNode: _focus,
+      voiceRecorderKey: _voiceRecorderKey,
       attachments: _stagedAttachments,
       onSend: (_) => _sendText(),
       onAttachTap: _toggleIMessageDrawer,

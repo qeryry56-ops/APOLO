@@ -626,14 +626,16 @@ class _SearchScreenState extends State<SearchScreen>
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
                             textDirection: TextDirection.ltr,
-                            textAlign:
-                                s.isAr ? TextAlign.right : TextAlign.left,
+                            textAlign: s.isAr ? TextAlign.end : TextAlign.start,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: _ink,
                             ),
                             decoration: InputDecoration(
                               hintText: s.tr('أقل ثمن', 'Prix min'),
+                              hintTextDirection: s.isAr
+                                  ? TextDirection.rtl
+                                  : TextDirection.ltr,
                               filled: true,
                               fillColor: _surface,
                               contentPadding: const EdgeInsets.symmetric(
@@ -651,13 +653,19 @@ class _SearchScreenState extends State<SearchScreen>
                         Expanded(
                           child: TextField(
                             controller: maxCtrl,
-                            keyboardType: TextInputType.number,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            textDirection: TextDirection.ltr,
+                            textAlign: s.isAr ? TextAlign.end : TextAlign.start,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: _ink,
                             ),
                             decoration: InputDecoration(
                               hintText: s.tr('أقصى ثمن', 'Prix max'),
+                              hintTextDirection: s.isAr
+                                  ? TextDirection.rtl
+                                  : TextDirection.ltr,
                               filled: true,
                               fillColor: _surface,
                               contentPadding: const EdgeInsets.symmetric(
@@ -1150,7 +1158,7 @@ class _SearchScreenState extends State<SearchScreen>
         children: [
           // 1. Apple iOS Pill Search Bar + bare Saved Bookmark on the same row
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 16, 8),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 16, 8),
             child: Row(
               children: [
                 if (canPop)

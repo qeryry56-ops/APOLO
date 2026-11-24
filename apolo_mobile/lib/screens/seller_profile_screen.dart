@@ -481,7 +481,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                         child: _buildMetricCard(
                           icon: CupertinoIcons.bolt_fill,
                           iconColor: _red,
-                          value: isAr ? '< 15 دقيقة' : '< 15 min',
+                          value: isAr ? '\u2066< 15\u2069 دقيقة' : '< 15 min',
                           label: isAr ? 'سرعة الرد' : 'Taux de réponse',
                         ),
                       ),
@@ -490,7 +490,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                         child: _buildMetricCard(
                           icon: CupertinoIcons.shield_lefthalf_fill,
                           iconColor: _emerald,
-                          value: isAr ? '100% موثق' : '100% Vérifié',
+                          value: isAr ? '\u2066100%\u2069 موثق' : '100% Vérifié',
                           label: isAr ? 'هوية مؤكدة' : 'Identité certifiée',
                         ),
                       ),
@@ -849,10 +849,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                             ),
                           ),
                           if (negotiable)
-                            Positioned(
+                            PositionedDirectional(
                               top: 8,
-                              right: isAr ? null : 8,
-                              left: isAr ? 8 : null,
+                              end: 8,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -193,10 +194,19 @@ void main() {
       expect(find.byKey(const Key('voice-recorder-locked-badge')), findsOneWidget);
       expect(sentData, isNull);
 
-      // Mic button is replaced by explicit STOP button
+      // Mic button is replaced by native iOS Voice Capsule with ✕ cancel, Play/Pause, and blue ↑ Send button
       expect(find.byKey(const Key('voice-recorder-mic-button')), findsNothing);
+      expect(find.byKey(const Key('voice-recorder-locked-cancel-button')), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.xmark), findsOneWidget);
+      expect(find.byKey(const Key('voice-recorder-play-pause-button')), findsOneWidget);
       expect(find.byKey(const Key('voice-recorder-stop-button')), findsOneWidget);
-      expect(find.text('STOP'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('voice-recorder-stop-button')),
+          matching: find.byIcon(CupertinoIcons.arrow_up),
+        ),
+        findsOneWidget,
+      );
 
       // Timer keeps advancing hands-free after thumb release
       await tester.pump(const Duration(seconds: 2));

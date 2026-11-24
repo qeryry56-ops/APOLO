@@ -477,9 +477,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         fallbackIcon: Icons.storefront_rounded,
                                       ),
                                     ),
-                                    Positioned(
+                                    PositionedDirectional(
                                       bottom: 2,
-                                      right: 2,
+                                      end: 2,
                                       child: Container(
                                         width: 24,
                                         height: 24,
@@ -582,14 +582,19 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                     color: _ink,
                                                   ),
                                                   const SizedBox(width: 6),
-                                                  Text(
-                                                    s.tr('اتصال', 'Appeler',
-                                                        'Call'),
-                                                    style: const TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: _ink,
+                                                  Flexible(
+                                                    child: Text(
+                                                      s.tr('اتصال', 'Appeler',
+                                                          'Call'),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: _ink,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -621,14 +626,19 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                     color: Colors.white,
                                                   ),
                                                   const SizedBox(width: 6),
-                                                  Text(
-                                                    s.tr('طلب مباشر',
-                                                        'Commander', 'Order'),
-                                                    style: const TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: Colors.white,
+                                                  Flexible(
+                                                    child: Text(
+                                                      s.tr('طلب مباشر',
+                                                          'Commander', 'Order'),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: Colors.white,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -654,14 +664,22 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           children: [
                                             Text(
                                               '${_ads.length}',
+                                              textDirection: TextDirection.ltr,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                   fontSize: 17,
                                                   fontWeight: FontWeight.w800,
-                                                  color: _ink),
+                                                  color: _ink,
+                                                  fontFeatures: [
+                                                    FontFeature.tabularFigures()
+                                                  ]),
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
                                               s.tr('المنتجات', 'Produits'),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                   fontSize: 11.5,
                                                   color: _muted,
@@ -677,14 +695,22 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           children: [
                                             const Text(
                                               '100%',
+                                              textDirection: TextDirection.ltr,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
                                                   fontSize: 17,
                                                   fontWeight: FontWeight.w800,
-                                                  color: _ink),
+                                                  color: _ink,
+                                                  fontFeatures: [
+                                                    FontFeature.tabularFigures()
+                                                  ]),
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
                                               s.tr('موثوق', 'Vérifié'),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                   fontSize: 11.5,
                                                   color: _muted,
@@ -700,14 +726,22 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           children: [
                                             const Text(
                                               '24/48h',
+                                              textDirection: TextDirection.ltr,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
                                                   fontSize: 17,
                                                   fontWeight: FontWeight.w800,
-                                                  color: _ink),
+                                                  color: _ink,
+                                                  fontFeatures: [
+                                                    FontFeature.tabularFigures()
+                                                  ]),
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
                                               s.tr('التوصيل', 'Livraison'),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                   fontSize: 11.5,
                                                   color: _muted,

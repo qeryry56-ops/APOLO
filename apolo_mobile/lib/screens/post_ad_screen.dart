@@ -1964,9 +1964,9 @@ class _PostAdScreenState extends State<PostAdScreen>
                               ),
                               size: 136,
                             ),
-                            Positioned(
+                            PositionedDirectional(
                               bottom: 12,
-                              right: 22,
+                              end: 22,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,

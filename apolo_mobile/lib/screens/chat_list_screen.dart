@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/chat_message.dart';
 import '../widgets/notification_badge.dart';
 import '../widgets/pull_to_refresh.dart';
 import 'call_screen.dart';
@@ -1032,10 +1033,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              _buildTabPill(0, s.tr('الكل', 'Tous', 'All')),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildTabPill(0, s.tr('الكل', 'Tous', 'All')),
+                      const SizedBox(width: 8),
+                      _buildTabPill(1, s.tr('غير مقروءة', 'Non lus', 'Unread')),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(width: 8),
-              _buildTabPill(1, s.tr('غير مقروءة', 'Non lus', 'Unread')),
-              const Spacer(),
               GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -1349,6 +1361,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           peerName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textDirection: ChatMessage.detectTextDirection(
+                            peerName,
+                            fallback: Directionality.of(context),
+                          ),
                           style: TextStyle(
                             color: _textBlack,
                             fontSize: 15,
@@ -1381,6 +1397,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     lastMsg,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    textDirection: ChatMessage.detectTextDirection(
+                      lastMsg,
+                      fallback: Directionality.of(context),
+                    ),
                     style: TextStyle(
                       color: unread > 0 ? _textBlack : _textMuted,
                       fontSize: 13,
@@ -1393,17 +1413,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             const SizedBox(width: 10),
 
-            // Right Column: Timestamp & Sky-Blue Unread Badge
+            // Trailing Column: Timestamp & Unread Badge
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   lastTime,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: RegExp(r'^\d').hasMatch(lastTime.trim())
+                      ? TextDirection.ltr
+                      : null,
                   style: const TextStyle(
                     color: _textMuted,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w400,
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(height: 4),

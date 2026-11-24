@@ -389,13 +389,23 @@ class _CallScreenState extends State<CallScreen> {
                       ],
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    _statusLabel(),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: Text(
+                        _statusLabel(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textDirection:
+                            _status == 'connected' ? TextDirection.ltr : null,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -453,10 +463,14 @@ class _CallScreenState extends State<CallScreen> {
                     const SizedBox(height: 6),
                     Text(
                       _statusLabel(),
+                      textAlign: TextAlign.center,
+                      textDirection:
+                          _status == 'connected' ? TextDirection.ltr : null,
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14.5,
                         fontWeight: FontWeight.w500,
+                        fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
                   ],

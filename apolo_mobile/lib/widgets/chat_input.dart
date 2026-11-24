@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'chat_message.dart';
 import 'ios26_imessage_kit.dart';
 import 'perceived_performance.dart';
 import 'voice_recorder.dart';
@@ -58,6 +59,7 @@ class ChatInput extends StatefulWidget {
   final int maxLines;
   final bool isDrawerOpen;
   final bool hasBottomSheetBelow;
+  final GlobalKey<VoiceRecorderState>? voiceRecorderKey;
 
   const ChatInput({
     super.key,
@@ -83,6 +85,7 @@ class ChatInput extends StatefulWidget {
     this.maxLines = 5,
     this.isDrawerOpen = false,
     this.hasBottomSheetBelow = false,
+    this.voiceRecorderKey,
   });
 
   static const Color _ink = Color(0xFF0A0A0A);
@@ -96,8 +99,13 @@ class ChatInput extends StatefulWidget {
 class _ChatInputState extends State<ChatInput> {
   FocusNode? _internalFocusNode;
   final ScrollController _inputScrollController = ScrollController();
+  final GlobalKey<VoiceRecorderState> _internalVoiceRecorderKey =
+      GlobalKey<VoiceRecorderState>();
   bool _isVoiceRecorderActive = false;
   bool _isSendPressed = false;
+
+  GlobalKey<VoiceRecorderState> get _effectiveVoiceRecorderKey =>
+      widget.voiceRecorderKey ?? _internalVoiceRecorderKey;
 
   FocusNode get _effectiveFocusNode =>
       widget.focusNode ?? (_internalFocusNode ??= FocusNode());
@@ -232,6 +240,7 @@ class _ChatInputState extends State<ChatInput> {
                                 att.subtitle!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                textDirection: TextDirection.ltr,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: ChatInput._textMuted,
@@ -273,11 +282,18 @@ class _ChatInputState extends State<ChatInput> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final canSend = _hasSendableContent;
+    final contextDir = Directionality.of(context);
+    final inputTextDir = widget.controller.text.trim().isEmpty
+        ? contextDir
+        : ChatMessage.detectTextDirection(
+            widget.controller.text,
+            fallback: contextDir,
+          );
 
     return FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
       child: Container(
-        padding: EdgeInsets.fromLTRB(
+        padding: EdgeInsetsDirectional.fromSTEB(
           16,
           6,
           16,
@@ -307,6 +323,8 @@ class _ChatInputState extends State<ChatInput> {
                       Expanded(
                         child: Text(
                           widget.editingBannerText!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
@@ -364,174 +382,205 @@ class _ChatInputState extends State<ChatInput> {
                 ],
 
                 // Exact Figma `Send chat` (`1:2659`): Floating Liquid Glass capsule (h=45, radius=22.5)
+                // When the native iOS Voice Message Capsule is active, it cleanly replaces
+                // the text input pill without double-bordered nesting.
                 Expanded(
-                  child: LiquidGlassSurface(
-                    borderRadius: BorderRadius.circular(
-                      Ios26IMessageTokens.controlRadius,
-                    ),
-                    constraints: const BoxConstraints(
-                      minHeight: Ios26IMessageTokens.composerMinHeight,
-                    ),
-                    padding: EdgeInsetsDirectional.only(
-                      start: _isVoiceRecorderActive ? 6 : 16,
-                      end: 4,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (!_isVoiceRecorderActive)
-                          Expanded(
-                            key: const ValueKey<String>('chat-draft-expanded'),
-                            child: Focus(
-                              onKeyEvent: _handleKeyEvent,
-                              child: Semantics(
-                                textField: true,
-                                label: 'Message input',
-                                child: TextField(
-                                  key: const Key('chat-draft'),
-                                  controller: widget.controller,
-                                  focusNode: _effectiveFocusNode,
-                                  scrollController: _inputScrollController,
-                                  scrollPhysics: const ClampingScrollPhysics(),
-                                  keyboardType: TextInputType.multiline,
-                                  minLines: widget.minLines,
-                                  maxLines: widget.maxLines,
-                                  textCapitalization:
-                                      TextCapitalization.sentences,
-                                  textInputAction: TextInputAction.newline,
-                                  onSubmitted: (_) => _triggerSend(),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    height: 1.32,
-                                    color: Ios26IMessageTokens.labelPrimary,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: -0.2,
-                                  ),
-                                  decoration: InputDecoration(
-                                    filled: false,
-                                    fillColor: Colors.transparent,
-                                    hoverColor: Colors.transparent,
-                                    hintText: widget.hintText,
-                                    hintStyle: const TextStyle(
-                                      color:
-                                          Ios26IMessageTokens.placeholderGray,
-                                      fontSize:
-                                          Ios26IMessageTokens.composerFontSize,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 11,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                  child: _isVoiceRecorderActive
+                      ? VoiceRecorder(
+                          key: _effectiveVoiceRecorderKey,
+                          compactWhenIdle: true,
+                          amplitudeProvider: widget.voiceAmplitudeProvider,
+                          simulateMicMuted: widget.simulateMicMuted,
+                          onRecordingStateChanged: (active) {
+                            if (mounted && _isVoiceRecorderActive != active) {
+                              setState(() => _isVoiceRecorderActive = active);
+                            }
+                          },
+                          onUnsupportedTap: widget.onVoiceTap,
+                          onSend: (recording) {
+                            if (widget.onSendVoice != null) {
+                              widget.onSendVoice!(recording);
+                            } else {
+                              widget.onStopAndSendVoice?.call();
+                            }
+                          },
+                          onCancel: () {
+                            widget.onCancelVoice?.call();
+                          },
+                        )
+                      : LiquidGlassSurface(
+                          borderRadius: BorderRadius.circular(
+                            Ios26IMessageTokens.controlRadius,
                           ),
-
-                        // Trailing Mic (`VoiceRecorder`) inside the Liquid Glass capsule
-                        Flexible(
-                          key:
-                              const ValueKey<String>('chat-voice-recorder-flex'),
-                          flex: _isVoiceRecorderActive ? 1 : 0,
-                          child: VoiceRecorder(
-                            key: const ValueKey<String>('chat-voice-recorder'),
-                            compactWhenIdle: true,
-                            amplitudeProvider: widget.voiceAmplitudeProvider,
-                            simulateMicMuted: widget.simulateMicMuted,
-                            onRecordingStateChanged: (active) {
-                              if (mounted && _isVoiceRecorderActive != active) {
-                                setState(() => _isVoiceRecorderActive = active);
-                              }
-                            },
-                            onUnsupportedTap: widget.onVoiceTap,
-                            onSend: (recording) {
-                              if (widget.onSendVoice != null) {
-                                widget.onSendVoice!(recording);
-                              } else {
-                                widget.onStopAndSendVoice?.call();
-                              }
-                            },
-                            onCancel: () {
-                              widget.onCancelVoice?.call();
-                            },
+                          constraints: const BoxConstraints(
+                            minHeight: Ios26IMessageTokens.composerMinHeight,
                           ),
-                        ),
-
-                        // Iconic iMessage `#0088FF` Circular Send Up-Arrow
-                        if (!_isVoiceRecorderActive)
-                          Semantics(
-                            button: true,
-                            enabled: canSend,
-                            label: 'Send message',
-                            child: GestureDetector(
-                              key: const Key('chat-send'),
-                              behavior: HitTestBehavior.opaque,
-                              onTapDown: (_) {
-                                HapticFeedback.lightImpact();
-                                setState(() => _isSendPressed = true);
-                              },
-                              onTapUp: (_) {
-                                setState(() => _isSendPressed = false);
-                                _triggerSend();
-                              },
-                              onTapCancel: () {
-                                if (_isSendPressed) {
-                                  setState(() => _isSendPressed = false);
-                                }
-                              },
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minWidth: 44,
-                                  minHeight: 44,
-                                ),
-                                child: Center(
-                                  child: AnimatedScale(
-                                    key: const Key('chat-send-scale'),
-                                    scale: _isSendPressed
-                                        ? ApoloMotion.pressedScale
-                                        : 1.0,
-                                    duration: ApoloMotion.microDuration,
-                                    curve: ApoloMotion.easeOutCurve,
-                                    child: AnimatedOpacity(
-                                      key: const Key('chat-send-opacity'),
-                                      opacity: _isSendPressed
-                                          ? ApoloMotion.pressedOpacity
-                                          : 1.0,
-                                      duration: ApoloMotion.microDuration,
-                                      curve: ApoloMotion.easeOutCurve,
-                                      child: AnimatedContainer(
-                                        duration: ApoloMotion.microDuration,
-                                        curve: ApoloMotion.easeOutCurve,
-                                        width: 34,
-                                        height: 34,
-                                        decoration: BoxDecoration(
-                                          color: canSend
-                                              ? Ios26IMessageTokens.bubbleMine
-                                              : const Color(0xFFD1D5DB),
-                                          shape: BoxShape.circle,
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 16,
+                            end: 4,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                key: const ValueKey<String>(
+                                    'chat-draft-expanded'),
+                                child: Focus(
+                                  onKeyEvent: _handleKeyEvent,
+                                  child: Semantics(
+                                    textField: true,
+                                    label: 'Message input',
+                                    child: TextField(
+                                      key: const Key('chat-draft'),
+                                      controller: widget.controller,
+                                      focusNode: _effectiveFocusNode,
+                                      scrollController: _inputScrollController,
+                                      scrollPhysics:
+                                          const ClampingScrollPhysics(),
+                                      keyboardType: TextInputType.multiline,
+                                      textDirection: inputTextDir,
+                                      minLines: widget.minLines,
+                                      maxLines: widget.maxLines,
+                                      textCapitalization:
+                                          TextCapitalization.sentences,
+                                      textInputAction: TextInputAction.newline,
+                                      onSubmitted: (_) => _triggerSend(),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        height: 1.32,
+                                        color: Ios26IMessageTokens.labelPrimary,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: -0.2,
+                                      ),
+                                      decoration: InputDecoration(
+                                        filled: false,
+                                        fillColor: Colors.transparent,
+                                        hoverColor: Colors.transparent,
+                                        hintText: widget.hintText,
+                                        hintStyle: const TextStyle(
+                                          color: Ios26IMessageTokens
+                                              .placeholderGray,
+                                          fontSize: Ios26IMessageTokens
+                                              .composerFontSize,
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                        alignment: Alignment.center,
-                                        child: Icon(
-                                          widget.editingBannerText != null
-                                              ? Icons.check_rounded
-                                              : CupertinoIcons.arrow_up,
-                                          color: Colors.white,
-                                          size: 18,
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        isDense: true,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          vertical: 11,
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
+
+                              // Trailing Mic (`VoiceRecorder`) inside the Liquid Glass capsule
+                              Flexible(
+                                key: const ValueKey<String>(
+                                    'chat-voice-recorder-flex'),
+                                flex: 0,
+                                child: VoiceRecorder(
+                                  key: _effectiveVoiceRecorderKey,
+                                  compactWhenIdle: true,
+                                  amplitudeProvider:
+                                      widget.voiceAmplitudeProvider,
+                                  simulateMicMuted: widget.simulateMicMuted,
+                                  onRecordingStateChanged: (active) {
+                                    if (mounted &&
+                                        _isVoiceRecorderActive != active) {
+                                      setState(
+                                          () => _isVoiceRecorderActive = active);
+                                    }
+                                  },
+                                  onUnsupportedTap: widget.onVoiceTap,
+                                  onSend: (recording) {
+                                    if (widget.onSendVoice != null) {
+                                      widget.onSendVoice!(recording);
+                                    } else {
+                                      widget.onStopAndSendVoice?.call();
+                                    }
+                                  },
+                                  onCancel: () {
+                                    widget.onCancelVoice?.call();
+                                  },
+                                ),
+                              ),
+
+                              // Iconic iMessage `#0088FF` Circular Send Up-Arrow
+                              Semantics(
+                                button: true,
+                                enabled: canSend,
+                                label: 'Send message',
+                                child: GestureDetector(
+                                  key: const Key('chat-send'),
+                                  behavior: HitTestBehavior.opaque,
+                                  onTapDown: (_) {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _isSendPressed = true);
+                                  },
+                                  onTapUp: (_) {
+                                    setState(() => _isSendPressed = false);
+                                    _triggerSend();
+                                  },
+                                  onTapCancel: () {
+                                    if (_isSendPressed) {
+                                      setState(() => _isSendPressed = false);
+                                    }
+                                  },
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      minWidth: 44,
+                                      minHeight: 44,
+                                    ),
+                                    child: Center(
+                                      child: AnimatedScale(
+                                        key: const Key('chat-send-scale'),
+                                        scale: _isSendPressed
+                                            ? ApoloMotion.pressedScale
+                                            : 1.0,
+                                        duration: ApoloMotion.microDuration,
+                                        curve: ApoloMotion.easeOutCurve,
+                                        child: AnimatedOpacity(
+                                          key: const Key('chat-send-opacity'),
+                                          opacity: _isSendPressed
+                                              ? ApoloMotion.pressedOpacity
+                                              : 1.0,
+                                          duration: ApoloMotion.microDuration,
+                                          curve: ApoloMotion.easeOutCurve,
+                                          child: AnimatedContainer(
+                                            duration: ApoloMotion.microDuration,
+                                            curve: ApoloMotion.easeOutCurve,
+                                            width: 34,
+                                            height: 34,
+                                            decoration: BoxDecoration(
+                                              color: canSend
+                                                  ? Ios26IMessageTokens
+                                                      .bubbleMine
+                                                  : const Color(0xFFD1D5DB),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Icon(
+                                              widget.editingBannerText != null
+                                                  ? Icons.check_rounded
+                                                  : CupertinoIcons.arrow_up,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                      ],
-                    ),
-                  ),
+                        ),
                 ),
               ],
             ),

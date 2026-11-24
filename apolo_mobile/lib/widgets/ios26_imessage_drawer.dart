@@ -310,7 +310,7 @@ class _Ios26IMessageDrawerState extends State<Ios26IMessageDrawer> {
       child: Container(
         key: const Key('ios26-imessage-drawer'),
         height: 336 + bottomInset,
-        margin: EdgeInsets.fromLTRB(6, 0, 6, bottomInset > 0 ? 4 : 6),
+        margin: EdgeInsetsDirectional.fromSTEB(6, 0, 6, bottomInset > 0 ? 4 : 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(34),
           boxShadow: [
@@ -360,28 +360,39 @@ class _Ios26IMessageDrawerState extends State<Ios26IMessageDrawer> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        _buildTabPill(
-                          selected: _tab == Ios26DrawerTab.apps,
-                          icon: CupertinoIcons.square_grid_2x2_fill,
-                          label: _tr('التطبيقات', 'Apps', 'Apps'),
-                          key: const Key('ios26-drawer-tab-apps'),
-                          onTap: () => setState(() {
-                            _tab = Ios26DrawerTab.apps;
-                            _showOfferComposer = false;
-                          }),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildTabPill(
+                                  selected: _tab == Ios26DrawerTab.apps,
+                                  icon: CupertinoIcons.square_grid_2x2_fill,
+                                  label: _tr('التطبيقات', 'Apps', 'Apps'),
+                                  key: const Key('ios26-drawer-tab-apps'),
+                                  onTap: () => setState(() {
+                                    _tab = Ios26DrawerTab.apps;
+                                    _showOfferComposer = false;
+                                  }),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildTabPill(
+                                  selected: _tab == Ios26DrawerTab.stickers,
+                                  icon: CupertinoIcons.smiley_fill,
+                                  label: _tr('الملصقات', 'Stickers', 'Stickers'),
+                                  key: const Key('ios26-drawer-tab-stickers'),
+                                  onTap: () => setState(() {
+                                    _tab = Ios26DrawerTab.stickers;
+                                    _showOfferComposer = false;
+                                  }),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 8),
-                        _buildTabPill(
-                          selected: _tab == Ios26DrawerTab.stickers,
-                          icon: CupertinoIcons.smiley_fill,
-                          label: _tr('الملصقات', 'Stickers', 'Stickers'),
-                          key: const Key('ios26-drawer-tab-stickers'),
-                          onTap: () => setState(() {
-                            _tab = Ios26DrawerTab.stickers;
-                            _showOfferComposer = false;
-                          }),
-                        ),
-                        const Spacer(),
                         LiquidGlassSurface(
                           width: 32,
                           height: 32,
@@ -537,7 +548,7 @@ class _Ios26IMessageDrawerState extends State<Ios26IMessageDrawer> {
     return GridView.builder(
       key: const ValueKey('apps-grid'),
       physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(18, 4, 18, bottomInset + 14),
+      padding: EdgeInsetsDirectional.fromSTEB(18, 4, 18, bottomInset + 14),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 132,
         mainAxisExtent: 104,
@@ -602,7 +613,7 @@ class _Ios26IMessageDrawerState extends State<Ios26IMessageDrawer> {
     return GridView.builder(
       key: const ValueKey('stickers-grid'),
       physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, 4, 16, bottomInset + 16),
+      padding: EdgeInsetsDirectional.fromSTEB(16, 4, 16, bottomInset + 16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 132,
         mainAxisExtent: 104,
@@ -634,9 +645,12 @@ class _Ios26IMessageDrawerState extends State<Ios26IMessageDrawer> {
 
   /// Inline Liquid Glass Price Offer panel for Apolo listings
   Widget _buildOfferComposer() {
+    final contextDir = Directionality.of(context);
+    final isRtl = contextDir == TextDirection.rtl;
+
     return Padding(
       key: const ValueKey('offer-composer'),
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+      padding: const EdgeInsetsDirectional.fromSTEB(18, 8, 18, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -644,32 +658,47 @@ class _Ios26IMessageDrawerState extends State<Ios26IMessageDrawer> {
             children: [
               GestureDetector(
                 onTap: () => setState(() => _showOfferComposer = false),
-                child: const Icon(
-                  CupertinoIcons.chevron_back,
+                child: Icon(
+                  isRtl
+                      ? CupertinoIcons.chevron_forward
+                      : CupertinoIcons.chevron_back,
                   size: 18,
                   color: Ios26IMessageTokens.bubbleMine,
                 ),
               ),
               const SizedBox(width: 6),
-              Text(
-                _tr('اقترح ثمن على البائع', 'Proposer un prix',
-                    'Make a price offer'),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Ios26IMessageTokens.labelPrimary,
+              Expanded(
+                child: Text(
+                  _tr('اقترح ثمن على البائع', 'Proposer un prix',
+                      'Make a price offer'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Ios26IMessageTokens.labelPrimary,
+                  ),
                 ),
               ),
               if (widget.listingPrice.isNotEmpty) ...[
-                const Spacer(),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(
-                    widget.listingPrice,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Ios26IMessageTokens.dateGray,
+                const SizedBox(width: 8),
+                Flexible(
+                  flex: 0,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                        widget.listingPrice,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Ios26IMessageTokens.dateGray,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -687,15 +716,23 @@ class _Ios26IMessageDrawerState extends State<Ios26IMessageDrawer> {
               controller: _offerCtrl,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+              textDirection: TextDirection.ltr,
+              textAlign: isRtl ? TextAlign.end : TextAlign.start,
               autofocus: true,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: Ios26IMessageTokens.labelPrimary,
+                fontFeatures: [FontFeature.tabularFigures()],
               ),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: _tr('مثلاً: 100 DH', 'Ex: 100 DH', 'e.g. 100 DH'),
+                hintText: _tr(
+                  'مثلاً: \u2066100 DH\u2069',
+                  'Ex: 100 DH',
+                  'e.g. 100 DH',
+                ),
+                hintTextDirection: contextDir,
                 hintStyle: const TextStyle(
                   color: Ios26IMessageTokens.placeholderGray,
                   fontWeight: FontWeight.w500,

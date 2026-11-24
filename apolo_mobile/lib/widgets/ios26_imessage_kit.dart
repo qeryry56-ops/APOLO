@@ -16,6 +16,20 @@ class Ios26IMessageTokens {
   static const Color edgeMistTint = Color(0xFFF4F5F7); // Figma subtle edge frost
   static const Color tabGlassInk = Color(0xFF0A0A0A);
 
+  // Native iOS Frosted Glass Header tokens (`rgba(255,255,255,0.75)` + `0.5px rgba(0,0,0,0.08)`)
+  static const Color headerFrostedLight = Color(0xBFFFFFFF);
+  static const Color headerFrostedDark = Color(0xC71C1C1E);
+  static const Color headerBorderLight = Color(0x14000000);
+  static const Color headerBorderDark = Color(0x1FFFFFFF);
+
+  /// Standard Rec. 709 `saturate(180%)` 5x4 color matrix matching iOS `backdrop-filter: blur(20px) saturate(180%)`.
+  static const List<double> saturationMatrix180 = <double>[
+    1.62992, -0.57216, -0.05776, 0.0, 0.0,
+    -0.17008, 1.22784, -0.05776, 0.0, 0.0,
+    -0.17008, -0.57216, 1.74224, 0.0, 0.0,
+    0.0, 0.0, 0.0, 1.0, 0.0,
+  ];
+
   // Official Apple iOS 26 Bubbles (from Figma `0:151` `Chat` & `2051:10899` `Bubble`)
   // Outgoing: vertical luminous sky-to-cobalt gradient `#4EBAFF` -> `#0088FF` + white text
   // Incoming: `--fills/secondary` `rgba(120, 120, 128, 0.16)` (#E9E9EB on white) + pure black text
@@ -467,6 +481,56 @@ class IMessageBubbleClipper extends CustomClipper<Path> {
     return oldClipper.tailOnRight != tailOnRight ||
         oldClipper.showTail != showTail ||
         oldClipper.radius != radius;
+  }
+}
+
+/// Standard native iOS frosted glass navigation header:
+/// - Background: `rgba(255, 255, 255, 0.75)` in light mode (`rgba(28,28,30,0.78)` in dark mode)
+/// - Filter: `backdrop-filter: blur(20px) saturate(180%)`
+/// - Border: bottom `0.5px solid rgba(0, 0, 0, 0.08)`
+/// - Strictly clipped (`ClipRect` / `Clip.hardEdge`) to prevent color bleeding/smearing underneath.
+class Ios26FrostedHeaderBar extends StatelessWidget {
+  final Widget child;
+
+  const Ios26FrostedHeaderBar({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ClipRect(
+      key: const Key('ios26-frosted-header-clip'),
+      clipBehavior: Clip.hardEdge,
+      child: BackdropFilter(
+        key: const Key('ios26-frosted-header-blur'),
+        filter: ImageFilter.compose(
+          outer: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          inner: const ColorFilter.matrix(
+            Ios26IMessageTokens.saturationMatrix180,
+          ),
+        ),
+        child: Container(
+          key: const Key('ios26-frosted-header-surface'),
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(
+            color: isDark
+                ? Ios26IMessageTokens.headerFrostedDark
+                : Ios26IMessageTokens.headerFrostedLight,
+            border: Border(
+              bottom: BorderSide(
+                color: isDark
+                    ? Ios26IMessageTokens.headerBorderDark
+                    : Ios26IMessageTokens.headerBorderLight,
+                width: 0.5,
+              ),
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
   }
 }
 

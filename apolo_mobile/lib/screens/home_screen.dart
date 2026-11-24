@@ -1310,7 +1310,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildOverviewRow(
                   icon: CupertinoIcons.tag_fill,
                   iconColor: _primary,
-                  title: isAr ? '0% عمولة وبالمجان' : '0% Commission',
+                  title: isAr ? '\u20660%\u2069 عمولة وبالمجان' : '0% Commission',
                   subtitle: isAr
                       ? 'بيع وشري فابور بدون أي اقتطاعات أو وسطاء.'
                       : 'Vendez et achetez gratuitement sans aucun intermédiaire.',

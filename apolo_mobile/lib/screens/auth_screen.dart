@@ -942,7 +942,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         AccountValidation.phone(text) != null;
                                     if (!isEmail && !isPhone) {
                                       return s.tr(
-                                        'أدخل بريداً صحيحاً أو رقماً يبدأ بـ 05/06/07',
+                                        'أدخل بريداً صحيحاً أو رقماً يبدأ بـ \u206605/06/07\u2069',
                                         'Enter a valid email or phone (05/06/07)',
                                       );
                                     }

@@ -461,7 +461,7 @@ class _WhatsAppVoiceMessagingScreenState
                       child: Container(
                         height: 46,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        alignment: Alignment.centerLeft,
+                        alignment: AlignmentDirectional.centerStart,
                         decoration: BoxDecoration(
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.08)
@@ -702,10 +702,12 @@ class _WhatsAppVoiceBubbleState extends State<WhatsAppVoiceBubble> {
     final totalDurStr = formatVoiceMmSs(Duration(milliseconds: _totalMs));
 
     return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isMine
+          ? AlignmentDirectional.centerEnd
+          : AlignmentDirectional.centerStart,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 300),
-        padding: const EdgeInsets.fromLTRB(10, 10, 12, 8),
+        padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 12, 8),
         decoration: bubbleDecoration,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -771,24 +773,34 @@ class _WhatsAppVoiceBubbleState extends State<WhatsAppVoiceBubble> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '$currentDurStr / $totalDurStr',
-                        key: Key('wa-duration-${widget.message.id}'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: metaTextColor,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                      Flexible(
+                        child: Text(
+                          '$currentDurStr / $totalDurStr',
+                          key: Key('wa-duration-${widget.message.id}'),
+                          textDirection: TextDirection.ltr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: metaTextColor,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
                       ),
-                      if (widget.message.timestamp.isNotEmpty)
+                      if (widget.message.timestamp.isNotEmpty) ...[
+                        const SizedBox(width: 6),
                         Text(
                           widget.message.timestamp,
+                          textDirection: TextDirection.ltr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 10.5,
                             color: metaTextColor,
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ],

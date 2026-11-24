@@ -260,7 +260,7 @@ class _StoresScreenState extends State<StoresScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                padding: const EdgeInsets.only(left: 14, right: 6),
+                padding: const EdgeInsetsDirectional.only(start: 14, end: 6),
                 child: Row(
                   children: [
                     const Icon(CupertinoIcons.search, color: _muted, size: 19),
@@ -440,9 +440,9 @@ class _StoresScreenState extends State<StoresScreen> {
                                                   Icons.storefront_rounded,
                                             ),
                                           ),
-                                          Positioned(
+                                          PositionedDirectional(
                                             bottom: 0,
-                                            right: 0,
+                                            end: 0,
                                             child: Container(
                                               width: 20,
                                               height: 20,
@@ -500,6 +500,8 @@ class _StoresScreenState extends State<StoresScreen> {
                                                     const SizedBox(width: 3),
                                                     Text(
                                                       rating,
+                                                      textDirection:
+                                                          TextDirection.ltr,
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                         fontWeight:
@@ -557,42 +559,55 @@ class _StoresScreenState extends State<StoresScreen> {
                                             ],
                                             const SizedBox(height: 10),
                                             Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
                                               children: [
-                                                Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        const Color(0xFFF2F3F7),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            999),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(
-                                                          CupertinoIcons
-                                                              .cube_box,
-                                                          size: 12.5,
-                                                          color: _ink),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        '$count ${s.tr('منتج', 'produits')}',
-                                                        style: const TextStyle(
-                                                            color: _ink,
-                                                            fontSize: 11.5,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w700),
-                                                      ),
-                                                    ],
+                                                Flexible(
+                                                  child: Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                          0xFFF2F3F7),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              999),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(
+                                                            CupertinoIcons
+                                                                .cube_box,
+                                                            size: 12.5,
+                                                            color: _ink),
+                                                        const SizedBox(width: 4),
+                                                        Flexible(
+                                                          child: Text(
+                                                            '$count ${s.tr('منتج', 'produits')}',
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style:
+                                                                const TextStyle(
+                                                                    color: _ink,
+                                                                    fontSize:
+                                                                        11.5,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
-                                                const Spacer(),
+                                                const SizedBox(width: 8),
                                                 Container(
                                                   padding: const EdgeInsets
                                                       .symmetric(
@@ -611,6 +626,9 @@ class _StoresScreenState extends State<StoresScreen> {
                                                       Text(
                                                         s.tr('زيارة المتجر',
                                                             'Visiter'),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                         style: const TextStyle(
                                                             color: Colors.white,
                                                             fontSize: 11.5,
@@ -620,7 +638,10 @@ class _StoresScreenState extends State<StoresScreen> {
                                                       ),
                                                       const SizedBox(width: 3),
                                                       Icon(
-                                                        s.isAr
+                                                        Directionality.of(
+                                                                    context) ==
+                                                                TextDirection
+                                                                    .rtl
                                                             ? CupertinoIcons
                                                                 .chevron_left
                                                             : CupertinoIcons

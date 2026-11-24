@@ -1,8 +1,12 @@
 import 'package:apolo_mobile/core/services/chat_realtime_client.dart';
+import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/chat_room_screen.dart';
 import 'package:apolo_mobile/widgets/chat_message.dart';
+import 'package:apolo_mobile/widgets/ios26_imessage_kit.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('ChatMessage.detectTextDirection handles Arabic RTL and Latin LTR cleanly', () {
@@ -118,6 +122,129 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('ios26-sticker-salam')), findsOneWidget);
       expect(find.byKey(const Key('ios26-sticker-deal')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Native iOS refactor: embedded scrollable ad card, clipped frosted header, inline image bubble without raw filename, and iOS voice capsule',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      // Valid 1x1 transparent PNG base64
+      const tinyPngBase64 =
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      // Ensure English strings so "Delivered" label is verified directly
+      await tester.runAsync(() => AppState().setLocale(const Locale('en')));
+      addTearDown(
+        () => tester.runAsync(() => AppState().setLocale(const Locale('ar'))),
+      );
+
+      final now = DateTime.now();
+      final messages = <Map<String, dynamic>>[
+        {
+          'id': 'img_1',
+          'body': 'scaled_IMG_0865.png',
+          'type': 'image',
+          'image_base64': tinyPngBase64,
+          'is_mine': true,
+          'sender_id': '101',
+          'sender_name': 'Me',
+          'read': false,
+          'created_at_ms': now.millisecondsSinceEpoch,
+          'created_at_time': '10:20',
+        },
+        for (int i = 0; i < 18; i++)
+          {
+            'id': 'm_$i',
+            'body': 'Conversation message #$i to make list scrollable',
+            'is_mine': i.isEven,
+            'sender_id': i.isEven ? '101' : '202',
+            'sender_name': i.isEven ? 'Me' : 'Amine',
+            'type': 'text',
+            'created_at_ms':
+                now.add(Duration(minutes: i + 1)).millisecondsSinceEpoch,
+            'created_at_time': '10:${(21 + i).toString().padLeft(2, '0')}',
+          },
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ChatRoomScreen(
+            conversationId: 77,
+            adId: 5501,
+            peerId: 202,
+            peerName: 'Amine',
+            adTitle: 'Tissot watch black',
+            adPrice: '110.00 DH',
+            initialMessages: messages,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      // 1. Product card is embedded inside the scrollable ListView (NOT sticky under header)
+      final adBannerFinder = find.byKey(const Key('chat-ad-context-banner'));
+      final listFinder = find.byKey(const Key('chat-virtual-list'));
+      expect(
+        find.descendant(of: listFinder, matching: adBannerFinder),
+        findsOneWidget,
+      );
+      final adTopBeforeScroll = tester.getTopLeft(adBannerFinder).dy;
+
+      // 2. Native iOS Frosted Glass Header (`rgba(255,255,255,0.75)`, `0.5px` bottom border, `Clip.hardEdge`, no TopEdgeFade)
+      expect(find.byType(Ios26FrostedHeaderBar), findsOneWidget);
+      expect(find.byType(Ios26TopEdgeFade), findsNothing);
+      final headerSurface = tester.widget<Container>(
+        find.byKey(const Key('ios26-frosted-header-surface')),
+      );
+      expect(headerSurface.clipBehavior, Clip.hardEdge);
+      final headerDeco = headerSurface.decoration! as BoxDecoration;
+      expect(headerDeco.color, Ios26IMessageTokens.headerFrostedLight);
+      final border = headerDeco.border! as Border;
+      expect(border.bottom.width, 0.5);
+      expect(border.bottom.color, Ios26IMessageTokens.headerBorderLight);
+
+      // 3. Inline image bubble renders actual image with 18px radius, hides raw `scaled_IMG_0865.png`, and shows "Delivered"
+      expect(find.byKey(const Key('chat-image-bubble-id_img_1')), findsOneWidget);
+      expect(find.text('scaled_IMG_0865.png'), findsNothing);
+      expect(find.byKey(const Key('chat-status-id_img_1')), findsOneWidget);
+      expect(find.text('Delivered'), findsWidgets);
+
+      // Verify embedded ad card scrolls away naturally when scrolling down the chat
+      await tester.drag(listFinder, const Offset(0, -420));
+      await tester.pumpAndSettle();
+      if (adBannerFinder.evaluate().isNotEmpty) {
+        expect(tester.getTopLeft(adBannerFinder).dy, lessThan(adTopBeforeScroll));
+      }
+
+      // 4. Native iOS Voice Message Capsule (tap mic -> ✕ cancel, Play/Pause, wave bars, timer, blue ↑ Send)
+      await tester.tap(find.byKey(const Key('voice-recorder-mic-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.byKey(const Key('chat-draft')), findsNothing);
+      expect(find.byKey(const Key('voice-recorder-active-bar')), findsOneWidget);
+      expect(find.byKey(const Key('voice-recorder-locked-cancel-button')), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.xmark), findsOneWidget);
+      expect(find.byKey(const Key('voice-recorder-play-pause-button')), findsOneWidget);
+      expect(find.byKey(const Key('voice-recorder-waveform')), findsOneWidget);
+      expect(find.byKey(const Key('voice-recorder-timer')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('voice-recorder-stop-button')),
+          matching: find.byIcon(CupertinoIcons.arrow_up),
+        ),
+        findsOneWidget,
+      );
+
+      // Toggle Play/Pause preview cleanly & close via ✕
+      await tester.tap(find.byKey(const Key('voice-recorder-play-pause-button')));
+      await tester.pump();
+      expect(find.byIcon(CupertinoIcons.play_fill), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('voice-recorder-locked-cancel-button')));
+      await tester.pump();
+      expect(find.byKey(const Key('chat-draft')), findsOneWidget);
+      expect(tester.takeException(), isNull);
     },
   );
 }

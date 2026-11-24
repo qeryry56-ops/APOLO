@@ -317,8 +317,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         scrolledUnderElevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(
-            CupertinoIcons.chevron_left,
+          icon: Icon(
+            Directionality.of(context) == TextDirection.rtl
+                ? CupertinoIcons.chevron_right
+                : CupertinoIcons.chevron_left,
             color: _ink,
             size: 22,
           ),
@@ -381,7 +383,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Enter the 6-digit code sent to ${widget.destination}',
+                    'Enter the 6-digit code sent to \u2066${widget.destination}\u2069',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 14,
