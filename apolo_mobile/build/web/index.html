@@ -191,7 +191,8 @@
           loadJsQr();
 
           var wrap = document.createElement('div');
-          wrap.style.cssText = 'width:100%;height:100%;position:relative;overflow:hidden;border-radius:16px;background:#EEEEEE;';
+          wrap.setAttribute('dir', 'ltr');
+          wrap.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:hidden;background:#000000;direction:ltr;';
 
           var vid = document.createElement('video');
           vid.setAttribute('playsinline', 'true');
@@ -201,7 +202,7 @@
           vid.playsInline = true;
           vid.muted = true;
           vid.autoplay = true;
-          vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;';
+          vid.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;display:block;pointer-events:none;';
           wrap.appendChild(vid);
           activeVideo = vid;
 
@@ -378,6 +379,6 @@
     });
   </script>
   <script src="apolo_rtc_bridge.js"></script>
-  <script src="flutter_bootstrap.js?v=1795557811" async></script>
+  <script src="flutter_bootstrap.js?v=1795561483" async></script>
 </body>
 </html>

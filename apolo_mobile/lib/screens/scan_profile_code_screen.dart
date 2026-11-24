@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,15 +14,17 @@ import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
-import '../widgets/dl_share_top_nav.dart';
 import 'ad_detail_screen.dart';
 import 'seller_profile_screen.dart';
 import 'store_detail_screen.dart';
 
-/// Dynamic Layer v5.1 QR scanner screen (`Share profile / Default` Camera Scan mode).
-/// Uses [DlShareProfileTokens], [DlShareProfileLayout], and [DlShareTopNavigation]
-/// to render a `311x311` (`roundedXl`) scan frame, `311x20` instruction text,
-/// `56x56` `Buttonicon` controls (`p_16`, `24x24` icons), and `80x80` capture frame.
+/// Minimalist Trust Wallet-style full-screen QR Scanner with RTL Arabic support:
+/// - Full-screen camera preview (`#000000` / `#121212` dark canvas)
+/// - `rgba(0, 0, 0, 0.65)` translucent vignette mask with a centered `270x270` cutout
+/// - Four outer rounded corner brackets (`6px` stroke, `28px` radius, `48px` arm, `StrokeCap.round`)
+/// - Subtle `#E31B23` animated laser scan pulse inside the frame
+/// - Minimalist white top bar (RTL-aware back arrow, `17px w600` title, gallery action)
+/// - Centered `"إدخال الرمز يدوياً"` action & subtle glass flashlight toggle above Home Indicator.
 class ScanProfileCodeScreen extends StatefulWidget {
   const ScanProfileCodeScreen({
     super.key,
@@ -28,6 +32,15 @@ class ScanProfileCodeScreen extends StatefulWidget {
     this.enableLiveCamera = true,
     this.onCodeScanned,
   });
+
+  static const double viewfinderSize = 270.0;
+  static const double cornerRadius = 28.0;
+  static const double cornerBracketLength = 48.0;
+  static const double cornerStrokeWidth = 6.0;
+  static const Color darkCanvas = Color(0xFF000000);
+  static const Color darkSurface = Color(0xFF121212);
+  static const Color maskOverlayColor = Color.fromRGBO(0, 0, 0, 0.65);
+  static const Color activePulseRed = Color(0xFFE31B23);
 
   final String? title;
   final bool enableLiveCamera;
@@ -163,8 +176,7 @@ class ScanProfileCodeScreen extends StatefulWidget {
             .trim()
             .replaceFirst(RegExp(r'^@+'), '')
             .toLowerCase();
-        if (myUsername.isNotEmpty &&
-            cleanHandle.toLowerCase() == myUsername) {
+        if (myUsername.isNotEmpty && cleanHandle.toLowerCase() == myUsername) {
           showToast(
             s.tr(
               'هذا هو ملفك الشخصي الحالي',
@@ -178,7 +190,6 @@ class ScanProfileCodeScreen extends StatefulWidget {
           return;
         }
 
-        // 1. Check if this handle is an official PRO store subdomain
         try {
           final encoded = Uri.encodeComponent(cleanHandle);
           final storeRes = await state.api.dio.get('/stores/$encoded');
@@ -190,7 +201,6 @@ class ScanProfileCodeScreen extends StatefulWidget {
           }
         } catch (_) {}
 
-        // 2. Search ads for a matching seller account
         int? matchedSellerId;
         String matchedName = (target.displayName != null &&
                 target.displayName!.trim().isNotEmpty)
@@ -357,11 +367,13 @@ class ScanProfileCodeScreen extends StatefulWidget {
   State<ScanProfileCodeScreen> createState() => _ScanProfileCodeScreenState();
 }
 
-class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
+class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
+    with SingleTickerProviderStateMixin {
   static int _nextWebSessionId = 1;
 
   final AppState _state = AppState();
   MobileScannerController? _controller;
+  late final AnimationController _laserController;
   late int _webSessionId;
   bool _webCameraStreaming = false;
   bool _webCameraError = false;
@@ -369,15 +381,24 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
   bool _pickingGallery = false;
   bool _webTorchOn = false;
 
-  bool get _shouldUseLiveScanner =>
-      widget.enableLiveCamera &&
-      (kIsWeb ||
-          !WidgetsBinding.instance.runtimeType.toString().contains('Test'));
+  bool get _isWidgetTest =>
+      !kIsWeb &&
+      WidgetsBinding.instance.runtimeType.toString().contains('Test');
+
+  bool get _shouldUseLiveScanner => widget.enableLiveCamera && !_isWidgetTest;
 
   @override
   void initState() {
     super.initState();
     _webSessionId = _nextWebSessionId++;
+    _laserController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+      value: 0.5,
+    );
+    if (!_isWidgetTest) {
+      _laserController.repeat(reverse: true);
+    }
     if (_shouldUseLiveScanner && !kIsWeb) {
       _controller = MobileScannerController(
         detectionSpeed: DetectionSpeed.noDuplicates,
@@ -388,7 +409,21 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context) || _isWidgetTest) {
+      if (_laserController.isAnimating) {
+        _laserController.stop();
+        _laserController.value = 0.5;
+      }
+    } else if (!_laserController.isAnimating) {
+      _laserController.repeat(reverse: true);
+    }
+  }
+
+  @override
   void dispose() {
+    _laserController.dispose();
     if (kIsWeb) {
       QrWebBridge.stopWebScanner();
     }
@@ -476,6 +511,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
   Future<void> _pickImageAndAnalyze() async {
     if (_pickingGallery) return;
     _pickingGallery = true;
+    HapticFeedback.selectionClick();
     final s = _state.s;
 
     try {
@@ -518,7 +554,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
           'No QR code detected in the selected image',
         ),
         action: SnackBarAction(
-          label: s.tr('أدخل الرابط', 'Saisir lien', 'Enter link'),
+          label: s.tr('أدخل الرمز', 'Saisir', 'Enter code'),
           onPressed: _openManualCodeSheet,
         ),
       );
@@ -530,7 +566,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
           'Could not open photo library',
         ),
         action: SnackBarAction(
-          label: s.tr('أدخل الرابط', 'Saisir lien', 'Enter link'),
+          label: s.tr('أدخل الرمز', 'Saisir', 'Enter code'),
           onPressed: _openManualCodeSheet,
         ),
       );
@@ -539,44 +575,9 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     }
   }
 
-  Future<void> _onShutterPressed() async {
-    HapticFeedback.mediumImpact();
-    final s = _state.s;
-    final controller = _controller;
-    final cameraActive = kIsWeb
-        ? (_shouldUseLiveScanner && _webCameraStreaming && !_webCameraError)
-        : (controller != null &&
-            controller.value.isRunning &&
-            controller.value.error == null);
-
-    if (!cameraActive) {
-      await _openManualCodeSheet();
-      return;
-    }
-
-    if (kIsWeb) {
-      final captured = await QrWebBridge.captureLiveVideoQr();
-      if (captured != null && captured.trim().isNotEmpty) {
-        await handleScannedPayload(captured.trim());
-        return;
-      }
-    }
-
-    _showSnack(
-      s.tr(
-        'وجّه الكاميرا نحو رمز QR أو أدخل الرابط يدوياً',
-        'Pointez la caméra vers le code QR ou saisissez le lien',
-        'Point camera at a QR code or paste a link',
-      ),
-      action: SnackBarAction(
-        label: s.tr('أدخل الرابط', 'Saisir lien', 'Enter link'),
-        onPressed: _openManualCodeSheet,
-      ),
-    );
-  }
-
   Future<void> _openManualCodeSheet() async {
     if (!mounted) return;
+    HapticFeedback.selectionClick();
     final palette = ApoloDlPalette.of(context);
     final isRtl = Directionality.of(context) == TextDirection.rtl;
 
@@ -615,11 +616,12 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     final trimmed = rawValue.trim();
     if (trimmed.isEmpty) return;
 
-    _isHandlingCode = true;
+    setState(() => _isHandlingCode = true);
+    HapticFeedback.mediumImpact();
 
     if (widget.onCodeScanned != null) {
       widget.onCodeScanned!(trimmed);
-      if (mounted) _isHandlingCode = false;
+      if (mounted) setState(() => _isHandlingCode = false);
       return;
     }
 
@@ -634,38 +636,156 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     }
   }
 
-  Widget _buildCameraFallback(DlShareProfileTokens tokens, AppStrings s) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: kIsWeb ? _retryWebCamera : _openManualCodeSheet,
-      child: ColoredBox(
-        color: tokens.cardBackground,
-        child: Center(
+  Widget _buildFullScreenCameraLayer(AppStrings s) {
+    if (!_shouldUseLiveScanner) {
+      return const ColoredBox(color: ScanProfileCodeScreen.darkSurface);
+    }
+
+    if (kIsWeb) {
+      if (_webCameraError) {
+        return const ColoredBox(color: ScanProfileCodeScreen.darkSurface);
+      }
+      final htmlView = QrWebBridge.buildWebScannerView(
+        sessionKey: _webSessionId,
+        onDetect: (raw) {
+          if (raw.isNotEmpty) handleScannedPayload(raw);
+        },
+        onStatus: (status) {
+          if (!mounted) return;
+          if (status == 'streaming') {
+            if (!_webCameraStreaming || _webCameraError) {
+              setState(() {
+                _webCameraStreaming = true;
+                _webCameraError = false;
+              });
+            }
+          } else if (status.startsWith('error')) {
+            if (!_webCameraError) {
+              setState(() {
+                _webCameraError = true;
+                _webCameraStreaming = false;
+              });
+            }
+          }
+        },
+      );
+      return Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox.expand(
+          child: htmlView ??
+              const ColoredBox(color: ScanProfileCodeScreen.darkCanvas),
+        ),
+      );
+    }
+
+    final controller = _controller;
+    if (controller == null) {
+      return const ColoredBox(color: ScanProfileCodeScreen.darkSurface);
+    }
+
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox.expand(
+        child: MobileScanner(
+          controller: controller,
+          fit: BoxFit.cover,
+          onDetect: _onDetect,
+          placeholderBuilder: (_) =>
+              const ColoredBox(color: ScanProfileCodeScreen.darkCanvas),
+          errorBuilder: (context, error) =>
+              const ColoredBox(color: ScanProfileCodeScreen.darkSurface),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopAppBar(AppStrings s, bool isAr, double topInset) {
+    final effectiveTitle = (widget.title != null && widget.title!.trim().isNotEmpty)
+        ? widget.title!.trim()
+        : s.tr('مسح الرمز', 'Scanner le code QR', 'Scan QR code');
+
+    return SizedBox(
+      key: const Key('scan-code-header'),
+      width: double.infinity,
+      height: topInset + 56.0,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(
+          key: const Key('scan-code-top-wrapper'),
+          width: double.infinity,
+          height: 56.0,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: Row(
               children: [
-                Icon(
-                  CupertinoIcons.camera,
-                  size: 32,
-                  color: tokens.mutedInk,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  kIsWeb
-                      ? s.tr(
-                          'اضغط لتفعيل الكاميرا واسمح بالوصول في المتصفح',
-                          'Appuyez pour activer la caméra dans le navigateur',
-                          'Tap to enable camera access in your browser',
-                        )
-                      : s.tr(
-                          'اضغط لإدخال رابط الحساب يدوياً',
-                          'Appuyez pour saisir un lien de profil',
-                          'Tap to enter a profile link',
+                Material(
+                  color: Colors.transparent,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    key: const Key('scan-code-back-btn'),
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: SizedBox(
+                      width: 44.0,
+                      height: 44.0,
+                      child: Center(
+                        child: Icon(
+                          isAr
+                              ? Icons.arrow_forward_rounded
+                              : Icons.arrow_back_rounded,
+                          color: Colors.white,
+                          size: 24.0,
                         ),
-                  textAlign: TextAlign.center,
-                  style: tokens.textSmRegular,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+                Expanded(
+                  child: Text(
+                    effectiveTitle,
+                    key: const Key('scan-code-title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17.0,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+                Material(
+                  color: Colors.transparent,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    key: const Key('scan-code-gallery-btn'),
+                    customBorder: const CircleBorder(),
+                    onTap: _pickImageAndAnalyze,
+                    child: Tooltip(
+                      message: s.tr(
+                        'اختيار صورة من المعرض',
+                        'Choisir une image',
+                        'Pick QR image',
+                      ),
+                      child: const SizedBox(
+                        width: 44.0,
+                        height: 44.0,
+                        child: Center(
+                          child: Icon(
+                            Icons.image_rounded,
+                            color: Colors.white,
+                            size: 24.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -675,174 +795,26 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     );
   }
 
-  Widget _buildViewfinder(
-    DlShareProfileTokens tokens,
-    AppStrings s, {
-    double maxSide = DlShareProfileLayout.scanFrameSize,
-  }) {
-    if (kIsWeb && _shouldUseLiveScanner) {
-      final Widget webChild;
-      if (_webCameraError) {
-        webChild = _buildCameraFallback(tokens, s);
-      } else {
-        final htmlView = QrWebBridge.buildWebScannerView(
-          sessionKey: _webSessionId,
-          onDetect: (raw) {
-            if (raw.isNotEmpty) handleScannedPayload(raw);
-          },
-          onStatus: (status) {
-            if (!mounted) return;
-            if (status == 'streaming') {
-              if (!_webCameraStreaming || _webCameraError) {
-                setState(() {
-                  _webCameraStreaming = true;
-                  _webCameraError = false;
-                });
-              }
-            } else if (status.startsWith('error')) {
-              if (!_webCameraError) {
-                setState(() {
-                  _webCameraError = true;
-                  _webCameraStreaming = false;
-                });
-              }
-            }
-          },
-        );
-        webChild = htmlView ?? ColoredBox(color: tokens.cardBackground);
-      }
-
-      return ConstrainedBox(
-        key: const Key('scan-code-viewfinder'),
-        constraints: BoxConstraints(
-          maxWidth: maxSide,
-        ),
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(tokens.radii.roundedXl),
-            child: webChild,
-          ),
-        ),
-      );
-    }
-
-    final Widget inner;
-    if (_shouldUseLiveScanner && _controller != null) {
-      inner = MobileScanner(
-        controller: _controller!,
-        fit: BoxFit.cover,
-        onDetect: _onDetect,
-        placeholderBuilder: (_) => ColoredBox(color: tokens.cardBackground),
-        errorBuilder: (context, error) => _buildCameraFallback(tokens, s),
-      );
-    } else {
-      inner = ColoredBox(color: tokens.cardBackground);
-    }
-
-    return ConstrainedBox(
-      key: const Key('scan-code-viewfinder'),
-      constraints: BoxConstraints(
-        maxWidth: maxSide,
-      ),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(tokens.radii.roundedXl),
-          child: ColoredBox(
-            color: tokens.cardBackground,
-            child: inner,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomControls(DlShareProfileTokens tokens) {
+  Widget _buildFlashButton() {
     final controller = _controller;
-
-    final Widget flashControl = controller != null
-        ? ValueListenableBuilder<MobileScannerState>(
-            valueListenable: controller,
-            builder: (context, state, _) {
-              final torchOn =
-                  kIsWeb ? _webTorchOn : (state.torchState == TorchState.on);
-              return _ScannerCircleControl(
-                key: const Key('scan-code-flash-btn'),
-                icon: torchOn
-                    ? Icons.flashlight_on_rounded
-                    : Icons.flashlight_off_rounded,
-                backgroundColor:
-                    torchOn ? tokens.ink : tokens.pillBackground,
-                iconColor:
-                    torchOn ? tokens.scaffoldBackground : tokens.ink,
-                borderRadius: tokens.radii.roundedFull,
-                onPressed: _toggleTorch,
-              );
-            },
-          )
-        : _ScannerCircleControl(
+    if (!kIsWeb && controller != null) {
+      return ValueListenableBuilder<MobileScannerState>(
+        valueListenable: controller,
+        builder: (context, state, _) {
+          final on = state.torchState == TorchState.on;
+          return _GlassTorchButton(
             key: const Key('scan-code-flash-btn'),
-            icon: _webTorchOn
-                ? Icons.flashlight_on_rounded
-                : Icons.flashlight_off_rounded,
-            backgroundColor:
-                _webTorchOn ? tokens.ink : tokens.pillBackground,
-            iconColor: _webTorchOn ? tokens.scaffoldBackground : tokens.ink,
-            borderRadius: tokens.radii.roundedFull,
+            active: on,
             onPressed: _toggleTorch,
           );
-
-    return SizedBox(
-      key: const Key('scan-code-controls-bar'),
-      width: double.infinity,
-      height: DlShareProfileLayout.bottomBarHeight,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxW = constraints.maxWidth;
-          final horizontalPadding = maxW < 320.0
-              ? 12.0
-              : DlShareProfileLayout.bottomBarPadding;
-          final controlsGap = maxW < 320.0
-              ? ((maxW - 24.0 - 192.0) / 2.0)
-                  .clamp(8.0, DlShareProfileLayout.cameraControlsGap)
-              : DlShareProfileLayout.cameraControlsGap;
-
-          return Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: DlShareProfileLayout.bottomBarPadding,
-            ),
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  flashControl,
-                  SizedBox(width: controlsGap),
-                  _ConcentricShutterButton(
-                    key: const Key('scan-code-shutter-btn'),
-                    outerColor: tokens.captureOuterColor,
-                    gapColor: tokens.captureGapColor,
-                    innerColor: tokens.captureInnerColor,
-                    borderRadius: tokens.radii.roundedFull,
-                    onPressed: _onShutterPressed,
-                  ),
-                  SizedBox(width: controlsGap),
-                  _ScannerCircleControl(
-                    key: const Key('scan-code-gallery-btn'),
-                    icon: Icons.image_rounded,
-                    backgroundColor: tokens.pillBackground,
-                    iconColor: tokens.ink,
-                    borderRadius: tokens.radii.roundedFull,
-                    onPressed: _pickImageAndAnalyze,
-                  ),
-                ],
-              ),
-            ),
-          );
         },
-      ),
+      );
+    }
+
+    return _GlassTorchButton(
+      key: const Key('scan-code-flash-btn'),
+      active: _webTorchOn,
+      onPressed: _toggleTorch,
     );
   }
 
@@ -853,126 +825,193 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
       builder: (context, _) {
         final s = _state.s;
         final isAr = s.isAr;
-        final tokens = DlShareProfileTokens.of(context);
         final mediaPadding = MediaQuery.paddingOf(context);
         final screenSize = MediaQuery.sizeOf(context);
-        final bottomInset =
-            DlShareProfileLayout.resolveBottomSafeInset(screenSize, mediaPadding);
+        final bottomInset = DlShareProfileLayout.resolveBottomSafeInset(
+          screenSize,
+          mediaPadding,
+        );
 
-        return Directionality(
-          textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
-          child: Scaffold(
-            backgroundColor: tokens.scaffoldBackground,
-            body: Column(
-              children: [
-                DlShareTopNavigation(
-                  tokens: tokens,
-                  headerKey: const Key('scan-code-header'),
-                  wrapperKey: const Key('scan-code-top-wrapper'),
-                  backButtonKey: const Key('scan-code-back-btn'),
-                  titleKey: const Key('scan-code-title'),
-                  title: widget.title,
-                  onBack: () => Navigator.of(context).maybePop(),
-                ),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 480.0),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final horizontalPadding =
-                                    constraints.maxWidth < 348.0
-                                        ? DlShareProfileLayout.p16
-                                        : DlShareProfileLayout
-                                            .screenHorizontalPadding;
-                                final maxViewfinderSide =
-                                    constraints.maxHeight < 395.0
-                                        ? (constraints.maxHeight - 84.0).clamp(
-                                            180.0,
-                                            DlShareProfileLayout.scanFrameSize,
-                                          )
-                                        : DlShareProfileLayout.scanFrameSize;
-                                final actualSide = (constraints.maxWidth -
-                                        horizontalPadding * 2)
-                                    .clamp(0.0, maxViewfinderSide);
-                                final groupHeight = actualSide +
-                                    DlShareProfileLayout.sectionGap +
-                                    DlShareProfileLayout.scanInstructionHeight;
-                                final topGap = ((constraints.maxHeight -
-                                            groupHeight) *
-                                        (121.0 / 167.0))
-                                    .clamp(0.0, double.infinity);
+        // Centered 270x270px square window (adapting gracefully only on ultra-small <318px screens)
+        final maxAllowedWidth = math.max(180.0, screenSize.width - 48.0);
+        final maxAllowedHeight = math.max(
+          180.0,
+          screenSize.height - (mediaPadding.top + 56.0) - (bottomInset + 148.0),
+        );
+        final cutoutSide = math.min(
+          ScanProfileCodeScreen.viewfinderSize,
+          math.min(maxAllowedWidth, maxAllowedHeight),
+        );
 
-                                return SingleChildScrollView(
-                                  physics: const BouncingScrollPhysics(),
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      minHeight: constraints.maxHeight,
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.light.copyWith(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: ScanProfileCodeScreen.darkCanvas,
+            systemNavigationBarIconBrightness: Brightness.light,
+          ),
+          child: Directionality(
+            textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+            child: Scaffold(
+              backgroundColor: ScanProfileCodeScreen.darkCanvas,
+              body: LayoutBuilder(
+                builder: (context, constraints) {
+                  final fullW = constraints.maxWidth;
+                  final fullH = constraints.maxHeight;
+                  // Dead-center horizontally, optically centered vertically
+                  final cutoutRect = Rect.fromCenter(
+                    center: Offset(fullW / 2.0, fullH * 0.46),
+                    width: cutoutSide,
+                    height: cutoutSide,
+                  );
+
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 1. Full-screen live camera preview underneath
+                      Positioned.fill(
+                        child: _buildFullScreenCameraLayer(s),
+                      ),
+
+                      // 2. Dark translucent vignette (0.65) + cutout + 4 rounded corner brackets + subtle pulse
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: AnimatedBuilder(
+                            animation: _laserController,
+                            builder: (context, _) {
+                              return CustomPaint(
+                                painter: _TrustWalletScannerOverlayPainter(
+                                  cutoutRect: cutoutRect,
+                                  bracketColor: _isHandlingCode
+                                      ? ScanProfileCodeScreen.activePulseRed
+                                      : Colors.white,
+                                  laserProgress: _laserController.value,
+                                  showLaser: !_webCameraError,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
+                      // Semantic / testable viewfinder target positioned at exact cutoutRect
+                      Positioned.fromRect(
+                        rect: cutoutRect,
+                        child: GestureDetector(
+                          key: const Key('scan-code-viewfinder'),
+                          behavior: HitTestBehavior.translucent,
+                          onTap: (kIsWeb && _webCameraError)
+                              ? _retryWebCamera
+                              : null,
+                          child: (kIsWeb && _webCameraError)
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20.0,
                                     ),
-                                    child: Padding(
-                                      padding: EdgeInsets.fromLTRB(
-                                        horizontalPadding,
-                                        topGap,
-                                        horizontalPadding,
-                                        16,
-                                      ),
-                                      child: Align(
-                                        alignment: Alignment.topCenter,
-                                        child: Column(
-                                          key: const Key('scan-code-content'),
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            _buildViewfinder(
-                                              tokens,
-                                              s,
-                                              maxSide: maxViewfinderSide,
-                                            ),
-                                            const SizedBox(
-                                              height: DlShareProfileLayout
-                                                  .sectionGap,
-                                            ),
-                                            ConstrainedBox(
-                                              constraints: const BoxConstraints(
-                                                maxWidth: DlShareProfileLayout
-                                                    .scanInstructionWidth,
-                                                minHeight: DlShareProfileLayout
-                                                    .scanInstructionHeight,
-                                              ),
-                                              child: SizedBox(
-                                                width: double.infinity,
-                                                child: Text(
-                                                  s.tr(
-                                                    'ضع الرمز في المنطقة العلوية.',
-                                                    'Placez le code dans la zone supérieure.',
-                                                    'Place the code in the upper area.',
-                                                  ),
-                                                  key: const Key(
-                                                      'scan-code-hint'),
-                                                  textAlign: TextAlign.center,
-                                                  style: tokens.textSmRegular,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          CupertinoIcons.camera_fill,
+                                          color: Colors.white70,
+                                          size: 32.0,
                                         ),
-                                      ),
+                                        const SizedBox(height: 10.0),
+                                        Text(
+                                          s.tr(
+                                            'اضغط لتفعيل الكاميرا',
+                                            'Appuyez pour activer la caméra',
+                                            'Tap to enable camera',
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                );
-                              },
-                            ),
-                          ),
-                          _buildBottomControls(tokens),
-                          if (bottomInset > 0) SizedBox(height: bottomInset),
-                        ],
+                                )
+                              : const SizedBox.expand(),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-              ],
+
+                      // 3. Minimalist Top App Bar
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: _buildTopAppBar(s, isAr, mediaPadding.top),
+                      ),
+
+                      // 4. Bottom Action Area ("إدخال الرمز يدوياً" + subtle Torch toggle)
+                      Positioned(
+                        left: 16.0,
+                        right: 16.0,
+                        bottom: bottomInset + 24.0,
+                        child: Column(
+                          key: const Key('scan-code-controls-bar'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildFlashButton(),
+                            const SizedBox(height: 20.0),
+                            Center(
+                              child: Material(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(999.0),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  key: const Key('scan-code-manual-btn'),
+                                  borderRadius: BorderRadius.circular(999.0),
+                                  onTap: _openManualCodeSheet,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18.0,
+                                      vertical: 12.0,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.edit_rounded,
+                                          color: Colors.white,
+                                          size: 18.0,
+                                        ),
+                                        const SizedBox(width: 8.0),
+                                        Flexible(
+                                          child: Text(
+                                            s.tr(
+                                              'إدخال الرمز يدوياً',
+                                              'Saisir le code manuellement',
+                                              'Enter code manually',
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14.0,
+                                              fontWeight: FontWeight.w500,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -981,46 +1020,37 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
   }
 }
 
-class _ScannerCircleControl extends StatelessWidget {
-  const _ScannerCircleControl({
-    required this.icon,
-    required this.backgroundColor,
-    required this.iconColor,
-    required this.borderRadius,
+class _GlassTorchButton extends StatelessWidget {
+  const _GlassTorchButton({
+    required this.active,
     required this.onPressed,
     super.key,
   });
 
-  final IconData icon;
-  final Color backgroundColor;
-  final Color iconColor;
-  final double borderRadius;
+  final bool active;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: backgroundColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
+      color: active
+          ? Colors.white
+          : const Color.fromRGBO(255, 255, 255, 0.14),
+      shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
+        customBorder: const CircleBorder(),
         onTap: onPressed,
-        customBorder: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(DlShareProfileLayout.p16),
-          child: SizedBox(
-            width: DlShareProfileLayout.cameraIconSize,
-            height: DlShareProfileLayout.cameraIconSize,
-            child: Center(
-              child: Icon(
-                icon,
-                size: DlShareProfileLayout.cameraIconSize,
-                color: iconColor,
-              ),
+        child: SizedBox(
+          width: 44.0,
+          height: 44.0,
+          child: Center(
+            child: Icon(
+              active
+                  ? Icons.flashlight_on_rounded
+                  : Icons.flashlight_off_rounded,
+              size: 20.0,
+              color: active ? Colors.black : Colors.white,
             ),
           ),
         ),
@@ -1029,84 +1059,128 @@ class _ScannerCircleControl extends StatelessWidget {
   }
 }
 
-class _ConcentricShutterButton extends StatefulWidget {
-  const _ConcentricShutterButton({
-    required this.outerColor,
-    required this.gapColor,
-    required this.innerColor,
-    required this.borderRadius,
-    required this.onPressed,
-    super.key,
+class _TrustWalletScannerOverlayPainter extends CustomPainter {
+  const _TrustWalletScannerOverlayPainter({
+    required this.cutoutRect,
+    required this.bracketColor,
+    required this.laserProgress,
+    required this.showLaser,
   });
 
-  final Color outerColor;
-  final Color gapColor;
-  final Color innerColor;
-  final double borderRadius;
-  final VoidCallback onPressed;
+  final Rect cutoutRect;
+  final Color bracketColor;
+  final double laserProgress;
+  final bool showLaser;
 
   @override
-  State<_ConcentricShutterButton> createState() =>
-      _ConcentricShutterButtonState();
-}
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
 
-class _ConcentricShutterButtonState extends State<_ConcentricShutterButton> {
-  bool _pressed = false;
+    const radius = ScanProfileCodeScreen.cornerRadius;
+    const arm = ScanProfileCodeScreen.cornerBracketLength;
+    const strokeW = ScanProfileCodeScreen.cornerStrokeWidth;
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onPressed,
-      child: AnimatedScale(
-        scale: _pressed ? 0.94 : 1.0,
-        duration: const Duration(milliseconds: 90),
-        curve: Curves.easeOut,
-        child: Container(
-          width: DlShareProfileLayout.captureOuterSize,
-          height: DlShareProfileLayout.captureOuterSize,
-          decoration: BoxDecoration(
-            color: widget.outerColor,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-          ),
-          child: Stack(
-            alignment: Alignment.topLeft,
-            textDirection: TextDirection.ltr,
-            children: [
-              Positioned(
-                top: DlShareProfileLayout.captureWhiteTop,
-                left: DlShareProfileLayout.captureWhiteLeft,
-                width: DlShareProfileLayout.captureWhiteSize,
-                height: DlShareProfileLayout.captureWhiteSize,
-                child: Container(
-                  key: const Key('scan-code-shutter-ring-white'),
-                  decoration: BoxDecoration(
-                    color: widget.gapColor,
-                    borderRadius: BorderRadius.circular(widget.borderRadius),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: DlShareProfileLayout.captureInnerTop,
-                left: DlShareProfileLayout.captureInnerLeft,
-                width: DlShareProfileLayout.captureInnerSize,
-                height: DlShareProfileLayout.captureInnerSize,
-                child: Container(
-                  key: const Key('scan-code-shutter-core'),
-                  decoration: BoxDecoration(
-                    color: widget.innerColor,
-                    borderRadius: BorderRadius.circular(widget.borderRadius),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final rrect = RRect.fromRectAndRadius(
+      cutoutRect,
+      const Radius.circular(radius),
     );
+
+    // 1. Dark translucent vignette (rgba(0, 0, 0, 0.65)) with crisp cutout
+    final maskPath = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addRRect(rrect);
+    final maskPaint = Paint()
+      ..color = ScanProfileCodeScreen.maskOverlayColor
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(maskPath, maskPaint);
+
+    // 2. Subtle animated Crimson (#E31B23) laser pulse inside the cutout
+    if (showLaser) {
+      final margin = 20.0;
+      final minY = cutoutRect.top + radius;
+      final maxY = cutoutRect.bottom - radius;
+      if (maxY > minY) {
+        final y = minY + (maxY - minY) * laserProgress;
+        final laserRect = Rect.fromLTRB(
+          cutoutRect.left + margin,
+          y - 1.0,
+          cutoutRect.right - margin,
+          y + 1.0,
+        );
+        final laserPaint = Paint()
+          ..shader = LinearGradient(
+            colors: [
+              ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.0),
+              ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.72),
+              ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.0),
+            ],
+          ).createShader(laserRect);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(laserRect, const Radius.circular(2.0)),
+          laserPaint,
+        );
+      }
+    }
+
+    // 3. Four outer rounded corner brackets (6px stroke, 28px arc, 48px arm, round caps)
+    final l = cutoutRect.left;
+    final t = cutoutRect.top;
+    final r = cutoutRect.right;
+    final b = cutoutRect.bottom;
+    final clampedArm = math.min(arm, cutoutRect.width * 0.42);
+    final clampedRadius = math.min(radius, clampedArm - 4.0);
+
+    final bracketPaint = Paint()
+      ..color = bracketColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeW
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final cornersPath = Path()
+      // Top-left
+      ..moveTo(l, t + clampedArm)
+      ..lineTo(l, t + clampedRadius)
+      ..arcToPoint(
+        Offset(l + clampedRadius, t),
+        radius: Radius.circular(clampedRadius),
+      )
+      ..lineTo(l + clampedArm, t)
+      // Top-right
+      ..moveTo(r - clampedArm, t)
+      ..lineTo(r - clampedRadius, t)
+      ..arcToPoint(
+        Offset(r, t + clampedRadius),
+        radius: Radius.circular(clampedRadius),
+      )
+      ..lineTo(r, t + clampedArm)
+      // Bottom-left
+      ..moveTo(l, b - clampedArm)
+      ..lineTo(l, b - clampedRadius)
+      ..arcToPoint(
+        Offset(l + clampedRadius, b),
+        radius: Radius.circular(clampedRadius),
+      )
+      ..lineTo(l + clampedArm, b)
+      // Bottom-right
+      ..moveTo(r - clampedArm, b)
+      ..lineTo(r - clampedRadius, b)
+      ..arcToPoint(
+        Offset(r, b - clampedRadius),
+        radius: Radius.circular(clampedRadius),
+      )
+      ..lineTo(r, b - clampedArm);
+
+    canvas.drawPath(cornersPath, bracketPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrustWalletScannerOverlayPainter oldDelegate) {
+    return oldDelegate.cutoutRect != cutoutRect ||
+        oldDelegate.bracketColor != bracketColor ||
+        oldDelegate.laserProgress != laserProgress ||
+        oldDelegate.showLaser != showLaser;
   }
 }
 
@@ -1158,104 +1232,97 @@ class _ManualCodeEntrySheetState extends State<_ManualCodeEntrySheet> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
+          padding: EdgeInsets.fromLTRB(
+            20,
+            14,
+            20,
+            MediaQuery.viewInsetsOf(context).bottom + 24,
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  height: 56,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 40, height: 40),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            s.tr(
-                              'فتح ملف شخصي بالرابط',
-                              'Ouvrir un profil par lien',
-                              'Open profile link',
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: palette.ink,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ApoloDlIconCircleButton(
-                          icon: CupertinoIcons.xmark,
-                          iconSize: 18,
-                          onPressed: () => Navigator.of(context).maybePop(),
-                        ),
-                      ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: palette.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                s.tr(
+                  'إدخال الرمز يدوياً',
+                  'Saisir le code manuellement',
+                  'Enter code manually',
+                ),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: palette.ink,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                s.tr(
+                  'الصق رابط الحساب (apolo.ma/users/...) أو اكتب @username',
+                  'Collez un lien Apolo ou saisissez @identifiant',
+                  'Paste an Apolo profile link or enter @handle',
+                ),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: palette.muted,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: TextField(
+                  key: const Key('scan-manual-input'),
+                  controller: _inputController,
+                  autofocus: true,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.go,
+                  onSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: 'https://apolo.ma/users/77  •  @username',
+                    errorText: _errorText,
+                    filled: true,
+                    fillColor: palette.surfaceSubtle,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: palette.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: palette.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: palette.ink, width: 1.4),
                     ),
                   ),
                 ),
-                const ApoloDlSeparator(),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        s.tr(
-                          'ألصق رابط ملف Apolo أو اسم المستخدم لفتحه مباشرة.',
-                          'Collez le lien d’un profil Apolo ou un identifiant @.',
-                          'Paste an Apolo profile link or @handle to open it directly.',
-                        ),
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          height: 1.45,
-                          color: palette.muted,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        key: const Key('scan-manual-input'),
-                        controller: _inputController,
-                        textDirection: TextDirection.ltr,
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.go,
-                        decoration: InputDecoration(
-                          hintText: 'https://apolo.ma/users/42',
-                          errorText: _errorText,
-                          filled: true,
-                          fillColor: palette.groupCard,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 14,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        onSubmitted: (_) => _submit(),
-                      ),
-                      const SizedBox(height: 18),
-                      ApoloDlButton(
-                        key: const Key('scan-manual-submit'),
-                        label: s.tr('فتح', 'Ouvrir', 'Open'),
-                        variant: ApoloDlButtonVariant.primary,
-                        borderRadius: 999,
-                        fullWidth: true,
-                        onPressed: _submit,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              ApoloDlButton(
+                key: const Key('scan-manual-submit'),
+                label: s.tr('فتح الحساب', 'Ouvrir le profil', 'Open profile'),
+                variant: ApoloDlButtonVariant.primary,
+                borderRadius: 999,
+                fullWidth: true,
+                onPressed: _submit,
+              ),
+            ],
           ),
         ),
       ),

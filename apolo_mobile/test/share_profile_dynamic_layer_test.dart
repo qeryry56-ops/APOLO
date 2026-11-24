@@ -322,9 +322,8 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(ScanProfileCodeScreen), findsOneWidget);
         expect(find.byKey(const Key('scan-code-viewfinder')), findsOneWidget);
-        expect(find.byKey(const Key('scan-code-hint')), findsOneWidget);
         expect(find.byKey(const Key('scan-code-flash-btn')), findsOneWidget);
-        expect(find.byKey(const Key('scan-code-shutter-btn')), findsOneWidget);
+        expect(find.byKey(const Key('scan-code-manual-btn')), findsOneWidget);
         expect(find.byKey(const Key('scan-code-gallery-btn')), findsOneWidget);
         expect(find.byKey(const Key('scan-code-back-btn')), findsOneWidget);
 
@@ -372,7 +371,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.tap(find.byKey(const Key('scan-code-manual-btn')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('scan-manual-input')), findsOneWidget);
@@ -395,7 +394,7 @@ void main() {
         const ScanProfileCodeScreen(enableLiveCamera: false),
       );
 
-      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.tap(find.byKey(const Key('scan-code-manual-btn')));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -426,7 +425,7 @@ void main() {
         const ScanProfileCodeScreen(enableLiveCamera: false),
       );
 
-      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.tap(find.byKey(const Key('scan-code-manual-btn')));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -454,7 +453,7 @@ void main() {
         tester,
         const ScanProfileCodeScreen(enableLiveCamera: false),
       );
-      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.tap(find.byKey(const Key('scan-code-manual-btn')));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('scan-manual-input')),
@@ -468,7 +467,8 @@ void main() {
       expect(find.text('@morocco_tech'), findsOneWidget);
     });
 
-    testWidgets('ScanProfileCodeScreen matches Figma 375x812 dimensions cleanly',
+    testWidgets(
+        'ScanProfileCodeScreen matches Trust Wallet 270x270 centered dark viewfinder specs',
         (tester) async {
       await pumpScreen(
         tester,
@@ -482,23 +482,12 @@ void main() {
           tester.getRect(find.byKey(const Key('scan-code-header')));
       final topWrapperRect =
           tester.getRect(find.byKey(const Key('scan-code-top-wrapper')));
-      final titleRect =
-          tester.getRect(find.byKey(const Key('scan-code-title')));
       final viewfinderRect =
           tester.getRect(find.byKey(const Key('scan-code-viewfinder')));
-      final hintRect = tester.getRect(find.byKey(const Key('scan-code-hint')));
-      final contentRect =
-          tester.getRect(find.byKey(const Key('scan-code-content')));
-      final controlsBarRect =
-          tester.getRect(find.byKey(const Key('scan-code-controls-bar')));
       final flashRect =
           tester.getRect(find.byKey(const Key('scan-code-flash-btn')));
-      final shutterRect =
-          tester.getRect(find.byKey(const Key('scan-code-shutter-btn')));
-      final shutterRingWhiteRect =
-          tester.getRect(find.byKey(const Key('scan-code-shutter-ring-white')));
-      final shutterCoreRect =
-          tester.getRect(find.byKey(const Key('scan-code-shutter-core')));
+      final manualBtnRect =
+          tester.getRect(find.byKey(const Key('scan-code-manual-btn')));
       final galleryRect =
           tester.getRect(find.byKey(const Key('scan-code-gallery-btn')));
 
@@ -507,41 +496,21 @@ void main() {
       expect(headerRect.height, 104);
       expect(topWrapperRect.width, 375);
       expect(topWrapperRect.height, 56);
-      expect(titleRect.width, 231);
-      expect(titleRect.height, 24);
+      expect(find.text('Scan QR code'), findsOneWidget);
+      expect(find.text('Enter code manually'), findsOneWidget);
 
-      expect(viewfinderRect.width, 311);
-      expect(viewfinderRect.height, 311);
-      expect(viewfinderRect.top, closeTo(225, 2));
-      expect(hintRect.width, 311);
-      expect(hintRect.height, 20);
-      expect(hintRect.top - viewfinderRect.bottom, closeTo(32, 1));
-      expect(contentRect.height, closeTo(363, 1));
-
-      expect(controlsBarRect.top, 634);
-      expect(controlsBarRect.width, 375);
-      expect(controlsBarRect.height, 144);
-
-      expect(flashRect.width, 56);
-      expect(flashRect.height, 56);
+      expect(viewfinderRect.width, 270);
+      expect(viewfinderRect.height, 270);
+      expect(viewfinderRect.center.dx, closeTo(187.5, 0.5));
+      expect(flashRect.width, 44);
+      expect(flashRect.height, 44);
+      expect(galleryRect.width, 44);
+      expect(galleryRect.height, 44);
+      expect(manualBtnRect.center.dx, closeTo(187.5, 0.5));
+      expect(manualBtnRect.top, greaterThan(viewfinderRect.bottom));
       expect(find.byIcon(Icons.flashlight_off_rounded), findsOneWidget);
-      expect(galleryRect.width, 56);
-      expect(galleryRect.height, 56);
       expect(find.byIcon(Icons.image_rounded), findsOneWidget);
-
-      expect(shutterRect.width, 80);
-      expect(shutterRect.height, 80);
-      expect(shutterRingWhiteRect.width, 72);
-      expect(shutterRingWhiteRect.height, 72);
-      expect(shutterRingWhiteRect.top - shutterRect.top, 4);
-      expect(shutterRingWhiteRect.left - shutterRect.left, 4.5);
-      expect(shutterCoreRect.width, 64);
-      expect(shutterCoreRect.height, 64);
-      expect(shutterCoreRect.top - shutterRect.top, 8);
-      expect(shutterCoreRect.left - shutterRect.left, 8.5);
-
-      expect(shutterRect.left - flashRect.right, closeTo(32, 1));
-      expect(galleryRect.left - shutterRect.right, closeTo(32, 1));
+      expect(find.byIcon(Icons.edit_rounded), findsOneWidget);
     });
 
     testWidgets(
@@ -712,8 +681,11 @@ void main() {
       expect(scanHeaderRect.height, 56);
       expect(scanTopWrapperRect.top, 0);
       expect(scanTopWrapperRect.width, 393);
-      expect(scanViewfinderRect.width, 311);
-      expect(scanControlsBarRect.height, 144);
+      expect(scanViewfinderRect.width, 270);
+      expect(scanViewfinderRect.center.dx, closeTo(196.5, 0.5));
+      expect(scanControlsBarRect.width, 361);
+      expect(find.text('مسح الرمز'), findsOneWidget);
+      expect(find.text('إدخال الرمز يدوياً'), findsOneWidget);
 
       const phoneSizes = <Size>[
         Size(320, 568),
