@@ -358,20 +358,27 @@ class ScanProfileCodeScreen extends StatefulWidget {
 }
 
 class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
+  static int _nextWebSessionId = 1;
+
   final AppState _state = AppState();
   MobileScannerController? _controller;
+  late int _webSessionId;
+  bool _webCameraStreaming = false;
+  bool _webCameraError = false;
   bool _isHandlingCode = false;
   bool _pickingGallery = false;
   bool _webTorchOn = false;
 
   bool get _shouldUseLiveScanner =>
       widget.enableLiveCamera &&
-      !WidgetsBinding.instance.runtimeType.toString().contains('Test');
+      (kIsWeb ||
+          !WidgetsBinding.instance.runtimeType.toString().contains('Test'));
 
   @override
   void initState() {
     super.initState();
-    if (_shouldUseLiveScanner) {
+    _webSessionId = _nextWebSessionId++;
+    if (_shouldUseLiveScanner && !kIsWeb) {
       _controller = MobileScannerController(
         detectionSpeed: DetectionSpeed.noDuplicates,
         facing: CameraFacing.back,
@@ -382,6 +389,9 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
 
   @override
   void dispose() {
+    if (kIsWeb) {
+      QrWebBridge.stopWebScanner();
+    }
     final controller = _controller;
     _controller = null;
     if (controller != null) {
@@ -390,6 +400,15 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
       } catch (_) {}
     }
     super.dispose();
+  }
+
+  void _retryWebCamera() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _webCameraError = false;
+      _webCameraStreaming = false;
+      _webSessionId = _nextWebSessionId++;
+    });
   }
 
   void _showSnack(String message, {SnackBarAction? action}) {
@@ -524,9 +543,11 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     HapticFeedback.mediumImpact();
     final s = _state.s;
     final controller = _controller;
-    final cameraActive = controller != null &&
-        controller.value.isRunning &&
-        controller.value.error == null;
+    final cameraActive = kIsWeb
+        ? (_shouldUseLiveScanner && _webCameraStreaming && !_webCameraError)
+        : (controller != null &&
+            controller.value.isRunning &&
+            controller.value.error == null);
 
     if (!cameraActive) {
       await _openManualCodeSheet();
@@ -616,7 +637,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
   Widget _buildCameraFallback(DlShareProfileTokens tokens, AppStrings s) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: _openManualCodeSheet,
+      onTap: kIsWeb ? _retryWebCamera : _openManualCodeSheet,
       child: ColoredBox(
         color: tokens.cardBackground,
         child: Center(
@@ -632,11 +653,17 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  s.tr(
-                    'اضغط لإدخال رابط الحساب يدوياً',
-                    'Appuyez pour saisir un lien de profil',
-                    'Tap to enter a profile link',
-                  ),
+                  kIsWeb
+                      ? s.tr(
+                          'اضغط لتفعيل الكاميرا واسمح بالوصول في المتصفح',
+                          'Appuyez pour activer la caméra dans le navigateur',
+                          'Tap to enable camera access in your browser',
+                        )
+                      : s.tr(
+                          'اضغط لإدخال رابط الحساب يدوياً',
+                          'Appuyez pour saisir un lien de profil',
+                          'Tap to enter a profile link',
+                        ),
                   textAlign: TextAlign.center,
                   style: tokens.textSmRegular,
                 ),
@@ -653,6 +680,53 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     AppStrings s, {
     double maxSide = DlShareProfileLayout.scanFrameSize,
   }) {
+    if (kIsWeb && _shouldUseLiveScanner) {
+      final Widget webChild;
+      if (_webCameraError) {
+        webChild = _buildCameraFallback(tokens, s);
+      } else {
+        final htmlView = QrWebBridge.buildWebScannerView(
+          sessionKey: _webSessionId,
+          onDetect: (raw) {
+            if (raw.isNotEmpty) handleScannedPayload(raw);
+          },
+          onStatus: (status) {
+            if (!mounted) return;
+            if (status == 'streaming') {
+              if (!_webCameraStreaming || _webCameraError) {
+                setState(() {
+                  _webCameraStreaming = true;
+                  _webCameraError = false;
+                });
+              }
+            } else if (status.startsWith('error')) {
+              if (!_webCameraError) {
+                setState(() {
+                  _webCameraError = true;
+                  _webCameraStreaming = false;
+                });
+              }
+            }
+          },
+        );
+        webChild = htmlView ?? ColoredBox(color: tokens.cardBackground);
+      }
+
+      return ConstrainedBox(
+        key: const Key('scan-code-viewfinder'),
+        constraints: BoxConstraints(
+          maxWidth: maxSide,
+        ),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(tokens.radii.roundedXl),
+            child: webChild,
+          ),
+        ),
+      );
+    }
+
     final Widget inner;
     if (_shouldUseLiveScanner && _controller != null) {
       inner = MobileScanner(

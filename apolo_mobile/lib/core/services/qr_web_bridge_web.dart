@@ -2,11 +2,54 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
+import 'dart:ui_web' as ui_web;
+
+import 'package:flutter/widgets.dart';
 
 /// Flutter Web JS-interop bridge to `window.ApoloQr` defined in `web/index.html`.
 abstract final class QrWebBridge {
+  static final Set<String> _registeredViewTypes = <String>{};
+
   static JSObject? get _qr =>
       globalContext.getProperty<JSObject?>('ApoloQr'.toJS);
+
+  static Widget? buildWebScannerView({
+    required int sessionKey,
+    required void Function(String code) onDetect,
+    required void Function(String status) onStatus,
+  }) {
+    final viewType = 'apolo-qr-camera-view-$sessionKey';
+    if (!_registeredViewTypes.contains(viewType)) {
+      _registeredViewTypes.add(viewType);
+      ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
+        final onDetectJs = ((JSString raw) {
+          final val = raw.toDart.trim();
+          if (val.isNotEmpty) onDetect(val);
+        }).toJS;
+        final onStatusJs = ((JSString st) {
+          onStatus(st.toDart);
+        }).toJS;
+
+        final el = _qr?.callMethod<JSObject>(
+          'mountCameraView'.toJS,
+          viewId.toJS,
+          onDetectJs,
+          onStatusJs,
+        );
+        return el ?? JSObject();
+      });
+    }
+    return HtmlElementView(
+      key: ValueKey<String>(viewType),
+      viewType: viewType,
+    );
+  }
+
+  static void stopWebScanner() {
+    try {
+      _qr?.callMethod<JSAny?>('stopCameraView'.toJS);
+    } catch (_) {}
+  }
 
   static Future<String?> decodeImageBytes(Uint8List bytes) async {
     if (bytes.isEmpty) return null;

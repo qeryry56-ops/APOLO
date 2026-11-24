@@ -1,7 +1,18 @@
 import 'dart:typed_data';
 
-/// Non-web stub for browser QR image decoding, frame capture, torch, and URL cleanup.
+import 'package:flutter/widgets.dart';
+
+/// Non-web stub for browser QR camera view, image decoding, torch, and URL cleanup.
 abstract final class QrWebBridge {
+  static Widget? buildWebScannerView({
+    required int sessionKey,
+    required void Function(String code) onDetect,
+    required void Function(String status) onStatus,
+  }) =>
+      null;
+
+  static void stopWebScanner() {}
+
   static Future<String?> decodeImageBytes(Uint8List bytes) async => null;
 
   static Future<String?> captureLiveVideoQr() async => null;

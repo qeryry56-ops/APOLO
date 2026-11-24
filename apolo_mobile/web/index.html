@@ -143,7 +143,41 @@
         return '';
       }
 
+      var activeStream = null;
+      var activeVideo = null;
+      var scanTimer = null;
+      var scanCanvas = null;
+      var scanCtx = null;
+      var scanBusy = false;
+
+      function stopCameraInternal() {
+        if (scanTimer) {
+          clearInterval(scanTimer);
+          scanTimer = null;
+        }
+        scanBusy = false;
+        if (activeStream) {
+          try {
+            var tracks = activeStream.getTracks();
+            for (var i = 0; i < tracks.length; i++) {
+              tracks[i].stop();
+            }
+          } catch (_) {}
+          activeStream = null;
+        }
+        if (activeVideo) {
+          try {
+            activeVideo.pause();
+            activeVideo.srcObject = null;
+          } catch (_) {}
+          activeVideo = null;
+        }
+      }
+
       function findActiveVideo() {
+        if (activeVideo && activeVideo.videoWidth > 0 && activeVideo.videoHeight > 0) {
+          return activeVideo;
+        }
         var vids = document.querySelectorAll('video');
         for (var i = vids.length - 1; i >= 0; i--) {
           if (vids[i].videoWidth > 0 && vids[i].videoHeight > 0) return vids[i];
@@ -152,6 +186,115 @@
       }
 
       window.ApoloQr = {
+        mountCameraView: function(viewId, onDetect, onStatus) {
+          stopCameraInternal();
+          loadJsQr();
+
+          var wrap = document.createElement('div');
+          wrap.style.cssText = 'width:100%;height:100%;position:relative;overflow:hidden;border-radius:16px;background:#EEEEEE;';
+
+          var vid = document.createElement('video');
+          vid.setAttribute('playsinline', 'true');
+          vid.setAttribute('webkit-playsinline', 'true');
+          vid.setAttribute('autoplay', 'true');
+          vid.setAttribute('muted', 'true');
+          vid.playsInline = true;
+          vid.muted = true;
+          vid.autoplay = true;
+          vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;';
+          wrap.appendChild(vid);
+          activeVideo = vid;
+
+          (async function() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+              if (onStatus) onStatus('error:unsupported');
+              return;
+            }
+            var stream = null;
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                  facingMode: { ideal: 'environment' },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 }
+                }
+              });
+            } catch (_) {
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                  audio: false,
+                  video: true
+                });
+              } catch (err2) {
+                if (onStatus) onStatus('error:' + ((err2 && err2.name) || 'denied'));
+                return;
+              }
+            }
+
+            if (activeVideo !== vid) {
+              try {
+                stream.getTracks().forEach(function(t) { t.stop(); });
+              } catch (_) {}
+              return;
+            }
+
+            activeStream = stream;
+            vid.onloadedmetadata = function() {
+              try { vid.play(); } catch (_) {}
+            };
+            vid.srcObject = stream;
+            try {
+              await vid.play();
+            } catch (_) {}
+            if (onStatus) onStatus('streaming');
+
+            if (!scanCanvas) {
+              scanCanvas = document.createElement('canvas');
+              scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
+            }
+
+            scanTimer = setInterval(async function() {
+              if (scanBusy || !activeVideo || activeVideo.videoWidth <= 0 || activeVideo.videoHeight <= 0) {
+                return;
+              }
+              scanBusy = true;
+              try {
+                var hit = await detectNative(activeVideo);
+                if (hit) {
+                  if (onDetect) onDetect(hit);
+                  return;
+                }
+                if (window.jsQR && scanCanvas && scanCtx) {
+                  var vw = activeVideo.videoWidth;
+                  var vh = activeVideo.videoHeight;
+                  var maxD = 640;
+                  var sc = (vw > maxD || vh > maxD) ? (maxD / Math.max(vw, vh)) : 1;
+                  var cw = Math.max(1, Math.round(vw * sc));
+                  var ch = Math.max(1, Math.round(vh * sc));
+                  if (scanCanvas.width !== cw || scanCanvas.height !== ch) {
+                    scanCanvas.width = cw;
+                    scanCanvas.height = ch;
+                  }
+                  scanCtx.drawImage(activeVideo, 0, 0, cw, ch);
+                  var data = scanCtx.getImageData(0, 0, cw, ch);
+                  var res = window.jsQR(data.data, cw, ch, { inversionAttempts: 'attemptBoth' });
+                  if (res && res.data && res.data.trim()) {
+                    if (onDetect) onDetect(res.data.trim());
+                  }
+                }
+              } catch (_) {
+              } finally {
+                scanBusy = false;
+              }
+            }, 220);
+          })();
+
+          return wrap;
+        },
+        stopCameraView: function() {
+          stopCameraInternal();
+        },
         decodeBase64: async function(b64) {
           try {
             var bin = atob(b64);
