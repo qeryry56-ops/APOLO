@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config/app_config.dart';
+import '../core/services/qr_web_bridge.dart';
 import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_qr_code.dart';
@@ -13,6 +15,7 @@ import '../widgets/dl_settings_kit.dart';
 import '../widgets/dl_share_top_nav.dart';
 import 'ad_detail_screen.dart';
 import 'seller_profile_screen.dart';
+import 'store_detail_screen.dart';
 
 /// Dynamic Layer v5.1 QR scanner screen (`Share profile / Default` Camera Scan mode).
 /// Uses [DlShareProfileTokens], [DlShareProfileLayout], and [DlShareTopNavigation]
@@ -30,6 +33,326 @@ class ScanProfileCodeScreen extends StatefulWidget {
   final bool enableLiveCamera;
   final void Function(String rawValue)? onCodeScanned;
 
+  /// Resolves a parsed [ApoloQrTarget] against live Apolo endpoints and opens
+  /// the matching profile, store, or listing screen. Used by both the in-app
+  /// QR scanner and cold-start deep links (`SplashScreen`).
+  static Future<void> navigateToQrTarget(
+    BuildContext context,
+    ApoloQrTarget target, {
+    bool replaceCurrentRoute = true,
+  }) async {
+    final state = AppState();
+    final s = state.s;
+
+    void showToast(String message) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(message),
+          ),
+        );
+    }
+
+    Future<void> openRoute(Widget page) async {
+      if (!context.mounted) return;
+      final route = MaterialPageRoute<void>(builder: (_) => page);
+      if (replaceCurrentRoute) {
+        await Navigator.of(context).pushReplacement(route);
+      } else {
+        await Navigator.of(context).push(route);
+      }
+    }
+
+    switch (target.type) {
+      case ApoloQrTargetType.user:
+        final sellerId = target.id!;
+        final myId = int.tryParse('${state.currentUser?['id'] ?? ''}');
+        if (myId != null && myId == sellerId) {
+          showToast(
+            s.tr(
+              'هذا هو ملفك الشخصي الحالي',
+              'Ceci est déjà votre profil',
+              'This is your own profile',
+            ),
+          );
+          if (replaceCurrentRoute && context.mounted) {
+            await Navigator.of(context).maybePop();
+          }
+          return;
+        }
+
+        String name = (target.displayName != null &&
+                target.displayName!.trim().isNotEmpty)
+            ? target.displayName!.trim()
+            : (target.handle != null && target.handle!.trim().isNotEmpty
+                ? target.handle!.trim()
+                : s.tr(
+                    'مستخدم Apolo #$sellerId',
+                    'Membre Apolo #$sellerId',
+                    'Apolo Member #$sellerId',
+                  ));
+        String? handle = target.handle;
+        String? avatar;
+        String? phone;
+        String? city;
+        Map<String, dynamic>? initialAd;
+
+        try {
+          final res = await state.api.dio.get(
+            '/ads',
+            queryParameters: {'per_page': 1, 'seller_id': sellerId},
+          );
+          if (res.data is Map && res.data['data'] is List) {
+            final list = res.data['data'] as List;
+            if (list.isNotEmpty && list.first is Map) {
+              final firstAd = Map<String, dynamic>.from(list.first as Map);
+              initialAd = firstAd;
+              final user = firstAd['user'] is Map
+                  ? Map<String, dynamic>.from(firstAd['user'] as Map)
+                  : null;
+              final fetchedName =
+                  (user?['name'] ?? firstAd['seller_name'] ?? '')
+                      .toString()
+                      .trim();
+              if (fetchedName.isNotEmpty) name = fetchedName;
+              final fetchedUsername =
+                  (user?['username'] ?? '').toString().trim();
+              if (fetchedUsername.isNotEmpty) handle = fetchedUsername;
+              final fetchedAvatar =
+                  (user?['avatar'] ?? firstAd['seller_avatar'] ?? '')
+                      .toString()
+                      .trim();
+              if (fetchedAvatar.isNotEmpty) avatar = fetchedAvatar;
+              final fetchedPhone =
+                  (user?['phone'] ?? firstAd['phone'] ?? '').toString().trim();
+              if (fetchedPhone.isNotEmpty) phone = fetchedPhone;
+              final rawCity = firstAd['city'] is Map
+                  ? firstAd['city']['name']
+                  : (firstAd['city_name'] ?? user?['city']);
+              final fetchedCity = rawCity?.toString().trim();
+              if (fetchedCity != null && fetchedCity.isNotEmpty) {
+                city = fetchedCity;
+              }
+            }
+          }
+        } catch (_) {}
+
+        await openRoute(
+          SellerProfileScreen(
+            sellerId: sellerId,
+            sellerName: name,
+            sellerHandle: handle,
+            sellerAvatar: avatar,
+            sellerPhone: phone,
+            sellerCity: city,
+            initialAd: initialAd,
+          ),
+        );
+        return;
+
+      case ApoloQrTargetType.handle:
+        final cleanHandle = (target.handle ?? '')
+            .trim()
+            .replaceFirst(RegExp(r'^@+'), '')
+            .trim();
+        final myUsername = (state.currentUser?['username'] ?? '')
+            .toString()
+            .trim()
+            .replaceFirst(RegExp(r'^@+'), '')
+            .toLowerCase();
+        if (myUsername.isNotEmpty &&
+            cleanHandle.toLowerCase() == myUsername) {
+          showToast(
+            s.tr(
+              'هذا هو ملفك الشخصي الحالي',
+              'Ceci est déjà votre profil',
+              'This is your own profile',
+            ),
+          );
+          if (replaceCurrentRoute && context.mounted) {
+            await Navigator.of(context).maybePop();
+          }
+          return;
+        }
+
+        // 1. Check if this handle is an official PRO store subdomain
+        try {
+          final encoded = Uri.encodeComponent(cleanHandle);
+          final storeRes = await state.api.dio.get('/stores/$encoded');
+          if (storeRes.data is Map &&
+              storeRes.data['status'] == 'success' &&
+              storeRes.data['store'] != null) {
+            await openRoute(StoreDetailScreen(subdomain: cleanHandle));
+            return;
+          }
+        } catch (_) {}
+
+        // 2. Search ads for a matching seller account
+        int? matchedSellerId;
+        String matchedName = (target.displayName != null &&
+                target.displayName!.trim().isNotEmpty)
+            ? target.displayName!.trim()
+            : cleanHandle;
+        String? matchedAvatar;
+        String? matchedPhone;
+        String? matchedCity;
+        Map<String, dynamic>? matchedAd;
+
+        try {
+          final searchRes = await state.api.dio.get(
+            '/ads',
+            queryParameters: {'per_page': 10, 'search': cleanHandle},
+          );
+          if (searchRes.data is Map && searchRes.data['data'] is List) {
+            final list = searchRes.data['data'] as List;
+            for (final rawItem in list) {
+              if (rawItem is! Map) continue;
+              final ad = Map<String, dynamic>.from(rawItem);
+              final user = ad['user'] is Map
+                  ? Map<String, dynamic>.from(ad['user'] as Map)
+                  : null;
+              final uHandle =
+                  (user?['username'] ?? '').toString().trim().toLowerCase();
+              final uName = (user?['name'] ?? ad['seller_name'] ?? '')
+                  .toString()
+                  .trim();
+              final normalizedUName = uName
+                  .toLowerCase()
+                  .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+                  .replaceAll(RegExp(r'^_+|_+$'), '');
+              if (uHandle == cleanHandle.toLowerCase() ||
+                  normalizedUName == cleanHandle.toLowerCase()) {
+                final uid =
+                    int.tryParse('${user?['id'] ?? ad['user_id'] ?? ''}');
+                if (uid != null && uid > 0) {
+                  matchedSellerId = uid;
+                  if (uName.isNotEmpty) matchedName = uName;
+                  final av = (user?['avatar'] ?? ad['seller_avatar'] ?? '')
+                      .toString()
+                      .trim();
+                  if (av.isNotEmpty) matchedAvatar = av;
+                  final ph = (user?['phone'] ?? ad['phone'] ?? '')
+                      .toString()
+                      .trim();
+                  if (ph.isNotEmpty) matchedPhone = ph;
+                  final rawCity = ad['city'] is Map
+                      ? ad['city']['name']
+                      : (ad['city_name'] ?? user?['city']);
+                  final cStr = rawCity?.toString().trim();
+                  if (cStr != null && cStr.isNotEmpty) matchedCity = cStr;
+                  matchedAd = ad;
+                  break;
+                }
+              }
+            }
+          }
+        } catch (_) {}
+
+        final resolvedId = matchedSellerId ??
+            (100000 +
+                (cleanHandle
+                        .toLowerCase()
+                        .codeUnits
+                        .fold<int>(0, (h, c) => ((h * 31) + c) & 0x3FFFFFFF) %
+                    899999));
+
+        await openRoute(
+          SellerProfileScreen(
+            sellerId: resolvedId,
+            sellerName: matchedName,
+            sellerHandle: cleanHandle,
+            sellerAvatar: matchedAvatar,
+            sellerPhone: matchedPhone,
+            sellerCity: matchedCity,
+            initialAd: matchedAd,
+          ),
+        );
+        return;
+
+      case ApoloQrTargetType.store:
+        await openRoute(StoreDetailScreen(subdomain: target.handle!));
+        return;
+
+      case ApoloQrTargetType.ad:
+        await openRoute(AdDetailScreen(adId: target.id!));
+        return;
+
+      case ApoloQrTargetType.external:
+      case ApoloQrTargetType.unknown:
+        if (!context.mounted) return;
+        final palette = ApoloDlPalette.of(context);
+        final externalUri = target.type == ApoloQrTargetType.external
+            ? Uri.tryParse(target.rawValue)
+            : null;
+        await showApoloDlBottomSheet<void>(
+          context,
+          headerTitle: s.tr('رمز ممسوح', 'Code scanné', 'Scanned Code'),
+          media: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: palette.groupCard,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              CupertinoIcons.qrcode,
+              size: 28,
+              color: palette.ink,
+            ),
+          ),
+          contentTitle:
+              s.tr('تمت قراءة الرمز', 'Code détecté', 'Code Detected'),
+          contentDescription: target.rawValue,
+          actions: [
+            if (externalUri != null)
+              ApoloDlButton(
+                label: s.tr('فتح الرابط', 'Ouvrir le lien', 'Open link'),
+                variant: ApoloDlButtonVariant.primary,
+                borderRadius: 999,
+                fullWidth: true,
+                onPressed: () async {
+                  if (context.mounted) Navigator.of(context).pop();
+                  try {
+                    await launchUrl(
+                      externalUri,
+                      mode: LaunchMode.externalApplication,
+                    );
+                  } catch (_) {}
+                },
+              ),
+            ApoloDlButton(
+              label: s.tr('نسخ', 'Copier', 'Copy'),
+              variant: externalUri != null
+                  ? ApoloDlButtonVariant.secondary
+                  : ApoloDlButtonVariant.primary,
+              borderRadius: 999,
+              fullWidth: true,
+              onPressed: () async {
+                try {
+                  await Clipboard.setData(ClipboardData(text: target.rawValue));
+                } catch (_) {}
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  showToast(s.tr('تم النسخ', 'Copié', 'Copied'));
+                }
+              },
+            ),
+            ApoloDlButton(
+              label: s.tr('مسح من جديد', 'Scanner encore', 'Scan again'),
+              variant: ApoloDlButtonVariant.secondary,
+              borderRadius: 999,
+              fullWidth: true,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+        return;
+    }
+  }
+
   @override
   State<ScanProfileCodeScreen> createState() => _ScanProfileCodeScreenState();
 }
@@ -39,6 +362,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
   MobileScannerController? _controller;
   bool _isHandlingCode = false;
   bool _pickingGallery = false;
+  bool _webTorchOn = false;
 
   bool get _shouldUseLiveScanner =>
       widget.enableLiveCamera &&
@@ -83,6 +407,24 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
 
   Future<void> _toggleTorch() async {
     final s = _state.s;
+
+    if (kIsWeb) {
+      final nextState = await QrWebBridge.toggleWebTorch(_webTorchOn);
+      if (nextState != null) {
+        HapticFeedback.selectionClick();
+        if (mounted) setState(() => _webTorchOn = nextState);
+        return;
+      }
+      _showSnack(
+        s.tr(
+          'الفلاش غير مدعوم في متصفح هذا الجهاز',
+          'Le flash n’est pas pris en charge sur ce navigateur',
+          'Flashlight is unavailable in this browser',
+        ),
+      );
+      return;
+    }
+
     final controller = _controller;
     if (controller == null ||
         !controller.value.isInitialized ||
@@ -122,21 +464,32 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
       final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
       if (picked == null || !mounted) return;
 
-      final controller = _controller;
-      if (!kIsWeb && controller != null) {
+      if (kIsWeb) {
         try {
-          final BarcodeCapture? capture = await controller.analyzeImage(
-            picked.path,
-            formats: const [BarcodeFormat.qrCode],
-          );
-          final raw = capture?.barcodes
-              .map((b) => (b.rawValue ?? '').trim())
-              .firstWhere((v) => v.isNotEmpty, orElse: () => '');
-          if (raw != null && raw.isNotEmpty) {
-            await handleScannedPayload(raw);
+          final bytes = await picked.readAsBytes();
+          final decoded = await QrWebBridge.decodeImageBytes(bytes);
+          if (decoded != null && decoded.trim().isNotEmpty) {
+            await handleScannedPayload(decoded.trim());
             return;
           }
         } catch (_) {}
+      } else {
+        final controller = _controller;
+        if (controller != null) {
+          try {
+            final BarcodeCapture? capture = await controller.analyzeImage(
+              picked.path,
+              formats: const [BarcodeFormat.qrCode],
+            );
+            final raw = capture?.barcodes
+                .map((b) => (b.rawValue ?? '').trim())
+                .firstWhere((v) => v.isNotEmpty, orElse: () => '');
+            if (raw != null && raw.isNotEmpty) {
+              await handleScannedPayload(raw);
+              return;
+            }
+          } catch (_) {}
+        }
       }
 
       _showSnack(
@@ -167,7 +520,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     }
   }
 
-  void _onShutterPressed() {
+  Future<void> _onShutterPressed() async {
     HapticFeedback.mediumImpact();
     final s = _state.s;
     final controller = _controller;
@@ -176,8 +529,16 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
         controller.value.error == null;
 
     if (!cameraActive) {
-      _openManualCodeSheet();
+      await _openManualCodeSheet();
       return;
+    }
+
+    if (kIsWeb) {
+      final captured = await QrWebBridge.captureLiveVideoQr();
+      if (captured != null && captured.trim().isNotEmpty) {
+        await handleScannedPayload(captured.trim());
+        return;
+      }
     }
 
     _showSnack(
@@ -234,7 +595,6 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     if (trimmed.isEmpty) return;
 
     _isHandlingCode = true;
-    final s = _state.s;
 
     if (widget.onCodeScanned != null) {
       widget.onCodeScanned!(trimmed);
@@ -243,147 +603,13 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
     }
 
     final target = ApoloProfileQrParser.parse(trimmed);
-    switch (target.type) {
-      case ApoloQrTargetType.user:
-        final sellerId = target.id!;
-        final myId = int.tryParse('${_state.currentUser?['id'] ?? ''}');
-        if (myId != null && myId == sellerId) {
-          _showSnack(
-            s.tr(
-              'هذا هو ملفك الشخصي الحالي',
-              'Ceci est déjà votre profil',
-              'This is your own profile',
-            ),
-          );
-          _isHandlingCode = false;
-          if (mounted) await Navigator.of(context).maybePop();
-          return;
-        }
-
-        String name = s.tr(
-          'مستخدم Apolo #$sellerId',
-          'Membre Apolo #$sellerId',
-          'Apolo Member #$sellerId',
-        );
-        String? avatar;
-        String? phone;
-        String? city;
-
-        try {
-          final res = await _state.api.dio.get(
-            '/ads',
-            queryParameters: {'per_page': 1, 'seller_id': sellerId},
-          );
-          if (res.data is Map && res.data['data'] is List) {
-            final list = res.data['data'] as List;
-            if (list.isNotEmpty && list.first is Map) {
-              final firstAd = Map<String, dynamic>.from(list.first as Map);
-              final user = firstAd['user'] is Map
-                  ? Map<String, dynamic>.from(firstAd['user'] as Map)
-                  : null;
-              final fetchedName =
-                  (user?['name'] ?? firstAd['seller_name'] ?? '')
-                      .toString()
-                      .trim();
-              if (fetchedName.isNotEmpty) name = fetchedName;
-              final fetchedAvatar =
-                  (user?['avatar'] ?? firstAd['seller_avatar'] ?? '')
-                      .toString()
-                      .trim();
-              if (fetchedAvatar.isNotEmpty) avatar = fetchedAvatar;
-              final fetchedPhone =
-                  (user?['phone'] ?? firstAd['phone'] ?? '').toString().trim();
-              if (fetchedPhone.isNotEmpty) phone = fetchedPhone;
-              final rawCity = firstAd['city'] is Map
-                  ? firstAd['city']['name']
-                  : (firstAd['city_name'] ?? user?['city']);
-              final fetchedCity = rawCity?.toString().trim();
-              if (fetchedCity != null && fetchedCity.isNotEmpty) {
-                city = fetchedCity;
-              }
-            }
-          }
-        } catch (_) {}
-
-        if (!mounted) return;
-        await Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => SellerProfileScreen(
-              sellerId: sellerId,
-              sellerName: name,
-              sellerAvatar: avatar,
-              sellerPhone: phone,
-              sellerCity: city,
-            ),
-          ),
-        );
-        return;
-
-      case ApoloQrTargetType.ad:
-        if (!mounted) return;
-        await Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => AdDetailScreen(adId: target.id!),
-          ),
-        );
-        return;
-
-      case ApoloQrTargetType.handle:
-      case ApoloQrTargetType.external:
-      case ApoloQrTargetType.unknown:
-        final palette = ApoloDlPalette.of(context);
-        if (!mounted) return;
-        await showApoloDlBottomSheet<void>(
-          context,
-          headerTitle: s.tr('رمز ممسوح', 'Code scanné', 'Scanned Code'),
-          media: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: palette.groupCard,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              CupertinoIcons.qrcode,
-              size: 28,
-              color: palette.ink,
-            ),
-          ),
-          contentTitle: target.type == ApoloQrTargetType.handle
-              ? '@${target.handle}'
-              : s.tr('تمت قراءة الرمز', 'Code détecté', 'Code Detected'),
-          contentDescription: target.rawValue,
-          actions: [
-            ApoloDlButton(
-              label: s.tr('نسخ', 'Copier', 'Copy'),
-              variant: ApoloDlButtonVariant.primary,
-              borderRadius: 999,
-              fullWidth: true,
-              onPressed: () async {
-                try {
-                  await Clipboard.setData(ClipboardData(text: target.rawValue));
-                } catch (_) {}
-                if (mounted) {
-                  Navigator.of(context).pop();
-                  _showSnack(
-                    s.tr('تم النسخ', 'Copié', 'Copied'),
-                  );
-                }
-              },
-            ),
-            ApoloDlButton(
-              label: s.tr('مسح من جديد', 'Scanner encore', 'Scan again'),
-              variant: ApoloDlButtonVariant.secondary,
-              borderRadius: 999,
-              fullWidth: true,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-        if (mounted) {
-          setState(() => _isHandlingCode = false);
-        }
-        return;
+    await ScanProfileCodeScreen.navigateToQrTarget(
+      context,
+      target,
+      replaceCurrentRoute: true,
+    );
+    if (mounted) {
+      setState(() => _isHandlingCode = false);
     }
   }
 
@@ -465,7 +691,8 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
         ? ValueListenableBuilder<MobileScannerState>(
             valueListenable: controller,
             builder: (context, state, _) {
-              final torchOn = state.torchState == TorchState.on;
+              final torchOn =
+                  kIsWeb ? _webTorchOn : (state.torchState == TorchState.on);
               return _ScannerCircleControl(
                 key: const Key('scan-code-flash-btn'),
                 icon: torchOn
@@ -482,9 +709,12 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
           )
         : _ScannerCircleControl(
             key: const Key('scan-code-flash-btn'),
-            icon: Icons.flashlight_off_rounded,
-            backgroundColor: tokens.pillBackground,
-            iconColor: tokens.ink,
+            icon: _webTorchOn
+                ? Icons.flashlight_on_rounded
+                : Icons.flashlight_off_rounded,
+            backgroundColor:
+                _webTorchOn ? tokens.ink : tokens.pillBackground,
+            iconColor: _webTorchOn ? tokens.scaffoldBackground : tokens.ink,
             borderRadius: tokens.radii.roundedFull,
             onPressed: _toggleTorch,
           );

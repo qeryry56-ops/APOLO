@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../account/account_helpers.dart';
+import '../core/services/qr_web_bridge.dart';
 import '../core/state/app_state.dart';
+import '../features/bug_report/services/bug_report_controller.dart';
+import '../widgets/dl_qr_code.dart';
 import 'main_shell.dart';
+import 'scan_profile_code_screen.dart';
 import 'welcome_screen.dart';
 
 /// A premium, modern, and minimalist splash screen for the APOLO marketplace application.
@@ -39,19 +43,31 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   Timer? _navigateTimer;
+  ApoloQrTarget? _initialDeepLink;
 
   static const Color _apoloRed = Color(0xFFE31828);
 
   @override
   void initState() {
     super.initState();
+    _initialDeepLink =
+        kIsWeb ? ApoloProfileQrParser.parseInitialDeepLink(Uri.base) : null;
+    if (_initialDeepLink != null) {
+      QrWebBridge.clearDeepLinkPathFromAddressBar();
+    }
+
     final googleCode = kIsWeb
         ? Uri.base.queryParameters['google_auth_code']?.trim()
         : null;
     if (googleCode != null && googleCode.isNotEmpty) {
       _completeGoogleCallback(googleCode);
     } else {
-      _navigateTimer = Timer(widget.duration, _proceedToNext);
+      _navigateTimer = Timer(
+        _initialDeepLink != null
+            ? const Duration(milliseconds: 450)
+            : widget.duration,
+        _proceedToNext,
+      );
     }
   }
 
@@ -79,7 +95,8 @@ class _SplashScreenState extends State<SplashScreen> {
   void _proceedToNext() {
     if (!mounted) return;
 
-    final target = AppState().isLoggedIn
+    final pendingTarget = _initialDeepLink;
+    final target = (AppState().isLoggedIn || pendingTarget != null)
         ? const MainShell()
         : WelcomeScreen(onContinueAsGuest: widget.onCompleteWelcome);
 
@@ -94,6 +111,19 @@ class _SplashScreenState extends State<SplashScreen> {
             FadeTransition(opacity: animation, child: child),
       ),
     );
+
+    if (pendingTarget != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final navCtx = BugReportController.navigatorKey.currentContext;
+        if (navCtx != null && navCtx.mounted) {
+          ScanProfileCodeScreen.navigateToQrTarget(
+            navCtx,
+            pendingTarget,
+            replaceCurrentRoute: false,
+          );
+        }
+      });
+    }
   }
 
   @override

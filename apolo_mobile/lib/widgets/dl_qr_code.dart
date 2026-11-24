@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:qr/qr.dart';
 
-/// Encoded destination types supported by Apolo profile & listing QR codes.
-enum ApoloQrTargetType { user, handle, ad, external, unknown }
+/// Encoded destination types supported by Apolo profile, store & listing QR codes.
+enum ApoloQrTargetType { user, handle, store, ad, external, unknown }
 
-/// Parsed destination payload extracted from an Apolo QR code or manual link.
+/// Parsed destination payload extracted from an Apolo QR code or deep link.
 @immutable
 class ApoloQrTarget {
   const ApoloQrTarget({
@@ -12,12 +13,14 @@ class ApoloQrTarget {
     required this.rawValue,
     this.id,
     this.handle,
+    this.displayName,
   });
 
   final ApoloQrTargetType type;
   final String rawValue;
   final int? id;
   final String? handle;
+  final String? displayName;
 
   @override
   bool operator ==(Object other) =>
@@ -27,16 +30,116 @@ class ApoloQrTarget {
           type == other.type &&
           rawValue == other.rawValue &&
           id == other.id &&
-          handle == other.handle;
+          handle == other.handle &&
+          displayName == other.displayName;
 
   @override
-  int get hashCode => Object.hash(type, rawValue, id, handle);
+  int get hashCode => Object.hash(type, rawValue, id, handle, displayName);
 }
 
-/// Parses scanned QR payloads and manual links into [ApoloQrTarget] values.
+/// Builds and parses shareable Apolo QR payloads and incoming browser deep links.
 abstract final class ApoloProfileQrParser {
   static final RegExp _handlePattern = RegExp(r'^@([A-Za-z0-9._-]+)$');
   static final RegExp _handleCharsPattern = RegExp(r'^[A-Za-z0-9._-]+$');
+
+  static String _cleanHandle(String? raw) {
+    if (raw == null) return '';
+    return raw.trim().replaceFirst(RegExp(r'^@+'), '').trim();
+  }
+
+  static String? _nonEmpty(String? raw) {
+    final trimmed = raw?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// Builds a real, shareable profile URL that opens directly in the deployed
+  /// Web/PWA app (when scanned by a phone's native Camera app or tapped in chat)
+  /// as well as inside [ScanProfileCodeScreen].
+  static String buildProfileShareUrl({
+    int? userId,
+    required String displayName,
+    required String handle,
+    String? baseOrigin,
+  }) {
+    String origin = (baseOrigin ?? '').trim();
+    if (origin.isEmpty) {
+      if (kIsWeb &&
+          (Uri.base.scheme == 'http' || Uri.base.scheme == 'https') &&
+          Uri.base.host.isNotEmpty) {
+        origin = Uri.base.origin;
+      } else {
+        origin = 'https://apolo.ma';
+      }
+    }
+    if (origin.endsWith('/')) {
+      origin = origin.substring(0, origin.length - 1);
+    }
+
+    final cleanName = displayName.trim();
+    final cleanHandle = _cleanHandle(handle);
+    final query = <String, String>{
+      if (cleanName.isNotEmpty) 'n': cleanName,
+      if (cleanHandle.isNotEmpty && (userId != null && userId > 0))
+        'h': cleanHandle,
+    };
+
+    final path = (userId != null && userId > 0)
+        ? '/users/$userId'
+        : '/@${cleanHandle.isNotEmpty ? cleanHandle : 'apolo_user'}';
+
+    final parsedOrigin = Uri.parse(origin);
+    return parsedOrigin
+        .replace(
+          path: path,
+          queryParameters: query.isEmpty ? null : query,
+        )
+        .toString();
+  }
+
+  static bool isApoloAppHost(String rawHost) {
+    final host = rawHost.toLowerCase();
+    if (host.isEmpty) return false;
+    if (host == 'apolo.ma' ||
+        host == 'www.apolo.ma' ||
+        host == 'staging.apolo.ma' ||
+        host.endsWith('.apolo.ma') ||
+        host.endsWith('.vercel.app') ||
+        host == 'localhost' ||
+        host == '127.0.0.1') {
+      return true;
+    }
+    if (kIsWeb && Uri.base.host.isNotEmpty) {
+      return host == Uri.base.host.toLowerCase();
+    }
+    return false;
+  }
+
+  /// Extracts an actionable initial deep-link target when the web app is opened
+  /// directly via a QR code scan or shared profile/ad/store link.
+  static ApoloQrTarget? parseInitialDeepLink(Uri uri) {
+    if (uri.queryParameters.containsKey('google_auth_code')) {
+      return null;
+    }
+    final segments = uri.pathSegments.where((s) => s.trim().isNotEmpty).toList();
+    final hasDeepQuery = uri.queryParameters.containsKey('user') ||
+        uri.queryParameters.containsKey('ad') ||
+        uri.queryParameters.containsKey('store') ||
+        uri.queryParameters.containsKey('handle');
+    if (segments.isEmpty && !hasDeepQuery) {
+      return null;
+    }
+    final target = parse(uri.toString());
+    switch (target.type) {
+      case ApoloQrTargetType.user:
+      case ApoloQrTargetType.handle:
+      case ApoloQrTargetType.store:
+      case ApoloQrTargetType.ad:
+        return target;
+      case ApoloQrTargetType.external:
+      case ApoloQrTargetType.unknown:
+        return null;
+    }
+  }
 
   static ApoloQrTarget parse(String raw) {
     final trimmed = raw.trim();
@@ -65,15 +168,20 @@ abstract final class ApoloProfileQrParser {
       final host = uri.host.toLowerCase();
       final segments =
           uri.pathSegments.where((s) => s.trim().isNotEmpty).toList();
+      final qp = uri.queryParameters;
+      final metaName = _nonEmpty(qp['n'] ?? qp['name']);
+      final metaHandle = _nonEmpty(_cleanHandle(qp['h'] ?? qp['handle']));
 
       if (scheme == 'apolo') {
-        if (host == 'users' && segments.isNotEmpty) {
+        if ((host == 'users' || host == 'u') && segments.isNotEmpty) {
           final id = int.tryParse(segments.first);
           if (id != null && id > 0) {
             return ApoloQrTarget(
               type: ApoloQrTargetType.user,
               rawValue: trimmed,
               id: id,
+              handle: metaHandle,
+              displayName: metaName,
             );
           }
         }
@@ -87,6 +195,17 @@ abstract final class ApoloProfileQrParser {
             );
           }
         }
+        if (host == 'stores' && segments.isNotEmpty) {
+          final slug = segments.first.trim();
+          if (slug.isNotEmpty) {
+            return ApoloQrTarget(
+              type: ApoloQrTargetType.store,
+              rawValue: trimmed,
+              handle: slug,
+              displayName: metaName,
+            );
+          }
+        }
         if (host.startsWith('@') && host.length > 1) {
           final h = host.substring(1);
           if (_handleCharsPattern.hasMatch(h)) {
@@ -94,20 +213,25 @@ abstract final class ApoloProfileQrParser {
               type: ApoloQrTargetType.handle,
               rawValue: trimmed,
               handle: h,
+              displayName: metaName,
             );
           }
         }
       }
 
       if ((scheme == 'http' || scheme == 'https') && host.isNotEmpty) {
-        if (host == 'apolo.ma' || host == 'www.apolo.ma') {
-          if (segments.length >= 2 && segments[0].toLowerCase() == 'users') {
+        if (isApoloAppHost(host)) {
+          if (segments.length >= 2 &&
+              (segments[0].toLowerCase() == 'users' ||
+                  segments[0].toLowerCase() == 'u')) {
             final id = int.tryParse(segments[1]);
             if (id != null && id > 0) {
               return ApoloQrTarget(
                 type: ApoloQrTargetType.user,
                 rawValue: trimmed,
                 id: id,
+                handle: metaHandle,
+                displayName: metaName,
               );
             }
           }
@@ -121,6 +245,17 @@ abstract final class ApoloProfileQrParser {
               );
             }
           }
+          if (segments.length >= 2 && segments[0].toLowerCase() == 'stores') {
+            final slug = segments[1].trim();
+            if (slug.isNotEmpty) {
+              return ApoloQrTarget(
+                type: ApoloQrTargetType.store,
+                rawValue: trimmed,
+                handle: slug,
+                displayName: metaName,
+              );
+            }
+          }
           if (segments.length == 1 && segments[0].startsWith('@')) {
             final h = segments[0].substring(1);
             if (h.isNotEmpty && _handleCharsPattern.hasMatch(h)) {
@@ -128,8 +263,46 @@ abstract final class ApoloProfileQrParser {
                 type: ApoloQrTargetType.handle,
                 rawValue: trimmed,
                 handle: h,
+                displayName: metaName,
               );
             }
+          }
+
+          // Query-parameter deep links (/?user=77, /?ad=501, /?store=slug, /?handle=h)
+          final qUser = int.tryParse(qp['user'] ?? '');
+          if (qUser != null && qUser > 0) {
+            return ApoloQrTarget(
+              type: ApoloQrTargetType.user,
+              rawValue: trimmed,
+              id: qUser,
+              handle: metaHandle,
+              displayName: metaName,
+            );
+          }
+          final qAd = int.tryParse(qp['ad'] ?? '');
+          if (qAd != null && qAd > 0) {
+            return ApoloQrTarget(
+              type: ApoloQrTargetType.ad,
+              rawValue: trimmed,
+              id: qAd,
+            );
+          }
+          final qStore = _nonEmpty(qp['store']);
+          if (qStore != null) {
+            return ApoloQrTarget(
+              type: ApoloQrTargetType.store,
+              rawValue: trimmed,
+              handle: qStore,
+              displayName: metaName,
+            );
+          }
+          if (metaHandle != null && _handleCharsPattern.hasMatch(metaHandle)) {
+            return ApoloQrTarget(
+              type: ApoloQrTargetType.handle,
+              rawValue: trimmed,
+              handle: metaHandle,
+              displayName: metaName,
+            );
           }
         }
         return ApoloQrTarget(

@@ -83,9 +83,15 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
       'Check out $name ($handle) on Apolo.ma:\n$url',
     );
     try {
-      await Share.share(shareText, subject: name);
-    } catch (_) {
-      await _copyProfileLink();
+      final result = await Share.share(shareText, subject: name);
+      if (result.status == ShareResultStatus.unavailable) {
+        await _copyProfileLink();
+      }
+    } catch (err) {
+      final msg = err.toString().toLowerCase();
+      if (!msg.contains('abort') && !msg.contains('cancel')) {
+        await _copyProfileLink();
+      }
     }
   }
 

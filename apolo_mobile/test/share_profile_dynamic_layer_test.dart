@@ -239,6 +239,46 @@ void main() {
           rawValue: 'hello world',
         ),
       );
+
+      final shareUrl = ApoloProfileQrParser.buildProfileShareUrl(
+        userId: 88,
+        displayName: 'kiziGym',
+        handle: '@kizigym',
+        baseOrigin: 'https://apolo-app.vercel.app',
+      );
+      expect(shareUrl, 'https://apolo-app.vercel.app/users/88?n=kiziGym&h=kizigym');
+      expect(
+        ApoloProfileQrParser.parse(shareUrl),
+        ApoloQrTarget(
+          type: ApoloQrTargetType.user,
+          rawValue: shareUrl,
+          id: 88,
+          handle: 'kizigym',
+          displayName: 'kiziGym',
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('https://apolo.ma/stores/atlas_motors'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.store,
+          rawValue: 'https://apolo.ma/stores/atlas_motors',
+          handle: 'atlas_motors',
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parseInitialDeepLink(Uri.parse('https://apolo-app.vercel.app/')),
+        isNull,
+      );
+      expect(
+        ApoloProfileQrParser.parseInitialDeepLink(
+          Uri.parse('https://apolo-app.vercel.app/?google_auth_code=abc'),
+        ),
+        isNull,
+      );
+      expect(
+        ApoloProfileQrParser.parseInitialDeepLink(Uri.parse(shareUrl))?.id,
+        88,
+      );
     });
 
     test('builds valid ISO/IEC 18004 QR matrix for profile URLs', () {
@@ -369,6 +409,63 @@ void main() {
       expect(find.byType(SellerProfileScreen), findsOneWidget);
       expect(find.byKey(const Key('seller-follow-btn')), findsOneWidget);
       expect(find.text('Alex Michael Smith'), findsNWidgets(2));
+    });
+
+    testWidgets(
+        'Scanning a zero-ads user QR URL or @handle opens SellerProfileScreen with real identity and Follow works',
+        (tester) async {
+      final sharedUrl = ApoloProfileQrParser.buildProfileShareUrl(
+        userId: 88,
+        displayName: 'kiziGym',
+        handle: '@kizigym',
+        baseOrigin: 'https://apolo-app.vercel.app',
+      );
+
+      await pumpScreen(
+        tester,
+        const ScanProfileCodeScreen(enableLiveCamera: false),
+      );
+
+      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('scan-manual-input')),
+        sharedUrl,
+      );
+      await tester.tap(find.byKey(const Key('scan-manual-submit')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SellerProfileScreen), findsOneWidget);
+      expect(find.text('kiziGym'), findsNWidgets(2));
+      expect(find.text('@kizigym'), findsOneWidget);
+      expect(state.isFollowingSeller(88), isFalse);
+
+      await tester.tap(find.byKey(const Key('seller-follow-btn')));
+      await tester.pumpAndSettle();
+      expect(state.isFollowingSeller(88), isTrue);
+    });
+
+    testWidgets(
+        'Scanning a bare @handle opens SellerProfileScreen directly',
+        (tester) async {
+      await pumpScreen(
+        tester,
+        const ScanProfileCodeScreen(enableLiveCamera: false),
+      );
+      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('scan-manual-input')),
+        '@morocco_tech',
+      );
+      await tester.tap(find.byKey(const Key('scan-manual-submit')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SellerProfileScreen), findsOneWidget);
+      expect(find.text('@morocco_tech'), findsOneWidget);
     });
 
     testWidgets('ScanProfileCodeScreen matches Figma 375x812 dimensions cleanly',

@@ -7,6 +7,7 @@ import '../core/config/app_config.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
 import 'share_profile_screen.dart';
@@ -27,6 +28,7 @@ import 'widgets/skeleton_loader.dart';
 class SellerProfileScreen extends StatefulWidget {
   final int sellerId;
   final String sellerName;
+  final String? sellerHandle;
   final String? sellerAvatar;
   final String? sellerPhone;
   final String? sellerCity;
@@ -38,6 +40,7 @@ class SellerProfileScreen extends StatefulWidget {
     super.key,
     required this.sellerId,
     required this.sellerName,
+    this.sellerHandle,
     this.sellerAvatar,
     this.sellerPhone,
     this.sellerCity,
@@ -260,6 +263,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           : _state.s.tr('المغرب', 'Maroc', 'Morocco');
 
   String _sellerHandle() {
+    final explicit = (widget.sellerHandle ?? '')
+        .trim()
+        .replaceFirst(RegExp(r'^@+'), '')
+        .trim();
+    if (explicit.isNotEmpty) return explicit;
+
     final cleaned = widget.sellerName
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
@@ -277,13 +286,18 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
   Future<void> _shareSellerProfile(AppStrings s) async {
     if (!mounted) return;
+    final handle = _sellerHandle();
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ShareProfileScreen(
           userId: widget.sellerId,
           displayName: widget.sellerName,
-          handle: _sellerHandle(),
-          profileUrl: 'https://apolo.ma/users/${widget.sellerId}',
+          handle: handle,
+          profileUrl: ApoloProfileQrParser.buildProfileShareUrl(
+            userId: widget.sellerId,
+            displayName: widget.sellerName,
+            handle: handle,
+          ),
         ),
       ),
     );

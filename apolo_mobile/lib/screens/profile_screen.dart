@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
@@ -154,9 +155,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ) async {
     final userId = _state.currentUser?['id']?.toString().trim() ?? '';
     final parsedId = int.tryParse(userId);
-    final url = userId.isNotEmpty
-        ? 'https://apolo.ma/users/$userId'
-        : 'https://apolo.ma/@$handle';
+    final url = ApoloProfileQrParser.buildProfileShareUrl(
+      userId: parsedId,
+      displayName: name,
+      handle: handle,
+    );
     if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(

@@ -74,6 +74,21 @@
     <div class="brand-sub">apolo.ma</div>
   </div>
   <script>
+    // Ensure dynamically created camera <video> elements play inline on iOS Safari / PWA
+    (function() {
+      var origCreateElement = document.createElement.bind(document);
+      document.createElement = function(tagName, options) {
+        var el = origCreateElement(tagName, options);
+        if (typeof tagName === 'string' && tagName.toLowerCase() === 'video') {
+          el.setAttribute('playsinline', 'true');
+          el.setAttribute('webkit-playsinline', 'true');
+          el.playsInline = true;
+          el.muted = true;
+          el.autoplay = true;
+        }
+        return el;
+      };
+    })();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for (let registration of registrations) {
