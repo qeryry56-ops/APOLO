@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -7,8 +5,9 @@ import '../theme/dl_share_profile_tokens.dart';
 import 'dl_settings_kit.dart';
 
 /// Shared Figma `TopNavigation` header used by both QR Display and Camera Scan modes.
-/// Renders a horizontal `56px` wrapper (`16px` gap) inside the `104px` header area
-/// with a `231x24` centered title slot on a `375px` canvas.
+/// Renders a horizontal `56px` wrapper (`16px` gap) beneath the real system top
+/// safe-area inset (`MediaQuery.paddingOf(context).top`), providing a `231x24`
+/// centered title slot on a `375px` canvas.
 class DlShareTopNavigation extends StatelessWidget {
   const DlShareTopNavigation({
     required this.tokens,
@@ -37,10 +36,7 @@ class DlShareTopNavigation extends StatelessWidget {
     final backIcon =
         isRtl ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
     final topInset = MediaQuery.paddingOf(context).top;
-    final headerHeight = math.max(
-      DlShareProfileLayout.headerTotalHeight,
-      topInset + DlShareProfileLayout.topNavHeight,
-    );
+    final headerHeight = topInset + DlShareProfileLayout.topNavHeight;
 
     return SizedBox(
       key: headerKey,

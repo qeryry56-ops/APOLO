@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -111,10 +109,6 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
         final isAr = s.isAr;
         final tokens = DlShareProfileTokens.of(context);
         final mediaPadding = MediaQuery.paddingOf(context);
-        final screenHeight = MediaQuery.sizeOf(context).height;
-        final bottomInset = screenHeight >= 700
-            ? math.max(DlShareProfileLayout.homeIndicatorHeight, mediaPadding.bottom)
-            : mediaPadding.bottom;
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -122,9 +116,7 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
             backgroundColor: tokens.scaffoldBackground,
             body: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: DlShareProfileLayout.canvasWidth,
-                ),
+                constraints: const BoxConstraints(maxWidth: 480.0),
                 child: Column(
                   children: [
                     DlShareTopNavigation(
@@ -153,11 +145,14 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                               width: DlShareProfileLayout.topNavActionSize,
                               height: DlShareProfileLayout.topNavActionSize,
                               child: Center(
-                                child: Icon(
-                                  CupertinoIcons
-                                      .arrowshape_turn_up_right_fill,
-                                  size: 22,
-                                  color: tokens.ink,
+                                child: Transform.flip(
+                                  flipX: isAr,
+                                  child: Icon(
+                                    CupertinoIcons
+                                        .arrowshape_turn_up_right_fill,
+                                    size: 22,
+                                    color: tokens.ink,
+                                  ),
                                 ),
                               ),
                             ),
@@ -360,33 +355,32 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                         },
                       ),
                     ),
-                    SizedBox(
+                    Padding(
                       key: const Key('share-profile-bottom-bar'),
-                      height: DlShareProfileLayout.bottomBarHeight,
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                          DlShareProfileLayout.bottomBarPadding,
-                        ),
-                        child: Center(
-                          child: ApoloDlButton(
-                            key: const Key('share-profile-scan-btn'),
-                            label: s.tr(
-                              'مسح الرمز',
-                              'Scanner le code',
-                              'Scan code',
-                            ),
-                            leadingIcon: Icons.qr_code_scanner_rounded,
-                            variant: ApoloDlButtonVariant.primary,
-                            size: ApoloDlButtonSize.md,
-                            height: 48,
-                            borderRadius: tokens.radii.pill,
-                            fullWidth: false,
-                            onPressed: _openScanner,
+                      padding: EdgeInsets.fromLTRB(
+                        DlShareProfileLayout.bottomBarPadding,
+                        16,
+                        DlShareProfileLayout.bottomBarPadding,
+                        24 + mediaPadding.bottom,
+                      ),
+                      child: Center(
+                        child: ApoloDlButton(
+                          key: const Key('share-profile-scan-btn'),
+                          label: s.tr(
+                            'مسح الرمز',
+                            'Scanner le code',
+                            'Scan code',
                           ),
+                          leadingIcon: Icons.qr_code_scanner_rounded,
+                          variant: ApoloDlButtonVariant.primary,
+                          size: ApoloDlButtonSize.md,
+                          height: 48,
+                          borderRadius: tokens.radii.pill,
+                          fullWidth: false,
+                          onPressed: _openScanner,
                         ),
                       ),
                     ),
-                    if (bottomInset > 0) SizedBox(height: bottomInset),
                   ],
                 ),
               ),

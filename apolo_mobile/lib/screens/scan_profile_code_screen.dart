@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -531,10 +529,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
         final isAr = s.isAr;
         final tokens = DlShareProfileTokens.of(context);
         final mediaPadding = MediaQuery.paddingOf(context);
-        final screenHeight = MediaQuery.sizeOf(context).height;
-        final bottomInset = screenHeight >= 700
-            ? math.max(DlShareProfileLayout.homeIndicatorHeight, mediaPadding.bottom)
-            : mediaPadding.bottom;
+        final bottomInset = mediaPadding.bottom;
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -542,9 +537,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
             backgroundColor: tokens.scaffoldBackground,
             body: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: DlShareProfileLayout.canvasWidth,
-                ),
+                constraints: const BoxConstraints(maxWidth: 480.0),
                 child: Column(
                   children: [
                     DlShareTopNavigation(
