@@ -88,11 +88,141 @@
         }
         return el;
       };
+
+      var jsQrPromise = null;
+      function loadJsQr() {
+        if (window.jsQR) return Promise.resolve(true);
+        if (jsQrPromise) return jsQrPromise;
+        jsQrPromise = new Promise(function(resolve) {
+          var s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+          s.async = true;
+          s.onload = function() { resolve(!!window.jsQR); };
+          s.onerror = function() { jsQrPromise = null; resolve(false); };
+          document.head.appendChild(s);
+          setTimeout(function() { resolve(!!window.jsQR); }, 6000);
+        });
+        return jsQrPromise;
+      }
+
+      async function detectNative(source) {
+        if (!('BarcodeDetector' in window)) return '';
+        try {
+          var det = new window.BarcodeDetector({ formats: ['qr_code'] });
+          var list = await det.detect(source);
+          for (var i = 0; i < list.length; i++) {
+            var val = (list[i].rawValue || '').trim();
+            if (val) return val;
+          }
+        } catch (_) {}
+        return '';
+      }
+
+      function decodeSourceWithJsQr(source, srcW, srcH) {
+        if (!window.jsQR || srcW <= 0 || srcH <= 0) return '';
+        var dims = [1200, 720, 1800];
+        for (var i = 0; i < dims.length; i++) {
+          try {
+            var maxD = dims[i];
+            var scale = (srcW > maxD || srcH > maxD)
+              ? (maxD / Math.max(srcW, srcH))
+              : 1;
+            var w = Math.max(1, Math.round(srcW * scale));
+            var h = Math.max(1, Math.round(srcH * scale));
+            var c = document.createElement('canvas');
+            c.width = w;
+            c.height = h;
+            var ctx = c.getContext('2d', { willReadFrequently: true });
+            if (!ctx) continue;
+            ctx.drawImage(source, 0, 0, w, h);
+            var imgData = ctx.getImageData(0, 0, w, h);
+            var res = window.jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
+            if (res && res.data && res.data.trim()) return res.data.trim();
+          } catch (_) {}
+        }
+        return '';
+      }
+
+      function findActiveVideo() {
+        var vids = document.querySelectorAll('video');
+        for (var i = vids.length - 1; i >= 0; i--) {
+          if (vids[i].videoWidth > 0 && vids[i].videoHeight > 0) return vids[i];
+        }
+        return null;
+      }
+
+      window.ApoloQr = {
+        decodeBase64: async function(b64) {
+          try {
+            var bin = atob(b64);
+            var arr = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            var url = URL.createObjectURL(new Blob([arr]));
+            try {
+              var img = new Image();
+              var ok = await new Promise(function(resolve) {
+                img.onload = function() { resolve(true); };
+                img.onerror = function() { resolve(false); };
+                img.src = url;
+              });
+              if (!ok || !img.naturalWidth) return '';
+              var hit = await detectNative(img);
+              if (hit) return hit;
+              if (await loadJsQr()) {
+                return decodeSourceWithJsQr(img, img.naturalWidth, img.naturalHeight);
+              }
+            } finally {
+              URL.revokeObjectURL(url);
+            }
+          } catch (_) {}
+          return '';
+        },
+        captureVideoFrame: async function() {
+          var v = findActiveVideo();
+          if (!v) return '';
+          var hit = await detectNative(v);
+          if (hit) return hit;
+          if (await loadJsQr()) {
+            return decodeSourceWithJsQr(v, v.videoWidth, v.videoHeight);
+          }
+          return '';
+        },
+        toggleTorch: async function(currentState) {
+          try {
+            var v = findActiveVideo();
+            if (!v || !v.srcObject || !v.srcObject.getVideoTracks) return '';
+            var tracks = v.srcObject.getVideoTracks();
+            if (!tracks.length) return '';
+            var track = tracks[0];
+            var caps = track.getCapabilities ? track.getCapabilities() : {};
+            if (!caps || !caps.torch) return '';
+            var next = !currentState;
+            await track.applyConstraints({ advanced: [{ torch: next }] });
+            return next ? 'on' : 'off';
+          } catch (_) {
+            return '';
+          }
+        },
+        clearDeepLinkPath: function() {
+          try {
+            if ((location.pathname && location.pathname !== '/') || location.search) {
+              history.replaceState(null, '', '/');
+            }
+          } catch (_) {}
+        }
+      };
     })();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for (let registration of registrations) {
           registration.unregister();
+        }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (let name of names) {
+          caches.delete(name);
         }
       });
     }
