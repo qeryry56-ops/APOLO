@@ -1,14 +1,14 @@
-import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/config/app_config.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
-import '../widgets/notification_badge.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
@@ -57,12 +57,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   List<Map<String, dynamic>> _sellerAds = [];
 
   // Unified 2026 Grouped Card Palette
-  static const Color _bg = Color(0xFFF2F3F7);
   static const Color _surface = Color(0xFFFFFFFF);
   static const Color _surfaceElevated = Color(0xFFFFFFFF);
   static const Color _ink = Color(0xFF0A0A0A);
   static const Color _muted = Color(0xFF6B7280);
-  static const Color _subtle = Color(0xFF8E8E93);
   static const Color _border = Color(0xFFE7EAF0);
   static const Color _red = Color(0xFFE31B23);
   static const Color _emerald = Color(0xFF10B981);
@@ -263,444 +261,308 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ? widget.sellerCity!.trim()
           : _state.s.tr('المغرب', 'Maroc', 'Morocco');
 
-  @override
-  Widget build(BuildContext context) {
-    final isAr = _state.s.isAr;
-    final city = _resolvedCity;
+  String _sellerHandle() {
+    final cleaned = widget.sellerName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    if (cleaned.isNotEmpty) return cleaned;
+    return 'apolo_seller_${widget.sellerId > 0 ? widget.sellerId : 1}';
+  }
 
-    return Scaffold(
-      backgroundColor: _bg,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(52),
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: AppBar(
-              backgroundColor: _bg.withValues(alpha: 0.88),
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              centerTitle: true,
-              leading: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(
-                  isAr
-                      ? CupertinoIcons.chevron_right
-                      : CupertinoIcons.chevron_left,
-                  color: _ink,
-                  size: 22,
-                ),
-              ),
-              title: Text(
-                _state.s
-                    .tr('بروفايل البائع', 'Profil Vendeur', 'Seller Profile'),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: _ink,
-                  letterSpacing:
-                      AppTypography.trackingForContext(context, -0.3),
-                ),
-              ),
-              actions: [
-                IconButton(
-                  onPressed: () => _showMoreActions(isAr),
-                  icon: const Icon(
-                    CupertinoIcons.ellipsis,
-                    color: _ink,
-                    size: 20,
-                  ),
-                ),
-              ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(0.8),
-                child: Container(
-                  color: _border,
-                  height: 0.8,
-                ),
-              ),
+  int get _baseFollowers => 120 + (widget.sellerId.abs() % 880);
+
+  Future<void> _toggleFollow() async {
+    HapticFeedback.selectionClick();
+    await _state.toggleFollowSeller(widget.sellerId);
+  }
+
+  Future<void> _shareSellerProfile(AppStrings s) async {
+    final url = 'https://apolo.ma/users/${widget.sellerId}';
+    final shareText = s.tr(
+      'شوف بروفايل البائع ${widget.sellerName} فـ Apolo.ma:\n$url',
+      'Découvrez le profil vendeur ${widget.sellerName} sur Apolo.ma :\n$url',
+      'Check out ${widget.sellerName} on Apolo.ma:\n$url',
+    );
+    try {
+      await Share.share(shareText, subject: widget.sellerName);
+    } catch (_) {
+      try {
+        await Clipboard.setData(ClipboardData(text: url));
+      } catch (_) {}
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            s.tr(
+              'تم نسخ رابط البائع',
+              'Lien du vendeur copié',
+              'Seller link copied',
             ),
           ),
         ),
-      ),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // 1. Apple Hero Seller Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _state,
+      builder: (context, _) {
+        final s = _state.s;
+        final isAr = s.isAr;
+        final palette = ApoloDlPalette.of(context);
+        final city = _resolvedCity;
+        final isFollowing = _state.isFollowingSeller(widget.sellerId);
+
+        return Directionality(
+          textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+          child: Scaffold(
+            backgroundColor: palette.bg,
+            body: SafeArea(
+              bottom: false,
               child: Column(
                 children: [
-                  // Avatar with Green Online Status Dot
-                  NotificationBadge(
-                    count: widget.isOnline ? 1 : 0,
-                    type: NotificationBadgeType.dot,
-                    variant: NotificationBadgeVariant.green,
-                    top: 2,
-                    right: 2,
-                    dotSize: 16,
-                    child: Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _border, width: 2.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _ink.withValues(alpha: 0.08),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: widget.sellerAvatar != null &&
-                                widget.sellerAvatar!.isNotEmpty
-                            ? AppImage(
-                                url: widget.sellerAvatar!,
-                                fit: BoxFit.cover,
-                                fallback: _buildAvatarFallback(),
-                              )
-                            : _buildAvatarFallback(),
-                      ),
+                  ApoloDlTopNav(
+                    title: widget.sellerName,
+                    size: ApoloDlTopNavSize.md,
+                    showSeparator: false,
+                    showBack: true,
+                    trailing: ApoloDlIconCircleButton(
+                      key: const Key('seller-more-btn'),
+                      icon: CupertinoIcons.ellipsis,
+                      onPressed: () => _showMoreActions(isAr),
                     ),
                   ),
-                  const SizedBox(height: 14),
-
-                  // Name & Verified Badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          widget.sellerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: _ink,
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, -0.5),
+                  Expanded(
+                    child: CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        // 1. Dynamic Layer v5.1 Account / Follow & Following Header
+                        SliverToBoxAdapter(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 480),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                                child: ApoloDlAccountHeader(
+                                  avatar: widget.sellerAvatar != null &&
+                                          widget.sellerAvatar!.isNotEmpty
+                                      ? AppImage(
+                                          url: widget.sellerAvatar!,
+                                          width: 72,
+                                          height: 72,
+                                          fit: BoxFit.cover,
+                                          fallback: Icon(
+                                            CupertinoIcons.person_fill,
+                                            size: 32,
+                                            color: palette.iconMuted,
+                                          ),
+                                        )
+                                      : Icon(
+                                          CupertinoIcons.person_fill,
+                                          size: 32,
+                                          color: palette.iconMuted,
+                                        ),
+                                  displayName: widget.sellerName,
+                                  nameTrailing: widget.isVerified
+                                      ? const Icon(
+                                          CupertinoIcons.checkmark_seal_fill,
+                                          color: _blueVerified,
+                                          size: 17,
+                                        )
+                                      : null,
+                                  handle: '@${_sellerHandle()}',
+                                  stats: [
+                                    ApoloDlAccountStat(
+                                      value: '${_sellerAds.length}',
+                                      label: s.tr(
+                                        'إعلانات',
+                                        'Annonces',
+                                        'Listings',
+                                      ),
+                                      onTap: () =>
+                                          setState(() => _selectedTab = 0),
+                                    ),
+                                    ApoloDlAccountStat(
+                                      value:
+                                          '${_baseFollowers + (isFollowing ? 1 : 0)}',
+                                      label: s.tr(
+                                        'متابع',
+                                        'Abonnés',
+                                        'Followers',
+                                      ),
+                                    ),
+                                    ApoloDlAccountStat(
+                                      value: '4.9',
+                                      label: s.tr(
+                                        'التقييم',
+                                        'Note',
+                                        'Rating',
+                                      ),
+                                      onTap: () =>
+                                          setState(() => _selectedTab = 1),
+                                    ),
+                                  ],
+                                  primaryAction: ApoloDlButton(
+                                    key: const Key('seller-follow-btn'),
+                                    label: isFollowing
+                                        ? s.tr('متابَع', 'Abonné', 'Following')
+                                        : s.tr('متابعة', 'Suivre', 'Follow'),
+                                    variant: isFollowing
+                                        ? ApoloDlButtonVariant.tertiary
+                                        : ApoloDlButtonVariant.primary,
+                                    size: ApoloDlButtonSize.sm,
+                                    height: 42,
+                                    borderRadius: 999,
+                                    fullWidth: true,
+                                    onPressed: _toggleFollow,
+                                  ),
+                                  secondaryAction: ApoloDlButton(
+                                    key: const Key('seller-share-btn'),
+                                    label: s.tr(
+                                      'مشاركة الملف',
+                                      'Partager le profil',
+                                      'Share profile',
+                                    ),
+                                    variant: ApoloDlButtonVariant.secondary,
+                                    size: ApoloDlButtonSize.sm,
+                                    height: 42,
+                                    borderRadius: 999,
+                                    fullWidth: true,
+                                    onPressed: () => _shareSellerProfile(s),
+                                  ),
+                                  bio: s.tr(
+                                    'تاجر موثوق في Apolo.ma · $city · استجابة سريعة على الشات والمكالمات.',
+                                    'Vendeur vérifié sur Apolo.ma · $city · Réponse rapide par chat et appel.',
+                                    'Verified seller on Apolo.ma · $city · Fast reply on chat and calls.',
+                                  ),
+                                  extraActions: Row(
+                                    children: [
+                                      Expanded(
+                                        child: ApoloDlButton(
+                                          key: const Key('seller-chat-btn'),
+                                          label: s.tr(
+                                            'محادثة فورية',
+                                            'Message direct',
+                                            'Message',
+                                          ),
+                                          leadingIcon:
+                                              CupertinoIcons.chat_bubble_2_fill,
+                                          variant:
+                                              ApoloDlButtonVariant.secondary,
+                                          size: ApoloDlButtonSize.sm,
+                                          height: 40,
+                                          borderRadius: 999,
+                                          fullWidth: true,
+                                          onPressed: _openChatWithSeller,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: ApoloDlButton(
+                                          key: const Key('seller-call-btn'),
+                                          label: s.tr(
+                                            'اتصال',
+                                            'Appeler',
+                                            'Call',
+                                          ),
+                                          leadingIcon:
+                                              CupertinoIcons.phone_fill,
+                                          variant:
+                                              ApoloDlButtonVariant.secondary,
+                                          size: ApoloDlButtonSize.sm,
+                                          height: 40,
+                                          borderRadius: 999,
+                                          fullWidth: true,
+                                          onPressed: _callSeller,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      if (widget.isVerified) ...[
-                        const SizedBox(width: 6),
-                        const Icon(
-                          CupertinoIcons.checkmark_seal_fill,
-                          color: _blueVerified,
-                          size: 20,
+
+                        // 2. Dynamic Layer Segmented Control Tabs (Pinned Sticky Header)
+                        SliverPersistentHeader(
+                          pinned: true,
+                          delegate: _SliverTabsDelegate(
+                            child: Container(
+                              color: palette.bg,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 480),
+                                  child: Container(
+                                    height: 42,
+                                    padding: const EdgeInsets.all(3.5),
+                                    decoration: BoxDecoration(
+                                      color: palette.groupCard,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        _buildTabBtn(
+                                          0,
+                                          isAr
+                                              ? 'الإعلانات (${_sellerAds.length})'
+                                              : 'Annonces (${_sellerAds.length})',
+                                        ),
+                                        _buildTabBtn(
+                                          1,
+                                          isAr ? 'التقييمات (48)' : 'Avis (48)',
+                                        ),
+                                        _buildTabBtn(
+                                          2,
+                                          isAr
+                                              ? 'حول والضمانات'
+                                              : 'Garanties',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // 3. Tab Body
+                        if (_selectedTab == 0)
+                          _buildAdsTab(isAr)
+                        else if (_selectedTab == 1)
+                          _buildReviewsTab(isAr)
+                        else
+                          _buildTrustTab(isAr),
+
+                        const SliverToBoxAdapter(
+                          child: SizedBox(height: 60),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Location & Member Since
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        CupertinoIcons.location_solid,
-                        size: 13,
-                        color: _muted,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        city,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: _muted,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 3.5,
-                        height: 3.5,
-                        decoration: const BoxDecoration(
-                          color: _subtle,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        isAr ? 'عضو منذ مارس 2023' : 'Membre depuis mars 2023',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: _muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Seller Bio in Soft Apple Surface
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
                     ),
-                    decoration: BoxDecoration(
-                      color: _surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _border, width: 0.8),
-                    ),
-                    child: Text(
-                      isAr
-                          ? 'تاجر موثوق فـ منصة Apolo.ma. سلع مضمونة 100% مع إمكانية الفحص والمعاينة قبل الشراء. استجابة سريعة على الشات والمكالمات.'
-                          : 'Vendeur de confiance sur Apolo.ma. Produits 100% vérifiés avec contrôle avant achat. Réponse ultra-rapide sur le chat.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.45,
-                        color: _ink,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Apple 3-Metric Summary Grid (⭐ 4.9 | ⚡ <15min | 🛡️ 100% Vérifié)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildMetricCard(
-                          icon: CupertinoIcons.star_fill,
-                          iconColor: _starGold,
-                          value: '4.9',
-                          label: isAr ? '48 تقييم' : '48 avis',
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildMetricCard(
-                          icon: CupertinoIcons.bolt_fill,
-                          iconColor: _red,
-                          value: isAr ? '\u2066< 15\u2069 دقيقة' : '< 15 min',
-                          label: isAr ? 'سرعة الرد' : 'Taux de réponse',
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildMetricCard(
-                          icon: CupertinoIcons.shield_lefthalf_fill,
-                          iconColor: _emerald,
-                          value: isAr ? '\u2066100%\u2069 موثق' : '100% Vérifié',
-                          label: isAr ? 'هوية مؤكدة' : 'Identité certifiée',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Apple Dual 1-Tap Action Bar (محادثة فورية 💬 | اتصال مباشر 📞)
-                  Row(
-                    children: [
-                      // Chat Primary Button (Apolo Crimson)
-                      Expanded(
-                        flex: 3,
-                        child: PressableScale(
-                          onTap: _openChatWithSeller,
-                          child: Container(
-                            height: 48,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [_red, Color(0xFFC80E16)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _red.withValues(alpha: 0.35),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  CupertinoIcons.chat_bubble_2_fill,
-                                  color: Colors.white,
-                                  size: 19,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  isAr ? 'محادثة فورية' : 'Message direct',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Direct Phone Call Button (Tinted Emerald)
-                      Expanded(
-                        flex: 2,
-                        child: PressableScale(
-                          onTap: _callSeller,
-                          child: Container(
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: _emerald.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: _emerald.withValues(alpha: 0.30),
-                                width: 1,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  CupertinoIcons.phone_fill,
-                                  color: _emerald,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  isAr ? 'اتصال' : 'Appeler',
-                                  style: const TextStyle(
-                                    color: _emerald,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
             ),
           ),
-
-          // 2. Apple Segmented Control Tabs (Pinned Sticky Header)
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SliverTabsDelegate(
-              child: Container(
-                color: _bg,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Container(
-                  height: 42,
-                  padding: const EdgeInsets.all(3.5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildTabBtn(
-                        0,
-                        isAr
-                            ? 'الإعلانات (${_sellerAds.length})'
-                            : 'Annonces (${_sellerAds.length})',
-                      ),
-                      _buildTabBtn(1, isAr ? 'التقييمات (48)' : 'Avis (48)'),
-                      _buildTabBtn(2, isAr ? 'حول والضمانات' : 'Garanties'),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // 3. Tab Body
-          if (_selectedTab == 0)
-            _buildAdsTab(isAr)
-          else if (_selectedTab == 1)
-            _buildReviewsTab(isAr)
-          else
-            _buildTrustTab(isAr),
-
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 60),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAvatarFallback() {
-    return Container(
-      color: const Color(0xFF1E293B),
-      alignment: Alignment.center,
-      child: Text(
-        widget.sellerName.isNotEmpty ? widget.sellerName[0].toUpperCase() : 'A',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricCard({
-    required IconData icon,
-    required Color iconColor,
-    required String value,
-    required String label,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _border, width: 0.8),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: iconColor, size: 18),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w900,
-              color: _ink,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: _muted,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildTabBtn(int index, String label) {
     final active = _selectedTab == index;
+    final palette = ApoloDlPalette.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -711,7 +573,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           duration: const Duration(milliseconds: 180),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: active ? Colors.white : Colors.transparent,
+            color: active ? palette.bg : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
             boxShadow: active
                 ? [
@@ -730,7 +592,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-              color: active ? _ink : _muted,
+              color: active ? palette.ink : palette.muted,
             ),
           ),
         ),
@@ -1337,6 +1199,6 @@ class _SliverTabsDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _SliverTabsDelegate oldDelegate) {
-    return false;
+    return true;
   }
 }

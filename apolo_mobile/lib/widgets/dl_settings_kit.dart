@@ -475,6 +475,7 @@ class ApoloDlButton extends StatefulWidget {
     this.isLoading = false,
     this.leadingIcon,
     this.borderRadius,
+    this.height,
   });
 
   final String label;
@@ -485,6 +486,7 @@ class ApoloDlButton extends StatefulWidget {
   final bool isLoading;
   final IconData? leadingIcon;
   final double? borderRadius;
+  final double? height;
 
   @override
   State<ApoloDlButton> createState() => _ApoloDlButtonState();
@@ -493,7 +495,9 @@ class ApoloDlButton extends StatefulWidget {
 class _ApoloDlButtonState extends State<ApoloDlButton> {
   bool _pressed = false;
 
-  double get _height => switch (widget.size) {
+  double get _height =>
+      widget.height ??
+      switch (widget.size) {
         ApoloDlButtonSize.lg => 54,
         ApoloDlButtonSize.md => 48,
         ApoloDlButtonSize.sm => 40,
@@ -1214,4 +1218,188 @@ class ApoloDlGroupedItem extends StatelessWidget {
     );
   }
 }
+
+/// Tabular metric column for [ApoloDlAccountHeader].
+@immutable
+class ApoloDlAccountStat {
+  const ApoloDlAccountStat({
+    required this.value,
+    required this.label,
+    this.onTap,
+  });
+
+  final String value;
+  final String label;
+  final VoidCallback? onTap;
+}
+
+/// Dynamic Layer v5.1 centered Account Header used in Profile and Seller Profile.
+/// Renders a 72x72 circular avatar, centered name & @handle, 3 dividerless
+/// tabular stats, two equal side-by-side pill actions, and centered bio text.
+class ApoloDlAccountHeader extends StatelessWidget {
+  const ApoloDlAccountHeader({
+    required this.avatar,
+    required this.displayName,
+    required this.handle,
+    required this.stats,
+    required this.primaryAction,
+    required this.secondaryAction,
+    super.key,
+    this.onAvatarTap,
+    this.onNameTap,
+    this.nameTrailing,
+    this.bio,
+    this.extraActions,
+  });
+
+  final Widget avatar;
+  final String displayName;
+  final VoidCallback? onAvatarTap;
+  final VoidCallback? onNameTap;
+  final Widget? nameTrailing;
+  final String handle;
+  final List<ApoloDlAccountStat> stats;
+  final Widget primaryAction;
+  final Widget secondaryAction;
+  final String? bio;
+  final Widget? extraActions;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final bool hasBio = bio != null && bio!.trim().isNotEmpty;
+    final bool forceLtrHandle = handle.trim().startsWith('@');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onAvatarTap,
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: palette.groupCard,
+              shape: BoxShape.circle,
+            ),
+            clipBehavior: Clip.antiAlias,
+            alignment: Alignment.center,
+            child: avatar,
+          ),
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: onNameTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: palette.ink,
+                  ),
+                ),
+              ),
+              if (nameTrailing != null) ...[
+                const SizedBox(width: 6),
+                nameTrailing!,
+              ],
+            ],
+          ),
+        ),
+        if (handle.trim().isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            handle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textDirection: forceLtrHandle ? TextDirection.ltr : null,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: palette.muted,
+            ),
+          ),
+        ],
+        const SizedBox(height: 18),
+        Row(
+          children: stats.map((stat) {
+            return Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: stat.onTap,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        stat.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          color: palette.ink,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        stat.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: palette.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: primaryAction),
+            const SizedBox(width: 12),
+            Expanded(child: secondaryAction),
+          ],
+        ),
+        if (hasBio) ...[
+          const SizedBox(height: 16),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 310),
+            child: Text(
+              bio!.trim(),
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.45,
+                color: palette.ink,
+              ),
+            ),
+          ),
+        ],
+        if (extraActions != null) ...[
+          const SizedBox(height: 16),
+          extraActions!,
+        ],
+      ],
+    );
+  }
+}
+
 

@@ -19,6 +19,7 @@ class AppState extends ChangeNotifier {
   List<dynamic> categories = [];
   List<dynamic> cities = [];
   Set<int> favoriteAdIds = {};
+  Set<int> followedSellerIds = {};
   int unreadNotificationsCount = 0;
   int _notificationsClearEpoch = 0;
   int _rawUnreadChatCount = 0;
@@ -70,6 +71,27 @@ class AppState extends ChangeNotifier {
       supportedLanguageCodes.contains(code) ? code : 'ar';
 
   static const String _cachedUserPrefsKey = 'apolo_cached_user_v1';
+  static const String _followedSellersPrefsKey = 'apolo_followed_sellers_v1';
+
+  bool isFollowingSeller(int sellerId) =>
+      sellerId > 0 && followedSellerIds.contains(sellerId);
+
+  Future<void> toggleFollowSeller(int sellerId) async {
+    if (sellerId <= 0) return;
+    if (followedSellerIds.contains(sellerId)) {
+      followedSellerIds.remove(sellerId);
+    } else {
+      followedSellerIds.add(sellerId);
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _followedSellersPrefsKey,
+        followedSellerIds.map((e) => e.toString()).toList(),
+      );
+    } catch (_) {}
+  }
 
   Future<void> initialize({bool loadRemote = true}) async {
     await api.init();
@@ -148,6 +170,14 @@ class AppState extends ChangeNotifier {
             }
           });
         }
+      }
+      final rawFollowed = prefs.getStringList(_followedSellersPrefsKey);
+      if (rawFollowed != null) {
+        followedSellerIds = rawFollowed
+            .map((e) => int.tryParse(e))
+            .whereType<int>()
+            .where((id) => id > 0)
+            .toSet();
       }
     } catch (_) {}
   }
@@ -987,6 +1017,7 @@ class AppState extends ChangeNotifier {
     zoneRadiusKm = MarketplaceLocation.defaultZoneRadiusKm;
     zoneFilterEnabled = false;
     categoryInterestWeights = {};
+    followedSellerIds.clear();
     try {
       final prefs = await SharedPreferences.getInstance();
       const keys = <String>[
@@ -1000,6 +1031,7 @@ class AppState extends ChangeNotifier {
         'apolo_zone_enabled',
         'apolo_interest_weights',
         'apolo_post_ad_draft_v1',
+        _followedSellersPrefsKey,
       ];
       for (final key in keys) {
         await prefs.remove(key);
@@ -1015,6 +1047,7 @@ class AppState extends ChangeNotifier {
     }
     _sessionRevision++;
     favoriteAdIds.clear();
+    followedSellerIds.clear();
     unreadNotificationsCount = 0;
     _notificationsClearEpoch++;
     _rawUnreadChatCount = 0;
@@ -1037,6 +1070,7 @@ class AppState extends ChangeNotifier {
     currentUser = null;
     await _persistCurrentUser();
     favoriteAdIds.clear();
+    followedSellerIds.clear();
     unreadNotificationsCount = 0;
     _notificationsClearEpoch++;
     _rawUnreadChatCount = 0;

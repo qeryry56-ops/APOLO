@@ -5,8 +5,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
 import 'post_ad_screen.dart';
@@ -144,123 +147,156 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _state.currentUser?['username']?.toString() ?? 'profil';
   String _displayBio(bool isAr) => _state.currentUser?['bio']?.toString() ?? '';
 
+  Future<void> _shareOwnProfile(
+    AppStrings s,
+    String name,
+    String handle,
+  ) async {
+    final userId = _state.currentUser?['id']?.toString() ?? '';
+    final url = userId.isNotEmpty
+        ? 'https://apolo.ma/users/$userId'
+        : 'https://apolo.ma';
+    final shareText = s.tr(
+      'شوف حساب $name (@$handle) على Apolo.ma:\n$url',
+      'Découvrez le profil de $name (@$handle) sur Apolo.ma :\n$url',
+      'Check out $name (@$handle) on Apolo.ma:\n$url',
+    );
+    try {
+      await Share.share(shareText, subject: name);
+    } catch (_) {
+      try {
+        await Clipboard.setData(ClipboardData(text: url));
+      } catch (_) {}
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            s.tr(
+              'تم نسخ رابط الملف الشخصي',
+              'Lien du profil copié',
+              'Profile link copied',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
     final isAr = s.isAr;
+    final palette = ApoloDlPalette.of(context);
     if (!_state.isLoggedIn) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF2F3F7),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFF2F3F7),
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          toolbarHeight: 48,
-          centerTitle: true,
-          title: Text(
-            s.profile,
-            style: const TextStyle(
-              color: Color(0xFF0A0A0A),
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          actions: [
-            IconButton(
-              key: const Key('guest-settings'),
-              tooltip: s.tr('الإعدادات والدعم', 'Paramètres et assistance'),
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen())),
-              icon: const Icon(CupertinoIcons.gear, color: Color(0xFF0A0A0A)),
-            ),
-          ],
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+      return Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          backgroundColor: palette.bg,
+          body: SafeArea(
+            child: Column(
+              children: [
+                ApoloDlTopNav(
+                  title: s.profile,
+                  size: ApoloDlTopNavSize.md,
+                  showBack: false,
+                  showSeparator: false,
+                  trailing: ApoloDlIconCircleButton(
+                    key: const Key('guest-settings'),
+                    tooltip: s.tr(
+                      'الإعدادات والدعم',
+                      'Paramètres et assistance',
+                      'Settings & support',
+                    ),
+                    icon: CupertinoIcons.gear,
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                  ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF2F3F7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        CupertinoIcons.person_fill,
-                        size: 34,
-                        color: Color(0xFF0A0A0A),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      s.tr('مرحباً بك في Apolo', 'Bienvenue sur Apolo',
-                          'Welcome to Apolo'),
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0A0A0A),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      s.tr(
-                        'سجّل الدخول لإدارة إعلاناتك، المفضلة، والمحادثات الفورية مع المشترين.',
-                        'Connectez-vous pour gérer vos annonces, vos favoris et vos messages.',
-                        'Sign in to manage your listings, saved items, and instant chats.',
-                      ),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: Color(0xFF6B7280),
-                        height: 1.45,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        key: const Key('profile-sign-in'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0A0A0A),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: const StadiumBorder(),
-                        ),
-                        onPressed: () async {
-                          await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const AuthScreen()));
-                          if (mounted) {
-                            _profileIdentity = _identity;
-                            await _loadProfileData();
-                          }
-                        },
-                        child: Text(
-                          s.tr('سجّل الدخول لعرض حسابك',
-                              'Connectez-vous pour voir votre profil'),
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700,
-                          ),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                color: palette.groupCard,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                CupertinoIcons.person_fill,
+                                size: 32,
+                                color: palette.iconMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              s.tr(
+                                'مرحباً بك في Apolo',
+                                'Bienvenue sur Apolo',
+                                'Welcome to Apolo',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w700,
+                                color: palette.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              s.tr(
+                                'سجّل الدخول لإدارة إعلاناتك، المفضلة، والمحادثات الفورية مع المشترين.',
+                                'Connectez-vous pour gérer vos annonces, vos favoris et vos messages.',
+                                'Sign in to manage your listings, saved items, and instant chats.',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: palette.muted,
+                                height: 1.45,
+                              ),
+                            ),
+                            const SizedBox(height: 22),
+                            ApoloDlButton(
+                              key: const Key('profile-sign-in'),
+                              label: s.tr(
+                                'سجّل الدخول لعرض حسابك',
+                                'Connectez-vous pour voir votre profil',
+                                'Sign in to view your profile',
+                              ),
+                              variant: ApoloDlButtonVariant.primary,
+                              borderRadius: 999,
+                              fullWidth: true,
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AuthScreen(),
+                                  ),
+                                );
+                                if (mounted) {
+                                  _profileIdentity = _identity;
+                                  await _loadProfileData();
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -270,70 +306,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final handle = _displayHandle;
     final bio = _displayBio(isAr);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F7),
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          color: _primary,
-          backgroundColor: Colors.white,
-          onRefresh: _loadProfileData,
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              // 1. Clean Top Bar: [+] on start, [@handle] in center, [Reels + Settings] on end
-              SliverToBoxAdapter(
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: palette.bg,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // Fixed Dynamic Layer v5.1 Top Navigation
+              SizedBox(
+                height: 56,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // + Add Ad Button
-                      PressableScale(
-                        onTap: () => Navigator.push(
+                      ApoloDlIconCircleButton(
+                        key: const Key('profile-add-ad'),
+                        icon: CupertinoIcons.add,
+                        onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const PostAdScreen()),
+                            builder: (_) => const PostAdScreen(),
+                          ),
                         ).then((_) => _loadProfileData()),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.add,
-                            color: _ink,
-                            size: 21,
-                          ),
-                        ),
                       ),
-
-                      // Centered @username
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           '@$handle',
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textDirection: TextDirection.ltr,
                           style: TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w700,
-                            color: _ink,
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, -0.3),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: palette.ink,
                           ),
                         ),
                       ),
-
-                      // Standalone Settings Page Button
-                      PressableScale(
-                        onTap: () => Navigator.push(
+                      const SizedBox(width: 12),
+                      ApoloDlIconCircleButton(
+                        key: const Key('profile-settings-btn'),
+                        icon: CupertinoIcons.gear,
+                        onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => SettingsScreen(
@@ -344,274 +361,169 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ).then((_) {
                           if (mounted) setState(() {});
                         }),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.gear,
-                            color: _ink,
-                            size: 20,
-                          ),
-                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-
-              // 2. White Grouped Identity + Metrics Card (Instagram-style Profile + @username + Bio)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          children: [
-                            // Avatar + Edit Photo/Profile Badge
-                            GestureDetector(
-                              onTap: () => _openEditProfileSheet(isAr),
-                              child: Stack(
-                                clipBehavior: Clip.none,
+              Expanded(
+                child: RefreshIndicator(
+                  color: _primary,
+                  backgroundColor: palette.bg,
+                  onRefresh: _loadProfileData,
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    slivers: [
+                      // Dynamic Layer v5.1 Account / Default Header
+                      SliverToBoxAdapter(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 480),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                              child: Column(
                                 children: [
-                                  Container(
-                                    width: 88,
-                                    height: 88,
-                                    decoration: BoxDecoration(
-                                      color: _surface,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                          color: _hairline, width: 1.5),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    alignment: Alignment.center,
-                                    child: _buildAvatarContent(name),
-                                  ),
-                                  PositionedDirectional(
-                                    bottom: 0,
-                                    end: -2,
-                                    child: Container(
-                                      width: 30,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        color: _ink,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: Colors.white, width: 2.5),
+                                  ApoloDlAccountHeader(
+                                    avatar: _buildAvatarContent(palette),
+                                    onAvatarTap: () =>
+                                        _openEditProfileSheet(isAr),
+                                    displayName: name,
+                                    onNameTap: () =>
+                                        _openEditProfileSheet(isAr),
+                                    handle: '@$handle',
+                                    stats: [
+                                      ApoloDlAccountStat(
+                                        value:
+                                            '${_state.followedSellerIds.length}',
+                                        label: s.tr(
+                                          'متابَعة',
+                                          'Abonnements',
+                                          'Following',
+                                        ),
                                       ),
-                                      child: const Icon(
-                                        CupertinoIcons.camera_fill,
-                                        color: Colors.white,
-                                        size: 13.5,
+                                      ApoloDlAccountStat(
+                                        value: '${_myAds.length}',
+                                        label: s.tr(
+                                          'إعلاناتي',
+                                          'Annonces',
+                                          'Listings',
+                                        ),
+                                        onTap: () =>
+                                            setState(() => _activeTab = 0),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            // Name + Edit tap
-                            GestureDetector(
-                              onTap: () => _openEditProfileSheet(isAr),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 21,
-                                        fontWeight: FontWeight.w800,
-                                        color: _ink,
-                                        letterSpacing:
-                                            AppTypography.trackingForContext(
-                                                context, -0.5),
+                                      ApoloDlAccountStat(
+                                        value:
+                                            '${_baseViews ?? _state.favoriteAdIds.length}',
+                                        label: _baseViews != null
+                                            ? s.tr('مشاهدة', 'Vues', 'Views')
+                                            : s.tr(
+                                                'المفضلة', 'Favoris', 'Likes'),
+                                        onTap: () =>
+                                            setState(() => _activeTab = 1),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '@$handle',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: _muted,
-                              ),
-                            ),
-                            if (bio.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 300),
-                                child: Text(
-                                  bio,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: _ink,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 14),
-
-                            // Instagram-style Edit Profile Pill Button
-                            PressableScale(
-                              onTap: () => _openEditProfileSheet(isAr),
-                              child: Container(
-                                height: 38,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _surface,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      CupertinoIcons.pencil,
-                                      size: 14,
-                                      color: _ink,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      s.tr(
+                                    ],
+                                    primaryAction: ApoloDlButton(
+                                      key: const Key('profile-edit-btn'),
+                                      label: s.tr(
                                         'تعديل الملف الشخصي',
                                         'Modifier le profil',
                                         'Edit profile',
                                       ),
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: _ink,
-                                      ),
+                                      variant: ApoloDlButtonVariant.secondary,
+                                      size: ApoloDlButtonSize.sm,
+                                      height: 42,
+                                      borderRadius: 999,
+                                      fullWidth: true,
+                                      onPressed: () =>
+                                          _openEditProfileSheet(isAr),
                                     ),
-                                  ],
-                                ),
+                                    secondaryAction: ApoloDlButton(
+                                      key: const Key('profile-share-btn'),
+                                      label: s.tr(
+                                        'مشاركة الملف',
+                                        'Partager le profil',
+                                        'Share profile',
+                                      ),
+                                      variant: ApoloDlButtonVariant.secondary,
+                                      size: ApoloDlButtonSize.sm,
+                                      height: 42,
+                                      borderRadius: 999,
+                                      fullWidth: true,
+                                      onPressed: () =>
+                                          _shareOwnProfile(s, name, handle),
+                                    ),
+                                    bio: bio.isNotEmpty ? bio : null,
+                                  ),
+
+                                  const SizedBox(height: 20),
+
+                                  // Clean #EEEEEE Dynamic Layer Segmented Control
+                                  Container(
+                                    height: 44,
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: palette.groupCard,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        _buildSegmentButton(
+                                          index: 0,
+                                          label:
+                                              isAr ? 'إعلاناتي' : 'Mes annonces',
+                                          icon: CupertinoIcons.square_grid_2x2,
+                                        ),
+                                        _buildSegmentButton(
+                                          index: 1,
+                                          label: isAr
+                                              ? 'الإحصائيات و Boost'
+                                              : 'Statistiques & Boost',
+                                          icon: CupertinoIcons.chart_bar,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-
-                            const SizedBox(height: 18),
-                            const Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: Color(0xFFF1F2F6)),
-                            const SizedBox(height: 16),
-
-                            // 3 Airy Tabular Metrics
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildMinimalStat(
-                                  value: '${_myAds.length}',
-                                  label: isAr ? 'إعلاناتي' : 'Annonces',
-                                  onTap: () => setState(() => _activeTab = 0),
-                                ),
-                                Container(
-                                    width: 1, height: 24, color: _hairline),
-                                _buildMinimalStat(
-                                  value: _baseViews?.toString() ?? '—',
-                                  label: isAr ? 'مشاهدة' : 'Vues',
-                                  onTap: () => setState(() => _activeTab = 1),
-                                ),
-                                Container(
-                                    width: 1, height: 24, color: _hairline),
-                                _buildMinimalStat(
-                                  value: '—',
-                                  label: isAr ? 'النمو' : 'Croissance',
-                                  valueColor: _muted,
-                                  onTap: () => setState(() => _activeTab = 1),
-                                ),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
                       ),
 
-                      const SizedBox(height: 12),
+                      // Content Area
+                      if (_loadingAds)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          sliver: SliverGrid(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 18,
+                              crossAxisSpacing: 18,
+                              childAspectRatio: 0.78,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (_, __) => const AdGridCardSkeleton(),
+                              childCount: 4,
+                            ),
+                          ),
+                        )
+                      else if (_activeTab == 0)
+                        _buildCleanAdsGrid(isAr)
+                      else
+                        SliverToBoxAdapter(
+                          child: _buildUpgradedInsightsStudio(isAr),
+                        ),
 
-                      // Clean White Segmented Control
-                      Container(
-                        height: 44,
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildSegmentButton(
-                              index: 0,
-                              label: isAr ? 'إعلاناتي' : 'Mes annonces',
-                              icon: CupertinoIcons.square_grid_2x2,
-                            ),
-                            _buildSegmentButton(
-                              index: 1,
-                              label: isAr
-                                  ? 'الإحصائيات و Boost'
-                                  : 'Statistiques & Boost',
-                              icon: CupertinoIcons.chart_bar,
-                            ),
-                          ],
-                        ),
-                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
                     ],
                   ),
                 ),
               ),
-
-              // 3. Content Area with Generous Padding
-              if (_loadingAds)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 18,
-                      crossAxisSpacing: 18,
-                      childAspectRatio: 0.78,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (_, __) => const AdGridCardSkeleton(),
-                      childCount: 4,
-                    ),
-                  ),
-                )
-              else if (_activeTab == 0)
-                _buildCleanAdsGrid(isAr)
-              else
-                SliverToBoxAdapter(
-                  child: _buildUpgradedInsightsStudio(isAr),
-                ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           ),
         ),
@@ -619,57 +531,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAvatarContent(String name) {
+  Widget _buildAvatarContent(ApoloDlPalette palette) {
     final avatarUrl = _state.currentUser?['avatar']?.toString();
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return AppImage(url: avatarUrl, width: 88, height: 88, fit: BoxFit.cover);
+      return AppImage(url: avatarUrl, width: 72, height: 72, fit: BoxFit.cover);
     }
-    return Text(
-      name.isNotEmpty ? name[0].toUpperCase() : 'A',
-      style: TextStyle(
-        fontSize: 32,
-        fontWeight: FontWeight.w800,
-        color: _ink,
-        letterSpacing: AppTypography.trackingForContext(context, -0.5),
-      ),
-    );
-  }
-
-  Widget _buildMinimalStat({
-    required String value,
-    required String label,
-    required VoidCallback onTap,
-    Color valueColor = _ink,
-  }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: valueColor,
-                letterSpacing: AppTypography.trackingForContext(context, -0.5),
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: _muted,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return Icon(
+      CupertinoIcons.person_fill,
+      size: 32,
+      color: palette.iconMuted,
     );
   }
 
@@ -679,6 +549,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required IconData icon,
   }) {
     final selected = _activeTab == index;
+    final palette = ApoloDlPalette.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _activeTab = index),
@@ -686,7 +557,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           duration: const Duration(milliseconds: 200),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? Colors.white : Colors.transparent,
+            color: selected ? palette.bg : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             boxShadow: selected
                 ? [
@@ -704,15 +575,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icon(
                 icon,
                 size: 15,
-                color: selected ? _ink : _muted,
+                color: selected ? palette.ink : palette.muted,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  color: selected ? _ink : _muted,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    color: selected ? palette.ink : palette.muted,
+                  ),
                 ),
               ),
             ],
