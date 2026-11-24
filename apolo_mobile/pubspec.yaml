@@ -28,6 +28,8 @@ dependencies:
   smart_auth: ^3.2.0
   audio_waveforms: ^2.0.2
   path_provider: ^2.1.4
+  qr: ^3.0.2
+  mobile_scanner: ^7.0.0
 
 dev_dependencies:
   flutter_test:

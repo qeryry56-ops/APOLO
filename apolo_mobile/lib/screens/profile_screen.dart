@@ -5,7 +5,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
@@ -14,6 +13,7 @@ import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
 import 'post_ad_screen.dart';
 import 'settings_screen.dart';
+import 'share_profile_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
 import 'widgets/boost_sheet.dart';
@@ -152,35 +152,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String name,
     String handle,
   ) async {
-    final userId = _state.currentUser?['id']?.toString() ?? '';
+    final userId = _state.currentUser?['id']?.toString().trim() ?? '';
+    final parsedId = int.tryParse(userId);
     final url = userId.isNotEmpty
         ? 'https://apolo.ma/users/$userId'
-        : 'https://apolo.ma';
-    final shareText = s.tr(
-      'شوف حساب $name (@$handle) على Apolo.ma:\n$url',
-      'Découvrez le profil de $name (@$handle) sur Apolo.ma :\n$url',
-      'Check out $name (@$handle) on Apolo.ma:\n$url',
-    );
-    try {
-      await Share.share(shareText, subject: name);
-    } catch (_) {
-      try {
-        await Clipboard.setData(ClipboardData(text: url));
-      } catch (_) {}
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            s.tr(
-              'تم نسخ رابط الملف الشخصي',
-              'Lien du profil copié',
-              'Profile link copied',
-            ),
-          ),
+        : 'https://apolo.ma/@$handle';
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ShareProfileScreen(
+          userId: parsedId,
+          displayName: name,
+          handle: handle,
+          profileUrl: url,
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override

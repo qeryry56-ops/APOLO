@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config/app_config.dart';
@@ -10,6 +9,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
+import 'share_profile_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
@@ -173,9 +173,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           CupertinoActionSheetAction(
             onPressed: () {
               Navigator.pop(ctx);
-              Share.share(
-                'شوف بروفايل البائع ${widget.sellerName} فـ Apolo.ma:\nhttps://apolo.ma/users/${widget.sellerId}',
-              );
+              _shareSellerProfile(_state.s);
             },
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -278,32 +276,17 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   Future<void> _shareSellerProfile(AppStrings s) async {
-    final url = 'https://apolo.ma/users/${widget.sellerId}';
-    final shareText = s.tr(
-      'شوف بروفايل البائع ${widget.sellerName} فـ Apolo.ma:\n$url',
-      'Découvrez le profil vendeur ${widget.sellerName} sur Apolo.ma :\n$url',
-      'Check out ${widget.sellerName} on Apolo.ma:\n$url',
-    );
-    try {
-      await Share.share(shareText, subject: widget.sellerName);
-    } catch (_) {
-      try {
-        await Clipboard.setData(ClipboardData(text: url));
-      } catch (_) {}
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            s.tr(
-              'تم نسخ رابط البائع',
-              'Lien du vendeur copié',
-              'Seller link copied',
-            ),
-          ),
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ShareProfileScreen(
+          userId: widget.sellerId,
+          displayName: widget.sellerName,
+          handle: _sellerHandle(),
+          profileUrl: 'https://apolo.ma/users/${widget.sellerId}',
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override

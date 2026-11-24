@@ -1,0 +1,356 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:apolo_mobile/core/state/app_state.dart';
+import 'package:apolo_mobile/screens/profile_screen.dart';
+import 'package:apolo_mobile/screens/scan_profile_code_screen.dart';
+import 'package:apolo_mobile/screens/seller_profile_screen.dart';
+import 'package:apolo_mobile/screens/share_profile_screen.dart';
+import 'package:apolo_mobile/theme/app_theme.dart';
+import 'package:apolo_mobile/widgets/dl_qr_code.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _MockDioAdapter implements HttpClientAdapter {
+  final FutureOr<ResponseBody> Function(RequestOptions options) handler;
+
+  _MockDioAdapter(this.handler);
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    return await handler(options);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+ResponseBody _jsonReply(Object payload, [int statusCode = 200]) {
+  return ResponseBody.fromString(
+    jsonEncode(payload),
+    statusCode,
+    headers: {
+      Headers.contentTypeHeader: [Headers.jsonContentType],
+    },
+  );
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  final state = AppState();
+  late Dio originalDio;
+  late Locale originalLocale;
+  late Map<String, dynamic> testUser;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    originalDio = state.api.dio;
+    originalLocale = state.locale;
+    testUser = <String, dynamic>{
+      'id': 77,
+      'name': 'Dynamic Layer',
+      'username': 'dynamiclayer',
+      'bio': 'Moroccan classifieds & verified stores.',
+      'avatar': '',
+    };
+
+    state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
+      ..httpClientAdapter = _MockDioAdapter((options) {
+        if (options.path.contains('/auth/profile')) {
+          return _jsonReply({'status': 'success', 'user': testUser});
+        }
+        if (options.path.contains('/my-ads')) {
+          return _jsonReply({'status': 'success', 'data': <dynamic>[]});
+        }
+        if (options.path.contains('/ads')) {
+          final sellerId = options.queryParameters['seller_id'];
+          if (sellerId?.toString() == '42') {
+            return _jsonReply({
+              'status': 'success',
+              'data': [
+                {
+                  'id': 501,
+                  'title': 'MacBook Pro M3',
+                  'user': {
+                    'id': 42,
+                    'name': 'Alex Michael Smith',
+                    'avatar': '',
+                    'phone': '+212600000042',
+                    'city': 'Casablanca',
+                  },
+                },
+              ],
+            });
+          }
+          return _jsonReply({'status': 'success', 'data': <dynamic>[]});
+        }
+        if (options.path.contains('/taxonomy')) {
+          return _jsonReply({
+            'status': 'success',
+            'categories': <dynamic>[],
+            'cities': <dynamic>[],
+          });
+        }
+        return _jsonReply({'status': 'success', 'data': <dynamic>[]});
+      });
+
+    state.followedSellerIds.clear();
+    state.favoriteAdIds.clear();
+    state.currentUser = null;
+    await state.api.setToken(null);
+    await state.setLocale(const Locale('en'));
+  });
+
+  tearDown(() async {
+    state.followedSellerIds.clear();
+    state.favoriteAdIds.clear();
+    state.currentUser = null;
+    await state.api.setToken(null);
+    await state.setLocale(originalLocale);
+    state.api.dio = originalDio;
+  });
+
+  Future<void> pumpScreen(
+    WidgetTester tester,
+    Widget screen, {
+    Size viewport = const Size(390, 844),
+  }) async {
+    tester.view.physicalSize = viewport;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      AnimatedBuilder(
+        animation: state,
+        builder: (context, _) {
+          return MaterialApp(
+            theme: AppTheme.light(state.locale).copyWith(
+              splashFactory: NoSplash.splashFactory,
+            ),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: screen,
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  group('ApoloProfileQrParser & ApoloDlQrCode', () {
+    test('parses supported Apolo user, ad, handle, external, and plain links',
+        () {
+      expect(
+        ApoloProfileQrParser.parse('https://apolo.ma/users/77'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.user,
+          rawValue: 'https://apolo.ma/users/77',
+          id: 77,
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('http://www.apolo.ma/users/42/'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.user,
+          rawValue: 'http://www.apolo.ma/users/42/',
+          id: 42,
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('apolo://users/15'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.user,
+          rawValue: 'apolo://users/15',
+          id: 15,
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('https://apolo.ma/ads/901'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.ad,
+          rawValue: 'https://apolo.ma/ads/901',
+          id: 901,
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('apolo://ads/901'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.ad,
+          rawValue: 'apolo://ads/901',
+          id: 901,
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('https://apolo.ma/@dynamiclayer'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.handle,
+          rawValue: 'https://apolo.ma/@dynamiclayer',
+          handle: 'dynamiclayer',
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('@alex_smith'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.handle,
+          rawValue: '@alex_smith',
+          handle: 'alex_smith',
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('https://example.com/item'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.external,
+          rawValue: 'https://example.com/item',
+        ),
+      );
+      expect(
+        ApoloProfileQrParser.parse('hello world'),
+        const ApoloQrTarget(
+          type: ApoloQrTargetType.unknown,
+          rawValue: 'hello world',
+        ),
+      );
+    });
+
+    test('builds valid ISO/IEC 18004 QR matrix for profile URLs', () {
+      final modules = ApoloDlQrCode.moduleCountFor('https://apolo.ma/users/77');
+      expect(modules, greaterThanOrEqualTo(21));
+      final img = ApoloDlQrCode.buildQrImage('https://apolo.ma/users/77');
+      expect(img.moduleCount, modules);
+      // Finder pattern top-left outer corner (0,0) is always dark in ISO QR.
+      expect(img.isDark(0, 0), isTrue);
+    });
+  });
+
+  group('Dynamic Layer Share profile & Scan code flow', () {
+    for (final lang in ['en', 'ar']) {
+      testWidgets(
+          'ProfileScreen -> ShareProfileScreen -> ScanProfileCodeScreen works in $lang without overflow',
+          (tester) async {
+        await tester.runAsync(() => state.setLocale(Locale(lang)));
+        state.currentUser = testUser;
+        await tester.runAsync(() => state.api.setToken('valid-test-token'));
+
+        await pumpScreen(tester, const ProfileScreen());
+        expect(tester.takeException(), isNull);
+
+        await tester.tap(find.byKey(const Key('profile-share-btn')));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(ShareProfileScreen), findsOneWidget);
+        expect(find.byKey(const Key('share-profile-qr-card')), findsOneWidget);
+        expect(find.byKey(const Key('share-profile-qr-code')), findsOneWidget);
+        expect(
+            find.byKey(const Key('share-profile-native-btn')), findsOneWidget);
+        expect(find.byKey(const Key('share-profile-scan-btn')), findsOneWidget);
+        expect(find.text('Dynamic Layer'), findsOneWidget);
+        expect(find.text('@dynamiclayer'), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('share-profile-scan-btn')));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(ScanProfileCodeScreen), findsOneWidget);
+        expect(find.byKey(const Key('scan-code-viewfinder')), findsOneWidget);
+        expect(find.byKey(const Key('scan-code-hint')), findsOneWidget);
+        expect(find.byKey(const Key('scan-code-flash-btn')), findsOneWidget);
+        expect(find.byKey(const Key('scan-code-shutter-btn')), findsOneWidget);
+        expect(find.byKey(const Key('scan-code-gallery-btn')), findsOneWidget);
+        expect(find.byKey(const Key('scan-code-back-btn')), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('scan-code-back-btn')));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(ShareProfileScreen), findsOneWidget);
+        expect(find.byType(ScanProfileCodeScreen), findsNothing);
+      });
+    }
+
+    testWidgets(
+        'SellerProfileScreen Share profile opens ShareProfileScreen with seller name & handle',
+        (tester) async {
+      await pumpScreen(
+        tester,
+        const SellerProfileScreen(
+          sellerId: 99,
+          sellerName: 'Atlas Store Casablanca',
+          sellerCity: 'Casablanca',
+          sellerPhone: '+212611223344',
+        ),
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const Key('seller-share-btn')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ShareProfileScreen), findsOneWidget);
+      expect(find.text('Atlas Store Casablanca'), findsOneWidget);
+      expect(find.text('@atlas_store_casablanca'), findsOneWidget);
+    });
+
+    testWidgets(
+        'ScanProfileCodeScreen manual entry sheet invokes onCodeScanned callback',
+        (tester) async {
+      String? capturedCode;
+      await pumpScreen(
+        tester,
+        ScanProfileCodeScreen(
+          enableLiveCamera: false,
+          onCodeScanned: (code) => capturedCode = code,
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('scan-manual-input')), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('scan-manual-input')),
+        'https://apolo.ma/users/42',
+      );
+      await tester.tap(find.byKey(const Key('scan-manual-submit')));
+      await tester.pumpAndSettle();
+
+      expect(capturedCode, 'https://apolo.ma/users/42');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'ScanProfileCodeScreen manual user link navigates to SellerProfileScreen',
+        (tester) async {
+      await pumpScreen(
+        tester,
+        const ScanProfileCodeScreen(enableLiveCamera: false),
+      );
+
+      await tester.tap(find.byKey(const Key('scan-code-shutter-btn')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('scan-manual-input')),
+        'https://apolo.ma/users/42',
+      );
+      await tester.tap(find.byKey(const Key('scan-manual-submit')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SellerProfileScreen), findsOneWidget);
+      expect(find.byKey(const Key('seller-follow-btn')), findsOneWidget);
+      expect(find.text('Alex Michael Smith'), findsNWidgets(2));
+    });
+  });
+}
