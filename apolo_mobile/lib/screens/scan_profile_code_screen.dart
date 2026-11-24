@@ -551,7 +551,9 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen> {
         final isAr = s.isAr;
         final tokens = DlShareProfileTokens.of(context);
         final mediaPadding = MediaQuery.paddingOf(context);
-        final bottomInset = mediaPadding.bottom;
+        final screenSize = MediaQuery.sizeOf(context);
+        final bottomInset =
+            DlShareProfileLayout.resolveBottomSafeInset(screenSize, mediaPadding);
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,

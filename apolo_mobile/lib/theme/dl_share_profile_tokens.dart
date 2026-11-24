@@ -141,6 +141,18 @@ abstract final class DlShareProfileLayout {
   static const double scanButtonIconGap = 8.0;
   static const double scanButtonIconSize = 24.0;
   static const double scanButtonBarPadding = p16;
+  static const double scanButtonBottomPadding = 20.0;
+
+  /// Resolves bottom safe-area clearance across native iOS/Android and mobile Web/PWA
+  /// (where standalone iOS WebApps render the 34px Home Indicator inside the viewport
+  /// while `MediaQuery.padding.bottom` reports `0`).
+  static double resolveBottomSafeInset(Size screenSize, EdgeInsets mediaPadding) {
+    if (mediaPadding.bottom > 0) return mediaPadding.bottom;
+    if (screenSize.width < 600.0 && screenSize.height >= 700.0) {
+      return homeIndicatorHeight;
+    }
+    return 0.0;
+  }
 }
 
 /// Modular token bundle for QR Share & Scan modes adapting cleanly to Light/Dark mode.

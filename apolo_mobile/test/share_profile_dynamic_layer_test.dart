@@ -498,7 +498,7 @@ void main() {
       expect(cardRect.width, 284);
       expect(cardRect.height, 364);
       expect(cardRect.left, 45.5);
-      expect(cardRect.top, 177);
+      expect(cardRect.top, 175);
       expect(innerRect.width, 220);
       expect(innerRect.height, 220);
       expect(innerRect.left - cardRect.left, 32);
@@ -528,11 +528,11 @@ void main() {
       final scanBtnRect =
           tester.getRect(find.byKey(const Key('share-profile-scan-btn')));
       expect(bottomBarRect.width, 375);
-      expect(bottomBarRect.height, 122);
-      expect(bottomBarRect.top, 690);
+      expect(bottomBarRect.height, 126);
+      expect(bottomBarRect.top, 686);
       expect(scanBtnRect.height, 56);
-      expect(scanBtnRect.top, 706);
-      expect(scanBtnRect.bottom, 762);
+      expect(scanBtnRect.top, 702);
+      expect(scanBtnRect.bottom, 758);
       expect(scanBtnRect.center.dx, closeTo(187.5, 0.5));
       expect(scanBtnRect.width, greaterThanOrEqualTo(140));
       expect(scanBtnRect.width, lessThanOrEqualTo(200));
@@ -588,8 +588,9 @@ void main() {
       expect(shareTopWrapperRect.width, 393);
       expect(shareCardRect.width, 284);
       expect(shareCardRect.height, 364);
-      expect(shareBottomBarRect.height, 88);
+      expect(shareBottomBarRect.height, 126);
       expect(shareScanBtnRect.height, 56);
+      expect(shareScanBtnRect.bottom, 706);
       expect(shareScanBtnRect.center.dx, closeTo(196.5, 0.5));
       expect(shareScanBtnRect.width, greaterThanOrEqualTo(135));
       expect(shareScanBtnRect.width, lessThanOrEqualTo(240));

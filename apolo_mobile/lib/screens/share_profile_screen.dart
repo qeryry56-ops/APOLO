@@ -108,6 +108,9 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
         final isAr = s.isAr;
         final tokens = DlShareProfileTokens.of(context);
         final mediaPadding = MediaQuery.paddingOf(context);
+        final screenSize = MediaQuery.sizeOf(context);
+        final bottomInset =
+            DlShareProfileLayout.resolveBottomSafeInset(screenSize, mediaPadding);
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -417,8 +420,8 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                                 DlShareProfileLayout.scanButtonBarPadding,
                                 DlShareProfileLayout.scanButtonBarPadding,
                                 DlShareProfileLayout.scanButtonBarPadding,
-                                DlShareProfileLayout.scanButtonBarPadding +
-                                    mediaPadding.bottom,
+                                DlShareProfileLayout.scanButtonBottomPadding +
+                                    bottomInset,
                               ),
                               child: Center(
                                 child: _ShareScanCodeButton(
