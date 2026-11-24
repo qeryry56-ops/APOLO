@@ -134,14 +134,13 @@ abstract final class DlShareProfileLayout {
   static const double bottomBarPadding = p32;
   static const double homeIndicatorHeight = 34.0;
 
-  // Mode 1 CTA button (`Scan code` / `مسح الرمز`)
-  static const double scanButtonHeight = 52.0;
+  // Mode 1 CTA button (`Frame 1321319711` -> `Button` `size: lg`, `roundedFull`, `Hug`)
+  static const double scanButtonHeight = 56.0;
   static const double scanButtonHorizontalPadding = 24.0;
-  static const double scanButtonIconGap = 10.0;
-  static const double scanButtonIconSize = 20.0;
-  static const double scanButtonOuterHorizontalPadding = 24.0;
-  static const double scanButtonOuterTopPadding = 16.0;
-  static const double scanButtonOuterBottomPadding = 24.0;
+  static const double scanButtonVerticalPadding = 16.0;
+  static const double scanButtonIconGap = 8.0;
+  static const double scanButtonIconSize = 24.0;
+  static const double scanButtonBarPadding = p16;
 }
 
 /// Modular token bundle for QR Share & Scan modes adapting cleanly to Light/Dark mode.

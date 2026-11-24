@@ -427,8 +427,10 @@ void main() {
 
       expect(flashRect.width, 56);
       expect(flashRect.height, 56);
+      expect(find.byIcon(Icons.flashlight_off_rounded), findsOneWidget);
       expect(galleryRect.width, 56);
       expect(galleryRect.height, 56);
+      expect(find.byIcon(Icons.image_rounded), findsOneWidget);
 
       expect(shutterRect.width, 80);
       expect(shutterRect.height, 80);
@@ -495,6 +497,8 @@ void main() {
 
       expect(cardRect.width, 284);
       expect(cardRect.height, 364);
+      expect(cardRect.left, 45.5);
+      expect(cardRect.top, 177);
       expect(innerRect.width, 220);
       expect(innerRect.height, 220);
       expect(innerRect.left - cardRect.left, 32);
@@ -524,10 +528,14 @@ void main() {
       final scanBtnRect =
           tester.getRect(find.byKey(const Key('share-profile-scan-btn')));
       expect(bottomBarRect.width, 375);
-      expect(bottomBarRect.height, 126);
-      expect(scanBtnRect.width, 327);
-      expect(scanBtnRect.height, 52);
-      expect(scanBtnRect.bottom, 754);
+      expect(bottomBarRect.height, 122);
+      expect(bottomBarRect.top, 690);
+      expect(scanBtnRect.height, 56);
+      expect(scanBtnRect.top, 706);
+      expect(scanBtnRect.bottom, 762);
+      expect(scanBtnRect.center.dx, closeTo(187.5, 0.5));
+      expect(scanBtnRect.width, greaterThanOrEqualTo(140));
+      expect(scanBtnRect.width, lessThanOrEqualTo(200));
 
       await pumpScreen(
         tester,
@@ -547,7 +555,7 @@ void main() {
     });
 
     testWidgets(
-        'iOS Safari/PWA viewport (393x760, zero insets) renders without double status bar or squished top bar',
+        'iOS Safari/PWA viewport (393x760, zero insets) and multi-phone matrix render cleanly with exact Hug proportions',
         (tester) async {
       await tester.runAsync(() => state.setLocale(const Locale('ar')));
       await pumpScreen(
@@ -580,9 +588,11 @@ void main() {
       expect(shareTopWrapperRect.width, 393);
       expect(shareCardRect.width, 284);
       expect(shareCardRect.height, 364);
-      expect(shareBottomBarRect.height, 92);
-      expect(shareScanBtnRect.width, 345);
-      expect(shareScanBtnRect.height, 52);
+      expect(shareBottomBarRect.height, 88);
+      expect(shareScanBtnRect.height, 56);
+      expect(shareScanBtnRect.center.dx, closeTo(196.5, 0.5));
+      expect(shareScanBtnRect.width, greaterThanOrEqualTo(135));
+      expect(shareScanBtnRect.width, lessThanOrEqualTo(240));
 
       await pumpScreen(
         tester,
@@ -606,6 +616,62 @@ void main() {
       expect(scanTopWrapperRect.width, 393);
       expect(scanViewfinderRect.width, 311);
       expect(scanControlsBarRect.height, 144);
+
+      const phoneSizes = <Size>[
+        Size(320, 568),
+        Size(375, 667),
+        Size(412, 915),
+        Size(430, 932),
+        Size(768, 1024),
+      ];
+
+      for (final lang in ['ar', 'en']) {
+        await tester.runAsync(() => state.setLocale(Locale(lang)));
+        for (final size in phoneSizes) {
+          await pumpScreen(
+            tester,
+            const ShareProfileScreen(
+              userId: 77,
+              displayName: 'Alex Michael Smith',
+              handle: '@alexsmith',
+              profileUrl: 'https://apolo.ma/users/77',
+              enableLiveCamera: false,
+            ),
+            viewport: size,
+            viewPadding: FakeViewPadding.zero,
+          );
+          expect(tester.takeException(), isNull);
+
+          final topW = tester
+              .getRect(find.byKey(const Key('share-profile-top-wrapper')))
+              .width;
+          final cRect = tester
+              .getRect(find.byKey(const Key('share-profile-qr-card')));
+          final bRect = tester
+              .getRect(find.byKey(const Key('share-profile-scan-btn')));
+
+          expect(topW, size.width);
+          expect(cRect.width, 284);
+          expect(cRect.height, 364);
+          expect(bRect.height, 56);
+          expect(bRect.center.dx, closeTo(size.width / 2, 0.5));
+          expect(bRect.width, lessThan(240));
+
+          await pumpScreen(
+            tester,
+            const ScanProfileCodeScreen(enableLiveCamera: false),
+            viewport: size,
+            viewPadding: FakeViewPadding.zero,
+          );
+          expect(tester.takeException(), isNull);
+          expect(
+            tester
+                .getRect(find.byKey(const Key('scan-code-top-wrapper')))
+                .width,
+            size.width,
+          );
+        }
+      }
     });
   });
 }
