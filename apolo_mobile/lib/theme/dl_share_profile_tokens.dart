@@ -133,6 +133,15 @@ abstract final class DlShareProfileLayout {
   static const double bottomBarHeight = 144.0;
   static const double bottomBarPadding = p32;
   static const double homeIndicatorHeight = 34.0;
+
+  // Mode 1 CTA button (`Scan code` / `مسح الرمز`)
+  static const double scanButtonHeight = 52.0;
+  static const double scanButtonHorizontalPadding = 24.0;
+  static const double scanButtonIconGap = 10.0;
+  static const double scanButtonIconSize = 20.0;
+  static const double scanButtonOuterHorizontalPadding = 24.0;
+  static const double scanButtonOuterTopPadding = 16.0;
+  static const double scanButtonOuterBottomPadding = 24.0;
 }
 
 /// Modular token bundle for QR Share & Scan modes adapting cleanly to Light/Dark mode.
@@ -149,6 +158,8 @@ class DlShareProfileTokens {
     required this.captureOuterColor,
     required this.captureGapColor,
     required this.captureInnerColor,
+    required this.primaryButtonBackground,
+    required this.primaryButtonForeground,
     this.radii = const DlShareProfileRadii(),
   });
 
@@ -162,6 +173,8 @@ class DlShareProfileTokens {
   final Color captureOuterColor;
   final Color captureGapColor;
   final Color captureInnerColor;
+  final Color primaryButtonBackground;
+  final Color primaryButtonForeground;
   final DlShareProfileRadii radii;
 
   static const DlShareProfileTokens light = DlShareProfileTokens(
@@ -175,6 +188,8 @@ class DlShareProfileTokens {
     captureOuterColor: DlShareProfileColors.colorGreyBlack,
     captureGapColor: DlShareProfileColors.colorGreyWhite,
     captureInnerColor: DlShareProfileColors.colorGreyBlack,
+    primaryButtonBackground: DlShareProfileColors.colorGreyBlack,
+    primaryButtonForeground: DlShareProfileColors.colorGreyWhite,
   );
 
   static final DlShareProfileTokens dark = DlShareProfileTokens(
@@ -188,6 +203,8 @@ class DlShareProfileTokens {
     captureOuterColor: ApoloDlPalette.dark.ink,
     captureGapColor: ApoloDlPalette.dark.bg,
     captureInnerColor: ApoloDlPalette.dark.ink,
+    primaryButtonBackground: ApoloDlPalette.dark.ink,
+    primaryButtonForeground: ApoloDlPalette.dark.onInk,
   );
 
   static DlShareProfileTokens of(BuildContext context) {

@@ -6,7 +6,6 @@ import 'package:share_plus/share_plus.dart';
 import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_qr_code.dart';
-import '../widgets/dl_settings_kit.dart';
 import '../widgets/dl_share_top_nav.dart';
 import 'scan_profile_code_screen.dart';
 
@@ -358,27 +357,21 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                     Padding(
                       key: const Key('share-profile-bottom-bar'),
                       padding: EdgeInsets.fromLTRB(
-                        DlShareProfileLayout.bottomBarPadding,
-                        16,
-                        DlShareProfileLayout.bottomBarPadding,
-                        24 + mediaPadding.bottom,
+                        DlShareProfileLayout.scanButtonOuterHorizontalPadding,
+                        DlShareProfileLayout.scanButtonOuterTopPadding,
+                        DlShareProfileLayout.scanButtonOuterHorizontalPadding,
+                        DlShareProfileLayout.scanButtonOuterBottomPadding +
+                            mediaPadding.bottom,
                       ),
-                      child: Center(
-                        child: ApoloDlButton(
-                          key: const Key('share-profile-scan-btn'),
-                          label: s.tr(
-                            'مسح الرمز',
-                            'Scanner le code',
-                            'Scan code',
-                          ),
-                          leadingIcon: Icons.qr_code_scanner_rounded,
-                          variant: ApoloDlButtonVariant.primary,
-                          size: ApoloDlButtonSize.md,
-                          height: 48,
-                          borderRadius: tokens.radii.pill,
-                          fullWidth: false,
-                          onPressed: _openScanner,
+                      child: _ShareScanCodeButton(
+                        key: const Key('share-profile-scan-btn'),
+                        label: s.tr(
+                          'مسح الرمز',
+                          'Scanner le code',
+                          'Scan code',
                         ),
+                        tokens: tokens,
+                        onPressed: _openScanner,
                       ),
                     ),
                   ],
@@ -388,6 +381,84 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _ShareScanCodeButton extends StatefulWidget {
+  const _ShareScanCodeButton({
+    required this.label,
+    required this.tokens,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String label;
+  final DlShareProfileTokens tokens;
+  final VoidCallback onPressed;
+
+  @override
+  State<_ShareScanCodeButton> createState() => _ShareScanCodeButtonState();
+}
+
+class _ShareScanCodeButtonState extends State<_ShareScanCodeButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = widget.tokens;
+    final radius = BorderRadius.circular(tokens.radii.roundedFull);
+
+    return AnimatedScale(
+      scale: _pressed ? 0.985 : 1.0,
+      duration: const Duration(milliseconds: 90),
+      curve: Curves.easeOut,
+      child: Material(
+        color: tokens.primaryButtonBackground,
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          customBorder: RoundedRectangleBorder(borderRadius: radius),
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) => setState(() => _pressed = false),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            widget.onPressed();
+          },
+          child: SizedBox(
+            width: double.infinity,
+            height: DlShareProfileLayout.scanButtonHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DlShareProfileLayout.scanButtonHorizontalPadding,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.qr_code_scanner_rounded,
+                    size: DlShareProfileLayout.scanButtonIconSize,
+                    color: tokens.primaryButtonForeground,
+                  ),
+                  const SizedBox(width: DlShareProfileLayout.scanButtonIconGap),
+                  Flexible(
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.textBaseBold.copyWith(
+                        color: tokens.primaryButtonForeground,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

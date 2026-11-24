@@ -524,7 +524,9 @@ void main() {
       final scanBtnRect =
           tester.getRect(find.byKey(const Key('share-profile-scan-btn')));
       expect(bottomBarRect.width, 375);
-      expect(bottomBarRect.height, 122);
+      expect(bottomBarRect.height, 126);
+      expect(scanBtnRect.width, 327);
+      expect(scanBtnRect.height, 52);
       expect(scanBtnRect.bottom, 754);
 
       await pumpScreen(
@@ -570,13 +572,17 @@ void main() {
           tester.getRect(find.byKey(const Key('share-profile-qr-card')));
       final shareBottomBarRect =
           tester.getRect(find.byKey(const Key('share-profile-bottom-bar')));
+      final shareScanBtnRect =
+          tester.getRect(find.byKey(const Key('share-profile-scan-btn')));
 
       expect(shareHeaderRect.height, 56);
       expect(shareTopWrapperRect.top, 0);
       expect(shareTopWrapperRect.width, 393);
       expect(shareCardRect.width, 284);
       expect(shareCardRect.height, 364);
-      expect(shareBottomBarRect.height, 88);
+      expect(shareBottomBarRect.height, 92);
+      expect(shareScanBtnRect.width, 345);
+      expect(shareScanBtnRect.height, 52);
 
       await pumpScreen(
         tester,
