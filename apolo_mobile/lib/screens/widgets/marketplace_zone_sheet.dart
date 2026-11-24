@@ -96,21 +96,25 @@ Future<bool?> showMarketplaceZoneSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (ctx) => _MarketplaceZoneSheetBody(state: state),
+    builder: (ctx) => MarketplaceZoneContent(state: state),
   );
 }
 
-class _MarketplaceZoneSheetBody extends StatefulWidget {
+class MarketplaceZoneContent extends StatefulWidget {
   final AppState state;
+  final bool embeddedInScreen;
 
-  const _MarketplaceZoneSheetBody({required this.state});
+  const MarketplaceZoneContent({
+    super.key,
+    required this.state,
+    this.embeddedInScreen = false,
+  });
 
   @override
-  State<_MarketplaceZoneSheetBody> createState() =>
-      _MarketplaceZoneSheetBodyState();
+  State<MarketplaceZoneContent> createState() => _MarketplaceZoneContentState();
 }
 
-class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
+class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
   static const Color _ink = Color(0xFF0A0A0A);
   static const Color _muted = Color(0xFF6B7280);
   static const Color _canvas = Color(0xFFF2F3F7);
@@ -238,30 +242,27 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
   Widget build(BuildContext context) {
     final s = widget.state.s;
     final activeCityLabel = s.isAr ? _nameAr : _nameFr;
+    final embedded = widget.embeddedInScreen;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: _canvas,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD1D5DB),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+    final scrollBody = SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(16, embedded ? 16 : 12, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!embedded) ...[
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1D5DB),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              const SizedBox(height: 14),
+            ),
+            const SizedBox(height: 14),
+          ],
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Row(
@@ -335,6 +336,9 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
                 decoration: BoxDecoration(
                   color: _cardBg,
                   borderRadius: BorderRadius.circular(22),
+                  border: embedded
+                      ? Border.all(color: const Color(0xFFEEEEEE))
+                      : null,
                 ),
                 child: Column(
                   children: [
@@ -610,16 +614,20 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
                                 color: _ink,
                               ),
                             const SizedBox(width: 8),
-                            Text(
-                              s.tr(
-                                'تحديد منطقتي تلقائياً (GPS)',
-                                'Détecter ma position automatiquement',
-                                'Detect my location automatically',
-                              ),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: _ink,
+                            Flexible(
+                              child: Text(
+                                s.tr(
+                                  'تحديد منطقتي تلقائياً (GPS)',
+                                  'Détecter ma position automatiquement',
+                                  'Detect my location automatically',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: _ink,
+                                ),
                               ),
                             ),
                           ],
@@ -639,6 +647,9 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
                 decoration: BoxDecoration(
                   color: _cardBg,
                   borderRadius: BorderRadius.circular(22),
+                  border: embedded
+                      ? Border.all(color: const Color(0xFFEEEEEE))
+                      : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,18 +657,23 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          s.tr(
-                            'نطاق المسافة (كم)',
-                            'Rayon de recherche (km)',
-                            'Distance radius',
-                          ),
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: _ink,
+                        Expanded(
+                          child: Text(
+                            s.tr(
+                              'نطاق المسافة (كم)',
+                              'Rayon de recherche (km)',
+                              'Distance radius',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: _ink,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           _allMorocco
                               ? s.tr('كل المغرب', 'Tout le Maroc')
@@ -825,7 +841,22 @@ class _MarketplaceZoneSheetBodyState extends State<_MarketplaceZoneSheetBody> {
               ),
             ],
           ),
-        ),
+        );
+
+    if (embedded) {
+      return Container(
+        color: Colors.white,
+        child: scrollBody,
+      );
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: _canvas,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: SafeArea(
+        child: scrollBody,
       ),
     );
   }

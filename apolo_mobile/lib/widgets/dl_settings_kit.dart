@@ -1,0 +1,1217 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+/// Dynamic Layer-inspired color tokens resolved cleanly for Light & Dark modes.
+@immutable
+class ApoloDlPalette {
+  const ApoloDlPalette({
+    required this.bg,
+    required this.surfaceSubtle,
+    required this.groupCard,
+    required this.pill,
+    required this.border,
+    required this.separator,
+    required this.ink,
+    required this.onInk,
+    required this.muted,
+    required this.iconMuted,
+    required this.subtle,
+    required this.danger,
+    required this.dangerSoft,
+    required this.success,
+    required this.successSoft,
+    required this.info,
+    required this.infoSoft,
+  });
+
+  final Color bg;
+  final Color surfaceSubtle;
+  final Color groupCard;
+  final Color pill;
+  final Color border;
+  final Color separator;
+  final Color ink;
+  final Color onInk;
+  final Color muted;
+  final Color iconMuted;
+  final Color subtle;
+  final Color danger;
+  final Color dangerSoft;
+  final Color success;
+  final Color successSoft;
+  final Color info;
+  final Color infoSoft;
+
+  static const ApoloDlPalette light = ApoloDlPalette(
+    bg: Color(0xFFFFFFFF),
+    surfaceSubtle: Color(0xFFF6F6F6),
+    groupCard: Color(0xFFEEEEEE),
+    pill: Color(0xFFEEEEEE),
+    border: Color(0xFFE2E2E2),
+    separator: Color(0xFFEEEEEE),
+    ink: Color(0xFF0A0A0A),
+    onInk: Color(0xFFFFFFFF),
+    muted: Color(0xFF757575),
+    iconMuted: Color(0xFF9E9E9E),
+    subtle: Color(0xFFAFAFAF),
+    danger: Color(0xFFE31B23),
+    dangerSoft: Color(0xFFFEF2F2),
+    success: Color(0xFF15803D),
+    successSoft: Color(0xFFECFDF5),
+    info: Color(0xFF0866FF),
+    infoSoft: Color(0xFFEFF6FF),
+  );
+
+  static const ApoloDlPalette dark = ApoloDlPalette(
+    bg: Color(0xFF0F172A),
+    surfaceSubtle: Color(0xFF1E293B),
+    groupCard: Color(0xFF1E293B),
+    pill: Color(0xFF1E293B),
+    border: Color(0xFF334155),
+    separator: Color(0xFF1E293B),
+    ink: Color(0xFFFFFFFF),
+    onInk: Color(0xFF0F172A),
+    muted: Color(0xFF94A3B8),
+    iconMuted: Color(0xFF64748B),
+    subtle: Color(0xFF64748B),
+    danger: Color(0xFFF87171),
+    dangerSoft: Color(0x29E31B23),
+    success: Color(0xFF34D399),
+    successSoft: Color(0x2610B981),
+    info: Color(0xFF60A5FA),
+    infoSoft: Color(0x263B82F6),
+  );
+
+  static ApoloDlPalette of(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark ? dark : light;
+  }
+}
+
+/// 1px hairline horizontal separator inspired by Dynamic Layer's DlSeparator.
+class ApoloDlSeparator extends StatelessWidget {
+  const ApoloDlSeparator({
+    super.key,
+    this.indentStart = 0,
+    this.indentEnd = 0,
+  });
+
+  final double indentStart;
+  final double indentEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    return Padding(
+      padding: EdgeInsetsDirectional.only(start: indentStart, end: indentEnd),
+      child: SizedBox(
+        width: double.infinity,
+        height: 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: palette.separator),
+        ),
+      ),
+    );
+  }
+}
+
+/// 40x40 circular icon button used in top navigation and modal headers.
+class ApoloDlIconCircleButton extends StatelessWidget {
+  const ApoloDlIconCircleButton({
+    required this.icon,
+    required this.onPressed,
+    super.key,
+    this.tooltip,
+    this.iconSize = 20,
+    this.backgroundColor,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+  final double iconSize;
+  final Color? backgroundColor;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final button = Material(
+      color: backgroundColor ?? palette.pill,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onPressed!();
+              },
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Center(
+            child: Icon(
+              icon,
+              size: iconSize,
+              color: iconColor ?? palette.ink,
+            ),
+          ),
+        ),
+      ),
+    );
+    if (tooltip != null && tooltip!.isNotEmpty) {
+      return Tooltip(message: tooltip!, child: button);
+    }
+    return button;
+  }
+}
+
+enum ApoloDlTopNavSize { md, lg }
+
+/// Dynamic Layer-inspired top navigation bar supporting compact (`md`) and
+/// bold large-title (`lg`) headers with automatic RTL/LTR chevron mirroring.
+class ApoloDlTopNav extends StatelessWidget {
+  const ApoloDlTopNav({
+    required this.title,
+    super.key,
+    this.size = ApoloDlTopNavSize.md,
+    this.showSeparator = true,
+    this.showBack = true,
+    this.onBack,
+    this.trailing,
+    this.horizontalPadding = 16,
+    this.backButtonKey,
+  });
+
+  final String title;
+  final ApoloDlTopNavSize size;
+  final bool showSeparator;
+  final bool showBack;
+  final VoidCallback? onBack;
+  final Widget? trailing;
+  final double horizontalPadding;
+  final Key? backButtonKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final backIcon =
+        isRtl ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+    final backTooltip = MaterialLocalizations.of(context).backButtonTooltip;
+    final handleBack = onBack ?? () => Navigator.of(context).maybePop();
+
+    return Container(
+      width: double.infinity,
+      color: palette.bg,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (size == ApoloDlTopNavSize.md)
+            SizedBox(
+              height: 56,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Row(
+                  children: [
+                    if (showBack)
+                      ApoloDlIconCircleButton(
+                        key: backButtonKey,
+                        icon: backIcon,
+                        tooltip: backTooltip,
+                        onPressed: handleBack,
+                      )
+                    else
+                      const SizedBox(width: 40, height: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          height: 1.5,
+                          fontWeight: FontWeight.w600,
+                          color: palette.ink,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 40,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: trailing ?? const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else ...[
+            SizedBox(
+              height: 56,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Row(
+                  children: [
+                    if (showBack)
+                      ApoloDlIconCircleButton(
+                        key: backButtonKey,
+                        icon: backIcon,
+                        tooltip: backTooltip,
+                        onPressed: handleBack,
+                      ),
+                    const Spacer(),
+                    if (trailing != null) trailing!,
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                4,
+                horizontalPadding,
+                14,
+              ),
+              child: Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                  color: palette.ink,
+                ),
+              ),
+            ),
+          ],
+          if (showSeparator) const ApoloDlSeparator(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Clean section label for grouped settings lists.
+class ApoloDlSectionHeader extends StatelessWidget {
+  const ApoloDlSectionHeader({
+    required this.title,
+    super.key,
+    this.isFirst = false,
+  });
+
+  final String title;
+  final bool isFirst;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    return Padding(
+      padding: EdgeInsetsDirectional.only(
+        top: isFirst ? 12 : 24,
+        bottom: 6,
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: palette.muted,
+        ),
+      ),
+    );
+  }
+}
+
+/// 24x24 Dynamic Layer-style circular radio indicator.
+class ApoloDlRadio extends StatelessWidget {
+  const ApoloDlRadio({
+    required this.selected,
+    super.key,
+    this.disabled = false,
+  });
+
+  final bool selected;
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final fillColor = selected
+        ? (disabled ? palette.subtle : palette.ink)
+        : palette.bg;
+
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: fillColor,
+            shape: BoxShape.circle,
+            border: selected
+                ? null
+                : Border.all(
+                    color: palette.border,
+                    width: 1.2,
+                  ),
+          ),
+          child: selected
+              ? Center(
+                  child: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: palette.bg,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom 50x32 animated pill toggle switch (never wraps Material [Switch]).
+class ApoloDlSwitch extends StatelessWidget {
+  const ApoloDlSwitch({
+    required this.value,
+    super.key,
+    this.onChanged,
+    this.disabled = false,
+    this.activeColor,
+  });
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final bool disabled;
+  final Color? activeColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final isInteractive = !disabled && onChanged != null;
+    final trackColor = disabled
+        ? palette.pill
+        : (value ? (activeColor ?? const Color(0xFF16A34A)) : palette.border);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: !isInteractive
+          ? null
+          : () {
+              HapticFeedback.mediumImpact();
+              onChanged!(!value);
+            },
+      child: Semantics(
+        toggled: value,
+        enabled: isInteractive,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeInOut,
+          width: 50,
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          decoration: BoxDecoration(
+            color: trackColor,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeInOut,
+            alignment:
+                value ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum ApoloDlButtonVariant { primary, secondary, tertiary, danger, dangerSoft }
+
+enum ApoloDlButtonSize { lg, md, sm, xs }
+
+/// Dynamic Layer-inspired button supporting primary, secondary, tertiary,
+/// danger, and soft-danger styles with press feedback and loading state.
+class ApoloDlButton extends StatefulWidget {
+  const ApoloDlButton({
+    required this.label,
+    super.key,
+    this.onPressed,
+    this.variant = ApoloDlButtonVariant.primary,
+    this.size = ApoloDlButtonSize.lg,
+    this.fullWidth = false,
+    this.isLoading = false,
+    this.leadingIcon,
+    this.borderRadius,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final ApoloDlButtonVariant variant;
+  final ApoloDlButtonSize size;
+  final bool fullWidth;
+  final bool isLoading;
+  final IconData? leadingIcon;
+  final double? borderRadius;
+
+  @override
+  State<ApoloDlButton> createState() => _ApoloDlButtonState();
+}
+
+class _ApoloDlButtonState extends State<ApoloDlButton> {
+  bool _pressed = false;
+
+  double get _height => switch (widget.size) {
+        ApoloDlButtonSize.lg => 54,
+        ApoloDlButtonSize.md => 48,
+        ApoloDlButtonSize.sm => 40,
+        ApoloDlButtonSize.xs => 32,
+      };
+
+  double get _fontSize => switch (widget.size) {
+        ApoloDlButtonSize.lg => 15.5,
+        ApoloDlButtonSize.md => 15,
+        ApoloDlButtonSize.sm => 14,
+        ApoloDlButtonSize.xs => 12.5,
+      };
+
+  double get _horizontalPadding => switch (widget.size) {
+        ApoloDlButtonSize.lg => 20,
+        ApoloDlButtonSize.md => 18,
+        ApoloDlButtonSize.sm => 16,
+        ApoloDlButtonSize.xs => 12,
+      };
+
+  double get _resolvedRadius =>
+      widget.borderRadius ?? (widget.size == ApoloDlButtonSize.xs ? 999 : 14);
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final isDisabled = widget.onPressed == null || widget.isLoading;
+
+    final Color bg;
+    final Color fg;
+    BorderSide? side;
+
+    switch (widget.variant) {
+      case ApoloDlButtonVariant.primary:
+        bg = palette.ink;
+        fg = palette.onInk;
+      case ApoloDlButtonVariant.secondary:
+        bg = palette.pill;
+        fg = palette.ink;
+      case ApoloDlButtonVariant.tertiary:
+        bg = palette.bg;
+        fg = palette.ink;
+        side = BorderSide(color: palette.border, width: 1.2);
+      case ApoloDlButtonVariant.danger:
+        bg = palette.danger;
+        fg = Colors.white;
+      case ApoloDlButtonVariant.dangerSoft:
+        bg = palette.dangerSoft;
+        fg = palette.danger;
+    }
+
+    final effectiveBg = isDisabled && widget.variant == ApoloDlButtonVariant.primary
+        ? palette.subtle.withValues(alpha: 0.35)
+        : bg;
+    final effectiveFg = isDisabled && widget.variant == ApoloDlButtonVariant.primary
+        ? palette.muted
+        : fg;
+
+    return AnimatedScale(
+      scale: _pressed && !isDisabled ? 0.985 : 1.0,
+      duration: const Duration(milliseconds: 90),
+      curve: Curves.easeOut,
+      child: Material(
+        color: effectiveBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_resolvedRadius),
+          side: side ?? BorderSide.none,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: isDisabled
+              ? null
+              : () {
+                  HapticFeedback.lightImpact();
+                  widget.onPressed!();
+                },
+          onTapDown: isDisabled ? null : (_) => setState(() => _pressed = true),
+          onTapUp: isDisabled ? null : (_) => setState(() => _pressed = false),
+          onTapCancel:
+              isDisabled ? null : () => setState(() => _pressed = false),
+          child: SizedBox(
+            width: widget.fullWidth ? double.infinity : null,
+            height: _height,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
+              child: Center(
+                widthFactor: widget.fullWidth ? null : 1,
+                child: widget.isLoading
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: effectiveFg,
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (widget.leadingIcon != null) ...[
+                            Icon(
+                              widget.leadingIcon,
+                              size: _fontSize + 3,
+                              color: effectiveFg,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(
+                            child: Text(
+                              widget.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: _fontSize,
+                                fontWeight: FontWeight.w700,
+                                color: effectiveFg,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum ApoloDlAlertType { info, success, danger }
+
+/// Inline feedback alert inspired by Dynamic Layer's DlAlert.
+class ApoloDlAlert extends StatelessWidget {
+  const ApoloDlAlert({
+    required this.message,
+    super.key,
+    this.title,
+    this.type = ApoloDlAlertType.info,
+  });
+
+  final String message;
+  final String? title;
+  final ApoloDlAlertType type;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final Color bg;
+    final Color accent;
+    final IconData icon;
+
+    switch (type) {
+      case ApoloDlAlertType.info:
+        bg = palette.infoSoft;
+        accent = palette.info;
+        icon = CupertinoIcons.info_circle_fill;
+      case ApoloDlAlertType.success:
+        bg = palette.successSoft;
+        accent = palette.success;
+        icon = CupertinoIcons.check_mark_circled_solid;
+      case ApoloDlAlertType.danger:
+        bg = palette.dangerSoft;
+        accent = palette.danger;
+        icon = CupertinoIcons.exclamationmark_circle_fill;
+    }
+
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accent.withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Icon(icon, size: 18, color: accent),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (title != null && title!.trim().isNotEmpty) ...[
+                    Text(
+                      title!,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                  ],
+                  Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
+                      color: accent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum ApoloDlLineItemType { chevron, radio, toggle, button, plain }
+
+enum ApoloDlLineItemState { normal, disabled, danger, success }
+
+/// Full-width settings / option row inspired by Dynamic Layer's DlLineItem.
+class ApoloDlLineItem extends StatelessWidget {
+  const ApoloDlLineItem({
+    required this.title,
+    super.key,
+    this.description,
+    this.leadingIcon,
+    this.leadingWidget,
+    this.trailingText,
+    this.trailingBadge,
+    this.type = ApoloDlLineItemType.chevron,
+    this.state = ApoloDlLineItemState.normal,
+    this.showSeparator = true,
+    this.value = false,
+    this.onChanged,
+    this.buttonLabel,
+    this.onButtonPressed,
+    this.onTap,
+    this.horizontalPadding = 0,
+  });
+
+  final String title;
+  final String? description;
+  final IconData? leadingIcon;
+  final Widget? leadingWidget;
+  final String? trailingText;
+  final Widget? trailingBadge;
+  final ApoloDlLineItemType type;
+  final ApoloDlLineItemState state;
+  final bool showSeparator;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final String? buttonLabel;
+  final VoidCallback? onButtonPressed;
+  final VoidCallback? onTap;
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isDisabled = state == ApoloDlLineItemState.disabled;
+    final isDanger = state == ApoloDlLineItemState.danger;
+    final isSuccess = state == ApoloDlLineItemState.success;
+
+    final Color titleColor = isDisabled
+        ? palette.subtle
+        : isDanger
+            ? palette.danger
+            : palette.ink;
+
+    final Color leadingColor = isDisabled
+        ? palette.subtle
+        : isDanger
+            ? palette.danger
+            : isSuccess
+                ? palette.success
+                : palette.ink;
+
+    final bool hasDescription =
+        description != null && description!.trim().isNotEmpty;
+
+    VoidCallback? rowTap;
+    if (!isDisabled) {
+      if (type == ApoloDlLineItemType.radio ||
+          type == ApoloDlLineItemType.toggle) {
+        if (onChanged != null) {
+          rowTap = () {
+            HapticFeedback.selectionClick();
+            onChanged!(!value);
+          };
+        } else if (onTap != null) {
+          rowTap = () {
+            HapticFeedback.selectionClick();
+            onTap!();
+          };
+        }
+      } else if (type != ApoloDlLineItemType.button && onTap != null) {
+        rowTap = () {
+          HapticFeedback.selectionClick();
+          onTap!();
+        };
+      }
+    }
+
+    final Widget? trailingWidget = _buildTrailing(palette, isRtl, isDisabled);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: rowTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: 14,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (leadingWidget != null) ...[
+                    leadingWidget!,
+                    const SizedBox(width: 14),
+                  ] else if (leadingIcon != null) ...[
+                    Icon(
+                      leadingIcon,
+                      size: 22,
+                      color: leadingColor,
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: isDisabled
+                                ? FontWeight.w500
+                                : FontWeight.w600,
+                            color: titleColor,
+                          ),
+                        ),
+                        if (hasDescription) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            description!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w400,
+                              height: 1.35,
+                              color: palette.muted,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (trailingBadge != null) ...[
+                    const SizedBox(width: 10),
+                    trailingBadge!,
+                  ],
+                  if (trailingText != null &&
+                      trailingText!.trim().isNotEmpty) ...[
+                    const SizedBox(width: 10),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 150),
+                      child: _buildBidiTrailingText(trailingText!, palette),
+                    ),
+                  ],
+                  if (trailingWidget != null) ...[
+                    const SizedBox(width: 10),
+                    trailingWidget,
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showSeparator) const ApoloDlSeparator(),
+      ],
+    );
+  }
+
+  Widget _buildBidiTrailingText(String text, ApoloDlPalette palette) {
+    final forceLtr = text.startsWith('@') ||
+        text.startsWith('+') ||
+        RegExp(r'^v?\d').hasMatch(text);
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textDirection: forceLtr ? TextDirection.ltr : null,
+      style: TextStyle(
+        fontSize: 13.5,
+        fontWeight: FontWeight.w500,
+        color: palette.muted,
+      ),
+    );
+  }
+
+  Widget? _buildTrailing(
+    ApoloDlPalette palette,
+    bool isRtl,
+    bool isDisabled,
+  ) {
+    switch (type) {
+      case ApoloDlLineItemType.chevron:
+        return Icon(
+          isRtl ? CupertinoIcons.chevron_left : CupertinoIcons.chevron_right,
+          size: 18,
+          color: isDisabled ? palette.subtle : palette.muted,
+        );
+      case ApoloDlLineItemType.radio:
+        return ApoloDlRadio(
+          selected: value,
+          disabled: isDisabled,
+        );
+      case ApoloDlLineItemType.toggle:
+        return ApoloDlSwitch(
+          value: value,
+          disabled: isDisabled,
+          onChanged: onChanged,
+        );
+      case ApoloDlLineItemType.button:
+        return ApoloDlButton(
+          label: buttonLabel ?? '',
+          size: ApoloDlButtonSize.xs,
+          variant: ApoloDlButtonVariant.secondary,
+          onPressed: isDisabled ? null : onButtonPressed,
+        );
+      case ApoloDlLineItemType.plain:
+        return null;
+    }
+  }
+}
+
+/// Shows a Dynamic Layer-styled modal bottom sheet with centered header title,
+/// circular close button, optional media & text, and stacked action buttons.
+Future<T?> showApoloDlBottomSheet<T>(
+  BuildContext context, {
+  required String headerTitle,
+  Widget? media,
+  String? contentTitle,
+  String? contentDescription,
+  List<Widget> actions = const [],
+}) {
+  final palette = ApoloDlPalette.of(context);
+  final textDirection = Directionality.of(context);
+
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: palette.bg,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetCtx) {
+      return Directionality(
+        textDirection: textDirection,
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 56,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 40, height: 40),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            headerTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: palette.ink,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ApoloDlIconCircleButton(
+                          icon: CupertinoIcons.xmark,
+                          iconSize: 18,
+                          onPressed: () => Navigator.of(sheetCtx).maybePop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const ApoloDlSeparator(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (media != null) ...[
+                        Center(child: media),
+                        const SizedBox(height: 16),
+                      ],
+                      if (contentTitle != null &&
+                          contentTitle.trim().isNotEmpty) ...[
+                        Text(
+                          contentTitle,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            color: palette.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (contentDescription != null &&
+                          contentDescription.trim().isNotEmpty) ...[
+                        Text(
+                          contentDescription,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            height: 1.45,
+                            color: palette.muted,
+                          ),
+                        ),
+                      ],
+                      if (actions.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        for (int i = 0; i < actions.length; i++) ...[
+                          actions[i],
+                          if (i < actions.length - 1)
+                            const SizedBox(height: 10),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Dynamic Layer v5.1 Settings section group: crisp dark label above a rounded
+/// #EEEEEE container with zero shadows, zero borders, and zero inner dividers.
+class ApoloDlSettingsGroup extends StatelessWidget {
+  const ApoloDlSettingsGroup({
+    required this.title,
+    required this.children,
+    super.key,
+    this.isFirst = false,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final bool isFirst;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    return Padding(
+      padding: EdgeInsets.only(top: isFirst ? 0 : 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: palette.ink,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: palette.groupCard,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: children,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual row inside an [ApoloDlSettingsGroup] matching Dynamic Layer v5.1's
+/// grey-icon + crisp-label + dark-chevron minimalism.
+class ApoloDlGroupedItem extends StatelessWidget {
+  const ApoloDlGroupedItem({
+    required this.icon,
+    required this.title,
+    super.key,
+    this.onTap,
+    this.trailingText,
+    this.trailingBadge,
+    this.showChevron = true,
+    this.disabled = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback? onTap;
+  final String? trailingText;
+  final Widget? trailingBadge;
+  final bool showChevron;
+  final bool disabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final bool hasTrailingText =
+        trailingText != null && trailingText!.trim().isNotEmpty;
+    final bool forceLtr = hasTrailingText &&
+        (trailingText!.startsWith('@') ||
+            trailingText!.startsWith('+') ||
+            RegExp(r'^v?\d').hasMatch(trailingText!));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: disabled || onTap == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap!();
+              },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: disabled ? palette.subtle : palette.iconMuted,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: disabled ? palette.subtle : palette.ink,
+                  ),
+                ),
+              ),
+              if (trailingBadge != null) ...[
+                const SizedBox(width: 8),
+                trailingBadge!,
+              ],
+              if (hasTrailingText) ...[
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 130),
+                  child: Text(
+                    trailingText!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textDirection: forceLtr ? TextDirection.ltr : null,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: palette.muted,
+                    ),
+                  ),
+                ),
+              ],
+              if (showChevron) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  isRtl
+                      ? CupertinoIcons.chevron_left
+                      : CupertinoIcons.chevron_right,
+                  size: 15,
+                  color: disabled ? palette.subtle : palette.ink,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

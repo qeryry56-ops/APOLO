@@ -4,18 +4,23 @@ import 'package:flutter/services.dart';
 
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
-import '../features/bug_report/services/bug_report_controller.dart';
-import '../features/bug_report/ui/bug_report_strings.dart';
+import '../widgets/dl_settings_kit.dart';
 import '../widgets/notification_badge.dart';
 import 'account_security_screen.dart';
 import 'auth_screen.dart';
+import 'forgot_password_screen.dart';
 import 'notifications_screen.dart';
-import 'post_ad_screen.dart';
 import 'privacy_compliance_screen.dart';
+import 'settings/settings_app_data_screen.dart';
+import 'settings/settings_blocked_accounts_screen.dart';
+import 'settings/settings_bug_report_screen.dart';
+import 'settings/settings_language_screen.dart';
+import 'settings/settings_rate_app_screen.dart';
+import 'settings/settings_share_app_screen.dart';
+import 'settings/settings_suggestion_screen.dart';
+import 'settings/settings_zone_screen.dart';
 import 'stores_screen.dart';
 import 'support_screen.dart';
-import 'widgets/apolo_safety_sheet.dart';
-import 'widgets/marketplace_zone_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onOpenEditProfile;
@@ -30,57 +35,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _busy = false;
   String? _error;
 
-  static const Color _bg = Color(0xFFF2F3F7);
-  static const Color _cardBg = Colors.white;
-  static const Color _textDark = Color(0xFF0A0A0A);
-  static const Color _sectionLabel = Color(0xFF6B7280);
-  static const Color _trailingMuted = Color(0xFF8E8E93);
-  static const Color _divider = Color(0xFFF1F2F6);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _lightRedBg = Color(0xFFFDE8E8);
-
-  Future<void> _language() async {
-    if (_busy) return;
-    HapticFeedback.selectionClick();
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await _state.toggleLanguage();
-    } catch (_) {
-      if (mounted) {
-        setState(() => _error = _state.s.tr('تعذر حفظ اللغة. أعد المحاولة.',
-            'Impossible d’enregistrer la langue. Réessayez.'));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _logout() async {
     final s = _state.s;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(s.tr('تسجيل الخروج؟', 'Se déconnecter ?')),
-        content: Text(s.tr(
-          'ستنتهي جلستك على هذا الجهاز. قد تحتاج لتسجيل الدخول مجدداً.',
-          'Votre session sur cet appareil sera fermée. Vous devrez vous reconnecter.',
-        )),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.tr('إلغاء', 'Annuler')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(s.logout),
-          ),
-        ],
+    final palette = ApoloDlPalette.of(context);
+    final confirmed = await showApoloDlBottomSheet<bool>(
+      context,
+      headerTitle: s.logout,
+      media: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: palette.dangerSoft,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          CupertinoIcons.power,
+          size: 26,
+          color: palette.danger,
+        ),
       ),
+      contentTitle: s.tr(
+        'تسجيل الخروج؟',
+        'Se déconnecter ?',
+        'Sign out of Apolo?',
+      ),
+      contentDescription: s.tr(
+        'ستنتهي جلستك على هذا الجهاز. قد تحتاج لتسجيل الدخول مجدداً.',
+        'Votre session sur cet appareil sera fermée. Vous devrez vous reconnecter.',
+        'Your session on this device will end. You may need to sign in again.',
+      ),
+      actions: [
+        ApoloDlButton(
+          key: const Key('settings-confirm-logout'),
+          label: s.logout,
+          variant: ApoloDlButtonVariant.danger,
+          fullWidth: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+        ApoloDlButton(
+          label: s.tr('إلغاء', 'Annuler', 'Cancel'),
+          variant: ApoloDlButtonVariant.secondary,
+          fullWidth: true,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+      ],
     );
     if (confirmed != true || !mounted || _busy) return;
     setState(() {
@@ -91,26 +89,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _state.logout();
     } catch (_) {
       if (mounted) {
-        setState(() => _error = s.tr('تعذر إغلاق الجلسة المحلية. أعد المحاولة.',
-            'Impossible de fermer la session locale. Réessayez.'));
+        setState(() {
+          _error = s.tr(
+            'تعذر إغلاق الجلسة المحلية. أعد المحاولة.',
+            'Impossible de fermer la session locale. Réessayez.',
+            'Could not close local session. Please try again.',
+          );
+        });
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _open(Widget screen) =>
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  void _open(Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
 
   void _handleEditProfileTap() {
     HapticFeedback.selectionClick();
     if (!_state.isLoggedIn) {
       _open(const AuthScreen());
     } else if (widget.onOpenEditProfile != null) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      widget.onOpenEditProfile?.call();
+      widget.onOpenEditProfile!.call();
+    } else {
+      _open(const AccountSecurityScreen());
     }
   }
 
@@ -122,6 +125,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return '@apolo_user';
   }
 
+  String _languageDisplayLabel(AppStrings s) {
+    if (s.isAr) return 'العربية';
+    if (s.isEn) return 'English';
+    return 'Français';
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -129,484 +138,348 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context, _) {
         final s = _state.s;
         final isAr = s.isAr;
+        final palette = ApoloDlPalette.of(context);
+        final isLoggedIn = _state.isLoggedIn;
+        final userEmail =
+            (_state.currentUser?['email'] ?? '').toString().trim();
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           child: Scaffold(
-            backgroundColor: _bg,
-            appBar: AppBar(
-              backgroundColor: _bg,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              toolbarHeight: 54,
-              centerTitle: true,
-              leading: IconButton(
-                icon: Icon(
-                  isAr
-                      ? CupertinoIcons.chevron_right
-                      : CupertinoIcons.chevron_left,
-                  color: _textDark,
-                  size: 22,
-                ),
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-              title: Text(
-                s.tr('الإعدادات', 'Paramètres', 'Settings'),
-                style: const TextStyle(
-                  color: _textDark,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+            backgroundColor: palette.bg,
             body: SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 36),
-                    children: [
-                      // Group 1: Account & Apolo Store Controls
-                      _buildSectionHeader(
-                        s.tr('الحساب والمتجر', 'Compte et boutique',
-                            'Account & Store'),
-                        isFirst: true,
-                      ),
-                      _buildCard(
-                        isAr: isAr,
-                        children: [
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.person_crop_circle_fill,
-                            title: s.tr(
-                              'تعديل الملف الشخصي',
-                              'Modifier le profil',
-                              'Edit profile',
-                            ),
-                            trailingLabel: _state.isLoggedIn
-                                ? _resolveHandle()
-                                : s.tr('زائر', 'Invité', 'Guest'),
-                            onTap: _handleEditProfileTap,
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.bag_fill,
-                            title: s.tr(
-                              'المتاجر الرسمية (PRO)',
-                              'Boutiques officielles (PRO)',
-                              'Official Stores (PRO)',
-                            ),
-                            onTap: () => _open(const StoresScreen()),
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.plus_circle_fill,
-                            title: s.tr(
-                              'نشر إعلان جديد',
-                              'Publier une annonce',
-                              'Post a new ad',
-                            ),
-                            onTap: () => _open(const PostAdScreen()),
-                          ),
-                        ],
-                      ),
-
-                      // Group 2: App Preferences & Experience
-                      _buildSectionHeader(
-                        s.tr('تفضيلات التطبيق', 'Préférences de l’app',
-                            'App preferences'),
-                      ),
-                      _buildCard(
-                        isAr: isAr,
-                        children: [
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.location_solid,
-                            title: s.tr(
-                              'منطقة الإعلانات (GPS)',
-                              'Zone des annonces',
-                              'Marketplace Zone',
-                            ),
-                            trailingLabel: _state.hasActiveZone
-                                ? _state.activeZoneBadgeLabel(s)
-                                : s.allCities,
-                            onTap: () => showMarketplaceZoneSheet(context),
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.globe,
-                            title: s.tr(
-                              'لغة التطبيق',
-                              'Langue de l’app',
-                              'App language',
-                            ),
-                            trailingLabel: s.isAr
-                                ? 'العربية'
-                                : (s.isEn ? 'English' : 'Français'),
-                            onTap: _busy ? null : _language,
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.bell_fill,
-                            title: s.tr(
-                              'مركز الإشعارات',
-                              'Notifications',
-                              'Notifications',
-                            ),
-                            trailingBadge: NotificationBadge(
-                              count: _state.unreadNotificationsCount,
-                              type: NotificationBadgeType.number,
-                              variant: NotificationBadgeVariant.red,
-                            ),
-                            onTap: () {
-                              _state.clearUnreadNotificationsOptimistically(
-                                syncRemote: false,
-                              );
-                              _open(const NotificationsScreen());
-                            },
-                          ),
-                        ],
-                      ),
-
-                      // Group 3: Privacy & Security
-                      _buildSectionHeader(
-                        s.tr('الأمان والخصوصية', 'Sécurité et confidentialité',
-                            'Security & Privacy'),
-                      ),
-                      _buildCard(
-                        isAr: isAr,
-                        children: [
-                          _buildRow(
-                            isAr: isAr,
-                            icon: Icons.lock_outline,
-                            title: s.tr(
-                              'كلمة المرور والأمان',
-                              'Mot de passe et sécurité',
-                              'Password & security',
-                            ),
-                            onTap: () => _open(const AccountSecurityScreen()),
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.nosign,
-                            title: s.tr(
-                              'الحسابات المحظورة',
-                              'Comptes bloqués',
-                              'Blocked accounts',
-                            ),
-                            onTap: () => showBlockedAccountsSheet(context),
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.doc_text_fill,
-                            title: s.tr(
-                              'الشروط وسياسة الخصوصية',
-                              'Conditions et confidentialité',
-                              'Terms & privacy',
-                            ),
-                            onTap: () => _open(
-                                const PrivacyComplianceScreen(initialTab: 0)),
-                          ),
-                          if (_state.isLoggedIn)
-                            _buildRow(
-                              isAr: isAr,
-                              icon: CupertinoIcons.trash_fill,
-                              title: s.tr(
-                                'حذف الحساب نهائياً',
-                                'Supprimer le compte',
-                                'Delete account',
-                              ),
-                              isDanger: true,
-                              showChevron: false,
-                              onTap: () => _open(
-                                  const PrivacyComplianceScreen(initialTab: 1)),
-                            ),
-                        ],
-                      ),
-
-                      // Group 4: Support & Sync
-                      _buildSectionHeader(
-                        s.tr('الدعم والمساعدة', 'Aide et assistance',
-                            'Help & Support'),
-                      ),
-                      _buildCard(
-                        isAr: isAr,
-                        children: [
-                          _buildRow(
-                            isAr: isAr,
-                            icon: Icons.help_outline,
-                            title: s.tr(
-                              'المساعدة والإبلاغ عن مشكلة',
-                              'Aide et signaler un problème',
-                              'Help & report a problem',
-                            ),
-                            onTap: () => _open(const SupportScreen()),
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: Icons.bug_report_outlined,
-                            title: BugReportStrings(s).settingsRowTitle,
-                            onTap: () => BugReportController.instance
-                                .openBugReporter(context: context),
-                          ),
-                          _buildRow(
-                            isAr: isAr,
-                            icon: CupertinoIcons.refresh,
-                            title: s.tr(
-                              'تحديث بيانات التطبيق',
-                              'Synchroniser les données',
-                              'Refresh app data',
-                            ),
-                            onTap: _busy
-                                ? null
-                                : () async {
-                                    HapticFeedback.lightImpact();
-                                    setState(() => _busy = true);
-                                    try {
-                                      await _state.refreshRemote();
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(s.tr(
-                                              'تم تحديث بيانات التطبيق بنجاح',
-                                              'Données synchronisées avec succès',
-                                              'App data refreshed successfully',
-                                            )),
-                                            duration:
-                                                const Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    } finally {
-                                      if (mounted) {
-                                        setState(() => _busy = false);
-                                      }
-                                    }
-                                  },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 28),
-
-                      // Bottom Pill Button (LOGIN / LOGOUT)
-                      Container(
-                        width: double.infinity,
-                        height: 54,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        child: TextButton(
-                          key: ValueKey(_state.isLoggedIn
-                              ? 'settings-logout'
-                              : 'settings-login'),
-                          onPressed: _busy
-                              ? null
-                              : (_state.isLoggedIn
-                                  ? _logout
-                                  : () => _open(const AuthScreen())),
-                          style: TextButton.styleFrom(
-                            backgroundColor: _state.isLoggedIn
-                                ? _lightRedBg
-                                : _textDark,
-                            foregroundColor:
-                                _state.isLoggedIn ? _red : Colors.white,
-                            shape: const StadiumBorder(),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            (_state.isLoggedIn ? s.logout : s.login)
-                                .toUpperCase(),
-                            style: TextStyle(
-                              color: _state.isLoggedIn ? _red : Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: isAr ? 0.0 : 0.6,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: Text(
-                          '${AppConfig.appName} · v${AppConfig.appVersion}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: _trailingMuted,
-                          ),
-                        ),
-                      ),
-
-                      if (_busy)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 14),
-                          child: Center(
-                            child: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        ),
-
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 14),
-                          child: Semantics(
-                            liveRegion: true,
-                            child: Text(
-                              _error!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: _red,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(height: 24),
-                    ],
+              child: Column(
+                children: [
+                  ApoloDlTopNav(
+                    title: s.tr('الإعدادات', 'Paramètres', 'Settings'),
+                    size: ApoloDlTopNavSize.md,
                   ),
-                ),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 36),
+                          children: [
+                            // Group 1: General
+                            ApoloDlSettingsGroup(
+                              title: s.tr('عام', 'Général', 'General'),
+                              isFirst: true,
+                              children: [
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-edit-profile'),
+                                  icon: CupertinoIcons.person_crop_circle_fill,
+                                  title: s.tr(
+                                    'تعديل الملف الشخصي',
+                                    'Modifier le profil',
+                                    'Edit profile',
+                                  ),
+                                  trailingText: isLoggedIn
+                                      ? _resolveHandle()
+                                      : s.tr('زائر', 'Invité', 'Guest'),
+                                  disabled: _busy,
+                                  onTap: _handleEditProfileTap,
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-security'),
+                                  icon: Icons.lock_outline,
+                                  title: s.tr(
+                                    'البريد وكلمة المرور',
+                                    'E-mail et mot de passe',
+                                    'Email & password',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const AccountSecurityScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-forgot-password'),
+                                  icon: CupertinoIcons.question_circle_fill,
+                                  title: s.tr(
+                                    'نسيت كلمة المرور؟',
+                                    'Mot de passe oublié ?',
+                                    'Forgot password?',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    ForgotPasswordScreen(
+                                      initialEmail: userEmail.isNotEmpty
+                                          ? userEmail
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-stores'),
+                                  icon: CupertinoIcons.rosette,
+                                  title: s.tr(
+                                    'المتاجر الرسمية (PRO)',
+                                    'Boutiques officielles (PRO)',
+                                    'Official Stores (PRO)',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(const StoresScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-zone'),
+                                  icon: CupertinoIcons.location_solid,
+                                  title: s.tr(
+                                    'منطقة الإعلانات (GPS)',
+                                    'Zone des annonces',
+                                    'Marketplace Zone',
+                                  ),
+                                  trailingText: _state.hasActiveZone
+                                      ? _state.activeZoneBadgeLabel(s)
+                                      : s.allCities,
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const SettingsZoneScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-language'),
+                                  icon: CupertinoIcons.globe,
+                                  title: s.tr(
+                                    'لغة التطبيق',
+                                    'Langue de l’app',
+                                    'App language',
+                                  ),
+                                  trailingText: _languageDisplayLabel(s),
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const SettingsLanguageScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-notifications'),
+                                  icon: CupertinoIcons.bell_fill,
+                                  title: s.tr(
+                                    'مركز الإشعارات',
+                                    'Notifications',
+                                    'Notifications',
+                                  ),
+                                  trailingBadge: NotificationBadge(
+                                    count: _state.unreadNotificationsCount,
+                                    type: NotificationBadgeType.number,
+                                    variant: NotificationBadgeVariant.red,
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () {
+                                    _state
+                                        .clearUnreadNotificationsOptimistically(
+                                      syncRemote: false,
+                                    );
+                                    _open(const NotificationsScreen());
+                                  },
+                                ),
+                              ],
+                            ),
+
+                            // Group 2: Support
+                            ApoloDlSettingsGroup(
+                              title: s.tr('الدعم', 'Support', 'Support'),
+                              children: [
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-bug-report'),
+                                  icon: CupertinoIcons
+                                      .exclamationmark_square_fill,
+                                  title: s.tr(
+                                    'الإبلاغ عن مشكلة',
+                                    'Signaler un problème',
+                                    'Report problem',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const SettingsBugReportScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-suggestion'),
+                                  icon: CupertinoIcons.chat_bubble_text_fill,
+                                  title: s.tr(
+                                    'تقديم اقتراح',
+                                    'Faire une suggestion',
+                                    'Make a suggestion',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const SettingsSuggestionScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-support'),
+                                  icon: Icons.help_outline,
+                                  title: s.tr(
+                                    'الدعم والمساعدة',
+                                    'Support',
+                                    'Support',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(const SupportScreen()),
+                                ),
+                              ],
+                            ),
+
+                            // Group 3: About
+                            ApoloDlSettingsGroup(
+                              title:
+                                  s.tr('حول التطبيق', 'À propos', 'About'),
+                              children: [
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-share-app'),
+                                  icon: CupertinoIcons
+                                      .arrowshape_turn_up_right_fill,
+                                  title: s.tr(
+                                    'مشاركة التطبيق',
+                                    'Partager l’app',
+                                    'Share App',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const SettingsShareAppScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-rate-app'),
+                                  icon: CupertinoIcons.star_fill,
+                                  title: s.tr(
+                                    'تقييم التطبيق',
+                                    'Noter l’app',
+                                    'Rate App',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const SettingsRateAppScreen()),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-blocked'),
+                                  icon: CupertinoIcons.nosign,
+                                  title: s.tr(
+                                    'الحسابات المحظورة',
+                                    'Comptes bloqués',
+                                    'Blocked accounts',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    const SettingsBlockedAccountsScreen(),
+                                  ),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-terms'),
+                                  icon: CupertinoIcons.doc_text_fill,
+                                  title: s.tr(
+                                    'شروط الاستخدام',
+                                    'Conditions d’utilisation',
+                                    'Terms of Service',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    const PrivacyComplianceScreen(
+                                      initialTab: 0,
+                                    ),
+                                  ),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-privacy'),
+                                  icon: CupertinoIcons.lock_shield_fill,
+                                  title: s.tr(
+                                    'سياسة الخصوصية',
+                                    'Politique de confidentialité',
+                                    'Privacy Policy',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    const PrivacyComplianceScreen(
+                                      initialTab: 0,
+                                    ),
+                                  ),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-app-data'),
+                                  icon: CupertinoIcons.shield_fill,
+                                  title: s.tr(
+                                    'التراخيص وبيانات التطبيق',
+                                    'Licences et données de l’app',
+                                    'Licenses & app data',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () =>
+                                      _open(const SettingsAppDataScreen()),
+                                ),
+                              ],
+                            ),
+
+                            // Group 4: Danger Zone
+                            ApoloDlSettingsGroup(
+                              title: s.tr(
+                                'منطقة الخطر',
+                                'Zone de danger',
+                                'Danger Zone',
+                              ),
+                              children: isLoggedIn
+                                  ? [
+                                      ApoloDlGroupedItem(
+                                        key: const Key(
+                                          'settings-row-delete-account',
+                                        ),
+                                        icon: CupertinoIcons.trash_fill,
+                                        title: s.tr(
+                                          'حذف الحساب',
+                                          'Supprimer le compte',
+                                          'Delete account',
+                                        ),
+                                        disabled: _busy,
+                                        onTap: () => _open(
+                                          const PrivacyComplianceScreen(
+                                            initialTab: 1,
+                                          ),
+                                        ),
+                                      ),
+                                      ApoloDlGroupedItem(
+                                        key: const ValueKey('settings-logout'),
+                                        icon: CupertinoIcons.power,
+                                        title: s.logout,
+                                        disabled: _busy,
+                                        onTap: _logout,
+                                      ),
+                                    ]
+                                  : [
+                                      ApoloDlGroupedItem(
+                                        key: const ValueKey('settings-login'),
+                                        icon: CupertinoIcons
+                                            .person_crop_circle_badge_checkmark,
+                                        title: s.login,
+                                        disabled: _busy,
+                                        onTap: () => _open(const AuthScreen()),
+                                      ),
+                                    ],
+                            ),
+
+                            if (_error != null) ...[
+                              const SizedBox(height: 16),
+                              ApoloDlAlert(
+                                message: _error!,
+                                type: ApoloDlAlertType.danger,
+                              ),
+                            ],
+
+                            const SizedBox(height: 22),
+                            Center(
+                              child: Text(
+                                '${AppConfig.appName} · v${AppConfig.appVersion}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: palette.muted,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildSectionHeader(String title, {bool isFirst = false}) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 6,
-        right: 6,
-        top: isFirst ? 6 : 24,
-        bottom: 10,
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: _sectionLabel,
-          fontSize: 13.5,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.1,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCard({
-    required bool isAr,
-    required List<Widget> children,
-  }) {
-    final list = <Widget>[];
-    for (int i = 0; i < children.length; i++) {
-      list.add(children[i]);
-      if (i < children.length - 1) {
-        list.add(
-          const Padding(
-            padding: EdgeInsetsDirectional.only(start: 64, end: 16),
-            child: Divider(height: 1, thickness: 1, color: _divider),
-          ),
-        );
-      }
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(children: list),
-    );
-  }
-
-  Widget _buildRow({
-    required bool isAr,
-    required IconData icon,
-    required String title,
-    required VoidCallback? onTap,
-    String? trailingLabel,
-    Widget? trailingBadge,
-    bool isDanger = false,
-    bool showChevron = true,
-  }) {
-    final textColor = isDanger ? _red : _textDark;
-    final iconColor = isDanger ? _red : _textDark;
-    final iconBg = isDanger ? const Color(0xFFFEF2F2) : const Color(0xFFF3F4F6);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _busy ? null : onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14.5),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 18, color: iconColor),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              if (trailingBadge != null) ...[
-                const SizedBox(width: 8),
-                trailingBadge,
-                const SizedBox(width: 8),
-              ],
-              if (trailingLabel != null) ...[
-                const SizedBox(width: 8),
-                Text(
-                  trailingLabel,
-                  textDirection: trailingLabel.startsWith('@')
-                      ? TextDirection.ltr
-                      : null,
-                  style: const TextStyle(
-                    color: _trailingMuted,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (showChevron)
-                Icon(
-                  isAr
-                      ? CupertinoIcons.chevron_left
-                      : CupertinoIcons.chevron_right,
-                  size: 15,
-                  color: _trailingMuted,
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
