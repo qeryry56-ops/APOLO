@@ -48,7 +48,10 @@ void main() {
   setUpAll(() async {
     try {
       final interRegular = rootBundle.load('assets/fonts/Inter-Regular.ttf');
-      final loader = FontLoader('Inter')..addFont(interRegular);
+      final interBold = rootBundle.load('assets/fonts/Inter-Bold.ttf');
+      final loader = FontLoader('Inter')
+        ..addFont(interRegular)
+        ..addFont(interBold);
       await loader.load();
     } catch (_) {}
   });
@@ -428,12 +431,63 @@ void main() {
 
       final headerRect =
           tester.getRect(find.byKey(const Key('share-profile-header')));
+      final topWrapperRect =
+          tester.getRect(find.byKey(const Key('share-profile-top-wrapper')));
+      final titleRect =
+          tester.getRect(find.byKey(const Key('share-profile-title')));
+      final cardRect =
+          tester.getRect(find.byKey(const Key('share-profile-qr-card')));
+      final innerRect =
+          tester.getRect(find.byKey(const Key('share-profile-qr-inner')));
+      final qrBoxRect =
+          tester.getRect(find.byKey(const Key('share-profile-qr-code-box')));
+      final identityGroupRect =
+          tester.getRect(find.byKey(const Key('share-profile-identity-group')));
+      final displayNameRect =
+          tester.getRect(find.byKey(const Key('share-profile-display-name')));
+      final handleRect =
+          tester.getRect(find.byKey(const Key('share-profile-handle')));
+      final privacyRect =
+          tester.getRect(find.byKey(const Key('share-profile-privacy-text')));
       final bottomBarRect =
           tester.getRect(find.byKey(const Key('share-profile-bottom-bar')));
 
       expect(headerRect.top, 0);
       expect(headerRect.width, 375);
       expect(headerRect.height, 104);
+      expect(topWrapperRect.width, 375);
+      expect(topWrapperRect.height, 56);
+      expect(titleRect.width, 231);
+      expect(titleRect.height, 24);
+
+      expect(cardRect.width, 284);
+      expect(cardRect.height, 364);
+      expect(innerRect.width, 220);
+      expect(innerRect.height, 220);
+      expect(innerRect.left - cardRect.left, 32);
+      expect(innerRect.top - cardRect.top, 32);
+
+      expect(qrBoxRect.width, 160);
+      expect(qrBoxRect.height, 160);
+      expect(qrBoxRect.top - innerRect.top, 30);
+      expect(qrBoxRect.left - innerRect.left, 30);
+
+      expect(identityGroupRect.height, 48);
+      expect(identityGroupRect.top - innerRect.bottom, 32);
+      expect(displayNameRect.height, 24);
+      expect(handleRect.height, 24);
+      expect(handleRect.top, displayNameRect.bottom);
+
+      expect(privacyRect.width, 311);
+      expect(privacyRect.height, 60);
+      expect(privacyRect.top - cardRect.bottom, 32);
+      expect(
+        find.text(
+          'Your QR code is private. If you share it with someone, that person can scan it with their camera to add you as a contact.',
+        ),
+        findsOneWidget,
+      );
+
       expect(bottomBarRect.top, 634);
       expect(bottomBarRect.width, 375);
       expect(bottomBarRect.height, 144);

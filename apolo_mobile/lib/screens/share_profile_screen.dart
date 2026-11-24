@@ -6,20 +6,22 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/state/app_state.dart';
+import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'scan_profile_code_screen.dart';
 
 /// Dynamic Layer v5.1 `Share profile / Default` screen.
-/// Displays a rounded `#EEEEEE` QR card with the user's real ISO/IEC 18004 QR code,
-/// name, `@handle`, privacy caption, native top-right share trigger, and bottom
-/// `Scan code` pill CTA launching [ScanProfileCodeScreen].
+/// Uses [DlShareProfileTokens] and [DlShareProfileLayout] to preserve exact
+/// Figma geometry (`284x364` rounded-5xl card, `220x220` rounded-xl container,
+/// `160x160` QR vector at `(30, 30)`, `24px` identity rows, and `311px` caption).
 class ShareProfileScreen extends StatefulWidget {
   const ShareProfileScreen({
     required this.displayName,
     required this.handle,
     required this.profileUrl,
     super.key,
+    this.title,
     this.userId,
     this.enableLiveCamera = true,
   });
@@ -27,6 +29,7 @@ class ShareProfileScreen extends StatefulWidget {
   final String displayName;
   final String handle;
   final String profileUrl;
+  final String? title;
   final int? userId;
   final bool enableLiveCamera;
 
@@ -105,23 +108,28 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
       builder: (context, _) {
         final s = _state.s;
         final isAr = s.isAr;
-        final palette = ApoloDlPalette.of(context);
+        final tokens = DlShareProfileTokens.of(context);
         final backIcon =
             isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
         final mediaPadding = MediaQuery.paddingOf(context);
         final screenHeight = MediaQuery.sizeOf(context).height;
-        final headerHeight = math.max(104.0, mediaPadding.top + 60.0);
+        final headerHeight = math.max(
+          DlShareProfileLayout.headerTotalHeight,
+          mediaPadding.top + DlShareProfileLayout.topNavHeight,
+        );
         final bottomInset = screenHeight >= 700
-            ? math.max(34.0, mediaPadding.bottom)
+            ? math.max(DlShareProfileLayout.homeIndicatorHeight, mediaPadding.bottom)
             : mediaPadding.bottom;
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           child: Scaffold(
-            backgroundColor: palette.bg,
+            backgroundColor: tokens.scaffoldBackground,
             body: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 375),
+                constraints: const BoxConstraints(
+                  maxWidth: DlShareProfileLayout.canvasWidth,
+                ),
                 child: Column(
                   children: [
                     SizedBox(
@@ -130,20 +138,48 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                       child: Align(
                         alignment: Alignment.bottomCenter,
                         child: SizedBox(
-                          height: 60,
+                          key: const Key('share-profile-top-wrapper'),
+                          width: double.infinity,
+                          height: DlShareProfileLayout.topNavHeight,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal:
+                                  DlShareProfileLayout.topNavHorizontalPadding,
+                            ),
                             child: Row(
                               children: [
                                 ApoloDlIconCircleButton(
                                   key: const Key('share-profile-back-btn'),
                                   icon: backIcon,
+                                  backgroundColor: tokens.pillBackground,
+                                  iconColor: tokens.ink,
                                   tooltip: MaterialLocalizations.of(context)
                                       .backButtonTooltip,
                                   onPressed: () =>
                                       Navigator.of(context).maybePop(),
                                 ),
-                                const Spacer(),
+                                const SizedBox(
+                                  width: DlShareProfileLayout.topNavGap,
+                                ),
+                                Expanded(
+                                  child: SizedBox(
+                                    key: const Key('share-profile-title'),
+                                    height:
+                                        DlShareProfileLayout.topNavTitleHeight,
+                                    child: Center(
+                                      child: Text(
+                                        widget.title ?? '',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: tokens.textBaseBold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(
+                                  width: DlShareProfileLayout.topNavGap,
+                                ),
                                 Material(
                                   color: Colors.transparent,
                                   shape: const CircleBorder(),
@@ -159,14 +195,16 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                                         'Share link',
                                       ),
                                       child: SizedBox(
-                                        width: 40,
-                                        height: 40,
+                                        width: DlShareProfileLayout
+                                            .topNavActionSize,
+                                        height: DlShareProfileLayout
+                                            .topNavActionSize,
                                         child: Center(
                                           child: Icon(
                                             CupertinoIcons
                                                 .arrowshape_turn_up_right_fill,
                                             size: 22,
-                                            color: palette.ink,
+                                            color: tokens.ink,
                                           ),
                                         ),
                                       ),
@@ -191,7 +229,8 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                               child: Center(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
+                                    horizontal: DlShareProfileLayout
+                                        .screenHorizontalPadding,
                                     vertical: 12,
                                   ),
                                   child: Column(
@@ -199,93 +238,168 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                                     children: [
                                       GestureDetector(
                                         onTap: _copyProfileLink,
-                                        child: ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            maxWidth: 272,
+                                        child: Container(
+                                          key: const Key(
+                                              'share-profile-qr-card'),
+                                          padding: const EdgeInsets.all(
+                                            DlShareProfileLayout
+                                                .outerCardPadding,
                                           ),
-                                          child: Container(
-                                            key: const Key(
-                                                'share-profile-qr-card'),
-                                            padding: const EdgeInsets.fromLTRB(
-                                                24, 24, 24, 22),
-                                            decoration: BoxDecoration(
-                                              color: palette.groupCard,
-                                              borderRadius:
-                                                  BorderRadius.circular(24),
+                                          decoration: BoxDecoration(
+                                            color: tokens.cardBackground,
+                                            borderRadius: BorderRadius.circular(
+                                              tokens.radii.rounded5Xl,
                                             ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                AspectRatio(
-                                                  aspectRatio: 1,
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            16),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              16),
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                key: const Key(
+                                                    'share-profile-qr-inner'),
+                                                width: DlShareProfileLayout
+                                                    .innerQrSize,
+                                                height: DlShareProfileLayout
+                                                    .innerQrSize,
+                                                decoration: BoxDecoration(
+                                                  color: tokens.qrBackground,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    tokens.radii.roundedXl,
+                                                  ),
+                                                ),
+                                                child: Stack(
+                                                  children: [
+                                                    Positioned(
+                                                      top: DlShareProfileLayout
+                                                          .qrCodeOffset,
+                                                      left: DlShareProfileLayout
+                                                          .qrCodeOffset,
+                                                      width:
+                                                          DlShareProfileLayout
+                                                              .qrCodeSize,
+                                                      height:
+                                                          DlShareProfileLayout
+                                                              .qrCodeSize,
+                                                      child: SizedBox(
+                                                        key: const Key(
+                                                            'share-profile-qr-code-box'),
+                                                        width:
+                                                            DlShareProfileLayout
+                                                                .qrCodeSize,
+                                                        height:
+                                                            DlShareProfileLayout
+                                                                .qrCodeSize,
+                                                        child: ApoloDlQrCode(
+                                                          key: const Key(
+                                                              'share-profile-qr-code'),
+                                                          data:
+                                                              widget.profileUrl,
+                                                          foregroundColor:
+                                                              tokens
+                                                                  .qrForeground,
+                                                          backgroundColor:
+                                                              tokens
+                                                                  .qrBackground,
+                                                        ),
+                                                      ),
                                                     ),
-                                                    child: ApoloDlQrCode(
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                height: DlShareProfileLayout
+                                                    .sectionGap,
+                                              ),
+                                              ConstrainedBox(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  maxWidth: DlShareProfileLayout
+                                                      .innerQrSize,
+                                                ),
+                                                child: Column(
+                                                  key: const Key(
+                                                      'share-profile-identity-group'),
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    SizedBox(
                                                       key: const Key(
-                                                          'share-profile-qr-code'),
-                                                      data: widget.profileUrl,
+                                                          'share-profile-display-name'),
+                                                      height:
+                                                          DlShareProfileLayout
+                                                              .identityLineHeight,
+                                                      child: Center(
+                                                        widthFactor: 1,
+                                                        child: Text(
+                                                          widget.displayName
+                                                              .trim(),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: tokens
+                                                              .textBaseBold,
+                                                        ),
+                                                      ),
                                                     ),
-                                                  ),
+                                                    SizedBox(
+                                                      key: const Key(
+                                                          'share-profile-handle'),
+                                                      height:
+                                                          DlShareProfileLayout
+                                                              .identityLineHeight,
+                                                      child: Center(
+                                                        widthFactor: 1,
+                                                        child: Text(
+                                                          _normalizedHandle,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          textDirection:
+                                                              TextDirection.ltr,
+                                                          style: tokens
+                                                              .textBaseRegular,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                                const SizedBox(height: 18),
-                                                Text(
-                                                  widget.displayName.trim(),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: palette.ink,
-                                                    height: 1.35,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  _normalizedHandle,
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  textDirection:
-                                                      TextDirection.ltr,
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w400,
-                                                    color: palette.muted,
-                                                    height: 1.35,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 32),
+                                      const SizedBox(
+                                        height:
+                                            DlShareProfileLayout.sectionGap,
+                                      ),
                                       ConstrainedBox(
                                         constraints: const BoxConstraints(
-                                          maxWidth: 311,
+                                          maxWidth: DlShareProfileLayout
+                                              .privacyMaxWidth,
+                                          minHeight: DlShareProfileLayout
+                                              .privacyMinHeight,
                                         ),
-                                        child: Text(
-                                          s.tr(
-                                            'رمز QR الخاص بك خاص. إذا شاركته مع شخص ما، يمكنه مسحه بالكاميرا للوصول إلى ملفك الشخصي.',
-                                            'Votre code QR est privé. Si vous le partagez, la personne pourra le scanner avec sa caméra pour voir votre profil.',
-                                            'Your QR code is private. If you share it with someone, that person can scan it with their camera to view your profile.',
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            height: 1.45,
-                                            color: palette.muted,
+                                        child: SizedBox(
+                                          width: double.infinity,
+                                          child: Text(
+                                            s.tr(
+                                              'رمز QR الخاص بك خاص. إذا شاركته مع شخص ما، يمكنه مسحه بالكاميرا لإضافتك كجهة اتصال.',
+                                              'Votre code QR est privé. Si vous le partagez, la personne pourra le scanner avec sa caméra pour vous ajouter comme contact.',
+                                              'Your QR code is private. If you share it with someone, that person can scan it with their camera to add you as a contact.',
+                                            ),
+                                            key: const Key(
+                                                'share-profile-privacy-text'),
+                                            textAlign: TextAlign.center,
+                                            style: tokens.textSmRegular,
                                           ),
                                         ),
                                       ),
@@ -300,9 +414,11 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                     ),
                     SizedBox(
                       key: const Key('share-profile-bottom-bar'),
-                      height: 144,
+                      height: DlShareProfileLayout.bottomBarHeight,
                       child: Padding(
-                        padding: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(
+                          DlShareProfileLayout.bottomBarPadding,
+                        ),
                         child: Center(
                           child: ApoloDlButton(
                             key: const Key('share-profile-scan-btn'),
@@ -315,7 +431,7 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                             variant: ApoloDlButtonVariant.primary,
                             size: ApoloDlButtonSize.md,
                             height: 48,
-                            borderRadius: 999,
+                            borderRadius: tokens.radii.pill,
                             fullWidth: false,
                             onPressed: _openScanner,
                           ),
