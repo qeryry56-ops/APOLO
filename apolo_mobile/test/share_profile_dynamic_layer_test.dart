@@ -502,6 +502,7 @@ void main() {
       expect(viewfinderRect.width, 270);
       expect(viewfinderRect.height, 270);
       expect(viewfinderRect.center.dx, closeTo(187.5, 0.5));
+      expect(viewfinderRect.center.dy, closeTo(812 / 2 - 30, 0.5));
       expect(flashRect.width, 44);
       expect(flashRect.height, 44);
       expect(galleryRect.width, 44);
@@ -683,8 +684,9 @@ void main() {
       expect(scanTopWrapperRect.width, 393);
       expect(scanViewfinderRect.width, 270);
       expect(scanViewfinderRect.center.dx, closeTo(196.5, 0.5));
+      expect(scanViewfinderRect.center.dy, closeTo(760 / 2 - 30, 0.5));
       expect(scanControlsBarRect.width, 361);
-      expect(find.text('مسح الرمز'), findsOneWidget);
+      expect(find.text('مسح رمز QR'), findsOneWidget);
       expect(find.text('إدخال الرمز يدوياً'), findsOneWidget);
 
       const phoneSizes = <Size>[

@@ -35,8 +35,9 @@ class ScanProfileCodeScreen extends StatefulWidget {
 
   static const double viewfinderSize = 270.0;
   static const double cornerRadius = 28.0;
-  static const double cornerBracketLength = 48.0;
-  static const double cornerStrokeWidth = 6.0;
+  static const double cornerBracketLength = 44.0;
+  static const double cornerStrokeWidth = 5.5;
+  static const double verticalCenterOffset = -30.0;
   static const Color darkCanvas = Color(0xFF000000);
   static const Color darkSurface = Color(0xFF121212);
   static const Color maskOverlayColor = Color.fromRGBO(0, 0, 0, 0.65);
@@ -702,7 +703,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
   Widget _buildTopAppBar(AppStrings s, bool isAr, double topInset) {
     final effectiveTitle = (widget.title != null && widget.title!.trim().isNotEmpty)
         ? widget.title!.trim()
-        : s.tr('مسح الرمز', 'Scanner le code QR', 'Scan QR code');
+        : s.tr('مسح رمز QR', 'Scanner le code QR', 'Scan QR code');
 
     return SizedBox(
       key: const Key('scan-code-header'),
@@ -857,9 +858,19 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
                 builder: (context, constraints) {
                   final fullW = constraints.maxWidth;
                   final fullH = constraints.maxHeight;
-                  // Dead-center horizontally, optically centered vertically
+                  final topSafeBound = mediaPadding.top + 56.0 + 16.0;
+                  final bottomSafeBound =
+                      fullH - (bottomInset + 132.0) - 16.0;
+                  final desiredCenterY =
+                      (fullH / 2.0) + ScanProfileCodeScreen.verticalCenterOffset;
+                  final minCenterY = topSafeBound + (cutoutSide / 2.0);
+                  final maxCenterY = bottomSafeBound - (cutoutSide / 2.0);
+                  final resolvedCenterY = maxCenterY >= minCenterY
+                      ? desiredCenterY.clamp(minCenterY, maxCenterY)
+                      : fullH / 2.0;
+
                   final cutoutRect = Rect.fromCenter(
-                    center: Offset(fullW / 2.0, fullH * 0.46),
+                    center: Offset(fullW / 2.0, resolvedCenterY),
                     width: cutoutSide,
                     height: cutoutSide,
                   );
@@ -872,21 +883,34 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
                         child: _buildFullScreenCameraLayer(s),
                       ),
 
-                      // 2. Dark translucent vignette (0.65) + cutout + 4 rounded corner brackets + subtle pulse
+                      // 2. Single dark translucent overlay (0.65) + rounded cutout + 4 outer convex corner brackets + laser line
                       Positioned.fill(
                         child: IgnorePointer(
-                          child: AnimatedBuilder(
-                            animation: _laserController,
-                            builder: (context, _) {
-                              return CustomPaint(
-                                painter: _TrustWalletScannerOverlayPainter(
-                                  cutoutRect: cutoutRect,
-                                  bracketColor: _isHandlingCode
-                                      ? ScanProfileCodeScreen.activePulseRed
-                                      : Colors.white,
-                                  laserProgress: _laserController.value,
-                                  showLaser: !_webCameraError,
-                                ),
+                          child: TweenAnimationBuilder<Color?>(
+                            tween: ColorTween(
+                              begin: Colors.white,
+                              end: _isHandlingCode
+                                  ? ScanProfileCodeScreen.activePulseRed
+                                  : Colors.white,
+                            ),
+                            duration: const Duration(milliseconds: 220),
+                            builder: (context, animatedBracketColor, _) {
+                              return AnimatedBuilder(
+                                animation: _laserController,
+                                builder: (context, _) {
+                                  return SizedBox.expand(
+                                    child: CustomPaint(
+                                      painter:
+                                          _TrustWalletScannerOverlayPainter(
+                                        cutoutRect: cutoutRect,
+                                        bracketColor:
+                                            animatedBracketColor ?? Colors.white,
+                                        laserProgress: _laserController.value,
+                                        showLaser: !_webCameraError,
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),
@@ -1095,9 +1119,9 @@ class _TrustWalletScannerOverlayPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawPath(maskPath, maskPaint);
 
-    // 2. Subtle animated Crimson (#E31B23) laser pulse inside the cutout
+    // 2. Horizontal Crimson (#E31B23) laser line + subtle glow strictly clipped inside cutout
     if (showLaser) {
-      final margin = 20.0;
+      const margin = 18.0;
       final minY = cutoutRect.top + radius;
       final maxY = cutoutRect.bottom - radius;
       if (maxY > minY) {
@@ -1108,28 +1132,52 @@ class _TrustWalletScannerOverlayPainter extends CustomPainter {
           cutoutRect.right - margin,
           y + 1.0,
         );
-        final laserPaint = Paint()
+        final glowRect = Rect.fromLTRB(
+          cutoutRect.left + margin,
+          y - 4.0,
+          cutoutRect.right - margin,
+          y + 4.0,
+        );
+        final gradient = LinearGradient(
+          colors: [
+            ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.0),
+            ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.85),
+            ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.0),
+          ],
+        );
+
+        canvas.save();
+        canvas.clipRRect(rrect);
+
+        final glowPaint = Paint()
           ..shader = LinearGradient(
             colors: [
               ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.0),
-              ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.72),
+              ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.35),
               ScanProfileCodeScreen.activePulseRed.withValues(alpha: 0.0),
             ],
-          ).createShader(laserRect);
+          ).createShader(glowRect)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+        canvas.drawRect(glowRect, glowPaint);
+
+        final laserPaint = Paint()..shader = gradient.createShader(laserRect);
         canvas.drawRRect(
           RRect.fromRectAndRadius(laserRect, const Radius.circular(2.0)),
           laserPaint,
         );
+
+        canvas.restore();
       }
     }
 
-    // 3. Four outer rounded corner brackets (6px stroke, 28px arc, 48px arm, round caps)
+    // 3. Four outer convex corner brackets (all 4 curving outward cleanly matching RRect radius)
     final l = cutoutRect.left;
     final t = cutoutRect.top;
     final r = cutoutRect.right;
     final b = cutoutRect.bottom;
     final clampedArm = math.min(arm, cutoutRect.width * 0.42);
     final clampedRadius = math.min(radius, clampedArm - 4.0);
+    final diameter = clampedRadius * 2.0;
 
     final bracketPaint = Paint()
       ..color = bracketColor
@@ -1139,38 +1187,46 @@ class _TrustWalletScannerOverlayPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
 
     final cornersPath = Path()
-      // Top-left
+      // Top-Left (convex outward toward top-left)
       ..moveTo(l, t + clampedArm)
       ..lineTo(l, t + clampedRadius)
-      ..arcToPoint(
-        Offset(l + clampedRadius, t),
-        radius: Radius.circular(clampedRadius),
+      ..arcTo(
+        Rect.fromLTWH(l, t, diameter, diameter),
+        math.pi,
+        math.pi / 2.0,
+        false,
       )
       ..lineTo(l + clampedArm, t)
-      // Top-right
+      // Top-Right (convex outward toward top-right)
       ..moveTo(r - clampedArm, t)
       ..lineTo(r - clampedRadius, t)
-      ..arcToPoint(
-        Offset(r, t + clampedRadius),
-        radius: Radius.circular(clampedRadius),
+      ..arcTo(
+        Rect.fromLTWH(r - diameter, t, diameter, diameter),
+        -math.pi / 2.0,
+        math.pi / 2.0,
+        false,
       )
       ..lineTo(r, t + clampedArm)
-      // Bottom-left
-      ..moveTo(l, b - clampedArm)
-      ..lineTo(l, b - clampedRadius)
-      ..arcToPoint(
-        Offset(l + clampedRadius, b),
-        radius: Radius.circular(clampedRadius),
+      // Bottom-Right (convex outward toward bottom-right)
+      ..moveTo(r, b - clampedArm)
+      ..lineTo(r, b - clampedRadius)
+      ..arcTo(
+        Rect.fromLTWH(r - diameter, b - diameter, diameter, diameter),
+        0.0,
+        math.pi / 2.0,
+        false,
       )
-      ..lineTo(l + clampedArm, b)
-      // Bottom-right
-      ..moveTo(r - clampedArm, b)
-      ..lineTo(r - clampedRadius, b)
-      ..arcToPoint(
-        Offset(r, b - clampedRadius),
-        radius: Radius.circular(clampedRadius),
+      ..lineTo(r - clampedArm, b)
+      // Bottom-Left (convex outward toward bottom-left)
+      ..moveTo(l + clampedArm, b)
+      ..lineTo(l + clampedRadius, b)
+      ..arcTo(
+        Rect.fromLTWH(l, b - diameter, diameter, diameter),
+        math.pi / 2.0,
+        math.pi / 2.0,
+        false,
       )
-      ..lineTo(r, b - clampedArm);
+      ..lineTo(l, b - clampedArm);
 
     canvas.drawPath(cornersPath, bracketPaint);
   }
