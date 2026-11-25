@@ -85,7 +85,9 @@ class Ios26IMessageTokens {
   static const double composerMinHeight = 45.0; // Exact 45 px height
   static const double composerRadius = 22.5;
   static const double composerControlGap = 19.0; // 326 - 45 - 262 = 19 px
-  static const double composerBottomOffset = 41.0; // Exact 41 px from screen bottom
+  static const double composerBottomOffset = 41.0; // Closed keyboard: 41 px from screen bottom
+  static const double composerKeyboardGap = 14.0; // Open keyboard (`1:2660` / `1:989`): 14 px above keyboard (Y = 411 px)
+  static const double keyboardReferenceHeight = 343.0; // Figma `1:989` (375 × 343 px, visible 342 px at y = 470..812)
   static const double headerButtonFillAlpha = 0.68;
   static const double namePillFillAlpha = 0.80;
   static const double composerFillAlpha = 0.78;

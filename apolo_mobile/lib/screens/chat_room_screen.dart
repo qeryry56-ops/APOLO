@@ -2055,18 +2055,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     final topInset = MediaQuery.paddingOf(context).top;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bool isKeyboardOpen = keyboardInset > 0;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final listHorizontalPad = screenWidth >= 375 ? 24.0 : 16.0;
     final hasAdContext = widget.adTitle.trim().isNotEmpty;
     final int adContextOffset = hasAdContext ? 1 : 0;
     final int totalListCount = adContextOffset + totalFlowCount;
-    // Floating header & 45px composer clearance (`41px` bottom offset + `45px` bar + `14px` breathing room)
+    // Floating header & 45px composer clearance:
+    // - Closed keyboard: `41px` bottom offset + `45px` bar
+    // - Open keyboard (`1:2660` / `1:989`): `14px` gap above keyboard + `45px` bar (`Y = 411px` on `375×812`)
     final double headerTopClearance = topInset + 114.0;
     final double headerGradientHeight = topInset + 144.0;
-    final double restingComposerBottom = math.max(
-      Ios26IMessageTokens.composerBottomOffset,
-      bottomInset + 7.0,
-    );
+    final double restingComposerBottom = _isDrawerOpen
+        ? 12.0
+        : (isKeyboardOpen
+            ? Ios26IMessageTokens.composerKeyboardGap
+            : math.max(
+                Ios26IMessageTokens.composerBottomOffset,
+                bottomInset + 7.0,
+              ));
     final double drawerHeightOffset = _isDrawerOpen ? 342.0 : 0.0;
     final double composerBottomClearance =
         restingComposerBottom + Ios26IMessageTokens.composerMinHeight + 14.0 + drawerHeightOffset;
@@ -2330,7 +2338,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildComposerSection(),
+                  _buildComposerSection(isKeyboardOpen: isKeyboardOpen),
                 AnimatedSize(
                   duration: const Duration(milliseconds: 260),
                   curve: const Cubic(0.22, 1.0, 0.36, 1.0),
@@ -3196,7 +3204,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     );
   }
 
-  Widget _buildComposerSection() {
+  Widget _buildComposerSection({bool isKeyboardOpen = false}) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     if (_isPeerBlocked) {
@@ -3261,6 +3269,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       onAttachTap: _toggleIMessageDrawer,
       isDrawerOpen: _isDrawerOpen,
       hasBottomSheetBelow: _isDrawerOpen,
+      isKeyboardOpen: isKeyboardOpen,
       onRemoveAttachment: (att) {
         setState(() {
           _stagedAttachments.removeWhere((a) => a.id == att.id);

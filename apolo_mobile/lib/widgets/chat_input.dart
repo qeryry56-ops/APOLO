@@ -61,6 +61,7 @@ class ChatInput extends StatefulWidget {
   final int maxLines;
   final bool isDrawerOpen;
   final bool hasBottomSheetBelow;
+  final bool isKeyboardOpen;
   final GlobalKey<VoiceRecorderState>? voiceRecorderKey;
 
   const ChatInput({
@@ -87,6 +88,7 @@ class ChatInput extends StatefulWidget {
     this.maxLines = 5,
     this.isDrawerOpen = false,
     this.hasBottomSheetBelow = false,
+    this.isKeyboardOpen = false,
     this.voiceRecorderKey,
   });
 
@@ -105,6 +107,7 @@ class _ChatInputState extends State<ChatInput> {
       GlobalKey<VoiceRecorderState>();
   bool _isVoiceRecorderActive = false;
   bool _isSendPressed = false;
+  double _maxObservedViewportHeight = 0.0;
 
   GlobalKey<VoiceRecorderState> get _effectiveVoiceRecorderKey =>
       widget.voiceRecorderKey ?? _internalVoiceRecorderKey;
@@ -116,6 +119,7 @@ class _ChatInputState extends State<ChatInput> {
   void initState() {
     super.initState();
     widget.controller.addListener(_onTextChanged);
+    _effectiveFocusNode.addListener(_onFocusChanged);
   }
 
   @override
@@ -125,15 +129,24 @@ class _ChatInputState extends State<ChatInput> {
       oldWidget.controller.removeListener(_onTextChanged);
       widget.controller.addListener(_onTextChanged);
     }
+    if (oldWidget.focusNode != widget.focusNode) {
+      (oldWidget.focusNode ?? _internalFocusNode)?.removeListener(_onFocusChanged);
+      _effectiveFocusNode.addListener(_onFocusChanged);
+    }
   }
 
   void _onTextChanged() {
     if (mounted) setState(() {});
   }
 
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     widget.controller.removeListener(_onTextChanged);
+    _effectiveFocusNode.removeListener(_onFocusChanged);
     _internalFocusNode?.dispose();
     _inputScrollController.dispose();
     super.dispose();
@@ -283,18 +296,37 @@ class _ChatInputState extends State<ChatInput> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    // Exact Figma `4:1061` (`326 × 45` on `375` screen -> start 25, end 24;
-    // `+` 45 + gap 19 + input `262 × 45` = `326 × 45`; `41 px` from bottom of screen).
+    final mediaSize = MediaQuery.sizeOf(context);
+    final screenWidth = mediaSize.width;
+    final screenHeight = mediaSize.height;
+    final mqKeyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final viewRef = View.maybeOf(context);
+    final rawViewKeyboardInset = viewRef != null && viewRef.devicePixelRatio > 0
+        ? viewRef.viewInsets.bottom / viewRef.devicePixelRatio
+        : 0.0;
+    final effectiveKeyboardInset = math.max(mqKeyboardInset, rawViewKeyboardInset);
+    final fullHeightCandidate = screenHeight + effectiveKeyboardInset;
+    if (fullHeightCandidate > _maxObservedViewportHeight) {
+      _maxObservedViewportHeight = fullHeightCandidate;
+    }
+    // Detects open keyboard across iOS Safari, iOS Chrome WKWebView (viewport shrink),
+    // native mobile (`View.viewInsets` even inside `Scaffold.body`), and widget tests.
+    final bool keyboardOpen = widget.isKeyboardOpen ||
+        effectiveKeyboardInset > 0 ||
+        (_effectiveFocusNode.hasFocus &&
+            (_maxObservedViewportHeight - screenHeight) > 100.0);
+
+    // Exact Figma `4:1061` & `1:2660` (`326 × 45` on `375` screen -> start 25, end 24;
+    // `+` 45 + gap 19 + input `262 × 45` = `326 × 45`;
+    // Closed keyboard: `41 px` from bottom; Open keyboard: `14 px` above keyboard -> `Y = 411 px`).
     final double startInset = screenWidth >= 360 ? 25.0 : 16.0;
     final double endInset = screenWidth >= 360 ? 24.0 : 16.0;
     final double controlsGap =
         screenWidth >= 360 ? Ios26IMessageTokens.composerControlGap : 12.0;
     final double bottomOffset = widget.hasBottomSheetBelow
         ? 12.0
-        : (keyboardInset > 0
-            ? 14.0
+        : (keyboardOpen
+            ? Ios26IMessageTokens.composerKeyboardGap
             : math.max(
                 Ios26IMessageTokens.composerBottomOffset,
                 bottomInset + 7.0,

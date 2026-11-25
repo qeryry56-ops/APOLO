@@ -297,4 +297,50 @@ void main() {
       expect(812.0 - barRect.bottom, closeTo(41.0, 0.01));
     },
   );
+
+  testWidgets(
+    'Figma 1:2660 & 1:989 keyboard-open state on 375x812: bar stays 326x45, 14px above keyboard (y=470), and Y = 411px',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      // Figma `1:989` keyboard: (0, 470, 375, 343) -> visible top at y = 470 inside 812 screen (inset = 342px)
+      tester.view.viewInsets = const FakeViewPadding(bottom: 342);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ChatRoomScreen(
+            conversationId: 102,
+            peerName: 'Name',
+            initialMessages: [
+              {
+                'id': 'b1',
+                'body': 'Come at 12 PM',
+                'is_mine': true,
+                'created_at_time': '11:04 PM',
+              },
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final barRect = tester.getRect(find.byKey(const Key('chat-composer-bar-row')));
+      final inputRect = tester.getRect(find.byKey(const Key('chat-input-capsule')));
+      const double keyboardTopY = 470.0; // 812 - 342
+
+      // Bottom input bar stays exact 326 × 45 px (input 262 × 45 px)
+      expect(barRect.width, closeTo(326.0, 0.01));
+      expect(barRect.height, closeTo(45.0, 0.01));
+      expect(inputRect.width, closeTo(262.0, 0.01));
+      expect(inputRect.height, closeTo(45.0, 0.01));
+
+      // Gap between bar bottom and keyboard top = 14 px, bar top Y = 411 px
+      expect(keyboardTopY - barRect.bottom, closeTo(14.0, 0.01));
+      expect(barRect.top, closeTo(411.0, 0.01));
+    },
+  );
 }
