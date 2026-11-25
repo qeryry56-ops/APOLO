@@ -178,7 +178,7 @@ class ApoloDlTopNav extends StatelessWidget {
     required this.title,
     super.key,
     this.size = ApoloDlTopNavSize.md,
-    this.showSeparator = true,
+    this.showSeparator = false,
     this.showBack = true,
     this.onBack,
     this.trailing,

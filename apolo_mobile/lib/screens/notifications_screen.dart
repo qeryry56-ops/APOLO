@@ -694,13 +694,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
         ),
-        if (showFeedHeader)
-          const SizedBox(
-            key: Key('dl-notifications-header-separator'),
-            width: double.infinity,
-            height: 1.0,
-            child: ColoredBox(color: _divider),
-          ),
       ],
     );
   }

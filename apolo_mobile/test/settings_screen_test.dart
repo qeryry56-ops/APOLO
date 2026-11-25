@@ -170,6 +170,13 @@ void main() {
           expect(find.byIcon(Icons.verified), findsNothing);
           expect(find.text('Amine'), findsNothing);
           expect(find.byType(ApoloDlTopNav), findsOneWidget);
+          expect(
+            find.descendant(
+              of: find.byType(ApoloDlTopNav),
+              matching: find.byType(ApoloDlSeparator),
+            ),
+            findsNothing,
+          );
           expect(find.byType(ApoloDlSettingsGroup), findsAtLeastNWidgets(2));
 
           final scrollable = find.byType(Scrollable).first;

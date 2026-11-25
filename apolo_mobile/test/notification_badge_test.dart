@@ -892,7 +892,7 @@ void main() {
 
       expect(find.byKey(const Key('dl-notifications-header-title')), findsOneWidget);
       expect(find.text('Notifications'), findsOneWidget);
-      expect(find.byKey(const Key('dl-notifications-header-separator')), findsOneWidget);
+      expect(find.byKey(const Key('dl-notifications-header-separator')), findsNothing);
 
       final mainContainer = tester.widget<Padding>(
         find.byKey(const Key('dl-notifications-main-container')),
