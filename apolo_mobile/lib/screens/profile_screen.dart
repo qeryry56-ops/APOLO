@@ -299,6 +299,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 }
                               },
                             ),
+                            const SizedBox(height: 12),
+                            ApoloDlButton(
+                              key: const Key('profile-sign-up'),
+                              label: s.tr(
+                                'إنشاء حساب جديد',
+                                'Créer un compte',
+                                'Create an account',
+                              ),
+                              variant: ApoloDlButtonVariant.secondary,
+                              borderRadius: 999,
+                              fullWidth: true,
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AuthScreen(
+                                      initialRegisterMode: true,
+                                    ),
+                                  ),
+                                );
+                                if (mounted) {
+                                  _profileIdentity = _identity;
+                                  await _loadProfileData();
+                                }
+                              },
+                            ),
                           ],
                         ),
                       ),

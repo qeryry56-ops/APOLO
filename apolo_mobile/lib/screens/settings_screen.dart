@@ -650,6 +650,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         disabled: _busy,
                                         onTap: () => _open(const AuthScreen()),
                                       ),
+                                      ApoloDlGroupedItem(
+                                        key: const ValueKey('settings-register'),
+                                        icon: CupertinoIcons
+                                            .person_crop_circle_badge_plus,
+                                        title: s.tr(
+                                          'إنشاء حساب جديد',
+                                          'Créer un compte',
+                                          'Create an account',
+                                        ),
+                                        disabled: _busy,
+                                        onTap: () => _open(
+                                          const AuthScreen(
+                                            initialRegisterMode: true,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                             ),
 

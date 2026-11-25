@@ -195,8 +195,11 @@ class AccountAuth {
       required String email,
       required String phone,
       required String password,
-      required String confirmation}) async {
+      required String confirmation,
+      String? username}) async {
     final normalizedPhone = AccountValidation.phone(phone);
+    final cleanUsername =
+        (username ?? '').trim().replaceFirst(RegExp(r'^@+'), '');
     if (name.trim().length < 2 ||
         !AccountValidation.email(email) ||
         normalizedPhone == null ||
@@ -204,16 +207,28 @@ class AccountAuth {
         password != confirmation) {
       throw const AccountFailure('validation');
     }
-    return _session(
+    final session = _session(
         await dio.post('/auth/register', data: {
           'name': name.trim(),
           'email': email.trim(),
           'phone': normalizedPhone,
           'password': password,
           'password_confirmation': confirmation,
+          if (cleanUsername.isNotEmpty) 'username': cleanUsername,
           'referral_source': 'mobile_app'
         }),
         registration: true);
+    if (cleanUsername.isNotEmpty &&
+        (session.user['username'] == null ||
+            session.user['username'].toString().trim().isEmpty)) {
+      return AccountSession(
+        session.token,
+        <String, dynamic>{...session.user, 'username': cleanUsername},
+        requiresOtp: session.requiresOtp,
+        otpSent: session.otpSent,
+      );
+    }
+    return session;
   }
 
   Future<AccountSession> verify(AccountSession pending, String code) async {
