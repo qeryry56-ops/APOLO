@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
-import '../theme/app_typography.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'forgot_password_screen.dart';
@@ -25,19 +24,19 @@ enum _OtpPhase {
   error,
 }
 
-/// Dynamic Layer v5.1 APOLO Authentication & Multi-Step Sign-Up Screen.
+/// Dynamic Layer v5.1 APOLO Authentication, Sign-Up & OTP Verification Screen.
 ///
 /// - **Log in** (`_login == true`, 2 steps — Figma `45786:56733`, `45786:57262`, `21414:22440`):
-///   1. `Enter your email` (accepts email or Moroccan phone)
-///   2. `Enter your password` + `Forgot password?` `#EEEEEE` pill
-/// - **Sign up** (`_login == false`, 5 steps — Figma `25680:46408` + required phone):
-///   1. `What's your email?`
-///   2. `Choose a password` (`Your password must be at least 8 characters`)
-///   3. `What's your first name?`
+///   1. `Enter your email` (`example@gmail.com`)
+///   2. `Enter your password` (`Password`) + `Forgot password?` `#EEEEEE` pill
+/// - **Sign up** (`_login == false`, 5 steps — Figma `25680:46408` + required `+212` phone):
+///   1. `What's your email?` (`example@gmail.com`)
+///   2. `Choose a password` (`Password` + `Your password must be at least 8 characters`)
+///   3. `What's your first name?` (`Name`)
 ///   4. `Pick a username` (`@username` + `Others can find you with your username!`)
-///   5. `What's your phone number?` (Moroccan phone required by `/auth/register`)
-/// - **OTP Verification** (`_pending != null`): 6-digit verification code + post-signup
-///   `ApoloIntentOnboardingScreen`.
+///   5. `What's your phone number?` (`+212` primary prefix + `650-123456` placeholder)
+/// - **OTP Verification** (`_pending != null`): Dynamic Layer v5.1 centered `28px Bold`
+///   6-digit input (`000000` hint) + `#EEEEEE` `Resend code` pill + `56px` `Continue` `ButtonDock`.
 class AuthScreen extends StatefulWidget {
   final VoidCallback? onSuccess;
   final bool initialRegisterMode;
@@ -102,6 +101,16 @@ class _AuthScreenState extends State<AuthScreen>
 
   String get _cleanUsername =>
       _username.text.trim().replaceFirst(RegExp(r'^@+'), '');
+
+  String get _phoneSubscriberDigits =>
+      AccountValidation.normalizeDigits(_phone.text)
+          .replaceAll(RegExp(r'[^0-9]'), '');
+
+  String get _fullSignUpPhone {
+    final digits = _phoneSubscriberDigits;
+    if (digits.isEmpty) return '';
+    return '+212$digits';
+  }
 
   @override
   void initState() {
@@ -427,9 +436,9 @@ class _AuthScreenState extends State<AuthScreen>
           HapticFeedback.heavyImpact();
           setState(() {
             _error = s.tr(
-              'يرجى إدخال اسمك الشخصي (حرفين على الأقل)',
-              'Veuillez saisir votre prénom (au moins 2 caractères)',
-              'Please enter your first name (at least 2 characters)',
+              'يرجى إدخال الاسم (حرفين على الأقل)',
+              'Veuillez saisir votre nom (au moins 2 caractères)',
+              'Please enter your name (at least 2 characters)',
             );
           });
           return false;
@@ -468,18 +477,18 @@ class _AuthScreenState extends State<AuthScreen>
         return false;
 
       case 5:
-        final rawPhone = _phone.text.trim();
-        if (rawPhone.isEmpty) {
+        final fullPhone = _fullSignUpPhone;
+        if (fullPhone.isEmpty) {
           _phoneFocus.requestFocus();
           return false;
         }
-        if (AccountValidation.phone(rawPhone) == null) {
+        if (AccountValidation.phone(fullPhone) == null) {
           HapticFeedback.heavyImpact();
           setState(() {
             _error = s.tr(
-              'يرجى إدخال رقم هاتف مغربي صالح (مثال: 0612345678)',
-              'Veuillez saisir un numéro marocain valide (ex : 0612345678)',
-              'Please enter a valid Moroccan phone number (e.g. 0612345678)',
+              'يرجى إدخال رقم هاتف مغربي صالح (مثال: 650-123456)',
+              'Veuillez saisir un numéro marocain valide (ex : 650-123456)',
+              'Please enter a valid Moroccan phone number (e.g. 650-123456)',
             );
           });
           return false;
@@ -554,7 +563,7 @@ class _AuthScreenState extends State<AuthScreen>
         result = await _auth.register(
           name: firstName.isNotEmpty ? firstName : 'User',
           email: _email.text.trim(),
-          phone: _phone.text.trim(),
+          phone: _fullSignUpPhone,
           password: _password.text,
           confirmation: _password.text,
           username: _cleanUsername,
@@ -669,14 +678,14 @@ class _AuthScreenState extends State<AuthScreen>
         _resendFailures = 0;
         _notice = masked != null
             ? _state.s.tr(
-                'تم إرسال رمز جديد إلى $masked. تحقق من البريد الوارد أو الرسائل غير المرغوب فيها.',
-                'Un nouveau code a été envoyé à $masked. Vérifiez votre boîte ou les spams.',
-                'A new verification code was sent to $masked. Check your inbox or spam.',
+                'تم إرسال رمز جديد إلى $masked.',
+                'Un nouveau code a été envoyé à $masked.',
+                'A new verification code was sent to $masked.',
               )
             : _state.s.tr(
-                'تم تأكيد إرسال رمز جديد. تحقق من بريدك.',
-                'Un nouveau code a été envoyé. Vérifiez votre boîte e-mail.',
-                'A new verification code was sent. Please check your email inbox.',
+                'تم إرسال رمز جديد إلى بريدك الإلكتروني.',
+                'Un nouveau code a été envoyé à votre boîte e-mail.',
+                'A new verification code was sent to your email.',
               );
       });
       _cooldown();
@@ -744,7 +753,7 @@ class _AuthScreenState extends State<AuthScreen>
       );
     }
 
-    return _buildOtpScaffold(
+    return _buildDynamicLayerOtpScaffold(
       context,
       s: s,
       isAr: isAr,
@@ -1026,13 +1035,13 @@ class _AuthScreenState extends State<AuthScreen>
                                       letterSpacing: 1.0,
                                     ),
                                     decoration: InputDecoration(
-                                      hintText: '••••••••',
+                                      hintText: 'Password',
                                       hintStyle: TextStyle(
                                         color: placeholderColor,
                                         fontSize: 28.0,
                                         fontWeight: FontWeight.w700,
                                         height: 36.0 / 28.0,
-                                        letterSpacing: 1.0,
+                                        letterSpacing: -0.4,
                                       ),
                                       filled: false,
                                       fillColor: Colors.transparent,
@@ -1174,11 +1183,11 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   /// Exact Figma `dynamic-layer-core-v5.1` `Sign up` flow (`25680:46408`):
-  /// 1. `What's your email?`
-  /// 2. `Choose a password` (`Your password must be at least 8 characters`)
-  /// 3. `What's your first name?`
-  /// 4. `Pick a username` (`@username` + `Others can find you with your username!`)
-  /// 5. `What's your phone number?` (Moroccan phone required by `/auth/register`)
+  /// 1. `What's your email?` (`example@gmail.com`)
+  /// 2. `Choose a password` (`Password`)
+  /// 3. `What's your first name?` (`Name`)
+  /// 4. `Pick a username` (`@username`)
+  /// 5. `What's your phone number?` (`+212` primary prefix + `650-123456`)
   Widget _buildDynamicLayerSignUpScaffold(
     BuildContext context, {
     required AppStrings s,
@@ -1205,6 +1214,8 @@ class _AuthScreenState extends State<AuthScreen>
         isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
     final Color mutedText =
         isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
+    final Color placeholderColor =
+        isDark ? const Color(0xFF52525B) : const Color(0xFFC7C7CC);
     const Color errorRed = Color(0xFFE31B23);
 
     final bool isFilled;
@@ -1258,7 +1269,7 @@ class _AuthScreenState extends State<AuthScreen>
         break;
       case 5:
       default:
-        isFilled = _phone.text.trim().isNotEmpty;
+        isFilled = _phoneSubscriberDigits.isNotEmpty;
         promptLabel = s.tr(
           'ما هو رقم هاتفك؟',
           'Quel est votre numéro de téléphone ?',
@@ -1316,9 +1327,6 @@ class _AuthScreenState extends State<AuthScreen>
         nav.pop();
       }
     }
-
-    final Color placeholderColor =
-        isDark ? const Color(0xFF52525B) : const Color(0xFFC7C7CC);
 
     InputDecoration buildCleanInputDecoration({
       required String hintText,
@@ -1405,8 +1413,8 @@ class _AuthScreenState extends State<AuthScreen>
               letterSpacing: 1.0,
             ),
             decoration: buildCleanInputDecoration(
-              hintText: '••••••••',
-              letterSpacing: 1.0,
+              hintText: 'Password',
+              letterSpacing: -0.4,
             ),
             onSubmitted: (_) => _submit(),
           ),
@@ -1421,7 +1429,7 @@ class _AuthScreenState extends State<AuthScreen>
           keyboardType: TextInputType.name,
           textCapitalization: TextCapitalization.words,
           textInputAction: TextInputAction.next,
-          autofillHints: const [AutofillHints.givenName],
+          autofillHints: const [AutofillHints.name],
           textAlign: TextAlign.center,
           cursorColor: ink,
           cursorWidth: 2.5,
@@ -1434,7 +1442,7 @@ class _AuthScreenState extends State<AuthScreen>
             letterSpacing: -0.4,
           ),
           decoration: buildCleanInputDecoration(
-            hintText: s.tr('أمين', 'Amine', 'Amine'),
+            hintText: 'Name',
           ),
           onSubmitted: (_) => _submit(),
         );
@@ -1464,7 +1472,7 @@ class _AuthScreenState extends State<AuthScreen>
               letterSpacing: -0.4,
             ),
             decoration: buildCleanInputDecoration(
-              hintText: '@amine',
+              hintText: '@username',
             ),
             onSubmitted: (_) => _submit(),
           ),
@@ -1474,31 +1482,84 @@ class _AuthScreenState extends State<AuthScreen>
       default:
         stepInput = Directionality(
           textDirection: TextDirection.ltr,
-          child: TextField(
-            key: const Key('auth-phone'),
-            controller: _phone,
-            focusNode: _phoneFocus,
-            enabled: !_busy,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.telephoneNumber],
-            textAlign: TextAlign.center,
-            textDirection: TextDirection.ltr,
-            cursorColor: ink,
-            cursorWidth: 2.5,
-            cursorHeight: 30.0,
-            style: TextStyle(
-              color: ink,
-              fontSize: 28.0,
-              fontWeight: FontWeight.w700,
-              height: 36.0 / 28.0,
-              letterSpacing: -0.3,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (!_busy) _phoneFocus.requestFocus();
+            },
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    '+212',
+                    key: const Key('reg-phone-prefix'),
+                    style: TextStyle(
+                      color: ink,
+                      fontSize: 26.0,
+                      fontWeight: FontWeight.w700,
+                      height: 36.0 / 26.0,
+                      letterSpacing: -0.3,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  SizedBox(
+                    width: 158.0,
+                    child: TextField(
+                      key: const Key('auth-phone'),
+                      controller: _phone,
+                      focusNode: _phoneFocus,
+                      enabled: !_busy,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.telephoneNumber],
+                      inputFormatters: const [
+                        _MoroccanSubscriberPhoneFormatter(),
+                      ],
+                      textAlign: TextAlign.left,
+                      textDirection: TextDirection.ltr,
+                      cursorColor: ink,
+                      cursorWidth: 2.5,
+                      cursorHeight: 28.0,
+                      style: TextStyle(
+                        color: ink,
+                        fontSize: 26.0,
+                        fontWeight: FontWeight.w700,
+                        height: 36.0 / 26.0,
+                        letterSpacing: -0.3,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '650-123456',
+                        hintStyle: TextStyle(
+                          color: placeholderColor,
+                          fontSize: 26.0,
+                          fontWeight: FontWeight.w700,
+                          height: 36.0 / 26.0,
+                          letterSpacing: -0.3,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 4.0),
+                      ),
+                      onSubmitted: (_) => _submit(),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            decoration: buildCleanInputDecoration(
-              hintText: '0612345678',
-              letterSpacing: -0.3,
-            ),
-            onSubmitted: (_) => _submit(),
           ),
         );
         break;
@@ -1673,475 +1734,388 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  /// OTP Verification Scaffold (`_pending != null`) with clean Dynamic Layer `56px` TopNavigation.
-  Widget _buildOtpScaffold(
+  /// Dynamic Layer v5.1 OTP Verification Scaffold (`_pending != null`):
+  /// - `56px` TopNavigation (`40×40` circular `#EEEEEE` `<` button, no separator line)
+  /// - `wrapper` (`padding: 32 top/bottom, 16 left/right`, `gap: 32`)
+  /// - Centered `16px Bold` `"Enter verification code"`, centered borderless `28px Bold`
+  ///   6-digit input (`000000` hint), centered `12.5px #757575` helper text,
+  ///   centered `#EEEEEE` stadium pill `"Resend code"`, and `56px` `Continue` `ButtonDock`.
+  Widget _buildDynamicLayerOtpScaffold(
     BuildContext context, {
     required AppStrings s,
     required bool isAr,
     required bool isDark,
     required Color bgColor,
   }) {
-    final Color inkColor =
-        isDark ? const Color(0xFFF9FAFB) : const Color(0xFF111827);
-    final Color mutedColor =
-        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF5B616E);
+    final screenSize = MediaQuery.sizeOf(context);
+    final mediaPadding = MediaQuery.paddingOf(context);
+    final topInset = mediaPadding.top;
+    final viewRef = View.maybeOf(context);
+    final rawViewKb = viewRef != null && viewRef.devicePixelRatio > 0
+        ? viewRef.viewInsets.bottom / viewRef.devicePixelRatio
+        : 0.0;
+    final bool keyboardOpen =
+        MediaQuery.viewInsetsOf(context).bottom > 0 || rawViewKb > 0;
+    final bottomSafe =
+        DlShareProfileLayout.resolveBottomSafeInset(screenSize, mediaPadding);
+    final double bottomDockPad =
+        keyboardOpen ? 16.0 : math.max(20.0, bottomSafe + 8.0);
+
+    final Color ink = isDark ? Colors.white : const Color(0xFF000000);
     final Color pillBg =
         isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
+    final Color mutedText =
+        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
+    final Color placeholderColor =
+        isDark ? const Color(0xFF52525B) : const Color(0xFFC7C7CC);
+    const Color errorRed = Color(0xFFE31B23);
+
+    final digits = AccountValidation.normalizeDigits(_code.text)
+        .replaceAll(RegExp(r'[^0-9]'), '');
+    final bool isFilled = digits.length == 6;
+    final Color continueBg =
+        isFilled ? (isDark ? Colors.white : const Color(0xFF000000)) : pillBg;
+    final Color continueFg = isFilled
+        ? (isDark ? const Color(0xFF000000) : Colors.white)
+        : mutedText;
+
     final backIcon =
         isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
     final maskedEmail =
         AccountValidation.maskEmail(_pending?.user['email']?.toString());
 
-    return Directionality(
-      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: bgColor,
-        body: SafeArea(
-          child: Column(
+    final bool isSending = _otpPhase == _OtpPhase.sendingInitial ||
+        _otpPhase == _OtpPhase.resending;
+    final bool canTapResend = !isSending && !_busy && _remaining == 0;
+
+    final String helperText = _notice ??
+        (maskedEmail != null
+            ? s.tr(
+                'أرسلنا رمز تحقق مكوناً من 6 أرقام إلى $maskedEmail',
+                'Nous avons envoyé un code à 6 chiffres à $maskedEmail',
+                'We sent a 6-digit verification code to $maskedEmail',
+              )
+            : s.tr(
+                'أرسلنا رمز تحقق مكوناً من 6 أرقام إلى بريدك الإلكتروني',
+                'Nous avons envoyé un code à 6 chiffres à votre e-mail',
+                'We sent a 6-digit verification code to your email',
+              ));
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _resetOtp();
+      },
+      child: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          backgroundColor: bgColor,
+          resizeToAvoidBottomInset: true,
+          body: Column(
             children: [
+              // Fixed `56px` TopNavigation (`40×40` circular `#EEEEEE` `<` button, no separator)
               SizedBox(
-                height: DlShareProfileLayout.topNavHeight,
-                width: double.infinity,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DlShareProfileLayout.topNavHorizontalPadding,
-                  ),
-                  child: Row(
-                    children: [
-                      ApoloDlIconCircleButton(
-                        key: const Key('auth-dismiss'),
-                        icon: backIcon,
-                        backgroundColor: pillBg,
-                        iconColor:
-                            isDark ? Colors.white : const Color(0xFF000000),
-                        tooltip:
-                            MaterialLocalizations.of(context).backButtonTooltip,
-                        onPressed: _resetOtp,
+                key: const Key('dl-otp-top-nav'),
+                height: topInset + DlShareProfileLayout.topNavHeight,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    height: DlShareProfileLayout.topNavHeight,
+                    width: double.infinity,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DlShareProfileLayout.topNavHorizontalPadding,
                       ),
-                      const Spacer(),
-                    ],
+                      child: Row(
+                        children: [
+                          ApoloDlIconCircleButton(
+                            key: const Key('auth-dismiss'),
+                            icon: backIcon,
+                            backgroundColor: pillBg,
+                            iconColor: ink,
+                            tooltip: MaterialLocalizations.of(context)
+                                .backButtonTooltip,
+                            onPressed: _resetOtp,
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
+
+              // Scrollable `wrapper` (`padding: 32 top/bottom, 16 left/right`, `gap: 32`)
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Text(
-                        s.tr(
-                          'لنتأكد من هويتك',
-                          'Confirmons votre identité',
-                          "Let's confirm it's you",
-                        ),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: inkColor,
-                          letterSpacing:
-                              AppTypography.trackingForContext(context, -0.5),
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        maskedEmail != null
-                            ? s.tr(
-                                'أدخل الرمز المكون من 6 أرقام المرسل إلى $maskedEmail',
-                                'Entrez le code à 6 chiffres envoyé à $maskedEmail',
-                                'Enter the 6-digit code sent to $maskedEmail',
-                              )
-                            : s.tr(
-                                'أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني',
-                                'Entrez le code à 6 chiffres envoyé à votre e-mail',
-                                'Enter the 6-digit code sent to your email',
-                              ),
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: mutedColor,
-                          height: 1.45,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      if (_error != null)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF2B1215)
-                                : const Color(0xFFFEF2F2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF7F1D1D)
-                                  : const Color(0xFFFCA5A5),
-                            ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460.0),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Padding(
+                          key: const Key('dl-otp-wrapper'),
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            32.0,
+                            16.0,
+                            32.0,
                           ),
-                          child: Row(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: Color(0xFFDC2626),
-                                size: 19,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  _error!,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: isDark
-                                        ? const Color(0xFFFCA5A5)
-                                        : const Color(0xFFB91C1C),
-                                  ),
+                              Text(
+                                s.tr(
+                                  'أدخل رمز التحقق',
+                                  'Entrez le code de vérification',
+                                  'Enter verification code',
+                                ),
+                                key: const Key('dl-otp-prompt-label'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: ink,
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w700,
+                                  height: 24.0 / 16.0,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      if (_notice != null)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1E293B)
-                                : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF334155)
-                                  : const Color(0xFFCBD5E1),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: mutedColor,
-                                size: 19,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  _notice!,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: inkColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      _buildOtpBoxesSection(),
-                      const SizedBox(height: 18),
-                      _buildOtpResendRow(s),
-                      const SizedBox(height: 28),
-                      _buildOtpSecurityBanner(s),
-                      const SizedBox(height: 28),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          key: const Key('auth-submit'),
-                          onPressed: _busy ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _code.text.trim().length == 6
-                                ? const Color(0xFF000000)
-                                : const Color(0xFFEEEEEE),
-                            foregroundColor: _code.text.trim().length == 6
-                                ? Colors.white
-                                : const Color(0xFF757575),
-                            shape: const StadiumBorder(),
-                            elevation: 0,
-                          ),
-                          child: _busy || _otpPhase == _OtpPhase.verifying
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: _code.text.trim().length == 6
-                                        ? Colors.white
-                                        : const Color(0xFF000000),
-                                  ),
-                                )
-                              : _otpPhase == _OtpPhase.verified
-                                  ? const Icon(
-                                      Icons.check_rounded,
-                                      size: 22,
-                                      color: Colors.white,
-                                    )
-                                  : Text(
-                                      s.tr(
-                                        'تأكيد الرمز',
-                                        'Confirmer le code',
-                                        'Verify code',
+                              const SizedBox(height: 32.0),
+
+                              AnimatedBuilder(
+                                animation: _shakeCtrl,
+                                builder: (context, child) {
+                                  final dx = _shakeCtrl.isAnimating
+                                      ? math.sin(
+                                              _shakeCtrl.value * math.pi * 6) *
+                                          6.0
+                                      : 0.0;
+                                  return Transform.translate(
+                                    offset: Offset(dx, 0),
+                                    child: child,
+                                  );
+                                },
+                                child: Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: TextField(
+                                    key: const Key('auth-code'),
+                                    controller: _code,
+                                    focusNode: _codeFocus,
+                                    enabled: !_busy,
+                                    keyboardType: TextInputType.number,
+                                    textInputAction: TextInputAction.done,
+                                    autofillHints: const [
+                                      AutofillHints.oneTimeCode,
+                                    ],
+                                    maxLength: 6,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(
+                                          r'[0-9\u0660-\u0669\u06F0-\u06F9]',
+                                        ),
                                       ),
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                    ],
+                                    textAlign: TextAlign.center,
+                                    textDirection: TextDirection.ltr,
+                                    cursorColor: ink,
+                                    cursorWidth: 2.5,
+                                    cursorHeight: 30.0,
+                                    style: TextStyle(
+                                      color: ink,
+                                      fontSize: 28.0,
+                                      fontWeight: FontWeight.w700,
+                                      height: 36.0 / 28.0,
+                                      letterSpacing: 6.0,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: '000000',
+                                      hintStyle: TextStyle(
+                                        color: placeholderColor,
+                                        fontSize: 28.0,
+                                        fontWeight: FontWeight.w700,
+                                        height: 36.0 / 28.0,
+                                        letterSpacing: 6.0,
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
+                                      ),
+                                      counterText: '',
+                                      filled: false,
+                                      fillColor: Colors.transparent,
+                                      hoverColor: Colors.transparent,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        vertical: 4.0,
                                       ),
                                     ),
+                                    onChanged: _onOtpChanged,
+                                    onSubmitted: (_) => _submit(),
+                                  ),
+                                ),
+                              ),
+
+                              if (_error != null) ...[
+                                const SizedBox(height: 18.0),
+                                Text(
+                                  _error!,
+                                  key: const Key('dl-otp-error-text'),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: errorRed,
+                                    fontSize: 13.0,
+                                    fontWeight: FontWeight.w400,
+                                    height: 18.0 / 13.0,
+                                  ),
+                                ),
+                              ],
+
+                              SizedBox(height: _error != null ? 20.0 : 32.0),
+
+                              Text(
+                                helperText,
+                                key: const Key('dl-otp-helper-text'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: mutedText,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w400,
+                                  height: 18.0 / 12.5,
+                                ),
+                              ),
+
+                              const SizedBox(height: 20.0),
+
+                              Material(
+                                color: pillBg,
+                                shape: const StadiumBorder(),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  key: const Key('otp-resend'),
+                                  customBorder: const StadiumBorder(),
+                                  onTap: canTapResend ? _resend : null,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18.0,
+                                      vertical: 10.0,
+                                    ),
+                                    child: isSending
+                                        ? Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const CupertinoActivityIndicator(
+                                                radius: 7,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                s.tr(
+                                                  'جاري الإرسال...',
+                                                  'Envoi...',
+                                                  'Sending...',
+                                                ),
+                                                style: TextStyle(
+                                                  color: mutedText,
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Text(
+                                            _remaining > 0
+                                                ? s.tr(
+                                                    'إعادة الإرسال ($_remaining ث)',
+                                                    'Renvoyer (${_remaining}s)',
+                                                    'Resend code (${_remaining}s)',
+                                                  )
+                                                : s.tr(
+                                                    'إعادة إرسال الرمز',
+                                                    'Renvoyer le code',
+                                                    'Resend code',
+                                                  ),
+                                            style: TextStyle(
+                                              color: canTapResend
+                                                  ? ink
+                                                  : mutedText,
+                                              fontSize: 14.0,
+                                              fontWeight: FontWeight.w600,
+                                              height: 20.0 / 14.0,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                    ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Fixed Bottom `ButtonDock` (`56px` stadium pill `Continue`)
+              Padding(
+                key: const Key('dl-otp-button-dock'),
+                padding: EdgeInsets.fromLTRB(16.0, 8.0, 16.0, bottomDockPad),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56.0,
+                      child: Material(
+                        color: continueBg,
+                        shape: const StadiumBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          key: const Key('auth-submit'),
+                          customBorder: const StadiumBorder(),
+                          onTap: _busy ? null : _submit,
+                          child: Center(
+                            child: _busy || _otpPhase == _OtpPhase.verifying
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: continueFg,
+                                    ),
+                                  )
+                                : _otpPhase == _OtpPhase.verified
+                                    ? Icon(
+                                        Icons.check_rounded,
+                                        size: 22,
+                                        color: continueFg,
+                                      )
+                                    : Text(
+                                        s.tr('متابعة', 'Continuer', 'Continue'),
+                                        style: TextStyle(
+                                          color: continueFg,
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.w600,
+                                          height: 24.0 / 16.0,
+                                        ),
+                                      ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildOtpBoxesSection() {
-    final digits = AccountValidation.normalizeDigits(_code.text)
-        .replaceAll(RegExp(r'[^0-9]'), '');
-    final isError = _otpPhase == _OtpPhase.error;
-    final activeIndex = digits.length < 6 ? digits.length : -1;
-
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: AnimatedBuilder(
-        animation: _shakeCtrl,
-        builder: (context, child) {
-          final dx = _shakeCtrl.isAnimating
-              ? math.sin(_shakeCtrl.value * math.pi * 6) * 6.0
-              : 0.0;
-          return Transform.translate(offset: Offset(dx, 0), child: child);
-        },
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            if (!_busy) _codeFocus.requestFocus();
-          },
-          child: SizedBox(
-            height: 60,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Row(
-                  children: List.generate(6, (index) {
-                    final hasDigit = index < digits.length;
-                    final digit = hasDigit ? digits[index] : '';
-                    final isActive = index == activeIndex &&
-                        (_codeFocus.hasFocus || digits.isEmpty);
-
-                    final Color bgColor;
-                    final Color borderColor;
-                    final double borderWidth;
-                    if (isError) {
-                      bgColor = const Color(0xFFFEF2F2);
-                      borderColor = const Color(0xFFDC2626);
-                      borderWidth = 1.5;
-                    } else if (isActive) {
-                      bgColor = Colors.white;
-                      borderColor = AppConfig.primary;
-                      borderWidth = 1.8;
-                    } else {
-                      bgColor = const Color(0xFFF3F5F8);
-                      borderColor = Colors.transparent;
-                      borderWidth = 1.5;
-                    }
-
-                    return Expanded(
-                      child: Padding(
-                        padding: EdgeInsetsDirectional.only(
-                          start: index == 0 ? 0 : 4,
-                          end: index == 5 ? 0 : 4,
-                        ),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 140),
-                          curve: Curves.easeOutCubic,
-                          height: 56,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: bgColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: borderColor,
-                              width: borderWidth,
-                            ),
-                          ),
-                          child: Text(
-                            digit,
-                            style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF0A0B0D),
-                              fontFeatures: [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                Positioned.fill(
-                  child: TextField(
-                    key: const Key('auth-code'),
-                    controller: _code,
-                    focusNode: _codeFocus,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.oneTimeCode],
-                    maxLength: 6,
-                    enabled: !_busy,
-                    showCursor: false,
-                    enableInteractiveSelection: true,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]'),
-                      ),
-                    ],
-                    style: const TextStyle(
-                      color: Colors.transparent,
-                      fontSize: 1,
-                    ),
-                    cursorColor: Colors.transparent,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      filled: false,
-                      counterText: '',
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    onChanged: _onOtpChanged,
-                    onSubmitted: (_) => _submit(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOtpResendRow(AppStrings s) {
-    final isSending = _otpPhase == _OtpPhase.sendingInitial ||
-        _otpPhase == _OtpPhase.resending;
-    final canTapResend = !isSending && !_busy && _remaining == 0;
-
-    return Center(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 6,
-        children: [
-          Text(
-            s.tr(
-              'لم يصلك الرمز؟',
-              'Code non reçu ?',
-              "Didn't get a code?",
-            ),
-            style: const TextStyle(
-              fontSize: 14.5,
-              color: Color(0xFF5B616E),
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          if (isSending)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CupertinoActivityIndicator(radius: 7),
-                const SizedBox(width: 6),
-                Text(
-                  s.tr('جاري الإرسال...', 'Envoi...', 'Sending...'),
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF5B616E),
-                  ),
-                ),
-              ],
-            )
-          else
-            GestureDetector(
-              key: const Key('otp-resend'),
-              onTap: canTapResend ? _resend : null,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                child: Text(
-                  _remaining > 0
-                      ? s.tr(
-                          'إعادة الإرسال ($_remaining ث)',
-                          'Renvoyer (${_remaining}s)',
-                          'Resend (${_remaining}s)',
-                        )
-                      : s.tr(
-                          'إعادة الإرسال',
-                          'Renvoyer',
-                          'Resend',
-                        ),
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    color: canTapResend
-                        ? AppConfig.primary
-                        : const Color(0xFFC4C8D0),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOtpSecurityBanner(AppStrings s) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F5F8),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(
-              Icons.info,
-              size: 20,
-              color: Color(0xFF717885),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              s.tr(
-                'لن يطلب منك أبولو أبداً إنشاء حساب جديد أو تحويل أموال. لا تدخل أبداً أي رمز يعطيه لك شخص آخر.',
-                'Apolo ne vous demandera jamais de créer un nouveau compte ou de transférer des fonds. N’entrez jamais un code fourni par un tiers.',
-                'Apolo will never ask you to set up a new account or transfer funds. Never enter a code given to you by someone else.',
-              ),
-              style: const TextStyle(
-                fontSize: 13.5,
-                color: Color(0xFF5B616E),
-                height: 1.45,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2170,6 +2144,45 @@ class _UsernameHandleInputFormatter extends TextInputFormatter {
     final capped =
         stripped.length > 24 ? stripped.substring(0, 24) : stripped;
     final formatted = '@$capped';
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+/// Formats Sign-Up Step 5 Moroccan subscriber number right after `+212`
+/// into `XXX-XXXXXX` (e.g. `650-123456`), stripping any pasted `+212` or leading `0`.
+class _MoroccanSubscriberPhoneFormatter extends TextInputFormatter {
+  const _MoroccanSubscriberPhoneFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = AccountValidation.normalizeDigits(newValue.text)
+        .replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('00212')) {
+      digits = digits.substring(5);
+    } else if (digits.startsWith('212') && digits.length > 9) {
+      digits = digits.substring(3);
+    }
+    if (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+    if (digits.length > 9) {
+      digits = digits.substring(0, 9);
+    }
+    final formatted = digits.length > 3
+        ? '${digits.substring(0, 3)}-${digits.substring(3)}'
+        : digits;
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),

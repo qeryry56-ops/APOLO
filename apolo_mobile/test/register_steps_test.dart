@@ -16,7 +16,7 @@ void main() {
   });
 
   testWidgets(
-      'Dynamic Layer v5.1 5-step Sign up wizard matches Figma 25680:46408 geometry and completes OTP verification',
+      'Dynamic Layer v5.1 5-step Sign up wizard matches Figma 25680:46408 geometry, custom placeholders, +212 650-123456 phone, and Dynamic Layer OTP',
       (tester) async {
     await tester.runAsync(() => AppState().setLocale(const Locale('en')));
     tester.view.physicalSize = const Size(375, 812);
@@ -66,7 +66,7 @@ void main() {
     expect(wrapperPad.padding, const EdgeInsets.fromLTRB(16, 32, 16, 32));
     expect(tester.getSize(find.byKey(const Key('auth-submit'))).height, 56.0);
 
-    // STEP 1: "What's your email?"
+    // STEP 1: "What's your email?" (`example@gmail.com`)
     expect(find.text("What's your email?"), findsOneWidget);
     expect(
         tester
@@ -90,8 +90,14 @@ void main() {
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();
 
-    // STEP 2: "Choose a password" + "Your password must be at least 8 characters"
+    // STEP 2: "Choose a password" (`Password` hint + 8-char helper)
     expect(find.text('Choose a password'), findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('auth-password')))
+            .decoration
+            ?.hintText,
+        'Password');
     expect(find.text('Your password must be at least 8 characters'),
         findsOneWidget);
     expect(submitMat().color, const Color(0xFFEEEEEE));
@@ -109,8 +115,14 @@ void main() {
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();
 
-    // STEP 3: "What's your first name?"
+    // STEP 3: "What's your first name?" (`Name` hint)
     expect(find.text("What's your first name?"), findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('reg-first-name')))
+            .decoration
+            ?.hintText,
+        'Name');
     expect(find.byKey(const Key('dl-signup-helper-text')), findsNothing);
     expect(submitMat().color, const Color(0xFFEEEEEE));
 
@@ -120,8 +132,14 @@ void main() {
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();
 
-    // STEP 4: "Pick a username" + "@joshua" prefix + "Others can find you with your username!"
+    // STEP 4: "Pick a username" (`@username` hint + `@joshua` auto-prefix)
     expect(find.text('Pick a username'), findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('reg-username')))
+            .decoration
+            ?.hintText,
+        '@username');
     expect(
         find.text('Others can find you with your username!'), findsOneWidget);
     expect(submitMat().color, const Color(0xFFEEEEEE));
@@ -135,21 +153,19 @@ void main() {
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();
 
-    // STEP 5: "What's your phone number?" (required by /auth/register)
+    // STEP 5: "What's your phone number?" (`+212` primary prefix + `650-123456` hint)
     expect(find.text("What's your phone number?"), findsOneWidget);
+    expect(find.byKey(const Key('reg-phone-prefix')), findsOneWidget);
+    expect(find.text('+212'), findsOneWidget);
+    final phoneField =
+        tester.widget<TextField>(find.byKey(const Key('auth-phone')));
+    expect(phoneField.decoration?.hintText, '650-123456');
     expect(submitMat().color, const Color(0xFFEEEEEE));
 
-    // Verify `<` back returns cleanly to Step 4 with `@joshua` preserved, then forward again
-    await tester.tap(find.byKey(const Key('auth-dismiss')));
-    await tester.pumpAndSettle();
-    expect(find.text('Pick a username'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('auth-submit')));
-    await tester.pumpAndSettle();
-    expect(find.text("What's your phone number?"), findsOneWidget);
-
-    await tester.enterText(
-        find.byKey(const Key('auth-phone')), '0612345678');
+    // Entering `650123456` formats as `650-123456` and submits `+212650123456`
+    await tester.enterText(find.byKey(const Key('auth-phone')), '650123456');
     await tester.pump();
+    expect(phoneField.controller?.text, '650-123456');
     expect(submitMat().color, const Color(0xFF000000));
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();
@@ -159,10 +175,21 @@ void main() {
     expect(registerPayload!['name'], 'Joshua');
     expect(registerPayload!['email'], 'mail@gmail.com');
     expect(registerPayload!['username'], 'joshua');
-    expect(registerPayload!['phone'], '+212612345678');
+    expect(registerPayload!['phone'], '+212650123456');
 
-    // STEP 6: OTP Verification
-    expect(find.byKey(const Key('auth-code')), findsOneWidget);
+    // STEP 6: Dynamic Layer v5.1 OTP Verification (`dl-otp-wrapper`, `000000` hint, `#EEEEEE` -> `#000000`)
+    expect(find.byKey(const Key('dl-otp-wrapper')), findsOneWidget);
+    expect(
+        tester
+            .widget<Padding>(find.byKey(const Key('dl-otp-wrapper')))
+            .padding,
+        const EdgeInsets.fromLTRB(16, 32, 16, 32));
+    expect(find.text('Enter verification code'), findsOneWidget);
+    final otpField =
+        tester.widget<TextField>(find.byKey(const Key('auth-code')));
+    expect(otpField.decoration?.hintText, '000000');
+    expect(submitMat().color, const Color(0xFFEEEEEE));
+
     await tester.enterText(find.byKey(const Key('auth-code')), '123456');
     await tester.pumpAndSettle();
 

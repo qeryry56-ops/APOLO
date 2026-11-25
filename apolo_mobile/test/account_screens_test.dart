@@ -88,7 +88,14 @@ void main() {
         home: AuthScreen(
             auth: AccountAuth(client: Dio()..httpClientAdapter = adapter))));
     await credentials(tester);
+    expect(find.byKey(const Key('dl-otp-wrapper')), findsOneWidget);
     expect(find.byKey(const Key('auth-code')), findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('auth-code')))
+            .decoration
+            ?.hintText,
+        '000000');
     expect(AppState().api.isAuthenticated, isFalse);
     expect((await SharedPreferences.getInstance()).getString('auth_token'),
         isNull);
@@ -241,7 +248,7 @@ void main() {
       expect(pwdField.obscureText, isTrue);
       expect(pwdField.textAlign, TextAlign.center);
       expect(pwdField.style?.fontSize, 28.0);
-      expect(pwdField.decoration?.hintText, '••••••••');
+      expect(pwdField.decoration?.hintText, 'Password');
 
       // 6. Tapping Forgot password? pill opens Dynamic Layer ForgotPasswordScreen
       await tester.tap(find.byKey(const Key('auth-forgot-password-pill')));

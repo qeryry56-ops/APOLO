@@ -69,6 +69,13 @@ void main() {
 
     expect(adapter.requests, isNotEmpty);
     expect(adapter.requests.first.path, '/auth/forgot-password');
+    expect(find.byKey(const Key('dl-forgot-otp-wrapper')), findsOneWidget);
     expect(find.byKey(const Key('forgot-code')), findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('forgot-code')))
+            .decoration
+            ?.hintText,
+        '000000');
   });
 }
