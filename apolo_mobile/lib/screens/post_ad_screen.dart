@@ -824,7 +824,7 @@ class _PostAdScreenState extends State<PostAdScreen>
             Expanded(
               child: ListView(
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(26, 8, 26, canPop ? 28 : 110),
+                padding: EdgeInsets.fromLTRB(26, 8, 26, canPop ? 28 : 132),
                 children: [
                   // Floating 3D Sculpture + Clean Apple Typography Header
                   _buildMinimalistStepHeader(s),

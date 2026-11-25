@@ -509,7 +509,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: _buildUpgradedInsightsStudio(isAr),
                         ),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 136)),
                     ],
                   ),
                 ),

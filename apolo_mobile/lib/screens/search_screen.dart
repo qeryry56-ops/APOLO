@@ -1580,7 +1580,7 @@ class _SearchScreenState extends State<SearchScreen>
                       )
                     else if (isWide)
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 132),
                         sliver: SliverGrid.builder(
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -1604,7 +1604,7 @@ class _SearchScreenState extends State<SearchScreen>
                       )
                     else
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 132),
                         sliver: SliverList.separated(
                           itemCount: _ads.length + (_loadingMore ? 1 : 0),
                           separatorBuilder: (_, __) =>

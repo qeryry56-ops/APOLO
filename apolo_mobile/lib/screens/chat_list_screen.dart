@@ -1222,7 +1222,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             physics: const BouncingScrollPhysics(
                               parent: AlwaysScrollableScrollPhysics(),
                             ),
-                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 130),
                             itemCount: filtered.length,
                             itemBuilder: (context, index) {
                               final conv = filtered[index];

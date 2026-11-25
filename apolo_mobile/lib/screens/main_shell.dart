@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -384,6 +385,7 @@ class _MainShellState extends State<MainShell>
     final showBottomBar = _currentIndex != 2 || _searchChromeVisible;
     final isPostAdSelected = _currentIndex == 1;
     final safeBottom = MediaQuery.of(context).padding.bottom;
+    final double dockBottomOffset = math.max(40.0, safeBottom + 14.0);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -520,9 +522,10 @@ class _MainShellState extends State<MainShell>
             ),
           // Responsive Floating Translucent Pill Dock + Borderless "+" Button with Squash & Stretch
           Positioned(
+            key: const Key('main-shell-bottom-dock'),
             left: 20,
             right: 20,
-            bottom: safeBottom > 0 ? safeBottom + 4 : 16,
+            bottom: dockBottomOffset,
             child: IgnorePointer(
               ignoring: !showBottomBar,
               child: AnimatedSlide(
