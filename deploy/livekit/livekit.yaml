@@ -1,0 +1,49 @@
+# LiveKit SFU Production Configuration for Apolo.ma (8–25+ Group Meetings)
+# Topology: Selective Forwarding Unit (SFU) — Zero server-side video transcoding, E2EE-preserving.
+
+port: 7880
+bind_addresses:
+  - ""
+
+rtc:
+  # Primary WebRTC media transport over UDP (low latency, no TCP head-of-line blocking)
+  port_range_start: 50000
+  port_range_end: 50200
+  udp_port: 7882
+  tcp_port: 7881
+  use_external_ip: true
+  congestion_control:
+    enabled: true
+    allow_pause: true
+
+redis:
+  address: redis:6379
+
+# Integrated STUN + TURN/UDP (3478) + TURNS/TLS (443) for CGNAT & strict firewalls
+turn:
+  enabled: true
+  domain: turn.apolo.ma
+  udp_port: 3478
+  tls_port: 443
+  cert_file: /etc/livekit/certs/fullchain.pem
+  key_file: /etc/livekit/certs/privkey.pem
+
+room:
+  auto_create: true
+  empty_timeout: 300
+  max_participants: 50
+  enabled_codecs:
+    - mime: audio/opus
+    - mime: audio/red
+    - mime: video/VP9     # Primary SVC codec (L3T3_KEY)
+    - mime: video/AV1     # Next-gen SVC codec
+    - mime: video/H264    # Hardware Simulcast fallback for older iOS/Android
+    - mime: video/VP8
+
+webhook:
+  api_key: ${LIVEKIT_API_KEY}
+  urls:
+    - https://apolo.ma/api/v1/meetings/webhook
+
+logging:
+  level: info

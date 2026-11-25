@@ -1,0 +1,29 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - livekit_redis_data:/data
+
+  livekit-sfu:
+    image: livekit/livekit-server:v1.8
+    restart: unless-stopped
+    depends_on:
+      - redis
+    command: --config /etc/livekit.yaml
+    environment:
+      - LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+    ports:
+      - "7880:7880/tcp"             # Signaling WebSocket / Twirp HTTP (behind TLS reverse proxy)
+      - "7881:7881/tcp"             # ICE/TCP fallback
+      - "7882:7882/udp"             # Single-port WebRTC UDP mux (primary media path)
+      - "3478:3478/udp"             # STUN & TURN/UDP NAT traversal
+      - "443:443/tcp"               # TURNS over TLS 443 (strict corporate/mobile NATs)
+      - "50000-50200:50000-50200/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+      - ./certs:/etc/livekit/certs:ro
+
+volumes:
+  livekit_redis_data:
