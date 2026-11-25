@@ -77,12 +77,15 @@ class Ios26IMessageTokens {
   // Tapback Reaction Badge (`20 × 20` circular `#0088FF`)
   static const Color tapbackBlue = Color(0xFF0088FF);
 
-  // Exact Figma `1:2` Dimensions
+  // Exact Figma `1:2` / `4:1061` Dimensions
   static const double controlCircleSize = 45.0;
   static const double controlRadius = 22.5;
-  static const double composerMinHeight = 45.0;
-  static const double composerRadius = 24.0;
-  static const double composerControlGap = 18.0;
+  static const double composerBarWidth = 326.0; // `4:1061` (326 × 45 px)
+  static const double composerInputWidth = 262.0; // `I4:1061;1:2659;1:76` (262 × 45 px)
+  static const double composerMinHeight = 45.0; // Exact 45 px height
+  static const double composerRadius = 22.5;
+  static const double composerControlGap = 19.0; // 326 - 45 - 262 = 19 px
+  static const double composerBottomOffset = 41.0; // Exact 41 px from screen bottom
   static const double headerButtonFillAlpha = 0.68;
   static const double namePillFillAlpha = 0.80;
   static const double composerFillAlpha = 0.78;
@@ -256,7 +259,7 @@ class _LiquidGlassSurfaceState extends State<LiquidGlassSurface>
               borderRadius: widget.borderRadius,
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.88),
-                width: 0.75,
+                width: 0.5,
               ),
             ),
             child: widget.child,

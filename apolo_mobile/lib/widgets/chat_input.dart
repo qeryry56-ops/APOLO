@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -281,10 +283,22 @@ class _ChatInputState extends State<ChatInput> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final horizontalInset = screenWidth >= 375 ? 24.0 : 16.0;
-    final controlsGap =
+    // Exact Figma `4:1061` (`326 × 45` on `375` screen -> start 25, end 24;
+    // `+` 45 + gap 19 + input `262 × 45` = `326 × 45`; `41 px` from bottom of screen).
+    final double startInset = screenWidth >= 360 ? 25.0 : 16.0;
+    final double endInset = screenWidth >= 360 ? 24.0 : 16.0;
+    final double controlsGap =
         screenWidth >= 360 ? Ios26IMessageTokens.composerControlGap : 12.0;
+    final double bottomOffset = widget.hasBottomSheetBelow
+        ? 12.0
+        : (keyboardInset > 0
+            ? 14.0
+            : math.max(
+                Ios26IMessageTokens.composerBottomOffset,
+                bottomInset + 7.0,
+              ));
     final canSend = _hasSendableContent;
     final contextDir = Directionality.of(context);
     final inputTextDir = widget.controller.text.trim().isEmpty
@@ -298,10 +312,10 @@ class _ChatInputState extends State<ChatInput> {
       policy: OrderedTraversalPolicy(),
       child: Container(
         padding: EdgeInsetsDirectional.fromSTEB(
-          horizontalInset,
-          6,
-          horizontalInset,
-          widget.hasBottomSheetBelow ? 12 : bottomInset + 14,
+          startInset,
+          0,
+          endInset,
+          bottomOffset,
         ),
         color: Colors.transparent,
         child: Column(
@@ -353,6 +367,7 @@ class _ChatInputState extends State<ChatInput> {
             if (widget.attachments.isNotEmpty) _buildAttachmentsAboveStrip(),
 
             Row(
+              key: const Key('chat-composer-bar-row'),
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (!_isVoiceRecorderActive) ...[
@@ -386,7 +401,7 @@ class _ChatInputState extends State<ChatInput> {
                   SizedBox(width: controlsGap),
                 ],
 
-                // Exact Figma `1:2` Input glass capsule: `(89, 411, 262, 45)`, corner radius 24
+                // Exact Figma `I4:1061;1:2659;1:76` Input glass capsule: `262 × 45 px`
                 Expanded(
                   child: _isVoiceRecorderActive
                       ? VoiceRecorder(
@@ -412,6 +427,7 @@ class _ChatInputState extends State<ChatInput> {
                           },
                         )
                       : LiquidGlassSurface(
+                          key: const Key('chat-input-capsule'),
                           fillAlpha: Ios26IMessageTokens.composerFillAlpha,
                           borderRadius: BorderRadius.circular(
                             Ios26IMessageTokens.composerRadius,
@@ -452,7 +468,7 @@ class _ChatInputState extends State<ChatInput> {
                                       style: const TextStyle(
                                         fontSize:
                                             Ios26IMessageTokens.composerFontSize,
-                                        height: 1.28,
+                                        height: 22.0 / 17.0,
                                         color: Ios26IMessageTokens.labelPrimary,
                                         fontWeight: FontWeight.w500,
                                         letterSpacing: -0.25,
@@ -467,6 +483,7 @@ class _ChatInputState extends State<ChatInput> {
                                               .placeholderGray,
                                           fontSize: Ios26IMessageTokens
                                               .composerFontSize,
+                                          height: 22.0 / 17.0,
                                           fontWeight: FontWeight.w500,
                                         ),
                                         border: InputBorder.none,
@@ -475,7 +492,7 @@ class _ChatInputState extends State<ChatInput> {
                                         isDense: true,
                                         contentPadding:
                                             const EdgeInsets.symmetric(
-                                          vertical: 11.5,
+                                          vertical: 11.0,
                                         ),
                                       ),
                                     ),

@@ -250,4 +250,51 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Figma 4:1061 exact bottom bar metrics on 375x812: full bar 326x45, input 262x45, + button 45x45, and 41px from bottom',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              padding: const EdgeInsets.only(top: 44, bottom: 34),
+            ),
+            child: child!,
+          ),
+          home: const ChatRoomScreen(
+            conversationId: 101,
+            peerName: 'Name',
+            initialMessages: [
+              {
+                'id': 'b1',
+                'body': 'Come at 12 PM',
+                'is_mine': true,
+                'created_at_time': '11:04 PM',
+              },
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final barRect = tester.getRect(find.byKey(const Key('chat-composer-bar-row')));
+      final addRect = tester.getRect(find.byKey(const Key('chat-attach-button')));
+      final inputRect = tester.getRect(find.byKey(const Key('chat-input-capsule')));
+
+      expect(barRect.width, closeTo(326.0, 0.01));
+      expect(barRect.height, closeTo(45.0, 0.01));
+      expect(addRect.width, closeTo(45.0, 0.01));
+      expect(addRect.height, closeTo(45.0, 0.01));
+      expect(inputRect.width, closeTo(262.0, 0.01));
+      expect(inputRect.height, closeTo(45.0, 0.01));
+      expect(812.0 - barRect.bottom, closeTo(41.0, 0.01));
+    },
+  );
 }

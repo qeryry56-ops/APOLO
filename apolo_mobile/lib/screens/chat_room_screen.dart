@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -2059,12 +2060,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final hasAdContext = widget.adTitle.trim().isNotEmpty;
     final int adContextOffset = hasAdContext ? 1 : 0;
     final int totalListCount = adContextOffset + totalFlowCount;
-    // Floating header clearance (messages and photos scroll cleanly behind the white gradient overlay)
+    // Floating header & 45px composer clearance (`41px` bottom offset + `45px` bar + `14px` breathing room)
     final double headerTopClearance = topInset + 114.0;
     final double headerGradientHeight = topInset + 144.0;
+    final double restingComposerBottom = math.max(
+      Ios26IMessageTokens.composerBottomOffset,
+      bottomInset + 7.0,
+    );
     final double drawerHeightOffset = _isDrawerOpen ? 342.0 : 0.0;
     final double composerBottomClearance =
-        bottomInset + 84.0 + drawerHeightOffset;
+        restingComposerBottom + Ios26IMessageTokens.composerMinHeight + 14.0 + drawerHeightOffset;
 
     return Scaffold(
       backgroundColor: Ios26IMessageTokens.canvasWhite,
@@ -2169,7 +2174,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             left: 0,
             right: 0,
             child: Ios26BottomEdgeFade(
-              height: bottomInset + 84.0,
+              height: restingComposerBottom +
+                  Ios26IMessageTokens.composerMinHeight +
+                  16.0,
             ),
           ),
 
@@ -2220,7 +2227,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           // Layer 3: Rule 4 Scroll Anchoring — Floating Liquid Glass "X new messages · Jump to latest" pill
           if (_unreadIncomingCount > 0)
             Positioned(
-              bottom: bottomInset + 74,
+              bottom: restingComposerBottom +
+                  Ios26IMessageTokens.composerMinHeight +
+                  10.0,
               left: 16,
               right: 16,
               child: Center(
