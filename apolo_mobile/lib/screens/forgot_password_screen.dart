@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,7 +9,9 @@ import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/custom_auth_input_field.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'main_shell.dart';
 import 'support_screen.dart';
 
@@ -42,6 +47,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _state = AppState();
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
+  final _emailFocus = FocusNode();
   final _code = TextEditingController();
   final _codeFocus = FocusNode();
   final _password = TextEditingController();
@@ -63,6 +69,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
       _email.text = widget.initialEmail!;
     }
+    _email.addListener(() {
+      if (mounted) {
+        setState(() {
+          if (_step == _RecoveryStep.email && _error != null) _error = null;
+        });
+      }
+    });
     _codeFocus.addListener(() {
       if (mounted) setState(() {});
     });
@@ -73,22 +86,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     _timer?.cancel();
     _auth.close();
     _email.dispose();
+    _emailFocus.dispose();
     _code.dispose();
     _codeFocus.dispose();
     _password.dispose();
     _confirmation.dispose();
     super.dispose();
-  }
-
-  int get _stepIndex {
-    switch (_step) {
-      case _RecoveryStep.email:
-        return 1;
-      case _RecoveryStep.otp:
-        return 2;
-      case _RecoveryStep.newPassword:
-        return 3;
-    }
   }
 
   void _startCooldown() {
@@ -135,9 +138,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _submitEmailRequest({bool isResend = false}) async {
     if (_busy) return;
     if (!isResend) {
-      final valid = _formKey.currentState?.validate() ?? false;
-      if (!valid) {
+      final trimmed = _email.text.trim();
+      if (trimmed.isEmpty) {
+        _emailFocus.requestFocus();
+        return;
+      }
+      if (!AccountValidation.email(trimmed)) {
         HapticFeedback.heavyImpact();
+        setState(() {
+          _error = _state.s.tr(
+            'يرجى إدخال بريد إلكتروني صحيح',
+            'Veuillez saisir une adresse e-mail valide',
+            'Please enter a valid email address',
+          );
+        });
         return;
       }
     }
@@ -368,9 +382,29 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final s = _state.s;
     final isAr = s.isAr;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (_step == _RecoveryStep.email) {
+      return _buildDynamicLayerEmailScaffold(
+        context,
+        s: s,
+        isAr: isAr,
+        isDark: isDark,
+      );
+    }
+
+    final Color bgColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final Color inkColor =
+        isDark ? Colors.white : const Color(0xFF111827);
+    final Color mutedColor =
+        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final Color pillBg =
+        isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
+    final backIcon =
+        isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
 
     return PopScope(
-      canPop: _step == _RecoveryStep.email,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           _handleBack();
@@ -379,51 +413,43 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       child: Directionality(
         textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: bgColor,
           body: SafeArea(
             child: Column(
               children: [
-                // Top Bar
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                  child: SizedBox(
-                    height: 48,
+                // Clean 56px TopNavigation (40×40 #EEEEEE circle back button, no separator line)
+                SizedBox(
+                  height: DlShareProfileLayout.topNavHeight,
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DlShareProfileLayout.topNavHorizontalPadding,
+                    ),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         Align(
                           alignment: AlignmentDirectional.centerStart,
-                          child: _buildBackButton(),
+                          child: ApoloDlIconCircleButton(
+                            key: const Key('forgot-dismiss'),
+                            icon: backIcon,
+                            backgroundColor: pillBg,
+                            iconColor: isDark
+                                ? Colors.white
+                                : const Color(0xFF000000),
+                            tooltip: MaterialLocalizations.of(context)
+                                .backButtonTooltip,
+                            onPressed: _handleBack,
+                          ),
                         ),
                         Text(
                           _headerTitle(s),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF111827),
+                            color: inkColor,
                             letterSpacing:
                                 AppTypography.trackingForContext(context, -0.2),
-                          ),
-                        ),
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              '$_stepIndex / 3',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF374151),
-                              ),
-                            ),
                           ),
                         ),
                       ],
@@ -431,33 +457,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                 ),
 
-                // Step Progress Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    children: List.generate(3, (index) {
-                      final active = (index + 1) <= _stepIndex;
-                      return Expanded(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 260),
-                          curve: Curves.easeOutCubic,
-                          height: 4,
-                          margin: EdgeInsetsDirectional.only(
-                            end: index < 2 ? 6 : 0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: active
-                                ? const Color(0xFFE31B23)
-                                : const Color(0xFFE5E7EB),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-
-                // Scrollable Body
+                // Scrollable Body (Steps 2 & 3: OTP & New Password)
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -475,7 +475,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF111827),
+                              color: inkColor,
                               letterSpacing: AppTypography.trackingForContext(
                                   context, -0.4),
                               height: AppTypography.lineHeightForContext(
@@ -494,7 +494,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w400,
-                              color: const Color(0xFF6B7280),
+                              color: mutedColor,
                               height: 1.45,
                               letterSpacing: AppTypography.trackingForContext(
                                   context, -0.1),
@@ -594,13 +594,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           // Primary Action Button
                           SizedBox(
                             width: double.infinity,
-                            height: 54,
+                            height: 56,
                             child: ElevatedButton(
                               key: const Key('forgot-submit'),
                               onPressed: _primaryAction,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0A0A0A),
-                                foregroundColor: Colors.white,
+                                backgroundColor: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF000000),
+                                foregroundColor: isDark
+                                    ? const Color(0xFF000000)
+                                    : Colors.white,
                                 shape: const StadiumBorder(),
                                 elevation: 0,
                                 padding: const EdgeInsets.symmetric(
@@ -608,12 +612,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 ),
                               ),
                               child: _busy
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white,
+                                        color: isDark
+                                            ? const Color(0xFF000000)
+                                            : Colors.white,
                                       ),
                                     )
                                   : Text(
@@ -621,7 +627,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                        color: isDark
+                                            ? const Color(0xFF000000)
+                                            : Colors.white,
                                         letterSpacing:
                                             AppTypography.trackingForContext(
                                                 context, -0.2),
@@ -641,9 +649,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                         'Renvoyer le code dans $_cooldownRemaining s',
                                         'Resend code in ${_cooldownRemaining}s',
                                       ),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13.5,
-                                        color: Color(0xFF6B7280),
+                                        color: mutedColor,
                                       ),
                                     )
                                   : TextButton(
@@ -674,10 +682,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     'Modifier l’adresse e-mail',
                                     'Change email address',
                                   ),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w500,
-                                    color: Color(0xFF4B5563),
+                                    color: mutedColor,
                                   ),
                                 ),
                               ),
@@ -685,51 +693,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ],
 
                           const SizedBox(height: 24),
-
-                          // Return to Sign In Link (on Step 1)
-                          if (_step == _RecoveryStep.email)
-                            Center(
-                              child: GestureDetector(
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  Navigator.of(context).pop();
-                                },
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  child: Text.rich(
-                                    TextSpan(
-                                      style: const TextStyle(fontSize: 14.5),
-                                      children: [
-                                        TextSpan(
-                                          text: s.tr(
-                                            'تذكرت كلمة المرور؟ ',
-                                            'Mot de passe retrouvé ? ',
-                                            'Remember your password? ',
-                                          ),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xFF111827),
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: s.tr(
-                                            'تسجيل الدخول',
-                                            'Se connecter',
-                                            'Sign in',
-                                          ),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: AppConfig.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ),
 
                           // Need help / Support
                           Center(
@@ -763,6 +726,266 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Exact Figma `dynamic-layer-core-v5.1` `Forgot password` Step 1 (`45786:56733`, `45786:57262`, `21414:22440`):
+  /// - `56px` TopNavigation (`40×40` circular `#EEEEEE` `<` button, no separator line)
+  /// - `wrapper` (`padding: 32 top/bottom, 16 left/right`, `gap: 32`)
+  /// - Centered `16px Bold` `"Enter your email"`, borderless `28px Bold` centered input, centered `12.5px #757575` helper text
+  /// - Fixed bottom `ButtonDock` (`56px` stadium `Continue`: `#EEEEEE` when empty -> `#000000` when filled).
+  Widget _buildDynamicLayerEmailScaffold(
+    BuildContext context, {
+    required dynamic s,
+    required bool isAr,
+    required bool isDark,
+  }) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final mediaPadding = MediaQuery.paddingOf(context);
+    final topInset = mediaPadding.top;
+    final viewRef = View.maybeOf(context);
+    final rawViewKb = viewRef != null && viewRef.devicePixelRatio > 0
+        ? viewRef.viewInsets.bottom / viewRef.devicePixelRatio
+        : 0.0;
+    final bool keyboardOpen =
+        MediaQuery.viewInsetsOf(context).bottom > 0 || rawViewKb > 0;
+    final bottomSafe =
+        DlShareProfileLayout.resolveBottomSafeInset(screenSize, mediaPadding);
+    final double bottomDockPad =
+        keyboardOpen ? 16.0 : math.max(20.0, bottomSafe + 8.0);
+
+    final Color bgColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final Color ink = isDark ? Colors.white : const Color(0xFF000000);
+    final Color pillBg =
+        isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
+    final Color mutedText =
+        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
+    const Color errorRed = Color(0xFFE31B23);
+
+    final bool isFilled = _email.text.trim().isNotEmpty;
+    final Color continueBg =
+        isFilled ? (isDark ? Colors.white : const Color(0xFF000000)) : pillBg;
+    final Color continueFg =
+        isFilled ? (isDark ? const Color(0xFF000000) : Colors.white) : mutedText;
+
+    final int emailLen = _email.text.length;
+    final double dynamicInputFontSize =
+        emailLen > 28 ? 19.0 : (emailLen > 20 ? 23.0 : 28.0);
+
+    final backIcon =
+        isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+
+    return PopScope(
+      canPop: true,
+      child: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          backgroundColor: bgColor,
+          resizeToAvoidBottomInset: true,
+          body: Column(
+            children: [
+              // Fixed 56px TopNavigation (40×40 #EEEEEE `<` circle, no separator)
+              SizedBox(
+                key: const Key('dl-forgot-top-nav'),
+                height: topInset + DlShareProfileLayout.topNavHeight,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    height: DlShareProfileLayout.topNavHeight,
+                    width: double.infinity,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DlShareProfileLayout.topNavHorizontalPadding,
+                      ),
+                      child: Row(
+                        children: [
+                          ApoloDlIconCircleButton(
+                            key: const Key('forgot-dismiss'),
+                            icon: backIcon,
+                            backgroundColor: pillBg,
+                            iconColor: ink,
+                            tooltip: MaterialLocalizations.of(context)
+                                .backButtonTooltip,
+                            onPressed: _handleBack,
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Scrollable `wrapper` (`padding: 32 top/bottom, 16 left/right`, `gap: 32`)
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460.0),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Padding(
+                          key: const Key('dl-forgot-wrapper'),
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            32.0,
+                            16.0,
+                            32.0,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                s.tr(
+                                  'أدخل بريدك الإلكتروني',
+                                  'Entrez votre e-mail',
+                                  'Enter your email',
+                                ),
+                                key: const Key('dl-forgot-prompt-label'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: ink,
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w700,
+                                  height: 24.0 / 16.0,
+                                ),
+                              ),
+                              const SizedBox(height: 32.0),
+
+                              Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: TextField(
+                                  key: const Key('forgot-email'),
+                                  controller: _email,
+                                  focusNode: _emailFocus,
+                                  enabled: !_busy,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.done,
+                                  autofillHints: const [AutofillHints.email],
+                                  textAlign: TextAlign.center,
+                                  textDirection: TextDirection.ltr,
+                                  cursorColor: ink,
+                                  cursorWidth: 2.5,
+                                  cursorHeight: 30.0,
+                                  style: TextStyle(
+                                    color: ink,
+                                    fontSize: dynamicInputFontSize,
+                                    fontWeight: FontWeight.w700,
+                                    height: 36.0 / 28.0,
+                                    letterSpacing: -0.4,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    filled: false,
+                                    fillColor: Colors.transparent,
+                                    hoverColor: Colors.transparent,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      vertical: 4.0,
+                                    ),
+                                  ),
+                                  onSubmitted: (_) =>
+                                      _submitEmailRequest(isResend: false),
+                                ),
+                              ),
+
+                              if (_error != null) ...[
+                                const SizedBox(height: 18.0),
+                                Text(
+                                  _error!,
+                                  key: const Key('dl-forgot-error-text'),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: errorRed,
+                                    fontSize: 13.0,
+                                    fontWeight: FontWeight.w400,
+                                    height: 18.0 / 13.0,
+                                  ),
+                                ),
+                              ],
+
+                              SizedBox(height: _error != null ? 20.0 : 32.0),
+
+                              Text(
+                                s.tr(
+                                  'ستتوصل برسالة في بريدك الإلكتروني لتعيين كلمة مرور جديدة',
+                                  'Vous recevrez un e-mail pour définir un nouveau mot de passe',
+                                  'You will receive an email to set a new password',
+                                ),
+                                key: const Key('dl-forgot-helper-text'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: mutedText,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w400,
+                                  height: 18.0 / 12.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Fixed Bottom `ButtonDock` (`56px` stadium pill `Continue`)
+              Padding(
+                key: const Key('dl-forgot-button-dock'),
+                padding: EdgeInsets.fromLTRB(16.0, 8.0, 16.0, bottomDockPad),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56.0,
+                      child: Material(
+                        color: continueBg,
+                        shape: const StadiumBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          key: const Key('forgot-submit'),
+                          customBorder: const StadiumBorder(),
+                          onTap: _busy
+                              ? null
+                              : () => _submitEmailRequest(isResend: false),
+                          child: Center(
+                            child: _busy
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: continueFg,
+                                    ),
+                                  )
+                                : Text(
+                                    s.tr('متابعة', 'Continuer', 'Continue'),
+                                    style: TextStyle(
+                                      color: continueFg,
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.w600,
+                                      height: 24.0 / 16.0,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -934,36 +1157,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBackButton() {
-    return GestureDetector(
-      onTap: _handleBack,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.arrow_back,
-            size: 19,
-            color: Color(0xFF111827),
-          ),
         ),
       ),
     );

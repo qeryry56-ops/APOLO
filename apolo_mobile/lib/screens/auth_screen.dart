@@ -10,7 +10,9 @@ import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/custom_auth_input_field.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'forgot_password_screen.dart';
 import 'intent_onboarding_screen.dart';
 import 'privacy_compliance_screen.dart';
@@ -68,7 +70,12 @@ class _AuthScreenState extends State<AuthScreen>
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
   final _code = TextEditingController();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
   final FocusNode _codeFocus = FocusNode();
+
+  // Login 2-step Dynamic Layer v5.1 state (`1`: Enter Email, `2`: Enter Password)
+  int _loginStep = 1;
 
   // Multi-step Registration controllers & states
   final _firstName = TextEditingController();
@@ -105,6 +112,10 @@ class _AuthScreenState extends State<AuthScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    _email.addListener(_onLoginInputChanged);
+    _password.addListener(_onLoginInputChanged);
+    _emailFocus.addListener(_onLoginInputChanged);
+    _passwordFocus.addListener(_onLoginInputChanged);
     _codeFocus.addListener(() {
       if (mounted) setState(() {});
     });
@@ -147,11 +158,25 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
+  void _onLoginInputChanged() {
+    if (mounted) {
+      setState(() {
+        if (_login && _pending == null && _error != null) {
+          _error = null;
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     _autoSubmitTimer?.cancel();
     _shakeCtrl.dispose();
+    _email.removeListener(_onLoginInputChanged);
+    _password.removeListener(_onLoginInputChanged);
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     _codeFocus.dispose();
     _auth.close();
     for (final controller in [
@@ -388,6 +413,41 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
+  bool _isValidLoginIdentifier(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) return false;
+    return AccountValidation.email(text) ||
+        AccountValidation.phone(text) != null;
+  }
+
+  void _advanceLoginEmailStep() {
+    if (_busy || _finished) return;
+    final text = _email.text.trim();
+    if (text.isEmpty) {
+      _emailFocus.requestFocus();
+      return;
+    }
+    if (!_isValidLoginIdentifier(text)) {
+      HapticFeedback.heavyImpact();
+      setState(() {
+        _error = _state.s.tr(
+          'يرجى إدخال بريد إلكتروني صحيح',
+          'Veuillez saisir une adresse e-mail valide',
+          'Please enter a valid email address',
+        );
+      });
+      return;
+    }
+    HapticFeedback.selectionClick();
+    setState(() {
+      _error = null;
+      _loginStep = 2;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _passwordFocus.requestFocus();
+    });
+  }
+
   Future<void> _submit() async {
     _autoSubmitTimer?.cancel();
     if (_busy || _finished) return;
@@ -403,6 +463,26 @@ class _AuthScreenState extends State<AuthScreen>
           );
         });
         _triggerOtpErrorShake();
+        return;
+      }
+    } else if (_login) {
+      if (_loginStep == 1) {
+        _advanceLoginEmailStep();
+        return;
+      }
+      if (!_isValidLoginIdentifier(_email.text)) {
+        setState(() {
+          _loginStep = 1;
+          _error = _state.s.tr(
+            'يرجى إدخال بريد إلكتروني صحيح',
+            'Veuillez saisir une adresse e-mail valide',
+            'Please enter a valid email address',
+          );
+        });
+        return;
+      }
+      if (_password.text.isEmpty) {
+        _passwordFocus.requestFocus();
         return;
       }
     } else if (!_form.currentState!.validate()) {
@@ -621,6 +701,16 @@ class _AuthScreenState extends State<AuthScreen>
         isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
     final Color borderColor =
         isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE5E7EB);
+
+    if (_login && !otp) {
+      return _buildDynamicLayerLoginScaffold(
+        context,
+        s: s,
+        isAr: isAr,
+        isDark: isDark,
+        bgColor: bgColor,
+      );
+    }
 
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -1993,6 +2083,369 @@ class _AuthScreenState extends State<AuthScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Exact Figma `dynamic-layer-core-v5.1` `Log in` 2-step screen (`45786:56733`, `45786:57262`, `21414:22440`):
+  /// - Step 1 (`_loginStep == 1`): `Enter Email` (`wrapper` `375 × 164`, `padding: 32 top/bottom, 16 left/right`, `gap: 32`)
+  /// - Step 2 (`_loginStep == 2`): `Enter Password` (`wrapper` `375 × 236`, `Forgot password?` `#EEEEEE` pill)
+  /// - Fixed bottom `ButtonDock` (`56px` stadium `Continue`: `#EEEEEE` when empty -> `#000000` when filled, lifting cleanly above keyboard).
+  Widget _buildDynamicLayerLoginScaffold(
+    BuildContext context, {
+    required AppStrings s,
+    required bool isAr,
+    required bool isDark,
+    required Color bgColor,
+  }) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final mediaPadding = MediaQuery.paddingOf(context);
+    final topInset = mediaPadding.top;
+    final viewRef = View.maybeOf(context);
+    final rawViewKb = viewRef != null && viewRef.devicePixelRatio > 0
+        ? viewRef.viewInsets.bottom / viewRef.devicePixelRatio
+        : 0.0;
+    final bool keyboardOpen =
+        MediaQuery.viewInsetsOf(context).bottom > 0 || rawViewKb > 0;
+    final bottomSafe =
+        DlShareProfileLayout.resolveBottomSafeInset(screenSize, mediaPadding);
+    final double bottomDockPad =
+        keyboardOpen ? 16.0 : math.max(20.0, bottomSafe + 8.0);
+
+    final Color ink = isDark ? Colors.white : const Color(0xFF000000);
+    final Color pillBg =
+        isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
+    final Color disabledText =
+        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
+    final Color errorRed = const Color(0xFFE31B23);
+
+    final bool isStep1 = _loginStep == 1;
+    final bool isFilled =
+        isStep1 ? _email.text.trim().isNotEmpty : _password.text.isNotEmpty;
+    final Color continueBg =
+        isFilled ? (isDark ? Colors.white : const Color(0xFF000000)) : pillBg;
+    final Color continueFg =
+        isFilled ? (isDark ? const Color(0xFF000000) : Colors.white) : disabledText;
+
+    final int emailLen = _email.text.length;
+    final double dynamicInputFontSize = !isStep1
+        ? 28.0
+        : (emailLen > 28 ? 19.0 : (emailLen > 20 ? 23.0 : 28.0));
+
+    final backIcon =
+        isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+
+    void handleBack() {
+      HapticFeedback.lightImpact();
+      if (_busy) return;
+      if (_loginStep == 2) {
+        setState(() {
+          _loginStep = 1;
+          _error = null;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _emailFocus.requestFocus();
+        });
+        return;
+      }
+      final nav = Navigator.of(context);
+      if (nav.canPop()) {
+        nav.pop();
+      }
+    }
+
+    return PopScope(
+      canPop: _loginStep == 1,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) handleBack();
+      },
+      child: Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          backgroundColor: bgColor,
+          resizeToAvoidBottomInset: true,
+          body: Column(
+            children: [
+              // Fixed `56px` TopNavigation (`40×40` circular `#EEEEEE` `<` button, no separator)
+              SizedBox(
+                key: const Key('dl-login-top-nav'),
+                height: topInset + DlShareProfileLayout.topNavHeight,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    height: DlShareProfileLayout.topNavHeight,
+                    width: double.infinity,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DlShareProfileLayout.topNavHorizontalPadding,
+                      ),
+                      child: Row(
+                        children: [
+                          ApoloDlIconCircleButton(
+                            key: const Key('auth-dismiss'),
+                            icon: backIcon,
+                            backgroundColor: pillBg,
+                            iconColor: ink,
+                            tooltip: MaterialLocalizations.of(context)
+                                .backButtonTooltip,
+                            onPressed: handleBack,
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Scrollable `wrapper` (`padding: 32 top/bottom, 16 left/right`, `gap: 32`)
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460.0),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Padding(
+                          key: const Key('dl-login-wrapper'),
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            32.0,
+                            16.0,
+                            32.0,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                isStep1
+                                    ? s.tr(
+                                        'أدخل بريدك الإلكتروني',
+                                        'Entrez votre e-mail',
+                                        'Enter your email',
+                                      )
+                                    : s.tr(
+                                        'أدخل كلمة المرور',
+                                        'Entrez votre mot de passe',
+                                        'Enter your password',
+                                      ),
+                                key: const Key('dl-login-prompt-label'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: ink,
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w700,
+                                  height: 24.0 / 16.0,
+                                ),
+                              ),
+                              const SizedBox(height: 32.0),
+
+                              if (isStep1)
+                                Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: TextField(
+                                    key: const Key('auth-email'),
+                                    controller: _email,
+                                    focusNode: _emailFocus,
+                                    enabled: !_busy,
+                                    keyboardType: TextInputType.emailAddress,
+                                    textInputAction: TextInputAction.next,
+                                    autofillHints: const [
+                                      AutofillHints.email,
+                                      AutofillHints.telephoneNumber,
+                                    ],
+                                    textAlign: TextAlign.center,
+                                    textDirection: TextDirection.ltr,
+                                    cursorColor: ink,
+                                    cursorWidth: 2.5,
+                                    cursorHeight: 30.0,
+                                    style: TextStyle(
+                                      color: ink,
+                                      fontSize: dynamicInputFontSize,
+                                      fontWeight: FontWeight.w700,
+                                      height: 36.0 / 28.0,
+                                      letterSpacing: -0.4,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      filled: false,
+                                      fillColor: Colors.transparent,
+                                      hoverColor: Colors.transparent,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 4.0,
+                                      ),
+                                    ),
+                                    onSubmitted: (_) => _submit(),
+                                  ),
+                                )
+                              else
+                                Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: TextField(
+                                    key: const Key('auth-password'),
+                                    controller: _password,
+                                    focusNode: _passwordFocus,
+                                    enabled: !_busy,
+                                    obscureText: true,
+                                    obscuringCharacter: '•',
+                                    textInputAction: TextInputAction.done,
+                                    autofillHints: const [
+                                      AutofillHints.password,
+                                    ],
+                                    textAlign: TextAlign.center,
+                                    textDirection: TextDirection.ltr,
+                                    cursorColor: ink,
+                                    cursorWidth: 2.5,
+                                    cursorHeight: 30.0,
+                                    style: TextStyle(
+                                      color: ink,
+                                      fontSize: 28.0,
+                                      fontWeight: FontWeight.w700,
+                                      height: 36.0 / 28.0,
+                                      letterSpacing: 1.0,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      filled: false,
+                                      fillColor: Colors.transparent,
+                                      hoverColor: Colors.transparent,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 2.0,
+                                      ),
+                                    ),
+                                    onSubmitted: (_) => _submit(),
+                                  ),
+                                ),
+
+                              if (_error != null) ...[
+                                const SizedBox(height: 18.0),
+                                Text(
+                                  _error!,
+                                  key: const Key('dl-login-error-text'),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: errorRed,
+                                    fontSize: 13.0,
+                                    fontWeight: FontWeight.w400,
+                                    height: 18.0 / 13.0,
+                                  ),
+                                ),
+                              ],
+
+                              if (!isStep1) ...[
+                                SizedBox(height: _error != null ? 20.0 : 32.0),
+                                Material(
+                                  color: pillBg,
+                                  shape: const StadiumBorder(),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    key: const Key('auth-forgot-password-pill'),
+                                    customBorder: const StadiumBorder(),
+                                    onTap: _busy
+                                        ? null
+                                        : () {
+                                            HapticFeedback.lightImpact();
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute<void>(
+                                                builder: (_) =>
+                                                    ForgotPasswordScreen(
+                                                  initialEmail:
+                                                      _email.text.trim(),
+                                                  auth: _auth,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18.0,
+                                        vertical: 10.0,
+                                      ),
+                                      child: Text(
+                                        s.tr(
+                                          'نسيت كلمة المرور؟',
+                                          'Mot de passe oublié ?',
+                                          'Forgot password?',
+                                        ),
+                                        style: TextStyle(
+                                          color: ink,
+                                          fontSize: 14.0,
+                                          fontWeight: FontWeight.w600,
+                                          height: 20.0 / 14.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Fixed Bottom `ButtonDock` (`56px` stadium pill `Continue`)
+              Padding(
+                key: const Key('dl-login-button-dock'),
+                padding: EdgeInsets.fromLTRB(16.0, 8.0, 16.0, bottomDockPad),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56.0,
+                      child: Material(
+                        color: continueBg,
+                        shape: const StadiumBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          key: const Key('auth-submit'),
+                          customBorder: const StadiumBorder(),
+                          onTap: _busy ? null : _submit,
+                          child: Center(
+                            child: _busy
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: continueFg,
+                                    ),
+                                  )
+                                : Text(
+                                    s.tr('متابعة', 'Continuer', 'Continue'),
+                                    style: TextStyle(
+                                      color: continueFg,
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.w600,
+                                      height: 24.0 / 16.0,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

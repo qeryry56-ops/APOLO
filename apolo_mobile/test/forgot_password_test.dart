@@ -14,8 +14,14 @@ void main() {
     await AppState().initialize();
   });
 
-  testWidgets('renders forgot password screen with clean input and sends reset',
+  testWidgets(
+      'renders Dynamic Layer v5.1 forgot password screen with exact wrapper geometry and sends reset to OTP step',
       (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final adapter = MockAccountAdapter((options) {
       if (options.path == '/auth/forgot-password') {
         return json('{"status":"success","message":"Instructions sent"}');
@@ -33,18 +39,36 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Verify initial components
+    // Verify Dynamic Layer v5.1 layout & filled state
+    expect(find.byKey(const Key('forgot-dismiss')), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('forgot-dismiss'))),
+        const Size(40.0, 40.0));
+    final wrapperPad =
+        tester.widget<Padding>(find.byKey(const Key('dl-forgot-wrapper')));
+    expect(wrapperPad.padding, const EdgeInsets.fromLTRB(16, 32, 16, 32));
+    expect(find.byKey(const Key('dl-forgot-helper-text')), findsOneWidget);
     expect(find.text('user@apolo.ma'), findsOneWidget);
     expect(find.byKey(const Key('forgot-email')), findsOneWidget);
     expect(find.byKey(const Key('forgot-submit')), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('forgot-submit'))).height, 56.0);
 
-    // Tap submit button
+    // Invalid email shows red error and makes zero API calls
+    await tester.enterText(find.byKey(const Key('forgot-email')), 'bad-email');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('forgot-submit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('dl-forgot-error-text')), findsOneWidget);
+    expect(adapter.requests, isEmpty);
+
+    // Valid email calls /auth/forgot-password and advances to Step 2 OTP
+    await tester.enterText(
+        find.byKey(const Key('forgot-email')), 'user@apolo.ma');
+    await tester.pump();
     await tester.tap(find.byKey(const Key('forgot-submit')));
     await tester.pumpAndSettle();
 
-    // Verify success feedback state
     expect(adapter.requests, isNotEmpty);
     expect(adapter.requests.first.path, '/auth/forgot-password');
-    expect(find.byIcon(Icons.mark_email_read_outlined), findsOneWidget);
+    expect(find.byKey(const Key('forgot-code')), findsOneWidget);
   });
 }

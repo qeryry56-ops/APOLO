@@ -6,9 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:apolo_mobile/account/account_helpers.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/auth_screen.dart';
+import 'package:apolo_mobile/screens/forgot_password_screen.dart';
 import 'package:apolo_mobile/screens/settings_screen.dart';
 import 'package:apolo_mobile/theme/app_theme.dart';
-import 'package:apolo_mobile/widgets/custom_auth_input_field.dart';
 import 'account_helpers_test.dart' show MockAccountAdapter, json;
 
 class DeferredAuth extends AccountAuth {
@@ -28,8 +28,11 @@ void main() {
   Future<void> credentials(WidgetTester tester) async {
     await tester.enterText(
         find.byKey(const Key('auth-email')), 'test@example.ma');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('auth-submit')));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('auth-password')), 'password');
-    await tester.ensureVisible(find.byKey(const Key('auth-submit')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pumpAndSettle();
   }
@@ -41,6 +44,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         theme: ThemeData(splashFactory: NoSplash.splashFactory),
         home: AuthScreen(auth: AccountAuth(client: client))));
+
     expect(
         tester
             .widget<EditableText>(find.descendant(
@@ -48,6 +52,22 @@ void main() {
                 matching: find.byType(EditableText)))
             .textDirection,
         TextDirection.ltr);
+
+    // Invalid email on Step 1 shows error and sends zero requests
+    await tester.enterText(find.byKey(const Key('auth-email')), 'not-an-email');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('auth-submit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('dl-login-error-text')), findsOneWidget);
+    expect(adapter.requests, isEmpty);
+    expect(AppState().isLoggedIn, isFalse);
+
+    // Valid email advances to Step 2 where password also stays LTR
+    await tester.enterText(
+        find.byKey(const Key('auth-email')), 'test@example.ma');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('auth-submit')));
+    await tester.pumpAndSettle();
     expect(
         tester
             .widget<EditableText>(find.descendant(
@@ -55,10 +75,6 @@ void main() {
                 matching: find.byType(EditableText)))
             .textDirection,
         TextDirection.ltr);
-    await tester.tap(find.byKey(const Key('auth-submit')));
-    await tester.pumpAndSettle();
-    expect(adapter.requests, isEmpty);
-    expect(AppState().isLoggedIn, isFalse);
   });
 
   testWidgets('OTP failure stays pending without persisting a token',
@@ -126,7 +142,11 @@ void main() {
         home: AuthScreen(auth: auth)));
     await tester.enterText(
         find.byKey(const Key('auth-email')), 'test@example.ma');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('auth-submit')));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('auth-password')), 'password');
+    await tester.pump();
     await tester.tap(find.byKey(const Key('auth-submit')));
     await tester.pump();
     await tester.pumpWidget(const SizedBox());
@@ -150,51 +170,12 @@ void main() {
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
   });
 
-  testWidgets('login fields have no grey inner fill and float label on focus',
-      (tester) async {
-    final adapter = MockAccountAdapter((_) => json('{}'));
-    final client = Dio()..httpClientAdapter = adapter;
-    await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(const Locale('en')),
-        home: AuthScreen(auth: AccountAuth(client: client))));
-
-    final emailField = tester.widget<TextField>(find.descendant(
-        of: find.byKey(const Key('auth-email')),
-        matching: find.byType(TextField)));
-    final passwordField = tester.widget<TextField>(find.descendant(
-        of: find.byKey(const Key('auth-password')),
-        matching: find.byType(TextField)));
-    expect(emailField.decoration?.filled, isFalse);
-    expect(passwordField.decoration?.filled, isFalse);
-
-    final emailWrapper = find.ancestor(
-        of: find.byKey(const Key('auth-email')),
-        matching: find.byType(CustomAuthInputField));
-    final initialLabelPos = tester.widget<AnimatedPositionedDirectional>(
-        find.descendant(
-            of: emailWrapper,
-            matching: find.byType(AnimatedPositionedDirectional)));
-    expect(initialLabelPos.top, 18.0);
-
-    await tester.tap(find.byKey(const Key('auth-email')));
-    await tester.pumpAndSettle();
-
-    final focusedLabelPos = tester.widget<AnimatedPositionedDirectional>(
-        find.descendant(
-            of: emailWrapper,
-            matching: find.byType(AnimatedPositionedDirectional)));
-    expect(focusedLabelPos.top, 8.0);
-  });
-
-  group('Moroccan RTL Meta-style Login UI', () {
-    setUp(() async {
-      await AppState().setLocale(const Locale('ar'));
-    });
-
+  group('Dynamic Layer v5.1 2-Step Login UI', () {
     testWidgets(
-        'renders X dismiss, Meta floating inputs, +212 phone detection, 44x44 eye toggle, neutral forgot link, #E31B23 CTA, and social 12px buttons',
+        'matches Figma 375x812 geometry across Enter Email, Enter Password, Filled, Error, and Forgot Password pill',
         (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
+      await tester.runAsync(() => AppState().setLocale(const Locale('en')));
+      tester.view.physicalSize = const Size(375, 812);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -203,120 +184,83 @@ void main() {
       final client = Dio()..httpClientAdapter = adapter;
 
       await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(const Locale('ar')),
+        theme: AppTheme.light(const Locale('en')),
         home: AuthScreen(auth: AccountAuth(client: client)),
       ));
       await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
+      // 1. Clean 56px TopNavigation with 40x40 circular #EEEEEE back button & no Divider
+      expect(find.byKey(const Key('dl-login-top-nav')), findsOneWidget);
+      expect(tester.getSize(find.byKey(const Key('auth-dismiss'))),
+          const Size(40.0, 40.0));
+      expect(find.byType(Divider), findsNothing);
 
-      // 1. Header: single dismiss X, no redundant 'تسجيل الدخول' title in top bar
-      expect(find.byKey(const Key('auth-dismiss')), findsOneWidget);
-      expect(find.text('مرحباً بك مجدداً'), findsOneWidget);
-      expect(
-        find.text('أدخل بريدك الإلكتروني أو رقم هاتفك للمتابعة'),
-        findsOneWidget,
-      );
-      // 'تسجيل الدخول' should appear ONLY once (on primary CTA, not repeated in header)
-      expect(find.text('تسجيل الدخول'), findsOneWidget);
+      // 2. Wrapper margins match Figma (top 32, right 16, bottom 32, left 16)
+      final wrapperPad =
+          tester.widget<Padding>(find.byKey(const Key('dl-login-wrapper')));
+      expect(wrapperPad.padding, const EdgeInsets.fromLTRB(16, 32, 16, 32));
 
-      // 2. Meta-style 59px inputs, 13px border radius, 1px -> 2px #E31B23 border
-      final emailContainerFinder = find.ancestor(
-        of: find.byKey(const Key('auth-email')),
-        matching: find.byType(AnimatedContainer),
-      );
-      final emailFieldContainer =
-          tester.widget<AnimatedContainer>(emailContainerFinder);
-      final BoxDecoration emailDec =
-          emailFieldContainer.decoration as BoxDecoration;
-      expect(emailDec.borderRadius, BorderRadius.circular(13));
-      expect(tester.getSize(emailContainerFinder).height, 59.0);
+      // 3. Step 1 Default: "Enter your email", borderless 28px centered input, #EEEEEE 56px Continue pill
+      expect(find.text('Enter your email'), findsOneWidget);
+      final emailField =
+          tester.widget<TextField>(find.byKey(const Key('auth-email')));
+      expect(emailField.textAlign, TextAlign.center);
+      expect(emailField.style?.fontSize, 28.0);
+      expect(emailField.decoration?.filled, isFalse);
+      expect(emailField.decoration?.border, InputBorder.none);
 
-      // 3. Phone number input stays clean without +212 prefix badge
-      expect(find.byKey(const Key('auth-phone-prefix')), findsNothing);
-      await tester.enterText(
-          find.byKey(const Key('auth-email')), '0612345678');
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('auth-phone-prefix')), findsNothing);
-      expect(find.text('+212'), findsNothing);
-
-      await tester.enterText(
-          find.byKey(const Key('auth-email')), 'amine@apolo.ma');
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('auth-phone-prefix')), findsNothing);
-
-      // 4. Password field trailing eye toggle has >= 44x44 tap target and toggles obscurity
-      final eyeFinder = find.byIcon(Icons.visibility_outlined);
-      expect(eyeFinder, findsOneWidget);
-      final eyeHitBox = find.ancestor(
-        of: eyeFinder,
-        matching: find.byWidgetPredicate(
-          (w) => w is SizedBox && w.width == 44 && w.height == 44,
-        ),
-      );
-      expect(eyeHitBox, findsOneWidget);
-      expect(
-        tester
-            .widget<EditableText>(find.descendant(
-              of: find.byKey(const Key('auth-password')),
-              matching: find.byType(EditableText),
-            ))
-            .obscureText,
-        isTrue,
-      );
-      await tester.tap(eyeHitBox);
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<EditableText>(find.descendant(
-              of: find.byKey(const Key('auth-password')),
-              matching: find.byType(EditableText),
-            ))
-            .obscureText,
-        isFalse,
-      );
-
-      // 5. Neutral Forgot Password link (#6B7280, NOT primary error red)
-      final forgotText = tester.widget<Text>(find.text('نسيت كلمة المرور؟'));
-      expect(forgotText.style?.color, const Color(0xFF6B7280));
-
-      // 6. Primary CTA: 54px high, 14px radius, monochrome #0A0A0A
-      final submitBtn =
-          tester.widget<ElevatedButton>(find.byKey(const Key('auth-submit')));
       final submitSize = tester.getSize(find.byKey(const Key('auth-submit')));
-      expect(submitSize.height, 54.0);
-      expect(
-        submitBtn.style?.backgroundColor?.resolve(<WidgetState>{}),
-        const Color(0xFF0A0A0A),
-      );
+      expect(submitSize.height, 56.0);
+      Material submitMat() => tester.widget<Material>(
+            find.ancestor(
+              of: find.byKey(const Key('auth-submit')),
+              matching: find.byType(Material),
+            ).first,
+          );
+      expect(submitMat().color, const Color(0xFFEEEEEE));
 
-      // 7. Social buttons & Divider 'أو' (Google only; Apple login removed)
-      expect(find.text('أو'), findsOneWidget);
-      expect(find.byKey(const Key('auth-google')), findsOneWidget);
-      expect(find.byKey(const Key('auth-apple')), findsNothing);
-      expect(find.text('المتابعة باستخدام Google'), findsOneWidget);
-      expect(find.text('المتابعة باستخدام Apple'), findsNothing);
-      expect(tester.getSize(find.byKey(const Key('auth-google'))).height, 52.0);
+      // 4. Filled state turns ButtonDock solid #000000 black
+      await tester.enterText(
+          find.byKey(const Key('auth-email')), 'mail@gmail.com');
+      await tester.pump();
+      expect(submitMat().color, const Color(0xFF000000));
 
-      // 8. Footer: 'أول مرة هنا؟ ' muted + 'إنشاء حساب'
-      expect(find.textContaining('أول مرة هنا؟'), findsOneWidget);
-      expect(find.textContaining('إنشاء حساب'), findsOneWidget);
+      // 5. Tapping Continue advances to Step 2 ("Enter your password" + "Forgot password?" pill)
+      await tester.tap(find.byKey(const Key('auth-submit')));
+      await tester.pumpAndSettle();
 
-      // 9. Password EditableText aligns right under Arabic RTL label while preserving LTR input order
-      final pwdEditable = tester.widget<EditableText>(
-        find.descendant(
-          of: find.byKey(const Key('auth-password')),
-          matching: find.byType(EditableText),
-        ),
-      );
-      expect(pwdEditable.textDirection, TextDirection.ltr);
-      expect(pwdEditable.textAlign, TextAlign.right);
-      expect(pwdEditable.cursorOpacityAnimates, isFalse);
+      expect(find.text('Enter your password'), findsOneWidget);
+      expect(find.byKey(const Key('auth-password')), findsOneWidget);
+      expect(find.byKey(const Key('auth-forgot-password-pill')), findsOneWidget);
+      expect(find.text('Forgot password?'), findsOneWidget);
+      expect(submitMat().color, const Color(0xFFEEEEEE));
+
+      final pwdField =
+          tester.widget<TextField>(find.byKey(const Key('auth-password')));
+      expect(pwdField.obscureText, isTrue);
+      expect(pwdField.textAlign, TextAlign.center);
+      expect(pwdField.style?.fontSize, 28.0);
+
+      // 6. Tapping Forgot password? pill opens Dynamic Layer ForgotPasswordScreen
+      await tester.tap(find.byKey(const Key('auth-forgot-password-pill')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ForgotPasswordScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('forgot-dismiss')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ForgotPasswordScreen), findsNothing);
+
+      // 7. Tapping `<` on Step 2 returns cleanly to Step 1
+      await tester.tap(find.byKey(const Key('auth-dismiss')));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter your email'), findsOneWidget);
+      expect(find.byKey(const Key('auth-email')), findsOneWidget);
     });
 
-    testWidgets('Dark mode renders #121212 scaffold and #1E1E1E Meta inputs cleanly',
+    testWidgets('Dark mode renders #121212 scaffold and #262629 -> #FFFFFF pill cleanly',
         (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
+      await tester.runAsync(() => AppState().setLocale(const Locale('ar')));
+      tester.view.physicalSize = const Size(375, 812);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -334,14 +278,18 @@ void main() {
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, const Color(0xFF121212));
 
-      final emailContainer = tester.widget<AnimatedContainer>(
-        find.ancestor(
-          of: find.byKey(const Key('auth-email')),
-          matching: find.byType(AnimatedContainer),
-        ),
-      );
-      final dec = emailContainer.decoration as BoxDecoration;
-      expect(dec.color, const Color(0xFF1E1E1E));
+      Material submitMat() => tester.widget<Material>(
+            find.ancestor(
+              of: find.byKey(const Key('auth-submit')),
+              matching: find.byType(Material),
+            ).first,
+          );
+      expect(submitMat().color, const Color(0xFF262629));
+
+      await tester.enterText(
+          find.byKey(const Key('auth-email')), '0612345678');
+      await tester.pump();
+      expect(submitMat().color, Colors.white);
     });
   });
 }
