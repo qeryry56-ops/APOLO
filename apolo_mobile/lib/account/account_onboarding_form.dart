@@ -19,7 +19,7 @@ class AccountOnboardingForm extends StatefulWidget {
 class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
   List<Map<String, dynamic>> _cities = [];
   List<Map<String, dynamic>> _categories = [];
-  String _type = 'individual';
+  final String _type = 'individual';
   int? _city;
   final Set<int> _selected = {};
   bool _busy = true;
@@ -96,23 +96,10 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
       Text(s.tr(
-          'اختر نوع الحساب والمدينة والمجالات التي تهمك. لن تكتمل الجلسة حتى يؤكد الموقع حفظ هذه المعلومات.',
-          'Choisissez le type de compte, votre ville et vos centres d’intérêt. La session ne sera ouverte qu’après confirmation du site.')),
+          'اختر مدينتك والمجالات التي تهمك. يمكنك التحويل إلى حساب أعمال (Business) مجاناً في أي وقت من الإعدادات.',
+          'Choisissez votre ville et vos centres d’intérêt. Vous pourrez passer en compte Business gratuitement à tout moment.')),
       const SizedBox(height: 24),
       if (_cities.isNotEmpty && _categories.isNotEmpty) ...[
-        DropdownButtonFormField<String>(
-            initialValue: _type,
-            decoration: InputDecoration(
-                labelText: s.tr('نوع الحساب', 'Type de compte')),
-            items: [
-              DropdownMenuItem(
-                  value: 'individual', child: Text(s.tr('فرد', 'Particulier'))),
-              DropdownMenuItem(
-                  value: 'pro', child: Text(s.tr('مهني', 'Professionnel')))
-            ],
-            onChanged:
-                _busy ? null : (value) => setState(() => _type = value!)),
-        const SizedBox(height: 20),
         DropdownButtonFormField<int>(
             initialValue: _city,
             isExpanded: true,

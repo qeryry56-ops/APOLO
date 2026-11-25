@@ -12,13 +12,17 @@ import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
 import 'auth_screen.dart';
+import 'business_switch_screen.dart';
 import 'post_ad_screen.dart';
+import 'pro_plus_screen.dart';
 import 'settings_screen.dart';
 import 'share_profile_screen.dart';
+import 'store_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/price_text.dart';
 import 'widgets/boost_sheet.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/quick_replies_sheet.dart';
 import 'widgets/skeleton_loader.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -33,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ScrollController _scrollController = ScrollController();
 
   List<Map<String, dynamic>> _myAds = [];
+  Map<String, dynamic>? _businessInsights;
   bool _loadingAds = false;
   int _activeTab = 0; // 0: My Ads (Default clean grid), 1: Insights & Boost
   String? _adsError;
@@ -114,9 +119,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
+      Map<String, dynamic>? fetchedInsights;
+      if (_state.isBusinessAccount) {
+        try {
+          final insRes = await _state.api.dio.get('/account/business-insights');
+          if (insRes.data is Map && insRes.data['insights'] is Map) {
+            fetchedInsights =
+                Map<String, dynamic>.from(insRes.data['insights'] as Map);
+          }
+        } catch (_) {}
+      }
       if (!mounted || identity != _identity) return;
       setState(() {
         _myAds = parsed;
+        _businessInsights = fetchedInsights;
+        if (!_state.isBusinessAccount) {
+          _activeTab = 0;
+        }
         _loadingAds = false;
       });
     } catch (_) {
@@ -449,34 +468,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     bio: bio.isNotEmpty ? bio : null,
                                   ),
 
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: 14),
 
-                                  // Clean #EEEEEE Dynamic Layer Segmented Control
-                                  Container(
-                                    height: 44,
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: palette.groupCard,
-                                      borderRadius: BorderRadius.circular(14),
+                                  if (!_state.isBusinessAccount)
+                                    _buildPersonalSwitchBanner(s, palette)
+                                  else ...[
+                                    _buildBusinessIdentityHeader(s, palette),
+                                    const SizedBox(height: 14),
+                                    // Clean #EEEEEE Dynamic Layer Segmented Control (Business & Pro Plus only)
+                                    Container(
+                                      height: 44,
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: palette.groupCard,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          _buildSegmentButton(
+                                            index: 0,
+                                            label: isAr
+                                                ? 'إعلاناتي'
+                                                : 'Mes annonces',
+                                            icon: CupertinoIcons.square_grid_2x2,
+                                          ),
+                                          _buildSegmentButton(
+                                            index: 1,
+                                            label: isAr
+                                                ? 'لوحة الأعمال والإحصائيات'
+                                                : 'Tableau Pro & Boost',
+                                            icon: CupertinoIcons.chart_bar,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        _buildSegmentButton(
-                                          index: 0,
-                                          label:
-                                              isAr ? 'إعلاناتي' : 'Mes annonces',
-                                          icon: CupertinoIcons.square_grid_2x2,
-                                        ),
-                                        _buildSegmentButton(
-                                          index: 1,
-                                          label: isAr
-                                              ? 'الإحصائيات و Boost'
-                                              : 'Statistiques & Boost',
-                                          icon: CupertinoIcons.chart_bar,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -502,7 +528,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         )
-                      else if (_activeTab == 0)
+                      else if (!_state.isBusinessAccount || _activeTab == 0)
                         _buildCleanAdsGrid(isAr)
                       else
                         SliverToBoxAdapter(
@@ -530,6 +556,299 @@ class _ProfileScreenState extends State<ProfileScreen> {
       CupertinoIcons.person_fill,
       size: 32,
       color: palette.iconMuted,
+    );
+  }
+
+  Widget _buildPersonalSwitchBanner(AppStrings s, ApoloDlPalette palette) {
+    return GestureDetector(
+      key: const Key('profile-switch-to-business-card'),
+      onTap: () async {
+        final switched = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(builder: (_) => const BusinessSwitchScreen()),
+        );
+        if (switched == true && mounted) {
+          await _loadProfileData();
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: palette.groupCard,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: palette.ink,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                CupertinoIcons.briefcase_fill,
+                size: 16,
+                color: palette.bg,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.tr(
+                      'التحويل إلى حساب احترافي (Business)',
+                      'Passer au compte Business',
+                      'Switch to Business profile',
+                    ),
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: palette.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    s.tr(
+                      'متجر مجاني، ردود سريعة في الشات، وطلب مباشر من الزبناء.',
+                      'Boutique gratuite, réponses rapides et commandes directes.',
+                      'Free store, chat quick replies & direct orders.',
+                    ),
+                    style: TextStyle(
+                      fontSize: 11.8,
+                      color: palette.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              s.isAr
+                  ? CupertinoIcons.chevron_left
+                  : CupertinoIcons.chevron_right,
+              size: 16,
+              color: palette.muted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessIdentityHeader(AppStrings s, ApoloDlPalette palette) {
+    final store = _state.activeStore;
+    final isProPlus = _state.isProPlusAccount;
+    final categoryLabel = ApoloBusinessCategories.labelFor(
+      store?['business_category']?.toString(),
+      s,
+    );
+    final hours = (store?['working_hours'] ?? '').toString().trim();
+    final isOpenNow = store?['is_open_now'];
+    final subdomain = (store?['subdomain'] ?? '').toString().trim();
+
+    return Container(
+      key: const Key('profile-business-identity-bar'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.groupCard,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isProPlus ? const Color(0xFFD97706) : palette.ink,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isProPlus
+                          ? CupertinoIcons.checkmark_seal_fill
+                          : CupertinoIcons.briefcase_fill,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isProPlus ? 'PRO+' : 'Business',
+                      textDirection: TextDirection.ltr,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  categoryLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: palette.ink,
+                  ),
+                ),
+              ),
+              if (hours.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: palette.bg,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isOpenNow is bool) ...[
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isOpenNow
+                                ? AppConfig.success
+                                : const Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        hours,
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: palette.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                if (subdomain.isNotEmpty) ...[
+                  _buildBusinessActionChip(
+                    key: const Key('profile-open-my-store-btn'),
+                    icon: Icons.storefront_rounded,
+                    label: s.tr('عرض متجري', 'Voir boutique', 'View store'),
+                    palette: palette,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => StoreDetailScreen(subdomain: subdomain),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                _buildBusinessActionChip(
+                  key: const Key('profile-edit-business-btn'),
+                  icon: CupertinoIcons.slider_horizontal_3,
+                  label: s.tr('إعدادات المتجر', 'Gérer boutique', 'Edit store'),
+                  palette: palette,
+                  onTap: () async {
+                    final updated = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const BusinessSwitchScreen(isEditing: true),
+                      ),
+                    );
+                    if (updated == true && mounted) {
+                      await _loadProfileData();
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                _buildBusinessActionChip(
+                  key: const Key('profile-quick-replies-btn'),
+                  icon: CupertinoIcons.bolt_fill,
+                  label: s.tr('الردود السريعة', 'Réponses rapides', 'Quick replies'),
+                  palette: palette,
+                  onTap: () => QuickRepliesManagerSheet.show(context),
+                ),
+                if (!isProPlus) ...[
+                  const SizedBox(width: 8),
+                  _buildBusinessActionChip(
+                    key: const Key('profile-pro-plus-chip'),
+                    icon: CupertinoIcons.sparkles,
+                    label: 'Pro Plus 👑',
+                    palette: palette,
+                    highlighted: true,
+                    onTap: () async {
+                      final ok = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(builder: (_) => const ProPlusScreen()),
+                      );
+                      if (ok == true && mounted) {
+                        await _loadProfileData();
+                      }
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessActionChip({
+    required Key key,
+    required IconData icon,
+    required String label,
+    required ApoloDlPalette palette,
+    required VoidCallback onTap,
+    bool highlighted = false,
+  }) {
+    return GestureDetector(
+      key: key,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: highlighted ? palette.ink : palette.bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13.5,
+              color: highlighted ? palette.bg : palette.ink,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: highlighted ? palette.bg : palette.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -849,6 +1168,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
 
           const SizedBox(height: 14),
+
+          // Pro Plus Conversion Analytics OR Upgrade Card
+          if (_state.isProPlusAccount) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _buildAnalyticsKpiCard(
+                    icon: CupertinoIcons.phone_fill,
+                    label: isAr ? 'نقرات الاتصال' : 'Appels reçus',
+                    value: '${_businessInsights?['phone_clicks'] ?? 0}',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildAnalyticsKpiCard(
+                    icon: CupertinoIcons.chat_bubble_2_fill,
+                    label: isAr ? 'محادثات الزبناء' : 'Conversations',
+                    value:
+                        '${_businessInsights?['chat_conversations_count'] ?? 0}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildAnalyticsKpiCard(
+                    icon: CupertinoIcons.bag_fill,
+                    label: isAr ? 'طلبيات المتجر' : 'Commandes directes',
+                    value: '${_businessInsights?['direct_orders_count'] ?? 0}',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildAnalyticsKpiCard(
+                    icon: CupertinoIcons.sparkles,
+                    label: isAr ? 'رصيد VIP المجاني' : 'Crédits VIP offerts',
+                    value: '${_state.vipBoostCredits}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+          ] else ...[
+            GestureDetector(
+              key: const Key('profile-upgrade-pro-plus-card'),
+              onTap: () async {
+                final ok = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const ProPlusScreen()),
+                );
+                if (ok == true && mounted) {
+                  await _loadProfileData();
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A0A0A),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFD97706),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.checkmark_seal_fill,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isAr
+                                ? 'افتح إحصائيات النقرات والطلبيات + شارة PRO+ 👑'
+                                : 'Débloquez les stats d’appels & commandes + Badge PRO+ 👑',
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            isAr
+                                ? 'احصل على 3 تمويلات VIP مجانية شهرياً وتصدر المتاجر عبر Google Pay.'
+                                : '3 Boosts VIP gratuits/mois et priorité d’affichage via Google Pay.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.78),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
 
           // 2. Mobile Performance Bar Chart Card
           Container(

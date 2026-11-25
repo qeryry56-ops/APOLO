@@ -40,7 +40,78 @@ class AppState extends ChangeNotifier {
   // Smart Personalization & Recommendation State (2026 Feed Engine)
   Map<int, int> categoryInterestWeights = {};
   int? preferredCityId;
-  String accountType = 'individual'; // 'individual' | 'pro'
+  String accountType = 'individual'; // 'individual' | 'business' | 'pro_plus'
+
+  String get effectiveAccountType {
+    final raw = (currentUser?['account_type'] ?? accountType)
+        .toString()
+        .toLowerCase()
+        .trim();
+    if (raw == 'pro_plus' || currentUser?['is_pro_plus'] == true) {
+      return 'pro_plus';
+    }
+    if (raw == 'business' ||
+        raw == 'pro' ||
+        raw == 'boutique' ||
+        currentUser?['is_business'] == true) {
+      return 'business';
+    }
+    return 'individual';
+  }
+
+  bool get isBusinessAccount =>
+      effectiveAccountType == 'business' || effectiveAccountType == 'pro_plus';
+
+  bool get isProPlusAccount => effectiveAccountType == 'pro_plus';
+
+  int get vipBoostCredits =>
+      int.tryParse('${currentUser?['vip_boost_credits'] ?? 0}') ?? 0;
+
+  Map<String, dynamic>? get activeStore => currentUser?['store'] is Map
+      ? Map<String, dynamic>.from(currentUser!['store'] as Map)
+      : null;
+
+  Map<String, dynamic>? get pausedStore => currentUser?['paused_store'] is Map
+      ? Map<String, dynamic>.from(currentUser!['paused_store'] as Map)
+      : null;
+
+  String get autoGreeting =>
+      (currentUser?['auto_greeting'] ?? '').toString().trim();
+
+  List<Map<String, dynamic>> get quickReplies {
+    final raw = currentUser?['quick_replies'];
+    if (raw is List && raw.isNotEmpty) {
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((e) => (e['text'] ?? '').toString().trim().isNotEmpty)
+          .toList();
+    }
+    if (!isBusinessAccount) return const [];
+    return [
+      {
+        'id': 'avail',
+        'shortcut': _locale.languageCode == 'fr' ? 'Disponible' : 'متوفر',
+        'text': _locale.languageCode == 'fr'
+            ? 'Bonjour ! Oui, cet article est toujours disponible.'
+            : 'السلام عليكم! نعم المنتج مازال متوفراً، مرحباً بك.',
+      },
+      {
+        'id': 'delivery',
+        'shortcut': _locale.languageCode == 'fr' ? 'Livraison' : 'التوصيل',
+        'text': _locale.languageCode == 'fr'
+            ? 'Livraison rapide partout au Maroc avec paiement à la livraison.'
+            : 'يتوفر لدينا التوصيل السريع لجميع المدن المغربية والدفع عند الاستلام.',
+      },
+      {
+        'id': 'location',
+        'shortcut': _locale.languageCode == 'fr' ? 'Adresse' : 'المحل',
+        'text': _locale.languageCode == 'fr'
+            ? 'Retrouvez notre adresse et nos horaires sur la page de notre boutique.'
+            : 'تفضل بزيارة محلنا، تجد الموقع وأوقات العمل في صفحة المتجر.',
+      },
+    ];
+  }
 
   // Facebook Marketplace Geographic Zone Strategy
   double? userLat;
@@ -131,8 +202,101 @@ class AppState extends ChangeNotifier {
 
   Future<void> updateCurrentUser(Map<String, dynamic> user) async {
     currentUser = Map<String, dynamic>.from(user);
+    accountType = effectiveAccountType;
     await _persistCurrentUser();
+    await _savePersonalizationPrefs();
     notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> switchToBusiness({
+    required String storeName,
+    String? subdomain,
+    required String businessCategory,
+    String? description,
+    String? location,
+    String? mapsUrl,
+    String? workingHours,
+    String? phone,
+    bool directOrderEnabled = true,
+    String? autoGreetingText,
+    List<Map<String, dynamic>>? initialQuickReplies,
+  }) async {
+    final res = await api.dio.post('/account/switch-business', data: {
+      'store_name': storeName.trim(),
+      if (subdomain != null && subdomain.trim().isNotEmpty)
+        'subdomain': subdomain.trim(),
+      'business_category': businessCategory,
+      if (description != null) 'description': description.trim(),
+      if (location != null) 'location': location.trim(),
+      if (mapsUrl != null) 'maps_url': mapsUrl.trim(),
+      if (workingHours != null) 'working_hours': workingHours.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      'direct_order_enabled': directOrderEnabled,
+      if (autoGreetingText != null) 'auto_greeting': autoGreetingText.trim(),
+      if (initialQuickReplies != null) 'quick_replies': initialQuickReplies,
+    });
+    if (res.data is Map && res.data['status'] == 'success') {
+      if (res.data['user'] is Map) {
+        await updateCurrentUser(Map<String, dynamic>.from(res.data['user']));
+      }
+      return Map<String, dynamic>.from(res.data as Map);
+    }
+    throw StateError(
+      (res.data is Map ? res.data['message'] : null)?.toString() ??
+          'Failed to switch account',
+    );
+  }
+
+  Future<void> switchToPersonal() async {
+    final res = await api.dio.post('/account/switch-personal');
+    if (res.data is Map &&
+        res.data['status'] == 'success' &&
+        res.data['user'] is Map) {
+      await updateCurrentUser(Map<String, dynamic>.from(res.data['user']));
+      return;
+    }
+    throw StateError('Failed to switch to personal account');
+  }
+
+  Future<void> saveBusinessQuickReplies({
+    required List<Map<String, dynamic>> replies,
+    String? autoGreetingText,
+  }) async {
+    final res = await api.dio.post('/account/quick-replies', data: {
+      'quick_replies': replies,
+      if (autoGreetingText != null) 'auto_greeting': autoGreetingText.trim(),
+    });
+    if (res.data is Map &&
+        res.data['status'] == 'success' &&
+        res.data['user'] is Map) {
+      await updateCurrentUser(Map<String, dynamic>.from(res.data['user']));
+      return;
+    }
+    throw StateError('Failed to save quick replies');
+  }
+
+  Future<Map<String, dynamic>> subscribeToProPlus({
+    required String plan,
+    required String platform,
+    required String transactionId,
+    String? receiptData,
+  }) async {
+    final res = await api.dio.post('/pro-plus/subscribe', data: {
+      'plan': plan,
+      'platform': platform,
+      'transaction_id': transactionId,
+      if (receiptData != null) 'receipt_data': receiptData,
+    });
+    if (res.data is Map && res.data['status'] == 'success') {
+      if (res.data['user'] is Map) {
+        await updateCurrentUser(Map<String, dynamic>.from(res.data['user']));
+      }
+      return Map<String, dynamic>.from(res.data as Map);
+    }
+    throw StateError(
+      (res.data is Map ? res.data['message'] : null)?.toString() ??
+          'Failed to activate Pro Plus',
+    );
   }
 
   Future<void> refreshRemote() async {
@@ -402,6 +566,9 @@ class AppState extends ChangeNotifier {
       }
       if (ad['is_vip'] == true || ad['is_featured'] == true) {
         score += 18;
+      }
+      if (ad['seller_is_pro_plus'] == true) {
+        score += 22;
       }
       final views =
           int.tryParse((ad['views'] ?? ad['views_count'] ?? 0).toString()) ?? 0;
@@ -715,6 +882,7 @@ class AppState extends ChangeNotifier {
       final body = response.data;
       if (body is Map && body['status'] == 'success' && body['user'] is Map) {
         currentUser = Map<String, dynamic>.from(body['user'] as Map);
+        accountType = effectiveAccountType;
         await _persistCurrentUser();
         if (preferredCityId == null) {
           final userCityId = int.tryParse(
@@ -1055,6 +1223,7 @@ class AppState extends ChangeNotifier {
     _chatTabDismissed = false;
     await api.setToken(token);
     currentUser = Map<String, dynamic>.from(user);
+    accountType = effectiveAccountType;
     await _persistCurrentUser();
     await fetchFavoritesIds();
     notifyListeners();

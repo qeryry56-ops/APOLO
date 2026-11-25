@@ -48,34 +48,34 @@ class Ios26IMessageTokens {
     0.0, 0.0, 0.0, 1.0, 0.0,
   ];
 
-  // Exact Figma `1:2` Chat Bubbles
-  // Outgoing: solid #0088FF, text #F2F2F7
-  // Incoming: solid #D0D2D5, text #333333
-  static const Color bubbleMineTop = Color(0xFF0088FF);
-  static const Color bubbleMine = Color(0xFF0088FF);
+  // Apolo.ma Brand Identity + dynamic-layer-core-v5.1 Chat Bubbles
+  // Outgoing: Apolo Primary Red (#E31B23), Pure White (#FFFFFF) ink
+  // Incoming: dynamic-layer-core-v5.1 grey-100 (#EEEEEE), Obsidian (#0A0A0A) ink
+  static const Color bubbleMineTop = Color(0xFFE31B23);
+  static const Color bubbleMine = Color(0xFFE31B23);
   static const LinearGradient bubbleMineGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [bubbleMineTop, bubbleMine],
   );
-  static const Color bubbleMineText = Color(0xFFF2F2F7);
-  static const Color bubbleOther = Color(0xFFD0D2D5);
-  static const Color bubbleOtherText = Color(0xFF333333);
+  static const Color bubbleMineText = Color(0xFFFFFFFF);
+  static const Color bubbleOther = Color(0xFFEEEEEE);
+  static const Color bubbleOtherText = Color(0xFF0A0A0A);
 
-  // Labels & Controls (exact Figma `1:2` tokens)
-  static const Color labelPrimary = Color(0xFF000000);
+  // Labels & Controls (Apolo.ma + dynamic-layer-core-v5.1 tokens)
+  static const Color labelPrimary = Color(0xFF0A0A0A);
   static const Color labelSecondary = Color(0x993C3C43);
   static const Color controlIconPrimary = Color(0xFF404040); // Back & Video icons
-  static const Color composerPlusIcon = Color(0xFF000000); // Composer `+` icon
+  static const Color composerPlusIcon = Color(0xFF0A0A0A); // Composer `+` icon
   static const Color nameChevron = Color(0xFFBFBFBF); // Profile pill right chevron
   static const Color chevronTertiary = Color(0xFFBFBFBF);
-  static const Color dateGray = Color(0xFF8E8E93); // Timestamps #8E8E93
-  static const Color placeholderGray = Color(0xFFCCCCCC); // "iMessage" & mic #CCCCCC
-  static const Color onlineGreen = Color(0xFF34C759);
-  static const Color errorRed = Color(0xFFFF3B30);
+  static const Color dateGray = Color(0xFF757575); // DL v5.1 grey-500 timestamps
+  static const Color placeholderGray = Color(0xFF9E9E9E);
+  static const Color onlineGreen = Color(0xFF15803D);
+  static const Color errorRed = Color(0xFFE31B23);
 
-  // Tapback Reaction Badge (`20 × 20` circular `#0088FF`)
-  static const Color tapbackBlue = Color(0xFF0088FF);
+  // Tapback Reaction Badge (`20 × 20` circular Apolo Red `#E31B23`)
+  static const Color tapbackBlue = Color(0xFFE31B23);
 
   // Exact Figma `1:2` / `4:1061` Dimensions
   static const double controlCircleSize = 45.0;

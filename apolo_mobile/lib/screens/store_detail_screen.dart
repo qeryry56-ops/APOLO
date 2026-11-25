@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import 'business_switch_screen.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
@@ -335,8 +336,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F3F7),
-      floatingActionButton: _ads.isNotEmpty
-          ? FloatingActionButton.extended(
+      floatingActionButton:
+          (_ads.isNotEmpty && store['direct_order_enabled'] != false)
+              ? FloatingActionButton.extended(
               onPressed: _openOrderSheet,
               backgroundColor: const Color(0xFF0A0A0A),
               foregroundColor: Colors.white,
@@ -391,19 +393,34 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _badgeBg,
+                        color: store['is_pro_plus'] == true
+                            ? const Color(0xFFFEF3C7)
+                            : _badgeBg,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.verified_rounded, size: 14, color: _red),
-                          SizedBox(width: 4),
-                          Text('PRO',
-                              style: TextStyle(
-                                  color: _red,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11.5)),
+                          Icon(
+                            store['is_pro_plus'] == true
+                                ? CupertinoIcons.checkmark_seal_fill
+                                : CupertinoIcons.briefcase_fill,
+                            size: 14,
+                            color: store['is_pro_plus'] == true
+                                ? const Color(0xFFD97706)
+                                : _red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            store['is_pro_plus'] == true ? 'PRO+' : 'Business',
+                            style: TextStyle(
+                              color: store['is_pro_plus'] == true
+                                  ? const Color(0xFF92400E)
+                                  : _red,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11.5,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -439,6 +456,17 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         (store['cover_url'] ?? '').toString().trim();
                     final location =
                         (store['location'] ?? '').toString().trim();
+                    final mapsUrl =
+                        (store['maps_url'] ?? '').toString().trim();
+                    final workingHours =
+                        (store['working_hours'] ?? '').toString().trim();
+                    final isOpenNow = store['is_open_now'];
+                    final businessCategory = ApoloBusinessCategories.labelFor(
+                      store['business_category']?.toString(),
+                      s,
+                    );
+                    final directOrderAllowed =
+                        store['direct_order_enabled'] != false;
                     final phone = (store['phone'] ?? '').toString().trim();
 
                     return Container(
@@ -508,30 +536,131 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                             context, -0.4),
                                   ),
                                 ),
-                                if (location.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        CupertinoIcons.location_solid,
-                                        size: 12.5,
-                                        color: _muted,
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
                                       ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          location,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: _muted,
-                                          ),
+                                      decoration: BoxDecoration(
+                                        color: _pillBg,
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        businessCategory,
+                                        style: const TextStyle(
+                                          fontSize: 11.8,
+                                          fontWeight: FontWeight.w700,
+                                          color: _ink,
                                         ),
                                       ),
-                                    ],
+                                    ),
+                                    if (workingHours.isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _pillBg,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (isOpenNow is bool) ...[
+                                              Container(
+                                                width: 7,
+                                                height: 7,
+                                                decoration: BoxDecoration(
+                                                  color: isOpenNow
+                                                      ? AppConfig.success
+                                                      : const Color(0xFFEF4444),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 5),
+                                            ],
+                                            Text(
+                                              isOpenNow == true
+                                                  ? s.tr(
+                                                      'مفتوح · $workingHours',
+                                                      'Ouvert · $workingHours',
+                                                      'Open · $workingHours',
+                                                    )
+                                                  : (isOpenNow == false
+                                                      ? s.tr(
+                                                          'مغلق · $workingHours',
+                                                          'Fermé · $workingHours',
+                                                          'Closed · $workingHours',
+                                                        )
+                                                      : workingHours),
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: _ink,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                if (location.isNotEmpty || mapsUrl.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final rawTarget = mapsUrl.isNotEmpty
+                                          ? mapsUrl
+                                          : 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}';
+                                      final uri = Uri.tryParse(rawTarget);
+                                      if (uri != null &&
+                                          await canLaunchUrl(uri)) {
+                                        await launchUrl(
+                                          uri,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      }
+                                    },
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          CupertinoIcons.location_solid,
+                                          size: 13,
+                                          color: _ink,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            location.isNotEmpty
+                                                ? location
+                                                : s.tr(
+                                                    'عرض الموقع على Google Maps',
+                                                    'Voir sur Google Maps',
+                                                    'Open in Google Maps',
+                                                  ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: _ink,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                                 if ((store['description'] ?? '')
@@ -602,10 +731,12 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                             ),
                                           ),
                                         ),
-                                        if (_ads.isNotEmpty)
+                                        if (_ads.isNotEmpty &&
+                                            directOrderAllowed)
                                           const SizedBox(width: 10),
                                       ],
-                                      if (_ads.isNotEmpty)
+                                      if (_ads.isNotEmpty &&
+                                          directOrderAllowed)
                                         Expanded(
                                           child: PressableScale(
                                             onTap: _openOrderSheet,

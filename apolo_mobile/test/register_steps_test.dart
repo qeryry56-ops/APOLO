@@ -55,11 +55,12 @@ void main() {
     await tester.tap(find.byKey(const Key('reg-step1-continue')));
     await tester.pumpAndSettle();
 
-    // STEP 2: Verify DOB (18+ validation + YYYY-MM-DD mask) & Buyer/Seller cards (City removed)
+    // STEP 2: Verify DOB (18+ validation + YYYY-MM-DD mask) & Personal-by-default note (no Buyer/Seller cards)
     expect(find.byKey(const Key('reg-dob')), findsOneWidget);
     expect(find.text('المدينة'), findsNothing);
-    expect(find.text('مشتري'), findsOneWidget);
-    expect(find.text('بائع'), findsOneWidget);
+    expect(find.text('مشتري'), findsNothing);
+    expect(find.text('بائع'), findsNothing);
+    expect(find.byKey(const Key('reg-personal-default-note')), findsOneWidget);
 
     // Under-18 DOB is rejected
     await tester.enterText(find.byKey(const Key('reg-dob')), '2015-01-01');
@@ -70,8 +71,6 @@ void main() {
 
     // Adult DOB (18+) is accepted
     await tester.enterText(find.byKey(const Key('reg-dob')), '2000-01-01');
-    await tester.ensureVisible(find.text('بائع'));
-    await tester.tap(find.text('بائع'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('reg-step2-continue')));
     await tester.tap(find.byKey(const Key('reg-step2-continue')));
@@ -85,6 +84,8 @@ void main() {
 
     await tester.enterText(
         find.byKey(const Key('auth-email')), 'amine@test.ma');
+    await tester.enterText(
+        find.byKey(const Key('auth-phone')), '0612345678');
     await tester.enterText(
         find.byKey(const Key('auth-password')), 'secret123');
     await tester.enterText(

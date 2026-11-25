@@ -1,16 +1,19 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
+import '../features/chat/models/chat_ack_models.dart';
+import '../features/chat/widgets/chat_ack_indicator.dart';
 import '../screens/widgets/app_image.dart';
 import '../screens/widgets/chat_utils.dart';
 import 'ios26_imessage_kit.dart';
 import 'typing_indicator.dart';
 
-/// Delivery status for a [ChatMessage] bubble (Rule 3: Optimistic UI).
+/// Delivery status for a [ChatMessage] bubble (Rule 3: Optimistic UI + 3-stage ACKs).
 enum ChatMessageStatus {
   sending,
   sent,
+  delivered,
   read,
   failed,
 }
@@ -73,6 +76,7 @@ class ChatMessage extends StatefulWidget {
   final bool showSenderName;
   final bool hideAvatarGutter;
   final String? deliveryLabel;
+  final ValueListenable<ChatAckStatus>? ackStatusListenable;
   final double swipeRevealProgress;
   final bool isBorderlessCustomContent;
 
@@ -109,6 +113,7 @@ class ChatMessage extends StatefulWidget {
     this.showSenderName = false,
     this.hideAvatarGutter = false,
     this.deliveryLabel,
+    this.ackStatusListenable,
     this.swipeRevealProgress = 0.0,
     this.isBorderlessCustomContent = false,
   });
@@ -370,6 +375,16 @@ class _ChatMessageState extends State<ChatMessage> {
     setState(() {
       _isTimestampPinned = !_isTimestampPinned;
     });
+  }
+
+  static ChatAckStatus _toAckStatus(ChatMessageStatus s) {
+    return switch (s) {
+      ChatMessageStatus.sending => ChatAckStatus.sending,
+      ChatMessageStatus.sent => ChatAckStatus.sent,
+      ChatMessageStatus.delivered => ChatAckStatus.delivered,
+      ChatMessageStatus.read => ChatAckStatus.read,
+      ChatMessageStatus.failed => ChatAckStatus.failed,
+    };
   }
 
   Widget _buildAvatar() {
@@ -781,28 +796,47 @@ class _ChatMessageState extends State<ChatMessage> {
                     children: [
                       bubbleWithTapback,
 
-                      // Subtle iOS iMessage delivery status under latest outgoing message
+                      // Explicit 3-stage Message ACK row (Sent ✓ / Delivered ✓✓ / Read ✓✓)
+                      // Driven by `ValueListenableBuilder` so real-time ACK updates never
+                      // trigger full-list rebuilds or scroll jitter.
                       if (isMine &&
                           !isDeleted &&
                           !isFailed &&
-                          widget.deliveryLabel != null &&
-                          widget.deliveryLabel!.isNotEmpty)
+                          ((widget.deliveryLabel != null &&
+                                  widget.deliveryLabel!.isNotEmpty) ||
+                              widget.ackStatusListenable != null))
                         Padding(
                           padding: EdgeInsetsDirectional.only(
                             top: 3,
                             end: isMine ? 8 : 4,
                             start: isMine ? 4 : 8,
                           ),
-                          child: Text(
-                            widget.deliveryLabel!,
-                            key: Key('chat-status-${widget.messageKey}'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Ios26IMessageTokens.dateGray,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.deliveryLabel != null &&
+                                  widget.deliveryLabel!.isNotEmpty) ...[
+                                Flexible(
+                                  child: Text(
+                                    widget.deliveryLabel!,
+                                    key: Key('chat-status-${widget.messageKey}'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: Ios26IMessageTokens.dateGray,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              ChatAckIndicator(
+                                key: Key('chat-ack-tick-${widget.messageKey}'),
+                                statusListenable: widget.ackStatusListenable,
+                                fallbackStatus: _toAckStatus(widget.status),
+                              ),
+                            ],
                           ),
                         ),
 

@@ -262,7 +262,8 @@ class AccountAuth {
   Future<AccountSession> onboard(AccountSession pending, String type, int city,
       Set<int> categories) async {
     if (pending.requiresOtp ||
-        !['individual', 'pro'].contains(type) ||
+        !['individual', 'personal', 'business', 'pro', 'pro_plus']
+            .contains(type) ||
         city <= 0 ||
         categories.isEmpty ||
         categories.any((id) => id <= 0)) {

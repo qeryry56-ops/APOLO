@@ -200,6 +200,43 @@ class _BoostSheetState extends State<BoostSheet> {
     return false;
   }
 
+  Future<void> _redeemProPlusCredit() async {
+    if (_purchasing || !_state.isProPlusAccount || _state.vipBoostCredits <= 0) {
+      return;
+    }
+    setState(() => _purchasing = true);
+    try {
+      final res = await _state.api.dio.post('/ads/${widget.adId}/boost/use-credit');
+      if (!mounted) return;
+      setState(() => _purchasing = false);
+      if (res.data is Map && res.data['status'] == 'success') {
+        if (res.data['user'] is Map) {
+          await _state.updateCurrentUser(
+            Map<String, dynamic>.from(res.data['user'] as Map),
+          );
+        }
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context, true);
+        messenger.showSnackBar(
+          SnackBar(
+            backgroundColor: AppConfig.success,
+            content: Text(
+              res.data['message']?.toString() ??
+                  _state.s.tr(
+                    'تم تفعيل VIP مجاناً من رصيد Pro Plus!',
+                    'Boost VIP activé via votre crédit Pro Plus !',
+                  ),
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      if (mounted) setState(() => _purchasing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
@@ -266,6 +303,37 @@ class _BoostSheetState extends State<BoostSheet> {
                   ],
                 ),
                 const SizedBox(height: 18),
+                if (_state.isProPlusAccount && _state.vipBoostCredits > 0) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      key: const Key('boost-use-pro-plus-credit-btn'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0A0A0A),
+                        foregroundColor: Colors.white,
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: _purchasing ? null : _redeemProPlusCredit,
+                      icon: const Icon(
+                        Icons.workspace_premium_rounded,
+                        size: 19,
+                        color: Color(0xFFFBBF24),
+                      ),
+                      label: Text(
+                        s.tr(
+                          'تفعيل VIP مجاناً من رصيد Pro Plus (${_state.vipBoostCredits})',
+                          'Activer VIP gratuit via Pro Plus (${_state.vipBoostCredits})',
+                        ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (_plans.isEmpty)
                   Text(s.tr('العروض غير متوفرة حالياً. أعد المحاولة لاحقاً.',
                       'Les offres sont indisponibles. Réessayez plus tard.')),

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import 'business_switch_screen.dart';
 import 'store_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
@@ -447,16 +448,23 @@ class _StoresScreenState extends State<StoresScreen> {
                                               width: 20,
                                               height: 20,
                                               decoration: BoxDecoration(
-                                                color: _ink,
+                                                color: store['is_pro_plus'] ==
+                                                        true
+                                                    ? const Color(0xFFD97706)
+                                                    : _ink,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
                                                     color: Colors.white,
                                                     width: 2),
                                               ),
-                                              child: const Icon(
-                                                  Icons.check_rounded,
-                                                  size: 12,
-                                                  color: Colors.white),
+                                              child: Icon(
+                                                store['is_pro_plus'] == true
+                                                    ? CupertinoIcons
+                                                        .checkmark_seal_fill
+                                                    : Icons.check_rounded,
+                                                size: 11.5,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -488,6 +496,36 @@ class _StoresScreenState extends State<StoresScreen> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 6),
+                                                if (store['is_pro_plus'] ==
+                                                    true) ...[
+                                                  Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                          0xFFFEF3C7),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              999),
+                                                    ),
+                                                    child: const Text(
+                                                      'PRO+',
+                                                      textDirection:
+                                                          TextDirection.ltr,
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        color:
+                                                            Color(0xFF92400E),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                ],
                                                 Row(
                                                   mainAxisSize:
                                                       MainAxisSize.min,
@@ -513,6 +551,28 @@ class _StoresScreenState extends State<StoresScreen> {
                                                 ),
                                               ],
                                             ),
+                                            if ((store['business_category'] ??
+                                                    '')
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                ApoloBusinessCategories
+                                                    .labelFor(
+                                                  store['business_category']
+                                                      ?.toString(),
+                                                  s,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _muted,
+                                                ),
+                                              ),
+                                            ],
                                             if (location.isNotEmpty) ...[
                                               const SizedBox(height: 3),
                                               Row(

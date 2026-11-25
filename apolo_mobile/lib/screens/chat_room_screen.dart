@@ -11,6 +11,9 @@ import '../core/services/chat_realtime_client.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/services/media_rtc_bridge.dart';
 import '../core/state/app_state.dart';
+import '../features/chat/models/chat_ack_models.dart';
+import '../features/chat/state/chat_ack_notifier_registry.dart';
+import '../features/chat/theme/apolo_chat_dl_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/chat_message.dart';
@@ -25,6 +28,7 @@ import 'seller_profile_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
+import 'widgets/quick_replies_sheet.dart';
 import 'widgets/skeleton_loader.dart';
 
 /// Clean, low-noise Real-time Chat Room powered by Firebase Firestore (with REST fallback),
@@ -119,7 +123,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   bool _isDrawerOpen = false;
   Ios26DrawerTab _drawerTab = Ios26DrawerTab.apps;
 
-  Timer? _pollTimer;
+  // Granular per-message ACK ValueNotifier registry (zero-jitter tick updates)
+  final ChatAckNotifierRegistry _ackRegistry = ChatAckNotifierRegistry();
+
   Timer? _focusScrollTimer;
   Timer? _typingTimer;
   Timer? _recordTimer;
@@ -129,6 +135,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
   StreamSubscription<Map<String, dynamic>>? _wsMessageSub;
   StreamSubscription<Map<String, dynamic>>? _wsAckSub;
+  StreamSubscription<Map<String, dynamic>>? _wsDeliveryReceiptSub;
+  StreamSubscription<Map<String, dynamic>>? _wsReadReceiptSub;
   StreamSubscription<Map<String, dynamic>>? _wsSyncSub;
   StreamSubscription<PeerPresenceState>? _wsPresenceSub;
   StreamSubscription<bool>? _wsConnSub;
@@ -185,10 +193,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _myUserId > 0 &&
       _activeFirestoreDocId != null;
 
-  static const Color _chatBlue = Ios26IMessageTokens.bubbleMine;
-  static const Color _chatBlueSoft = Color(0xFFEAF4FF);
-  static const Color _textBlack = Color(0xFF000000);
-  static const Color _textMuted = Ios26IMessageTokens.dateGray;
+  static const Color _chatBlue = ApoloChatDlTokens.primaryRed;
+  static const Color _chatBlueSoft = ApoloChatDlTokens.primaryRedSoft;
+  static const Color _textBlack = ApoloChatDlTokens.inkPrimary;
+  static const Color _textMuted = ApoloChatDlTokens.inkSecondary;
   static const Color _textSubtle = Color(0xFF9CA3AF);
 
   @override
@@ -255,8 +263,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         unawaited(_loadBackendMessagesIntoFirestoreIfNeeded());
       }
     } else {
+      // Initial one-time history hydration only; live updates arrive over persistent WebSocket (NO HTTP polling).
       _loadMessages(scrollToBottom: true);
-      _startPolling();
     }
 
     if (widget.initialMessages == null && _state.isLoggedIn && _myUserId > 0) {
@@ -284,6 +292,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Future<void> _initRealtimeWebSocket() async {
     final ws = ChatRealtimeClient.instance;
+    ws.registerActiveChannel(_realtimeChannelId);
     final peerId = _effectivePeerId;
     if (peerId > 0) {
       final cached = ws.cachedPresence(peerId);
@@ -305,8 +314,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       if (!mounted) return;
       if ((msg['channel_id'] ?? '').toString() != _realtimeChannelId) return;
       _mergeRealtimeMessage(msg);
+      final senderId = int.tryParse('${msg['sender_id'] ?? 0}') ?? 0;
+      final mid = (msg['message_id'] ?? '').toString();
+      if (senderId > 0 && senderId != _myUserId && mid.isNotEmpty) {
+        // Stage 3 ACK (`read` ✓✓): user is actively viewing this conversation
+        ws.sendReadAck(
+          channelId: _realtimeChannelId,
+          lastReadMessageId: mid,
+          senderId: senderId,
+        );
+      }
     });
 
+    // Stage 1 ACK (`sent` ✓): updates ONLY the affected message's ValueNotifier
     _wsAckSub?.cancel();
     _wsAckSub = ws.messageAcks.listen((ack) {
       if (!mounted) return;
@@ -314,16 +334,59 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       final clientId = (ack['client_message_id'] ?? '').toString();
       final serverId = (ack['message_id'] ?? '').toString();
       if (clientId.isEmpty) return;
-      setState(() {
-        for (final p in _pending) {
-          if ((p['client_message_id'] ?? p['local_id'] ?? '').toString() ==
-              clientId) {
-            p['message_id'] = serverId;
-            p['_pending'] = false;
-            p['_failed'] = false;
-          }
+
+      final ackStatus = ChatAckStatusCodec.fromWire(ack['ack_status'] ?? 'sent');
+      _ackRegistry.applyServerAck(
+        clientMessageId: clientId,
+        serverMessageId: serverId,
+        status: ackStatus,
+      );
+
+      for (final p in _pending) {
+        if ((p['client_message_id'] ?? p['local_id'] ?? '').toString() ==
+            clientId) {
+          p['message_id'] = serverId;
+          p['ack_status'] = ackStatus.wireValue;
+          p['_pending'] = false;
+          p['_failed'] = false;
         }
-      });
+      }
+    });
+
+    // Stage 2 ACK (`delivered` ✓✓): zero-jitter ValueNotifier update (no list rebuild!)
+    _wsDeliveryReceiptSub?.cancel();
+    _wsDeliveryReceiptSub = ws.deliveryReceipts.listen((receipt) {
+      if (!mounted) return;
+      if ((receipt['channel_id'] ?? '').toString() != _realtimeChannelId) return;
+      final ids = (receipt['message_ids'] is List)
+          ? (receipt['message_ids'] as List).map((e) => '$e').toList()
+          : const <String>[];
+      final clientIds = (receipt['client_message_ids'] is List)
+          ? (receipt['client_message_ids'] as List).map((e) => '$e').toList()
+          : const <String>[];
+      final upTo = receipt['last_delivered_message_id']?.toString();
+      _ackRegistry.applyReceipt(
+        status: ChatAckStatus.delivered,
+        messageIds: ids,
+        clientMessageIds: clientIds,
+        upToMessageId: upTo,
+      );
+    });
+
+    // Stage 3 ACK (`read` ✓✓ highlighted): zero-jitter ValueNotifier update (no list rebuild!)
+    _wsReadReceiptSub?.cancel();
+    _wsReadReceiptSub = ws.readReceipts.listen((receipt) {
+      if (!mounted) return;
+      if ((receipt['channel_id'] ?? '').toString() != _realtimeChannelId) return;
+      final clientIds = (receipt['client_message_ids'] is List)
+          ? (receipt['client_message_ids'] as List).map((e) => '$e').toList()
+          : const <String>[];
+      final upTo = receipt['last_read_message_id']?.toString();
+      _ackRegistry.applyReceipt(
+        status: ChatAckStatus.read,
+        clientMessageIds: clientIds,
+        upToMessageId: upTo,
+      );
     });
 
     _wsSyncSub?.cancel();
@@ -521,7 +584,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   void _bindFirestoreStreams() {
-    _pollTimer?.cancel();
     _messagesSub?.cancel();
     _convMetaSub?.cancel();
 
@@ -654,37 +716,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  void _startPolling() {
-    if (_useFirestore || widget.initialMessages != null) return;
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
-        _loadMessages(silent: true);
-      }
-    });
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final isBackgrounded = state != AppLifecycleState.resumed;
-    ChatRealtimeClient.instance.setBackgrounded(isBackgrounded);
-    if (!isBackgrounded && ChatRealtimeClient.instance.isConnected) {
-      unawaited(ChatRealtimeClient.instance.requestChannelSync(_realtimeChannelId));
-    }
-
-    if (_useFirestore || widget.initialMessages != null) return;
-    if (state == AppLifecycleState.resumed) {
-      _startPolling();
-      if (ModalRoute.of(context)?.isCurrent == true) {
-        _loadMessages(silent: true);
+    final ws = ChatRealtimeClient.instance;
+    ws.setBackgrounded(isBackgrounded);
+    if (!isBackgrounded) {
+      if (ws.isConnected) {
+        unawaited(ws.requestChannelSync(_realtimeChannelId));
+      } else if (widget.initialMessages == null &&
+          _state.isLoggedIn &&
+          _myUserId > 0) {
+        unawaited(ws.connect(userId: _myUserId, userName: _myDisplayName));
       }
-    } else {
-      _pollTimer?.cancel();
     }
   }
 
   @override
   void dispose() {
+    ChatRealtimeClient.instance.unregisterActiveChannel(_realtimeChannelId);
     if (FirebaseChatService.activeChatDocId == _activeFirestoreDocId) {
       FirebaseChatService.activeChatDocId = null;
     }
@@ -701,6 +751,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _incomingCallSub?.cancel();
     _wsMessageSub?.cancel();
     _wsAckSub?.cancel();
+    _wsDeliveryReceiptSub?.cancel();
+    _wsReadReceiptSub?.cancel();
     _wsSyncSub?.cancel();
     _wsPresenceSub?.cancel();
     _wsConnSub?.cancel();
@@ -710,8 +762,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       MediaRtcBridge.cancelVoiceRecording();
     }
     MediaRtcBridge.pauseVoiceMessage();
-    _pollTimer?.cancel();
     _focusScrollTimer?.cancel();
+    _ackRegistry.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _state.removeListener(_onAccountChanged);
     _scrollCtrl.removeListener(_handleScrollPosition);
@@ -2461,15 +2513,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         mergedReactions.values.where((e) => e.trim().isNotEmpty).toList();
 
     final ChatMessageStatus status;
+    final ChatAckStatus initialAckStatus;
     if (m['_failed'] == true) {
       status = ChatMessageStatus.failed;
+      initialAckStatus = ChatAckStatus.failed;
     } else if (m['_pending'] == true) {
       status = ChatMessageStatus.sending;
-    } else if (m['read'] == true) {
+      initialAckStatus = ChatAckStatus.sending;
+    } else if (m['read'] == true || m['ack_status'] == 'read') {
       status = ChatMessageStatus.read;
+      initialAckStatus = ChatAckStatus.read;
+    } else if (m['delivered'] == true || m['ack_status'] == 'delivered') {
+      status = ChatMessageStatus.delivered;
+      initialAckStatus = ChatAckStatus.delivered;
     } else {
       status = ChatMessageStatus.sent;
+      initialAckStatus = ChatAckStatus.sent;
     }
+
+    final ackListenable = isMine && !isDeletedAll
+        ? _ackRegistry.listenableFor(
+            msgKey,
+            initial: initialAckStatus,
+            serverMessageId: (m['message_id'] ?? m['id'])?.toString(),
+          )
+        : null;
 
     final senderName = isMine
         ? _myDisplayName
@@ -2482,7 +2550,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     if (isMine && (isLastOutgoing || isImage) && !isDeletedAll) {
       if (status == ChatMessageStatus.read) {
         deliveryLabel = _state.s.tr('تمت القراءة', 'Lu', 'Read');
-      } else if (status == ChatMessageStatus.sent) {
+      } else if (status == ChatMessageStatus.delivered ||
+          status == ChatMessageStatus.sent) {
         deliveryLabel = _state.s.tr('تم التسليم', 'Distribué', 'Delivered');
       }
     }
@@ -2511,6 +2580,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       showAvatar: meta.showAvatar,
       hideAvatarGutter: !widget.showInlineAvatars,
       deliveryLabel: deliveryLabel,
+      ackStatusListenable: ackListenable,
       swipeRevealProgress: _swipeRevealProgress,
       isBorderlessCustomContent: stickerItem != null,
       isFirstInGroup: meta.isFirstInGroup,
@@ -3260,50 +3330,76 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       );
     }
 
-    return ChatInput(
-      controller: _msgCtrl,
-      focusNode: _focus,
-      voiceRecorderKey: _voiceRecorderKey,
-      attachments: _stagedAttachments,
-      onSend: (_) => _sendText(),
-      onAttachTap: _toggleIMessageDrawer,
-      isDrawerOpen: _isDrawerOpen,
-      hasBottomSheetBelow: _isDrawerOpen,
-      isKeyboardOpen: isKeyboardOpen,
-      onRemoveAttachment: (att) {
-        setState(() {
-          _stagedAttachments.removeWhere((a) => a.id == att.id);
-        });
-      },
-      onVoiceTap: _startVoiceRecording,
-      onSendVoice: _handleSendVoiceRecording,
-      isRecordingVoice: _isRecordingVoice,
-      recordSeconds: _recordSeconds,
-      onCancelVoice: _cancelVoiceRecording,
-      editingBannerText: _editingMessage != null
-          ? _state.s.tr(
-              'تعديل الرسالة',
-              'Modifier le message',
-              'Editing message',
-            )
-          : null,
-      onCancelEdit: () {
-        setState(() {
-          _editingMessage = null;
-          _editingMessageKey = null;
-          _msgCtrl.clear();
-        });
-      },
-      hintText: _state.s.tr(
-        'iMessage',
-        'iMessage',
-        'iMessage',
-      ),
-      recordingText: _state.s.tr(
-        'جاري التسجيل...',
-        'Enregistrement...',
-        'Recording...',
-      ),
+    final showQuickReplies =
+        _state.isBusinessAccount && !_isRecordingVoice && _state.quickReplies.isNotEmpty;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showQuickReplies)
+          BusinessQuickRepliesBar(
+            replies: _state.quickReplies,
+            isAr: _state.s.isAr,
+            onSelectReply: (replyText) {
+              setState(() {
+                _msgCtrl.value = TextEditingValue(
+                  text: replyText,
+                  selection: TextSelection.collapsed(offset: replyText.length),
+                );
+              });
+              _focus.requestFocus();
+            },
+            onManageTap: () async {
+              await QuickRepliesManagerSheet.show(context);
+              if (mounted) setState(() {});
+            },
+          ),
+        ChatInput(
+          controller: _msgCtrl,
+          focusNode: _focus,
+          voiceRecorderKey: _voiceRecorderKey,
+          attachments: _stagedAttachments,
+          onSend: (_) => _sendText(),
+          onAttachTap: _toggleIMessageDrawer,
+          isDrawerOpen: _isDrawerOpen,
+          hasBottomSheetBelow: _isDrawerOpen,
+          isKeyboardOpen: isKeyboardOpen,
+          onRemoveAttachment: (att) {
+            setState(() {
+              _stagedAttachments.removeWhere((a) => a.id == att.id);
+            });
+          },
+          onVoiceTap: _startVoiceRecording,
+          onSendVoice: _handleSendVoiceRecording,
+          isRecordingVoice: _isRecordingVoice,
+          recordSeconds: _recordSeconds,
+          onCancelVoice: _cancelVoiceRecording,
+          editingBannerText: _editingMessage != null
+              ? _state.s.tr(
+                  'تعديل الرسالة',
+                  'Modifier le message',
+                  'Editing message',
+                )
+              : null,
+          onCancelEdit: () {
+            setState(() {
+              _editingMessage = null;
+              _editingMessageKey = null;
+              _msgCtrl.clear();
+            });
+          },
+          hintText: _state.s.tr(
+            'iMessage',
+            'iMessage',
+            'iMessage',
+          ),
+          recordingText: _state.s.tr(
+            'جاري التسجيل...',
+            'Enregistrement...',
+            'Recording...',
+          ),
+        ),
+      ],
     );
   }
 

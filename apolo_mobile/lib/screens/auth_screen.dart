@@ -78,7 +78,7 @@ class _AuthScreenState extends State<AuthScreen>
 
   String _gender = 'male'; // 'male' or 'female'
   final int _cityId = 1;
-  String _accountType = 'individual'; // 'individual' (Buyer) or 'pro' (Seller)
+  final String _accountType = 'individual'; // Personal by default (Instagram-style)
   int _registerStep = 1; // 1 to 4
   bool _acceptedTerms = false;
 
@@ -685,7 +685,7 @@ class _AuthScreenState extends State<AuthScreen>
                             _registerStep == 1
                                 ? s.tr('المعلومات الشخصية', 'Personal info')
                                 : _registerStep == 2
-                                    ? s.tr('التفاصيل والموقع', 'Details & Role')
+                                    ? s.tr('تاريخ الميلاد', 'Birth date')
                                     : _registerStep == 3
                                         ? s.tr('بيانات الدخول', 'Credentials')
                                         : s.tr('التحقق', 'Verification'),
@@ -804,8 +804,8 @@ class _AuthScreenState extends State<AuthScreen>
                                                 )
                                               : _registerStep == 2
                                                   ? s.tr(
-                                                      'حدد تاريخ ميلادك وكيف ستستخدم أبولو',
-                                                      'Set your birth date and role',
+                                                      'حدد تاريخ ميلادك لإعداد حسابك الشخصي',
+                                                      'Set your birth date to continue',
                                                     )
                                                   : s.tr(
                                                       'أدخل بريدك الإلكتروني وكلمة مرور قوية',
@@ -1239,52 +1239,48 @@ class _AuthScreenState extends State<AuthScreen>
                             validator: _validateDob18Plus,
                           ),
 
-                          const SizedBox(height: 4),
-
-                          Text(
-                            s.tr(
-                              'كيف ستستخدم Apolo؟',
-                              'How will you use Apolo?',
-                            ),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF4B5563),
-                            ),
-                          ),
-
                           const SizedBox(height: 8),
 
-                          // Buyer Card
-                          _buildRoleCard(
-                            selected: _accountType == 'individual',
-                            icon: Icons.shopping_bag_outlined,
-                            title: s.tr('مشتري', 'Buyer'),
-                            subtitle: s.tr(
-                              'أرغب في الشراء والبحث عن أفضل العروض والمنتجات',
-                              'Browse and buy products at the best prices',
+                          // Clean Instagram-style Personal-by-default note
+                          Container(
+                            key: const Key('reg-personal-default-note'),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF141B26)
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: borderColor,
+                                width: 1,
+                              ),
                             ),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() => _accountType = 'individual');
-                            },
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          // Seller Card
-                          _buildRoleCard(
-                            selected: _accountType == 'pro',
-                            icon: Icons.storefront_outlined,
-                            title: s.tr('بائع', 'Seller'),
-                            subtitle: s.tr(
-                              'أرغب في عرض وبيع منتجاتي والتواصل مع الزبناء',
-                              'List and sell products to customers',
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.sparkles,
+                                  size: 18,
+                                  color: inkColor,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    s.tr(
+                                      'سيتم إنشاء حسابك كحساب شخصي للبيع والشراء بحرية. يمكنك التحويل إلى حساب أعمال (Business) مجاناً في أي وقت من الإعدادات.',
+                                      'Votre compte sera créé en mode Personnel. Vous pourrez basculer gratuitement vers un compte Business à tout moment depuis les paramètres.',
+                                      'Your account starts as Personal. You can switch to a free Business profile anytime in Settings.',
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 12.8,
+                                      height: 1.45,
+                                      color: mutedColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              setState(() => _accountType = 'pro');
-                            },
                           ),
 
                           const SizedBox(height: 24),
@@ -2101,87 +2097,6 @@ class _AuthScreenState extends State<AuthScreen>
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: selected ? AppConfig.primary : const Color(0xFF374151),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleCard({
-    required bool selected,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppConfig.primary.withValues(alpha: 0.05)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? AppConfig.primary : const Color(0xFFE5E7EB),
-            width: selected ? 1.8 : 1.2,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppConfig.primary.withValues(alpha: 0.12)
-                    : const Color(0xFFF3F4F6),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: selected ? AppConfig.primary : const Color(0xFF4B5563),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w700,
-                      color: selected
-                          ? AppConfig.primary
-                          : const Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: Color(0xFF6B7280),
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              color: selected ? AppConfig.primary : const Color(0xFFD1D5DB),
-              size: 22,
             ),
           ],
         ),

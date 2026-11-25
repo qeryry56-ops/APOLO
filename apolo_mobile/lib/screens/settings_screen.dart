@@ -8,9 +8,11 @@ import '../widgets/dl_settings_kit.dart';
 import '../widgets/notification_badge.dart';
 import 'account_security_screen.dart';
 import 'auth_screen.dart';
+import 'business_switch_screen.dart';
 import 'forgot_password_screen.dart';
 import 'notifications_screen.dart';
 import 'privacy_compliance_screen.dart';
+import 'pro_plus_screen.dart';
 import 'settings/settings_app_data_screen.dart';
 import 'settings/settings_blocked_accounts_screen.dart';
 import 'settings/settings_bug_report_screen.dart';
@@ -21,6 +23,7 @@ import 'settings/settings_suggestion_screen.dart';
 import 'settings/settings_zone_screen.dart';
 import 'stores_screen.dart';
 import 'support_screen.dart';
+import 'widgets/quick_replies_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onOpenEditProfile;
@@ -104,6 +107,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _open(Widget screen) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  Future<void> _confirmSwitchToPersonal() async {
+    final s = _state.s;
+    final palette = ApoloDlPalette.of(context);
+    final confirmed = await showApoloDlBottomSheet<bool>(
+      context,
+      headerTitle: s.tr(
+        'العودة إلى حساب شخصي',
+        'Revenir au compte personnel',
+        'Switch to Personal Account',
+      ),
+      media: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: palette.groupCard,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          CupertinoIcons.person_crop_circle,
+          size: 28,
+          color: palette.ink,
+        ),
+      ),
+      contentTitle: s.tr(
+        'إيقاف وضع الأعمال مؤقتاً؟',
+        'Masquer votre boutique temporairement ?',
+        'Pause your Business store?',
+      ),
+      contentDescription: s.tr(
+        'سيتم إخفاء متجرك مؤقتاً من قسم المتاجر دون حذف أي بيانات أو ردود سريعة. يمكنك العودة لحساب Business في أي وقت بضغطة زر.',
+        'Votre boutique sera masquée sans supprimer vos données ni vos réponses rapides. Vous pourrez réactiver Business à tout moment.',
+        'Your store will be hidden without deleting any data or quick replies. You can switch back anytime.',
+      ),
+      actions: [
+        ApoloDlButton(
+          key: const Key('settings-confirm-switch-personal'),
+          label: s.tr(
+            'نعم، العودة لحساب شخصي',
+            'Revenir en Personnel',
+            'Switch to Personal',
+          ),
+          variant: ApoloDlButtonVariant.primary,
+          fullWidth: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+        ApoloDlButton(
+          label: s.tr('إلغاء', 'Annuler', 'Cancel'),
+          variant: ApoloDlButtonVariant.secondary,
+          fullWidth: true,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+      ],
+    );
+    if (confirmed != true || !mounted || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _state.switchToPersonal();
+      if (!mounted) return;
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppConfig.success,
+          content: Text(
+            s.tr(
+              'تم إرجاع حسابك إلى حساب شخصي مع حفظ إعدادات متجرك.',
+              'Compte repassé en mode Personnel (boutique sauvegardée).',
+              'Switched back to Personal (store data saved).',
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = s.tr(
+            'تعذر تغيير نوع الحساب حالياً. حاول مجدداً.',
+            'Impossible de changer le type de compte. Réessayez.',
+            'Could not switch account type. Please try again.',
+          );
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   void _handleEditProfileTap() {
@@ -272,6 +365,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                               ],
                             ),
+
+                            if (isLoggedIn)
+                              ApoloDlSettingsGroup(
+                                title: s.tr(
+                                  'نوع الحساب والأعمال',
+                                  'Compte et outils Business',
+                                  'Account & Business Tools',
+                                ),
+                                children: [
+                                  if (!_state.isBusinessAccount)
+                                    ApoloDlGroupedItem(
+                                      key: const Key(
+                                          'settings-switch-to-business'),
+                                      icon: CupertinoIcons.briefcase_fill,
+                                      title: s.tr(
+                                        'التحويل إلى حساب احترافي (Business)',
+                                        'Passer au compte professionnel',
+                                        'Switch to Business Account',
+                                      ),
+                                      trailingText: s.tr(
+                                        'مجاني',
+                                        'Gratuit',
+                                        'Free',
+                                      ),
+                                      disabled: _busy,
+                                      onTap: () =>
+                                          _open(const BusinessSwitchScreen()),
+                                    )
+                                  else ...[
+                                    ApoloDlGroupedItem(
+                                      key: const Key('settings-edit-business'),
+                                      icon: CupertinoIcons.briefcase_fill,
+                                      title: s.tr(
+                                        'إعدادات المتجر والهوية التجارية',
+                                        'Identité et horaires de la boutique',
+                                        'Store Identity & Working Hours',
+                                      ),
+                                      trailingText: _state.isProPlusAccount
+                                          ? 'PRO+'
+                                          : 'Business',
+                                      disabled: _busy,
+                                      onTap: () => _open(
+                                        const BusinessSwitchScreen(
+                                          isEditing: true,
+                                        ),
+                                      ),
+                                    ),
+                                    ApoloDlGroupedItem(
+                                      key: const Key('settings-quick-replies'),
+                                      icon: CupertinoIcons.bolt_fill,
+                                      title: s.tr(
+                                        'الردود السريعة في الشات',
+                                        'Réponses rapides (Chat)',
+                                        'Chat Quick Replies',
+                                      ),
+                                      trailingText:
+                                          '${_state.quickReplies.length}',
+                                      disabled: _busy,
+                                      onTap: () =>
+                                          QuickRepliesManagerSheet.show(
+                                              context),
+                                    ),
+                                    ApoloDlGroupedItem(
+                                      key: const Key('settings-pro-plus'),
+                                      icon: CupertinoIcons.sparkles,
+                                      title: _state.isProPlusAccount
+                                          ? s.tr(
+                                              'إدارة اشتراك Pro Plus 👑',
+                                              'Gérer mon abonnement Pro Plus 👑',
+                                              'Manage Pro Plus 👑',
+                                            )
+                                          : s.tr(
+                                              'الترقية إلى Pro Plus (توثيق وصدارة) 👑',
+                                              'Passer à Pro Plus (Vérifié) 👑',
+                                              'Upgrade to Pro Plus 👑',
+                                            ),
+                                      disabled: _busy,
+                                      onTap: () => _open(const ProPlusScreen()),
+                                    ),
+                                    ApoloDlGroupedItem(
+                                      key: const Key(
+                                          'settings-switch-to-personal'),
+                                      icon: CupertinoIcons.arrow_2_circlepath,
+                                      title: s.tr(
+                                        'العودة إلى حساب شخصي (Personal)',
+                                        'Revenir au compte personnel',
+                                        'Switch back to Personal',
+                                      ),
+                                      disabled: _busy,
+                                      onTap: _confirmSwitchToPersonal,
+                                    ),
+                                  ],
+                                ],
+                              ),
 
                             // Group 2: Support
                             ApoloDlSettingsGroup(

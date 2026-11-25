@@ -33,16 +33,17 @@ class PeerPresenceState {
   }
 }
 
-/// Real-time Chat & Presence Client (ByteByteGo Architecture):
+/// Persistent WebSocket Real-Time Chat & Presence Client (WhatsApp / Zero-Polling Architecture):
 ///
-/// 1. Calls Stateless Service Discovery (`GET /chat/service-discovery`) over HTTP
-///    to obtain the optimal Stateful WebSocket Chat Server hostname.
-/// 2. Maintains a persistent bidirectional WebSocket connection with automatic
-///    exponential-backoff reconnect.
-/// 3. Sends periodic Presence heartbeats and receives live `presence_update`
-///    events for subscribed peers.
-/// 4. Tracks a persistent per-device `device_id` and per-channel `cur_max_message_id`
-///    cursor for multi-device & offline catch-up sync without duplicate messages.
+/// 1. Discovers the optimal Stateful WebSocket Gateway + `fallback_nodes` once via
+///    `GET /chat/service-discovery` (ZERO periodic HTTP polling).
+/// 2. Maintains a single persistent WebSocket connection with automatic
+///    **Exponential Backoff + Jitter** reconnect and automatic gateway failover.
+/// 3. Automatically emits `ack_delivered` when incoming messages (live or
+///    Store-and-Forward offline flush) arrive, and provides `sendReadAck` when
+///    the user views an active conversation.
+/// 4. Streams real-time `message_ack` (✓), `delivery_receipt` (✓✓), and
+///    `read_receipt` (✓✓) events plus per-channel `cur_max_message_id` resync.
 class ChatRealtimeClient {
   static final ChatRealtimeClient instance = ChatRealtimeClient._internal();
   factory ChatRealtimeClient() => instance;
@@ -61,6 +62,8 @@ class ChatRealtimeClient {
   int _userId = 0;
   String _userName = '';
   String? _activeWsUrl;
+  final List<String> _gatewayPool = <String>[];
+  int _gatewayIndex = 0;
   int _heartbeatIntervalMs = 10000;
   int _reconnectAttempt = 0;
   bool _authenticated = false;
@@ -68,10 +71,13 @@ class ChatRealtimeClient {
   bool _disposed = false;
 
   final Set<int> _subscribedPresenceUsers = <int>{};
+  final Set<String> _activeSyncChannels = <String>{};
   final Map<int, PeerPresenceState> _presenceCache = <int, PeerPresenceState>{};
 
   final _messageCtrl = StreamController<Map<String, dynamic>>.broadcast();
   final _ackCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _deliveryReceiptCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _readReceiptCtrl = StreamController<Map<String, dynamic>>.broadcast();
   final _syncCtrl = StreamController<Map<String, dynamic>>.broadcast();
   final _presenceCtrl = StreamController<PeerPresenceState>.broadcast();
   final _typingCtrl = StreamController<Map<String, dynamic>>.broadcast();
@@ -79,6 +85,9 @@ class ChatRealtimeClient {
 
   Stream<Map<String, dynamic>> get incomingMessages => _messageCtrl.stream;
   Stream<Map<String, dynamic>> get messageAcks => _ackCtrl.stream;
+  Stream<Map<String, dynamic>> get deliveryReceipts =>
+      _deliveryReceiptCtrl.stream;
+  Stream<Map<String, dynamic>> get readReceipts => _readReceiptCtrl.stream;
   Stream<Map<String, dynamic>> get syncResponses => _syncCtrl.stream;
   Stream<PeerPresenceState> get presenceUpdates => _presenceCtrl.stream;
   Stream<Map<String, dynamic>> get typingEvents => _typingCtrl.stream;
@@ -88,6 +97,19 @@ class ChatRealtimeClient {
   String get deviceId => _deviceId ?? 'dev-pending';
 
   PeerPresenceState? cachedPresence(int userId) => _presenceCache[userId];
+
+  /// Computes deterministic-bounded exponential backoff with jitter (`1s..30s`)
+  /// to prevent thundering-herd reconnect storms when a cellular tower recovers.
+  static int computeReconnectDelayMs(
+    int attempt, {
+    math.Random? random,
+  }) {
+    final clamped = attempt.clamp(1, 6);
+    final baseMs = math.min(30000, 1000 * (1 << (clamped - 1)));
+    final rng = random ?? math.Random();
+    final jitterMs = rng.nextInt(math.max(250, (baseMs * 0.25).round()));
+    return math.min(30000, baseMs + jitterMs);
+  }
 
   Future<String> ensureDeviceId() async {
     if (_deviceId != null && _deviceId!.isNotEmpty) return _deviceId!;
@@ -121,6 +143,18 @@ class ChatRealtimeClient {
     }
   }
 
+  /// Registers a channel as actively open so missed messages resync immediately
+  /// after any reconnect without periodic HTTP polling.
+  void registerActiveChannel(String channelId) {
+    if (channelId.trim().isNotEmpty) {
+      _activeSyncChannels.add(channelId.trim());
+    }
+  }
+
+  void unregisterActiveChannel(String channelId) {
+    _activeSyncChannels.remove(channelId.trim());
+  }
+
   /// Discover optimal Chat Server WebSocket URL via Stateless Service Discovery,
   /// then establish the persistent WebSocket connection.
   Future<bool> connect({
@@ -142,6 +176,8 @@ class ChatRealtimeClient {
       String? wsUrl = overrideWsUrl;
       if (wsUrl == null || wsUrl.isEmpty) {
         wsUrl = await _discoverChatServerUrl(userId);
+      } else if (!_gatewayPool.contains(wsUrl)) {
+        _gatewayPool.insert(0, wsUrl);
       }
       if (wsUrl == null || wsUrl.isEmpty) {
         _connecting = false;
@@ -174,13 +210,33 @@ class ChatRealtimeClient {
         if (hb != null && hb >= 3000) {
           _heartbeatIntervalMs = hb;
         }
-        final url = (data['chat_server_ws_url'] ?? '').toString().trim();
-        if (url.startsWith('ws://') || url.startsWith('wss://')) {
-          return url;
+        final primary = (data['chat_server_ws_url'] ?? '').toString().trim();
+        final pool = <String>[];
+        if (primary.startsWith('ws://') || primary.startsWith('wss://')) {
+          pool.add(primary);
+        }
+        final fallbacks = data['fallback_nodes'];
+        if (fallbacks is List) {
+          for (final item in fallbacks) {
+            if (item is Map) {
+              final fbUrl = (item['ws_url'] ?? '').toString().trim();
+              if ((fbUrl.startsWith('ws://') || fbUrl.startsWith('wss://')) &&
+                  !pool.contains(fbUrl)) {
+                pool.add(fbUrl);
+              }
+            }
+          }
+        }
+        if (pool.isNotEmpty) {
+          _gatewayPool
+            ..clear()
+            ..addAll(pool);
+          _gatewayIndex = 0;
+          return pool.first;
         }
       }
     } catch (_) {
-      // Service discovery unavailable (e.g. static preview) -> caller falls back cleanly
+      // Service discovery unavailable -> caller handles gracefully without polling
     }
     return null;
   }
@@ -224,6 +280,7 @@ class ChatRealtimeClient {
     switch (event) {
       case 'auth_ok':
         _authenticated = true;
+        _reconnectAttempt = 0;
         final hb = int.tryParse('${packet['heartbeat_interval_ms'] ?? ''}');
         if (hb != null && hb >= 3000) _heartbeatIntervalMs = hb;
         _startHeartbeat();
@@ -234,6 +291,9 @@ class ChatRealtimeClient {
             'user_ids': _subscribedPresenceUsers.toList(),
           });
         }
+        for (final ch in _activeSyncChannels) {
+          unawaited(requestChannelSync(ch));
+        }
         break;
       case 'message':
         final data = packet['data'];
@@ -241,8 +301,19 @@ class ChatRealtimeClient {
           final msg = Map<String, dynamic>.from(data);
           final ch = (msg['channel_id'] ?? '').toString();
           final mid = (msg['message_id'] ?? '').toString();
+          final senderId = int.tryParse('${msg['sender_id'] ?? 0}') ?? 0;
           if (ch.isNotEmpty && mid.isNotEmpty) {
             saveChannelCursor(ch, mid);
+            // Stage 2 ACK (`delivered` ✓✓): automatically acknowledge receipt
+            // back to the gateway so Store-and-Forward purges the queue and
+            // notifies the sender in real time.
+            if (senderId > 0 && senderId != _userId) {
+              sendDeliveredAck(
+                channelId: ch,
+                messageIds: [mid],
+                senderId: senderId,
+              );
+            }
           }
           _messageCtrl.add(msg);
         }
@@ -255,11 +326,33 @@ class ChatRealtimeClient {
         }
         _ackCtrl.add(packet);
         break;
+      case 'delivery_receipt':
+        _deliveryReceiptCtrl.add(packet);
+        break;
+      case 'read_receipt':
+        _readReceiptCtrl.add(packet);
+        break;
       case 'sync_response':
         final ch = (packet['channel_id'] ?? '').toString();
         final cur = (packet['cur_max_message_id'] ?? '').toString();
         if (ch.isNotEmpty && cur.isNotEmpty) {
           saveChannelCursor(ch, cur);
+        }
+        final syncedMsgs = packet['messages'];
+        if (ch.isNotEmpty && syncedMsgs is List && syncedMsgs.isNotEmpty) {
+          final peerMsgIds = <String>[];
+          for (final item in syncedMsgs) {
+            if (item is Map) {
+              final sid = int.tryParse('${item['sender_id'] ?? 0}') ?? 0;
+              final mid = (item['message_id'] ?? '').toString();
+              if (sid > 0 && sid != _userId && mid.isNotEmpty) {
+                peerMsgIds.add(mid);
+              }
+            }
+          }
+          if (peerMsgIds.isNotEmpty) {
+            sendDeliveredAck(channelId: ch, messageIds: peerMsgIds);
+          }
         }
         _syncCtrl.add(packet);
         break;
@@ -344,6 +437,43 @@ class ChatRealtimeClient {
     return true;
   }
 
+  /// Stage 2 ACK (`delivered` ✓✓): confirms receipt of incoming message(s) on this device.
+  void sendDeliveredAck({
+    required String channelId,
+    List<String> messageIds = const <String>[],
+    String? lastDeliveredMessageId,
+    int? senderId,
+  }) {
+    if (!isConnected || channelId.isEmpty) return;
+    if (messageIds.isEmpty &&
+        (lastDeliveredMessageId == null || lastDeliveredMessageId.isEmpty)) {
+      return;
+    }
+    _sendJson({
+      'event': 'ack_delivered',
+      'channel_id': channelId,
+      if (messageIds.isNotEmpty) 'message_ids': messageIds,
+      if (lastDeliveredMessageId != null && lastDeliveredMessageId.isNotEmpty)
+        'last_delivered_message_id': lastDeliveredMessageId,
+      if (senderId != null && senderId > 0) 'sender_id': senderId,
+    });
+  }
+
+  /// Stage 3 ACK (`read` ✓✓): confirms messages up to [lastReadMessageId] were viewed in-chat.
+  void sendReadAck({
+    required String channelId,
+    required String lastReadMessageId,
+    int? senderId,
+  }) {
+    if (!isConnected || channelId.isEmpty || lastReadMessageId.isEmpty) return;
+    _sendJson({
+      'event': 'ack_read',
+      'channel_id': channelId,
+      'last_read_message_id': lastReadMessageId,
+      if (senderId != null && senderId > 0) 'sender_id': senderId,
+    });
+  }
+
   void sendTyping(String channelId, bool isTyping) {
     if (!isConnected || channelId.isEmpty) return;
     _sendJson({
@@ -374,19 +504,31 @@ class ChatRealtimeClient {
   }
 
   void _scheduleReconnect() {
-    if (_disposed || _userId <= 0 || _activeWsUrl == null) return;
+    if (_disposed || _userId <= 0) return;
+    final targetUrl = _nextGatewayUrl();
+    if (targetUrl == null) return;
+
     _reconnectTimer?.cancel();
     _reconnectAttempt = (_reconnectAttempt + 1).clamp(1, 6);
-    final delaySec = math.min(30, 1 << _reconnectAttempt);
-    _reconnectTimer = Timer(Duration(seconds: delaySec), () {
+    final delayMs = computeReconnectDelayMs(_reconnectAttempt);
+
+    _reconnectTimer = Timer(Duration(milliseconds: delayMs), () {
       if (!_disposed && !isConnected) {
         connect(
           userId: _userId,
           userName: _userName,
-          overrideWsUrl: _activeWsUrl,
+          overrideWsUrl: targetUrl,
         );
       }
     });
+  }
+
+  String? _nextGatewayUrl() {
+    if (_gatewayPool.isNotEmpty) {
+      _gatewayIndex = (_gatewayIndex + 1) % _gatewayPool.length;
+      return _gatewayPool[_gatewayIndex];
+    }
+    return _activeWsUrl;
   }
 
   void _sendJson(Map<String, dynamic> payload) {
