@@ -11,8 +11,8 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/custom_auth_input_field.dart';
-import '../widgets/interests_survey_sheet.dart';
 import 'forgot_password_screen.dart';
+import 'intent_onboarding_screen.dart';
 import 'privacy_compliance_screen.dart';
 import 'support_screen.dart';
 
@@ -512,15 +512,19 @@ class _AuthScreenState extends State<AuthScreen>
       }
       callback?.call();
 
-      // Show interests survey modal popup if newly registered
+      // Show Dynamic Layer v5.1 intent onboarding screen if newly registered
       if (isFromRegistration && navigator.context.mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          InterestsSurveySheet.show(
-            navigator.context,
-            auth: _auth,
-            session: result,
-            accountType: _accountType,
-            cityId: _cityId,
+          if (!navigator.context.mounted) return;
+          Navigator.of(navigator.context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ApoloIntentOnboardingScreen(
+                auth: _auth,
+                session: result,
+                accountType: _accountType,
+                cityId: _cityId,
+              ),
+            ),
           );
         });
       }

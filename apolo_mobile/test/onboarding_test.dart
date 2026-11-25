@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/auth_screen.dart';
+import 'package:apolo_mobile/screens/intent_onboarding_screen.dart';
 import 'package:apolo_mobile/screens/splash_screen.dart';
 import 'package:apolo_mobile/screens/welcome_screen.dart';
 import 'package:dio/dio.dart';
@@ -207,5 +208,65 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 1));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'ApoloIntentOnboardingScreen matches Figma 45952:346 (64/32 margins, tilted pills, + / - toggle, 56px Continue) and saves AppState intents',
+      (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    AppState().userIntents = <String>{};
+    AppState().hasCompletedIntentOnboarding = false;
+    AppState().categoryInterestWeights = <int, int>{};
+
+    Set<String>? completedIntents;
+    await tester.pumpWidget(
+      _app(
+        ApoloIntentOnboardingScreen(
+          nextBuilder: (_, chosen) {
+            completedIntents = chosen;
+            return const Scaffold(body: Center(child: Text('DONE_MAIN')));
+          },
+        ),
+        reducedMotion: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+
+    // Exact Figma `Main Container` margins on 375px width: left 64, top 32, right 64, bottom 32
+    final mainContainer = tester.widget<Padding>(
+      find.byKey(const Key('dl-intent-main-container')),
+    );
+    expect(
+      mainContainer.padding,
+      const EdgeInsets.fromLTRB(64.0, 32.0, 64.0, 32.0),
+    );
+
+    // 40x40 back circle & 56px Continue stadium button
+    final backSize =
+        tester.getSize(find.byKey(const Key('dl-intent-back-button')));
+    expect(backSize, const Size(40.0, 40.0));
+    final continueSize =
+        tester.getSize(find.byKey(const Key('dl-intent-continue-button')));
+    expect(continueSize.height, closeTo(56.0, 0.01));
+
+    // Toggle `auto_immo` pill ON in addition to default `selling`
+    await tester.tap(find.byKey(const Key('dl-intent-pill-auto_immo')));
+    await tester.pumpAndSettle();
+
+    // Tap Continue -> persists to AppState & boosts Vehicles/RealEstate weights
+    await tester.tap(find.byKey(const Key('dl-intent-continue-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DONE_MAIN'), findsOneWidget);
+    expect(completedIntents, containsAll(<String>['selling', 'auto_immo']));
+    expect(AppState().hasCompletedIntentOnboarding, isTrue);
+    expect(AppState().categoryInterestWeights[2], greaterThanOrEqualTo(10));
+    expect(AppState().categoryInterestWeights[5], greaterThanOrEqualTo(10));
   });
 }

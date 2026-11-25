@@ -143,6 +143,48 @@ class AppState extends ChangeNotifier {
 
   static const String _cachedUserPrefsKey = 'apolo_cached_user_v1';
   static const String _followedSellersPrefsKey = 'apolo_followed_sellers_v1';
+  static const String _userIntentsPrefsKey = 'apolo_user_intents_v1';
+  static const String _intentOnboardingDoneKey =
+      'apolo_intent_onboarding_done_v1';
+
+  Set<String> userIntents = <String>{};
+  bool hasCompletedIntentOnboarding = false;
+
+  /// Persists selected user usage intents (`buying`, `selling`, `pro_store`, `auto_immo`)
+  /// and boosts matching category weights in Apolo's smart feed ranking engine.
+  Future<void> saveUserIntents(Set<String> intents) async {
+    userIntents = Set<String>.from(intents);
+    hasCompletedIntentOnboarding = true;
+
+    final mappedCategories = <int>{};
+    if (intents.contains('buying')) {
+      mappedCategories.addAll(const [1, 3, 4]); // Phones/Tech, Fashion, Home
+    }
+    if (intents.contains('selling')) {
+      mappedCategories.addAll(const [1, 2, 3]);
+    }
+    if (intents.contains('pro_store')) {
+      mappedCategories.addAll(const [1, 8]); // Tech & Services/Business
+    }
+    if (intents.contains('auto_immo')) {
+      mappedCategories.addAll(const [2, 5]); // Vehicles & Real Estate
+    }
+
+    for (final catId in mappedCategories) {
+      final current = categoryInterestWeights[catId] ?? 0;
+      if (current < 10) {
+        categoryInterestWeights[catId] = 10;
+      }
+    }
+
+    await _savePersonalizationPrefs();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_userIntentsPrefsKey, userIntents.toList());
+      await prefs.setBool(_intentOnboardingDoneKey, true);
+    } catch (_) {}
+    notifyListeners();
+  }
 
   bool isFollowingSeller(int sellerId) =>
       sellerId > 0 && followedSellerIds.contains(sellerId);
@@ -343,6 +385,12 @@ class AppState extends ChangeNotifier {
             .where((id) => id > 0)
             .toSet();
       }
+      final rawIntents = prefs.getStringList(_userIntentsPrefsKey);
+      if (rawIntents != null) {
+        userIntents = rawIntents.where((e) => e.trim().isNotEmpty).toSet();
+      }
+      hasCompletedIntentOnboarding =
+          prefs.getBool(_intentOnboardingDoneKey) ?? false;
     } catch (_) {}
   }
 

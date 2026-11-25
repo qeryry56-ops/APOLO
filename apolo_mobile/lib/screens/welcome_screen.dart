@@ -7,6 +7,7 @@ import '../account/account_helpers.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import 'auth_screen.dart';
+import 'intent_onboarding_screen.dart';
 import 'main_shell.dart';
 import 'privacy_compliance_screen.dart';
 
@@ -57,6 +58,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     if (!mounted || _leaving) return;
     _leaving = true;
     widget.onContinueAsGuest?.call();
+    if (!_state.hasCompletedIntentOnboarding) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => ApoloIntentOnboardingScreen(
+            nextBuilder: (_, chosen) {
+              final openSellTab =
+                  chosen.length == 1 && chosen.contains('selling');
+              return MainShell(initialIndex: openSellTab ? 1 : 0);
+            },
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const MainShell()),
     );

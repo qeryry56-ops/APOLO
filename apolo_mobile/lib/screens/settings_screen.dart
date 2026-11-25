@@ -10,6 +10,7 @@ import 'account_security_screen.dart';
 import 'auth_screen.dart';
 import 'business_switch_screen.dart';
 import 'forgot_password_screen.dart';
+import 'intent_onboarding_screen.dart';
 import 'notifications_screen.dart';
 import 'privacy_compliance_screen.dart';
 import 'pro_plus_screen.dart';
@@ -362,6 +363,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     );
                                     _open(const NotificationsScreen());
                                   },
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key(
+                                    'settings-row-intent-onboarding',
+                                  ),
+                                  icon: CupertinoIcons.sparkles,
+                                  title: s.tr(
+                                    'هدف استخدام Apolo',
+                                    'Objectif d’utilisation',
+                                    'App usage goal',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    const ApoloIntentOnboardingScreen(),
+                                  ),
                                 ),
                               ],
                             ),

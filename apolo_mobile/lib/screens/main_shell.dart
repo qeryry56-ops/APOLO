@@ -20,7 +20,8 @@ import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  final int initialIndex;
+  const MainShell({super.key, this.initialIndex = 0});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -29,7 +30,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell>
     with SingleTickerProviderStateMixin {
   final AppState _state = AppState();
-  int _currentIndex = 0;
+  late int _currentIndex;
   int _lastPillSlot = 0;
   int? _searchInitialCategory;
   bool _searchChromeVisible = true;
@@ -57,6 +58,7 @@ class _MainShellState extends State<MainShell>
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, 4);
     _syncTabRoute(_currentIndex);
     _lastNotifCount = _state.unreadNotificationsCount;
     _bindGlobalAlerts(allowNotify: false);
