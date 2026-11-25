@@ -160,6 +160,10 @@ void main() {
     final phoneField =
         tester.widget<TextField>(find.byKey(const Key('auth-phone')));
     expect(phoneField.decoration?.hintText, '650-123456');
+    expect(
+      phoneField.keyboardType,
+      const TextInputType.numberWithOptions(signed: false, decimal: false),
+    );
     expect(submitMat().color, const Color(0xFFEEEEEE));
 
     // Entering `650123456` formats as `650-123456` and submits `+212650123456`

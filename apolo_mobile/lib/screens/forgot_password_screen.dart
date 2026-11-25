@@ -495,63 +495,75 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       case _RecoveryStep.otp:
         stepField = Directionality(
           textDirection: TextDirection.ltr,
-          child: TextField(
-            key: const Key('forgot-code'),
-            controller: _code,
-            focusNode: _codeFocus,
-            enabled: !_busy,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.oneTimeCode],
-            maxLength: 6,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(
-                RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]'),
+          child: AutofillGroup(
+            child: TextField(
+              key: const Key('forgot-code'),
+              controller: _code,
+              focusNode: _codeFocus,
+              autofocus: true,
+              enabled: !_busy,
+              keyboardType: const TextInputType.numberWithOptions(
+                signed: false,
+                decimal: false,
               ),
-            ],
-            textAlign: TextAlign.center,
-            textDirection: TextDirection.ltr,
-            cursorColor: ink,
-            cursorWidth: 2.5,
-            cursorHeight: 30.0,
-            style: TextStyle(
-              color: ink,
-              fontSize: 28.0,
-              fontWeight: FontWeight.w700,
-              height: 36.0 / 28.0,
-              letterSpacing: 6.0,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-            decoration: InputDecoration(
-              hintText: '000000',
-              hintStyle: TextStyle(
-                color: placeholderColor,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              inputFormatters: [
+                TextInputFormatter.withFunction((oldVal, newVal) {
+                  final digits = AccountValidation.normalizeDigits(newVal.text)
+                      .replaceAll(RegExp(r'[^0-9]'), '');
+                  final capped =
+                      digits.length > 6 ? digits.substring(0, 6) : digits;
+                  return TextEditingValue(
+                    text: capped,
+                    selection: TextSelection.collapsed(offset: capped.length),
+                  );
+                }),
+              ],
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.ltr,
+              cursorColor: ink,
+              cursorWidth: 2.5,
+              cursorHeight: 30.0,
+              style: TextStyle(
+                color: ink,
                 fontSize: 28.0,
                 fontWeight: FontWeight.w700,
                 height: 36.0 / 28.0,
                 letterSpacing: 6.0,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
-              counterText: '',
-              filled: false,
-              fillColor: Colors.transparent,
-              hoverColor: Colors.transparent,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              disabledBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 4.0),
+              decoration: InputDecoration(
+                hintText: '000000',
+                hintStyle: TextStyle(
+                  color: placeholderColor,
+                  fontSize: 28.0,
+                  fontWeight: FontWeight.w700,
+                  height: 36.0 / 28.0,
+                  letterSpacing: 6.0,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+                counterText: '',
+                filled: false,
+                fillColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 4.0),
+              ),
+              onChanged: (value) {
+                final clean = AccountValidation.normalizeDigits(value)
+                    .replaceAll(RegExp(r'[^0-9]'), '');
+                if (clean.length == 6 && !_busy) {
+                  _verifyOtpCode();
+                }
+              },
+              onSubmitted: (_) => _verifyOtpCode(),
             ),
-            onChanged: (value) {
-              final clean = AccountValidation.normalizeDigits(value)
-                  .replaceAll(RegExp(r'[^0-9]'), '');
-              if (clean.length == 6 && !_busy) {
-                _verifyOtpCode();
-              }
-            },
-            onSubmitted: (_) => _verifyOtpCode(),
           ),
         );
         break;

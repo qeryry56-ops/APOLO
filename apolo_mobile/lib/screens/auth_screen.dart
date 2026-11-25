@@ -1508,53 +1508,61 @@ class _AuthScreenState extends State<AuthScreen>
                   const SizedBox(width: 8.0),
                   SizedBox(
                     width: 158.0,
-                    child: TextField(
-                      key: const Key('auth-phone'),
-                      controller: _phone,
-                      focusNode: _phoneFocus,
-                      enabled: !_busy,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.telephoneNumber],
-                      inputFormatters: const [
-                        _MoroccanSubscriberPhoneFormatter(),
-                      ],
-                      textAlign: TextAlign.left,
-                      textDirection: TextDirection.ltr,
-                      cursorColor: ink,
-                      cursorWidth: 2.5,
-                      cursorHeight: 28.0,
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 26.0,
-                        fontWeight: FontWeight.w700,
-                        height: 36.0 / 26.0,
-                        letterSpacing: -0.3,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '650-123456',
-                        hintStyle: TextStyle(
-                          color: placeholderColor,
+                    child: AutofillGroup(
+                      child: TextField(
+                        key: const Key('auth-phone'),
+                        controller: _phone,
+                        focusNode: _phoneFocus,
+                        enabled: !_busy,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          signed: false,
+                          decimal: false,
+                        ),
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [
+                          AutofillHints.telephoneNumberNational,
+                          AutofillHints.telephoneNumber,
+                        ],
+                        inputFormatters: const [
+                          _MoroccanSubscriberPhoneFormatter(),
+                        ],
+                        textAlign: TextAlign.left,
+                        textDirection: TextDirection.ltr,
+                        cursorColor: ink,
+                        cursorWidth: 2.5,
+                        cursorHeight: 28.0,
+                        style: TextStyle(
+                          color: ink,
                           fontSize: 26.0,
                           fontWeight: FontWeight.w700,
                           height: 36.0 / 26.0,
                           letterSpacing: -0.3,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
-                        filled: false,
-                        fillColor: Colors.transparent,
-                        hoverColor: Colors.transparent,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        isDense: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 4.0),
+                        decoration: InputDecoration(
+                          hintText: '650-123456',
+                          hintStyle: TextStyle(
+                            color: placeholderColor,
+                            fontSize: 26.0,
+                            fontWeight: FontWeight.w700,
+                            height: 36.0 / 26.0,
+                            letterSpacing: -0.3,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 4.0),
+                        ),
+                        onSubmitted: (_) => _submit(),
                       ),
-                      onSubmitted: (_) => _submit(),
                     ),
                   ),
                 ],
@@ -1898,43 +1906,32 @@ class _AuthScreenState extends State<AuthScreen>
                                 },
                                 child: Directionality(
                                   textDirection: TextDirection.ltr,
-                                  child: TextField(
-                                    key: const Key('auth-code'),
-                                    controller: _code,
-                                    focusNode: _codeFocus,
-                                    enabled: !_busy,
-                                    keyboardType: TextInputType.number,
-                                    textInputAction: TextInputAction.done,
-                                    autofillHints: const [
-                                      AutofillHints.oneTimeCode,
-                                    ],
-                                    maxLength: 6,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.allow(
-                                        RegExp(
-                                          r'[0-9\u0660-\u0669\u06F0-\u06F9]',
-                                        ),
+                                  child: AutofillGroup(
+                                    child: TextField(
+                                      key: const Key('auth-code'),
+                                      controller: _code,
+                                      focusNode: _codeFocus,
+                                      autofocus: true,
+                                      enabled: !_busy,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                        signed: false,
+                                        decimal: false,
                                       ),
-                                    ],
-                                    textAlign: TextAlign.center,
-                                    textDirection: TextDirection.ltr,
-                                    cursorColor: ink,
-                                    cursorWidth: 2.5,
-                                    cursorHeight: 30.0,
-                                    style: TextStyle(
-                                      color: ink,
-                                      fontSize: 28.0,
-                                      fontWeight: FontWeight.w700,
-                                      height: 36.0 / 28.0,
-                                      letterSpacing: 6.0,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
+                                      textInputAction: TextInputAction.done,
+                                      autofillHints: const [
+                                        AutofillHints.oneTimeCode,
                                       ],
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: '000000',
-                                      hintStyle: TextStyle(
-                                        color: placeholderColor,
+                                      inputFormatters: const [
+                                        _OtpSixDigitInputFormatter(),
+                                      ],
+                                      textAlign: TextAlign.center,
+                                      textDirection: TextDirection.ltr,
+                                      cursorColor: ink,
+                                      cursorWidth: 2.5,
+                                      cursorHeight: 30.0,
+                                      style: TextStyle(
+                                        color: ink,
                                         fontSize: 28.0,
                                         fontWeight: FontWeight.w700,
                                         height: 36.0 / 28.0,
@@ -1943,23 +1940,36 @@ class _AuthScreenState extends State<AuthScreen>
                                           FontFeature.tabularFigures(),
                                         ],
                                       ),
-                                      counterText: '',
-                                      filled: false,
-                                      fillColor: Colors.transparent,
-                                      hoverColor: Colors.transparent,
-                                      border: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      disabledBorder: InputBorder.none,
-                                      errorBorder: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                        vertical: 4.0,
+                                      decoration: InputDecoration(
+                                        hintText: '000000',
+                                        hintStyle: TextStyle(
+                                          color: placeholderColor,
+                                          fontSize: 28.0,
+                                          fontWeight: FontWeight.w700,
+                                          height: 36.0 / 28.0,
+                                          letterSpacing: 6.0,
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                        counterText: '',
+                                        filled: false,
+                                        fillColor: Colors.transparent,
+                                        hoverColor: Colors.transparent,
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        disabledBorder: InputBorder.none,
+                                        errorBorder: InputBorder.none,
+                                        isDense: true,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          vertical: 4.0,
+                                        ),
                                       ),
+                                      onChanged: _onOtpChanged,
+                                      onSubmitted: (_) => _submit(),
                                     ),
-                                    onChanged: _onOtpChanged,
-                                    onSubmitted: (_) => _submit(),
                                   ),
                                 ),
                               ),
@@ -2186,6 +2196,26 @@ class _MoroccanSubscriberPhoneFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+/// Extracts up to 6 numeric digits from typed or `one-time-code` auto-filled
+/// SMS/Email OTP strings (even when spaced like `123 456` or prefixed).
+class _OtpSixDigitInputFormatter extends TextInputFormatter {
+  const _OtpSixDigitInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = AccountValidation.normalizeDigits(newValue.text)
+        .replaceAll(RegExp(r'[^0-9]'), '');
+    final capped = digits.length > 6 ? digits.substring(0, 6) : digits;
+    return TextEditingValue(
+      text: capped,
+      selection: TextSelection.collapsed(offset: capped.length),
     );
   }
 }

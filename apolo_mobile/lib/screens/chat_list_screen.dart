@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,22 +9,25 @@ import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/chat_message.dart';
-import '../widgets/notification_badge.dart';
 import '../widgets/pull_to_refresh.dart';
+import 'auth_screen.dart';
 import 'call_screen.dart';
 import 'chat_room_screen.dart';
-import 'post_ad_screen.dart';
-import 'auth_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
-/// 2026 Production Chats Screen with Apolo Brand Styling & Desktop/Web Split-View:
-/// - Apolo Brand Red palette (`#E31B23`) for accents, pills, unread badges & buttons.
-/// - Top `+` button navigates to `PostAdScreen` ("نشر إعلان جديد").
-/// - Long-press contextual sheet on any chat row: Mute, Pin to top, Mark unread, Delete, Block.
-/// - Responsive Desktop / Web view: On wide screens (`>= 800px`), renders a 2-column Messenger view (Chats on left, Chat Room on right).
+/// Dynamic Layer v5.1 `Inbox` / `Chats` Screen (`21768:49231`):
+/// - Large `Chats` title (`16px` horizontal padding, pure `#FFFFFF` / `#121212` canvas).
+/// - `#EEEEEE` stadium `Search` bar:
+///   - `Default`: `#EEEEEE` fill, `#757575` magnifying glass + `Search` hint, no border.
+///   - `Search / Active` (focused): `#EEEEEE` fill + `1.5px` `#000000` solid border + trailing `×` button.
+///   - `Search / Filled` (unfocused with query): `#EEEEEE` fill, no border, `#000000` text + `#757575` trailing `×`.
+/// - `All` / `Unread` `36px` stadium filter pills (`#000000` + `#FFFFFF` active, `#EEEEEE` + `#000000` inactive).
+/// - `48 × 48` circular avatars, 2-line message previews (`#757575` read, `#000000` semi-bold unread + `#E31B23` red count badge),
+///   `1px` `#EEEEEE` divider between rows (none after last row), and `🔒 Your personal messages are end-to-end encrypted` footer.
+/// - Responsive Desktop / Web view (`>= 800px`): 2-column split view (`380px` Inbox list + `ChatRoomScreen`).
 class ChatListScreen extends StatefulWidget {
   final VoidCallback? onExploreAds;
 
@@ -39,13 +43,13 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final AppState _state = AppState();
 
-  static const Color _bgWhite = Color(0xFFFFFFFF);
-  static const Color _surfaceGrey = Color(0xFFF2F3F7);
-  static const Color _textBlack = Color(0xFF0A0A0A);
-  static const Color _textMuted = Color(0xFF6B7280);
-  static const Color _textSubtle = Color(0xFF9CA3AF);
-  static const Color _chatBlue = Color(0xFF0A0A0A);
-  static const Color _chatBlueSoft = Color(0xFFF2F3F7);
+  static const List<Color> _avatarPastels = <Color>[
+    Color(0xFFEDE9FE),
+    Color(0xFFDBEAFE),
+    Color(0xFFFCE7F3),
+    Color(0xFFFEF3C7),
+    Color(0xFFD1FAE5),
+  ];
 
   List<Map<String, dynamic>> _conversations = [];
   List<Map<String, dynamic>> _firestoreConversations = [];
@@ -54,10 +58,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final Set<int> _pinnedIds = {};
   final Set<int> _mutedIds = {};
   bool _isLoading = true;
-  bool _unreadFirst = false;
   String _searchQuery = '';
   int _selectedFilterIndex = 0; // 0: All, 1: Unread
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   // Active conversation for desktop 2-column web view
   Map<String, dynamic>? _activeWebConversation;
@@ -75,7 +79,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
     super.initState();
     _loadedAuthKey = _currentAuthKey;
     _state.addListener(_onStateChanged);
+    _searchFocusNode.addListener(_onSearchFocusChanged);
     _loadConversations();
+  }
+
+  void _onSearchFocusChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onStateChanged() {
@@ -107,6 +116,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _convSub?.cancel();
     _incomingCallSub?.cancel();
     _state.removeListener(_onStateChanged);
+    _searchFocusNode.removeListener(_onSearchFocusChanged);
+    _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -115,8 +126,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
     List<Map<String, dynamic>> firestoreList,
     List<Map<String, dynamic>> backendList,
   ) {
-    if (backendList.isEmpty) return List<Map<String, dynamic>>.from(firestoreList);
-    if (firestoreList.isEmpty) return List<Map<String, dynamic>>.from(backendList);
+    if (backendList.isEmpty) {
+      return List<Map<String, dynamic>>.from(firestoreList);
+    }
+    if (firestoreList.isEmpty) {
+      return List<Map<String, dynamic>>.from(backendList);
+    }
 
     final merged = List<Map<String, dynamic>>.from(firestoreList);
     for (final bConv in backendList) {
@@ -332,7 +347,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       'peer_online': raw['peer_online'] == true,
       'last_message': lastBody.isNotEmpty ? lastBody : 'Hello! How are you?',
       'last_message_time':
-          (raw['last_message_time'] ?? raw['updated_at_human'] ?? '12:30 PM')
+          (raw['last_message_time'] ?? raw['updated_at_human'] ?? '9:41')
               .toString(),
       'unread_count': int.tryParse('${raw['unread_count'] ?? 0}') ?? 0,
     };
@@ -354,33 +369,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return true;
     }).toList();
 
-    // Sort: pinned conversations first (and optionally unread conversations first)
     list.sort((a, b) {
       final aPinned = _pinnedIds.contains(a['id']);
       final bPinned = _pinnedIds.contains(b['id']);
       if (aPinned != bPinned) return aPinned ? -1 : 1;
-      if (_unreadFirst) {
-        final aUnread = _effectiveUnread(a) > 0;
-        final bUnread = _effectiveUnread(b) > 0;
-        if (aUnread != bUnread) return aUnread ? -1 : 1;
-      }
       return 0;
     });
 
     return list;
   }
 
-  // ───────────────────────── Apple / Instagram Style Haptic Context Menu ─────────────────────────
-  // 1:1 Pixel Match to Reference Screenshot:
-  // - Frosted glass blurred backdrop (BackdropFilter blur)
-  // - Top floating action card: Pin, Archive, Mute, Block, Report, Delete (Red)
-  // - Bottom floating active conversation preview card: Avatar, Peer Name, 'Sent 1d ago', Camera icon
   void _showAppleContextMenu(Map<String, dynamic> conv) {
     HapticFeedback.heavyImpact();
     final int convId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
     final String peerName = (conv['peer_name'] ?? 'Jenny Wilson').toString();
     final String? avatarUrl = conv['peer_avatar']?.toString();
-    final String lastTime = (conv['last_message_time'] ?? '1d ago').toString();
+    final String lastTime = (conv['last_message_time'] ?? '9:41').toString();
     final bool isPinned = _pinnedIds.contains(convId);
     final bool isMuted = _mutedIds.contains(convId);
 
@@ -410,7 +414,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Center(
                 child: GestureDetector(
-                  onTap: () {}, // Prevent taps inside cards from dismissing
+                  onTap: () {},
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     constraints: const BoxConstraints(maxWidth: 380),
@@ -418,7 +422,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 1. Context Actions Card (Exact match to screenshot)
                         Container(
                           width: 230,
                           decoration: BoxDecoration(
@@ -566,8 +569,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-
-                        // 2. Active Chat Preview Row Card (Exact match to screenshot)
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
@@ -585,13 +586,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                           child: Row(
                             children: [
-                              // Avatar Circle
                               Container(
                                 width: 48,
                                 height: 48,
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Color(0xFFF3F4F6),
+                                  color: Color(0xFFEEEEEE),
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(999),
@@ -600,15 +600,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       ? AppImage(
                                           url: avatarUrl,
                                           fit: BoxFit.cover,
-                                          fallback:
-                                              _buildAvatarFallback(peerName),
+                                          fallback: _buildAvatarFallback(
+                                              peerName, convId),
                                         )
-                                      : _buildAvatarFallback(peerName),
+                                      : _buildAvatarFallback(peerName, convId),
                                 ),
                               ),
                               const SizedBox(width: 12),
-
-                              // Peer Name & "Sent 1d ago" / Time
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,7 +616,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color: const Color(0xFF0F172A),
+                                        color: const Color(0xFF000000),
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing:
@@ -634,20 +632,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         'Sent $lastTime',
                                       ),
                                       style: const TextStyle(
-                                        color: Color(0xFF9CA3AF),
+                                        color: Color(0xFF757575),
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-
-                              // Camera Icon on the right
-                              const Icon(
-                                CupertinoIcons.camera,
-                                color: Color(0xFF6B7280),
-                                size: 24,
                               ),
                             ],
                           ),
@@ -671,7 +662,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     bool isDestructive = false,
   }) {
     final Color itemColor =
-        isDestructive ? const Color(0xFFEF4444) : const Color(0xFF0F172A);
+        isDestructive ? const Color(0xFFE31B23) : const Color(0xFF000000);
 
     return InkWell(
       onTap: onTap,
@@ -708,47 +699,47 @@ class _ChatListScreenState extends State<ChatListScreen> {
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: const Color(0xFF000000),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  // Top `+` button: Add New Ad ("نشر إعلان جديد")
-  void _openPostAd() {
-    HapticFeedback.lightImpact();
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const PostAdScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color bgColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final Color mutedText =
+        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
+    final Color borderColor =
+        isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktopWeb = screenWidth >= 800;
 
     if (isDesktopWeb) {
-      // ───────────────────────── Responsive Desktop / Web Split-View (Site Page) ─────────────────────────
       return Scaffold(
-        backgroundColor: _bgWhite,
+        backgroundColor: bgColor,
         body: Row(
           children: [
-            // Left Column: Chats List (380px)
             SizedBox(
               width: 380,
               child: Container(
-                decoration: const BoxDecoration(
-                  color: _bgWhite,
+                decoration: BoxDecoration(
+                  color: bgColor,
                   border: Border(
-                      right: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+                    right: BorderSide(color: borderColor, width: 1),
+                  ),
                 ),
-                child: _buildChatsListPane(isDesktop: true),
+                child: SafeArea(
+                  bottom: false,
+                  child: _buildChatsListPane(
+                    isDesktop: true,
+                    isDark: isDark,
+                  ),
+                ),
               ),
             ),
-
-            // Right Column: Active Chat Room
             Expanded(
               child: _activeWebConversation != null
                   ? ChatRoomScreen(
@@ -776,10 +767,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           _activeWebConversation!['ad_image']?.toString(),
                       adPrice: _activeWebConversation!['ad_price']?.toString(),
                     )
-                  : const Center(
+                  : Center(
                       child: Text(
-                        'حدد محادثة لبدء الدردشة على Apolo Web',
-                        style: TextStyle(color: _textMuted, fontSize: 16),
+                        _state.s.tr(
+                          'حدد محادثة لبدء المراسلة',
+                          'Sélectionnez une discussion',
+                          'Select a conversation to start messaging',
+                        ),
+                        style: TextStyle(color: mutedText, fontSize: 15),
                       ),
                     ),
             ),
@@ -788,291 +783,176 @@ class _ChatListScreenState extends State<ChatListScreen> {
       );
     }
 
-    // Standard Mobile View
     return Scaffold(
-      backgroundColor: _bgWhite,
+      backgroundColor: bgColor,
       body: SafeArea(
         bottom: false,
-        child: _buildChatsListPane(isDesktop: false),
-      ),
-    );
-  }
-
-  void _openMoreSheet() {
-    HapticFeedback.selectionClick();
-    final s = _state.s;
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (ctx) => CupertinoActionSheet(
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _selectedFilterIndex = 0;
-                _unreadFirst = false;
-              });
-            },
-            child: Text(
-              s.tr('عرض كل المحادثات', 'Toutes les discussions',
-                  'Show all chats'),
-            ),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() => _unreadFirst = !_unreadFirst);
-            },
-            child: Text(
-              _unreadFirst
-                  ? s.tr('الترتيب الافتراضي', 'Tri par défaut', 'Default order')
-                  : s.tr('غير المقروءة أولاً', 'Non lus en premier',
-                      'Unread first'),
-            ),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _loadConversations();
-            },
-            child: Text(s.tr('تحديث المحادثات', 'Actualiser', 'Refresh chats')),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          isDefaultAction: true,
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(s.tr('إلغاء', 'Annuler', 'Cancel')),
+        child: _buildChatsListPane(
+          isDesktop: false,
+          isDark: isDark,
         ),
       ),
     );
   }
 
-  void _openCameraSheet() {
-    HapticFeedback.selectionClick();
-    final s = _state.s;
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (ctx) => CupertinoActionSheet(
-        title: Text(s.tr('مشاركة صور', 'Partager des photos', 'Share photos')),
-        message: Text(
-          s.tr(
-            'أنشئ إعلاناً جديداً بالصور أو افتح أي محادثة للمراسلة.',
-            'Publiez une annonce avec photos ou ouvrez une discussion.',
-            'Create a listing with photos or open a chat to message.',
-          ),
-        ),
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _openPostAd();
-            },
-            child: Text(s.tr('نشر إعلان بالصور', 'Publier avec photo',
-                'Post listing with photos')),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          isDefaultAction: true,
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(s.tr('إلغاء', 'Annuler', 'Cancel')),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatsListPane({required bool isDesktop}) {
+  Widget _buildChatsListPane({
+    required bool isDesktop,
+    required bool isDark,
+  }) {
     final filtered = _filteredConversations;
     final s = _state.s;
+
+    final Color ink = isDark ? Colors.white : const Color(0xFF000000);
+    final Color pillBg =
+        isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
+    final Color mutedText =
+        isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
+    final Color dividerColor =
+        isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
+
+    final bool searchFocused = _searchFocusNode.hasFocus;
+    final bool showSearchClear = searchFocused || _searchQuery.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Top Action Bar: `...` pill on start, bare Camera & Sky-Blue `+` on end
+        // 1. Dynamic Layer v5.1 Large `Chats` Title (`16px` horizontal padding, clean top)
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              PressableScale(
-                onTap: _openMoreSheet,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: _surfaceGrey,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    CupertinoIcons.ellipsis,
-                    color: _textBlack,
-                    size: 18,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Text(
+            s.tr('المحادثات', 'Discussions', 'Chats'),
+            key: const Key('inbox-title'),
+            style: TextStyle(
+              color: ink,
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              height: 36.0 / 28.0,
+              letterSpacing: AppTypography.trackingForContext(context, -0.5),
+            ),
+          ),
+        ),
+
+        // 2. Dynamic Layer v5.1 Stadium `Search` Bar (`#EEEEEE` fill, `1.5px` `#000000` border on focus)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: AnimatedContainer(
+            key: const Key('inbox-search-container'),
+            duration: const Duration(milliseconds: 140),
+            height: 46,
+            decoration: BoxDecoration(
+              color: pillBg,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: searchFocused ? ink : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Icon(
+                  CupertinoIcons.search,
+                  color: searchFocused ? ink : mutedText,
+                  size: 19,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    key: const Key('inbox-search-field'),
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    textAlignVertical: TextAlignVertical.center,
+                    cursorColor: ink,
+                    cursorWidth: 2.0,
+                    style: TextStyle(
+                      color: ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      height: 20.0 / 15.0,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: s.tr('بحث', 'Rechercher', 'Search'),
+                      hintStyle: TextStyle(
+                        color: mutedText,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                        height: 20.0 / 15.0,
+                      ),
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
                   ),
                 ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  PressableScale(
-                    onTap: _openCameraSheet,
-                    child: const SizedBox(
-                      width: 36,
-                      height: 36,
+                if (showSearchClear)
+                  GestureDetector(
+                    key: const Key('inbox-search-clear'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      if (_searchController.text.isNotEmpty) {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      } else {
+                        _searchFocusNode.unfocus();
+                      }
+                    },
+                    child: SizedBox(
+                      width: 40,
+                      height: 44,
                       child: Center(
                         child: Icon(
-                          CupertinoIcons.camera,
-                          color: _textBlack,
-                          size: 21,
+                          CupertinoIcons.xmark,
+                          color: searchFocused ? ink : mutedText,
+                          size: 16,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  PressableScale(
-                    onTap: _openPostAd,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: _chatBlue,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: _chatBlue.withValues(alpha: 0.28),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        CupertinoIcons.plus,
-                        color: Colors.white,
-                        size: 19,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // 2. Bold Chats Title
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
-          child: Text(
-            s.tr('المحادثات', 'Messages', 'Chats'),
-            style: TextStyle(
-              color: _textBlack,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: AppTypography.trackingForContext(context, -0.6),
+                  )
+                else
+                  const SizedBox(width: 14),
+              ],
             ),
           ),
         ),
 
-        // 3. Compact Rounded Search Bar (`Search chat`)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            height: 40,
-            decoration: BoxDecoration(
-              color: _surfaceGrey,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() => _searchQuery = v),
-              textAlignVertical: TextAlignVertical.center,
-              style: const TextStyle(
-                color: _textBlack,
-                fontSize: 14.5,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: s.tr('ابحث في المحادثات', 'Rechercher', 'Search chat'),
-                hintStyle: const TextStyle(
-                  color: _textSubtle,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                ),
-                prefixIcon: const Icon(
-                  CupertinoIcons.search,
-                  color: _textSubtle,
-                  size: 18,
-                ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 40,
-                  minHeight: 40,
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(
-                          CupertinoIcons.xmark_circle_fill,
-                          color: _textSubtle,
-                          size: 17,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
-        // 4. Filter Pills (`All` / `Unread`) + trailing sort icon
+        // 3. Filter Pills (`All` | `Unread` — `36px` stadium pills)
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildTabPill(0, s.tr('الكل', 'Tous', 'All')),
-                      const SizedBox(width: 8),
-                      _buildTabPill(1, s.tr('غير مقروءة', 'Non lus', 'Unread')),
-                    ],
-                  ),
-                ),
+              _buildFilterPill(
+                index: 0,
+                key: const Key('inbox-filter-all'),
+                label: s.tr('الكل', 'Tout', 'All'),
+                ink: ink,
+                pillBg: pillBg,
+                isDark: isDark,
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _unreadFirst = !_unreadFirst);
-                },
-                behavior: HitTestBehavior.opaque,
-                child: SizedBox(
-                  width: 32,
-                  height: 28,
-                  child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: Icon(
-                      Icons.filter_list_rounded,
-                      color: _unreadFirst ? _chatBlue : _textMuted,
-                      size: 20,
-                    ),
-                  ),
-                ),
+              _buildFilterPill(
+                index: 1,
+                key: const Key('inbox-filter-unread'),
+                label: s.tr('غير مقروءة', 'Non lus', 'Unread'),
+                ink: ink,
+                pillBg: pillBg,
+                isDark: isDark,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 6),
 
-        // 5. Borderless Chat Items List
+        const SizedBox(height: 10),
+
+        // 4. Conversations List / States
         Expanded(
           child: _isLoading
               ? const ChatListSkeleton()
@@ -1084,33 +964,42 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 72,
-                              height: 72,
-                              decoration: const BoxDecoration(
-                                color: _chatBlueSoft,
+                              width: 68,
+                              height: 68,
+                              decoration: BoxDecoration(
+                                color: pillBg,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
-                                CupertinoIcons.chat_bubble_2_fill,
-                                color: _chatBlue,
-                                size: 34,
+                              child: Icon(
+                                CupertinoIcons.bubble_left_bubble_right,
+                                color: ink,
+                                size: 30,
                               ),
                             ),
                             const SizedBox(height: 20),
-                            const Text(
-                              'تسجيل الدخول للمحادثات',
+                            Text(
+                              s.tr(
+                                'سجّل الدخول لعرض محادثاتك',
+                                'Connectez-vous pour voir vos discussions',
+                                'Sign in to view your chats',
+                              ),
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: _textBlack,
+                                color: ink,
                                 fontSize: 18,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'سجل الدخول للتواصل الفوري مع البائعين والمشترين ومتابعة رسائلك بأمان.',
+                            Text(
+                              s.tr(
+                                'تواصل مباشرة مع البائعين والمشترين وتابع رسائلك بأمان.',
+                                'Échangez directement avec les vendeurs et acheteurs en toute sécurité.',
+                                'Message buyers and sellers directly and securely.',
+                              ),
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: _textMuted,
+                                color: mutedText,
                                 fontSize: 13.5,
                                 height: 1.4,
                               ),
@@ -1121,32 +1010,31 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => AuthScreen(),
+                                    builder: (_) => const AuthScreen(),
                                   ),
                                 ).then((_) => _loadConversations());
                               },
                               child: Container(
+                                height: 52,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
+                                  horizontal: 28,
                                 ),
+                                alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: _chatBlue,
+                                  color: ink,
                                   borderRadius: BorderRadius.circular(999),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _chatBlue.withValues(alpha: 0.30),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
                                 ),
-                                child: const Text(
-                                  'تسجيل الدخول / إنشاء حساب',
+                                child: Text(
+                                  s.tr(
+                                    'تسجيل الدخول',
+                                    'Se connecter',
+                                    'Continue',
+                                  ),
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
+                                    color:
+                                        isDark ? const Color(0xFF000000) : Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
                                   ),
                                 ),
                               ),
@@ -1165,49 +1053,72 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 Container(
                                   width: 64,
                                   height: 64,
-                                  decoration: const BoxDecoration(
-                                    color: _surfaceGrey,
+                                  decoration: BoxDecoration(
+                                    color: pillBg,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     CupertinoIcons.bubble_left_bubble_right,
-                                    color: _textSubtle,
+                                    color: mutedText,
                                     size: 28,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'لا توجد محادثات بعد',
+                                Text(
+                                  _selectedFilterIndex == 1
+                                      ? s.tr(
+                                          'لا توجد رسائل غير مقروءة',
+                                          'Aucun message non lu',
+                                          'No unread chats',
+                                        )
+                                      : s.tr(
+                                          'لا توجد محادثات بعد',
+                                          'Aucune discussion pour le moment',
+                                          'No chats yet',
+                                        ),
                                   style: TextStyle(
-                                    color: _textBlack,
+                                    color: ink,
                                     fontSize: 17,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                const Text(
-                                  'تصفح الإعلانات وتواصل مع البائعين مباشرة بدون وسيط وبأمان تام.',
+                                Text(
+                                  s.tr(
+                                    'تصفح الإعلانات وتواصل مع البائعين مباشرة بأمان تام.',
+                                    'Parcourez les annonces et discutez directement avec les vendeurs.',
+                                    'Browse listings and message sellers directly.',
+                                  ),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: _textMuted,
+                                    color: mutedText,
                                     fontSize: 13,
                                     height: 1.4,
                                   ),
                                 ),
-                                if (widget.onExploreAds != null) ...[
+                                if (widget.onExploreAds != null &&
+                                    _selectedFilterIndex == 0 &&
+                                    _searchQuery.trim().isEmpty) ...[
                                   const SizedBox(height: 18),
-                                  TextButton.icon(
+                                  TextButton(
                                     onPressed: widget.onExploreAds,
-                                    icon: const Icon(
-                                      CupertinoIcons.compass,
-                                      size: 16,
-                                      color: _chatBlue,
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: pillBg,
+                                      foregroundColor: ink,
+                                      shape: const StadiumBorder(),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 10,
+                                      ),
                                     ),
-                                    label: const Text(
-                                      'تصفح الإعلانات',
-                                      style: TextStyle(
-                                        color: _chatBlue,
-                                        fontWeight: FontWeight.w700,
+                                    child: Text(
+                                      s.tr(
+                                        'تصفح الإعلانات',
+                                        'Parcourir les annonces',
+                                        'Explore listings',
+                                      ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
@@ -1222,13 +1133,38 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             physics: const BouncingScrollPhysics(
                               parent: AlwaysScrollableScrollPhysics(),
                             ),
-                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 130),
-                            itemCount: filtered.length,
+                            padding: const EdgeInsets.only(top: 2, bottom: 130),
+                            itemCount: filtered.length + 1,
                             itemBuilder: (context, index) {
+                              if (index == filtered.length) {
+                                return _buildEncryptedFooter(s, mutedText);
+                              }
                               final conv = filtered[index];
                               final isSelected = isDesktop &&
                                   _activeWebConversation?['id'] == conv['id'];
-                              return _buildChatRow(conv, isSelected, isDesktop);
+                              final isLast = index == filtered.length - 1;
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildChatRow(
+                                    conv,
+                                    isSelected: isSelected,
+                                    ink: ink,
+                                    mutedText: mutedText,
+                                    pillBg: pillBg,
+                                  ),
+                                  if (!isLast)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Container(
+                                        height: 1,
+                                        color: dividerColor,
+                                      ),
+                                    ),
+                                ],
+                              );
                             },
                           ),
                         ),
@@ -1237,43 +1173,99 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildTabPill(int index, String label) {
+  Widget _buildFilterPill({
+    required int index,
+    required Key key,
+    required String label,
+    required Color ink,
+    required Color pillBg,
+    required bool isDark,
+  }) {
     final bool active = _selectedFilterIndex == index;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() => _selectedFilterIndex = index);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? _textBlack : _surfaceGrey,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.white : _textMuted,
-            fontSize: 12.5,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+    final Color bg =
+        active ? (isDark ? Colors.white : const Color(0xFF000000)) : pillBg;
+    final Color fg =
+        active ? (isDark ? const Color(0xFF000000) : Colors.white) : ink;
+
+    return Material(
+      color: bg,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: key,
+        customBorder: const StadiumBorder(),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _selectedFilterIndex = index);
+        },
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 20.0 / 14.0,
+            ),
           ),
         ),
       ),
     );
   }
 
+  Widget _buildEncryptedFooter(dynamic s, Color mutedText) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              CupertinoIcons.lock_fill,
+              size: 12,
+              color: mutedText,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                s.tr(
+                  'رسائلك الشخصية مشفرة تماماً بين الطرفين',
+                  'Vos messages personnels sont chiffrés de bout en bout',
+                  'Your personal messages are end-to-end encrypted',
+                ),
+                key: const Key('inbox-e2ee-caption'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: mutedText,
+                  fontSize: 12.0,
+                  fontWeight: FontWeight.w400,
+                  height: 16.0 / 12.0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildChatRow(
-      Map<String, dynamic> conv, bool isSelected, bool isDesktop) {
+    Map<String, dynamic> conv, {
+    required bool isSelected,
+    required Color ink,
+    required Color mutedText,
+    required Color pillBg,
+  }) {
     final int convId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
     final String peerName = (conv['peer_name'] ?? 'Jenny Wilson').toString();
     final String lastMsg = (conv['last_message'] ?? '').toString();
     final String lastTime = (conv['last_message_time'] ?? '').toString();
     final String? avatarUrl = conv['peer_avatar']?.toString();
     final int unread = _effectiveUnread(conv);
-    final bool isOnline = conv['peer_online'] == true;
     final bool isPinned = _pinnedIds.contains(convId);
     final bool isMuted = _mutedIds.contains(convId);
 
@@ -1313,138 +1305,161 @@ class _ChatListScreenState extends State<ChatListScreen> {
         });
       },
       onLongPress: () => _showAppleContextMenu(conv),
-      borderRadius: BorderRadius.circular(14),
       child: Container(
-        color: isSelected ? _chatBlueSoft.withValues(alpha: 0.45) : Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+        color: isSelected ? pillBg.withValues(alpha: 0.65) : Colors.transparent,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Avatar (46x46) with optional Green Online Status Dot
-            NotificationBadge(
-              count: isOnline ? 1 : 0,
-              type: NotificationBadgeType.dot,
-              variant: NotificationBadgeVariant.green,
-              top: 0,
-              right: 0,
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _surfaceGrey,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: avatarUrl != null && avatarUrl.isNotEmpty
-                      ? AppImage(
-                          url: avatarUrl,
-                          width: 46,
-                          height: 46,
-                          fit: BoxFit.cover,
-                          fallback: _buildAvatarFallback(peerName),
-                        )
-                      : _buildAvatarFallback(peerName),
-                ),
+            // 48x48 Circular Avatar (Figma `Inbox` spec)
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _avatarPastelFor(peerName, convId),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: avatarUrl != null && avatarUrl.isNotEmpty
+                    ? AppImage(
+                        url: avatarUrl,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        fallback: _buildAvatarFallback(peerName, convId),
+                      )
+                    : _buildAvatarFallback(peerName, convId),
               ),
             ),
             const SizedBox(width: 12),
 
-            // Middle Column: Name, Pinned/Muted icons, and Last Message
+            // Middle + Right Column: Top (Name + Time), Bottom (2-line Preview + Red Unread Badge)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Flexible(
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                peerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textDirection: ChatMessage.detectTextDirection(
+                                  peerName,
+                                  fallback: Directionality.of(context),
+                                ),
+                                style: TextStyle(
+                                  color: ink,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  height: 20.0 / 15.0,
+                                  letterSpacing:
+                                      AppTypography.trackingForContext(
+                                          context, -0.2),
+                                ),
+                              ),
+                            ),
+                            if (isPinned) ...[
+                              const SizedBox(width: 5),
+                              Icon(
+                                CupertinoIcons.pin_fill,
+                                color: ink,
+                                size: 12,
+                              ),
+                            ],
+                            if (isMuted) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                CupertinoIcons.bell_slash_fill,
+                                color: mutedText,
+                                size: 12,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        lastTime,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textDirection: RegExp(r'^\d').hasMatch(lastTime.trim())
+                            ? TextDirection.ltr
+                            : null,
+                        style: TextStyle(
+                          color: mutedText,
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w400,
+                          height: 18.0 / 13.0,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
                         child: Text(
-                          peerName,
-                          maxLines: 1,
+                          lastMsg,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           textDirection: ChatMessage.detectTextDirection(
-                            peerName,
+                            lastMsg,
                             fallback: Directionality.of(context),
                           ),
                           style: TextStyle(
-                            color: _textBlack,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, -0.2),
+                            color: unread > 0 ? ink : mutedText,
+                            fontSize: 14.0,
+                            fontWeight: unread > 0
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            height: 19.5 / 14.0,
                           ),
                         ),
                       ),
-                      if (isPinned) ...[
-                        const SizedBox(width: 5),
-                        const Icon(
-                          CupertinoIcons.pin_fill,
-                          color: _chatBlue,
-                          size: 12.5,
-                        ),
-                      ],
-                      if (isMuted) ...[
-                        const SizedBox(width: 4),
-                        const Icon(
-                          CupertinoIcons.bell_slash_fill,
-                          color: _textSubtle,
-                          size: 12.5,
+                      if (unread > 0) ...[
+                        const SizedBox(width: 10),
+                        Container(
+                          key: Key('inbox-unread-badge-$convId'),
+                          constraints: const BoxConstraints(
+                            minWidth: 20,
+                            minHeight: 20,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE31B23),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            unread > 99 ? '99+' : '$unread',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              height: 1.1,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    lastMsg,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textDirection: ChatMessage.detectTextDirection(
-                      lastMsg,
-                      fallback: Directionality.of(context),
-                    ),
-                    style: TextStyle(
-                      color: unread > 0 ? _textBlack : _textMuted,
-                      fontSize: 13,
-                      fontWeight:
-                          unread > 0 ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  ),
                 ],
               ),
-            ),
-            const SizedBox(width: 10),
-
-            // Trailing Column: Timestamp & Unread Badge
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  lastTime,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textDirection: RegExp(r'^\d').hasMatch(lastTime.trim())
-                      ? TextDirection.ltr
-                      : null,
-                  style: const TextStyle(
-                    color: _textMuted,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w400,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  height: 20,
-                  child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: NotificationBadge(
-                      count: unread,
-                      type: NotificationBadgeType.number,
-                      variant: NotificationBadgeVariant.red,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -1452,16 +1467,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildAvatarFallback(String name) {
+  Color _avatarPastelFor(String name, int seedId) {
+    final hash = (name.hashCode.abs() + seedId.abs());
+    return _avatarPastels[hash % _avatarPastels.length];
+  }
+
+  Widget _buildAvatarFallback(String name, int seedId) {
     return Container(
-      color: _chatBlueSoft,
+      color: _avatarPastelFor(name, seedId),
       alignment: Alignment.center,
       child: Text(
-        name.isNotEmpty ? name[0].toUpperCase() : 'A',
+        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'A',
         style: const TextStyle(
-          color: _chatBlue,
-          fontSize: 16.5,
-          fontWeight: FontWeight.w800,
+          color: Color(0xFF111827),
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

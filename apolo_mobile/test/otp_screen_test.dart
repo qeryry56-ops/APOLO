@@ -22,8 +22,19 @@ void main() {
     expect(AccountValidation.maskEmail('invalid'), isNull);
   });
 
+  Future<void> submitTwoStepLogin(WidgetTester tester) async {
+    await tester.enterText(find.byKey(const Key('auth-email')), '0612345678');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('auth-submit')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('auth-password')), 'secret123');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('auth-submit')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets(
-      'phone login with unverified email auto-dispatches OTP, displays masked email, and verifies 6-digit code',
+      'phone login with unverified email auto-dispatches OTP, displays masked email, exposes one-time-code numeric keyboard, and auto-verifies 6-digit code',
       (tester) async {
     final state = AppState();
     final original = state.api.dio;
@@ -55,26 +66,27 @@ void main() {
       home: AuthScreen(auth: AccountAuth(client: client)),
     ));
 
-    await tester.enterText(find.byKey(const Key('auth-email')), '0612345678');
-    await tester.enterText(find.byKey(const Key('auth-password')), 'secret123');
-    await tester.ensureVisible(find.byKey(const Key('auth-submit')));
-    await tester.tap(find.byKey(const Key('auth-submit')));
-    await tester.pumpAndSettle();
+    await submitTwoStepLogin(tester);
 
     expect(
       adapter.requests.map((r) => r.path).toList(),
       ['/auth/login', '/auth/otp/resend'],
     );
     expect(adapter.requests.last.data, {'email': 'amine@apolo.ma'});
-    expect(find.text("Let's confirm it's you"), findsOneWidget);
+    expect(find.text('Enter verification code'), findsOneWidget);
     expect(find.textContaining('am***@apolo.ma'), findsWidgets);
-    expect(
-      find.textContaining('Apolo will never ask you to set up a new account'),
-      findsOneWidget,
-    );
     expect(find.byKey(const Key('auth-code')), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('auth-code')), '741218');
+    final otpField =
+        tester.widget<TextField>(find.byKey(const Key('auth-code')));
+    expect(
+      otpField.keyboardType,
+      const TextInputType.numberWithOptions(signed: false, decimal: false),
+    );
+    expect(otpField.autofillHints, contains(AutofillHints.oneTimeCode));
+
+    // Simulate SMS/Email `one-time-code` autofill with spaces ('741 218') -> auto-submits '741218'
+    await tester.enterText(find.byKey(const Key('auth-code')), '741 218');
     await tester.pump(const Duration(milliseconds: 220));
     await tester.pumpAndSettle();
 
@@ -105,19 +117,16 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(
       theme: ThemeData(splashFactory: NoSplash.splashFactory),
-      home: AuthScreen(auth: AccountAuth(client: Dio()..httpClientAdapter = adapter)),
+      home: AuthScreen(
+          auth: AccountAuth(client: Dio()..httpClientAdapter = adapter)),
     ));
 
-    await tester.enterText(find.byKey(const Key('auth-email')), '0612345678');
-    await tester.enterText(find.byKey(const Key('auth-password')), 'secret123');
-    await tester.ensureVisible(find.byKey(const Key('auth-submit')));
-    await tester.tap(find.byKey(const Key('auth-submit')));
-    await tester.pumpAndSettle();
+    await submitTwoStepLogin(tester);
 
     expect(resendCount, 1);
     expect(find.text('SMTP timeout'), findsOneWidget);
     expect(find.byKey(const Key('otp-resend')), findsOneWidget);
-    expect(find.text('Resend'), findsOneWidget);
+    expect(find.text('Resend code'), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const Key('otp-resend')));
     await tester.tap(find.byKey(const Key('otp-resend')));

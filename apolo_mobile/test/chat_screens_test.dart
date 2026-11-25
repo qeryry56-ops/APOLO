@@ -163,59 +163,84 @@ void main() {
   }
 
   testWidgets(
-      'ChatListScreen matches sky-blue iOS Chats design, filters All/Unread, and searches chats',
+      'ChatListScreen matches Dynamic Layer v5.1 Inbox design (21768:49231), active search border, All/Unread pills, red unread badge, and E2EE footer',
       (WidgetTester tester) async {
     await pumpPhone(tester, const ChatListScreen());
 
     expect(tester.takeException(), isNull);
     expect(find.text('Chats'), findsOneWidget);
-    expect(find.text('Search chat'), findsOneWidget);
+    expect(find.text('Search'), findsOneWidget);
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Unread'), findsOneWidget);
-    expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
-
-    // Top sky-blue `+` circle & bare camera icon + subtle gray `...`
-    final plusContainer = tester.widget<Container>(
-      find.ancestor(
-        of: find.byIcon(CupertinoIcons.plus),
-        matching: find.byType(Container),
-      ).first,
+    expect(find.byKey(const Key('inbox-e2ee-caption')), findsOneWidget);
+    expect(
+      find.text('Your personal messages are end-to-end encrypted'),
+      findsOneWidget,
     );
-    final plusDecoration = plusContainer.decoration as BoxDecoration;
-    expect(plusDecoration.color, const Color(0xFF288AF2));
-    expect(plusDecoration.shape, BoxShape.circle);
 
-    // Conversation rows & unread sky-blue badge
+    // Search bar starts borderless `#EEEEEE` (`Default`), gains `1.5px` `#000000` border + `×` on focus (`Search / Active`)
+    AnimatedContainer searchBox() => tester.widget<AnimatedContainer>(
+          find.byKey(const Key('inbox-search-container')),
+        );
+    final defaultDec = searchBox().decoration as BoxDecoration;
+    expect(defaultDec.color, const Color(0xFFEEEEEE));
+    expect((defaultDec.border as Border).top.color, Colors.transparent);
+    expect(find.byKey(const Key('inbox-search-clear')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('inbox-search-field')));
+    await tester.pumpAndSettle();
+    final activeDec = searchBox().decoration as BoxDecoration;
+    expect((activeDec.border as Border).top.color, const Color(0xFF000000));
+    expect((activeDec.border as Border).top.width, 1.5);
+    expect(find.byKey(const Key('inbox-search-clear')), findsOneWidget);
+
+    // Conversation rows & red `#E31B23` unread count badge
     expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Aileen Fullbright'), findsOneWidget);
     expect(find.text('Ronald Richards'), findsOneWidget);
 
     final badgeContainer = tester.widget<Container>(
-      find.ancestor(
-        of: find.text('2'),
-        matching: find.byType(Container),
-      ).first,
+      find.byKey(const Key('inbox-unread-badge-1')),
     );
     final badgeDecoration = badgeContainer.decoration as BoxDecoration;
-    expect(badgeDecoration.color, const Color(0xFF288AF2));
+    expect(badgeDecoration.color, const Color(0xFFE31B23));
 
-    // Active `All` pill uses soft sky-blue `#E3F1FE` + `#288AF2` text
-    final allText = tester.widget<Text>(find.text('All'));
-    expect(allText.style?.color, const Color(0xFF288AF2));
+    // Active `All` pill uses solid `#000000` + `#FFFFFF` text; `Unread` uses `#EEEEEE` + `#000000` text
+    final allMat = tester.widget<Material>(
+      find.ancestor(
+        of: find.byKey(const Key('inbox-filter-all')),
+        matching: find.byType(Material),
+      ).first,
+    );
+    final unreadMat = tester.widget<Material>(
+      find.ancestor(
+        of: find.byKey(const Key('inbox-filter-unread')),
+        matching: find.byType(Material),
+      ).first,
+    );
+    expect(allMat.color, const Color(0xFF000000));
+    expect(unreadMat.color, const Color(0xFFEEEEEE));
 
     // Filtering by `Unread` hides Ronald Richards (unread_count = 0)
-    await tester.tap(find.text('Unread'));
+    await tester.tap(find.byKey(const Key('inbox-filter-unread')));
     await tester.pumpAndSettle();
     expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Ronald Richards'), findsNothing);
 
-    // Switch back to `All` and search for 'Ronald'
-    await tester.tap(find.text('All'));
+    // Switch back to `All` and search for 'Ronald' (`Search / Filled` state)
+    await tester.tap(find.byKey(const Key('inbox-filter-all')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Ronald');
+    await tester.enterText(find.byKey(const Key('inbox-search-field')), 'Ronald');
     await tester.pumpAndSettle();
     expect(find.text('Ronald Richards'), findsOneWidget);
     expect(find.text('Jenny Wilson'), findsNothing);
+
+    // Unfocusing with query keeps `×` clear button and hides black border (`Search / Filled`)
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    final filledDec = searchBox().decoration as BoxDecoration;
+    expect((filledDec.border as Border).top.color, Colors.transparent);
+    expect(find.byKey(const Key('inbox-search-clear')), findsOneWidget);
   });
 
   group('ChatRoomScreen Arabic RTL', () {
