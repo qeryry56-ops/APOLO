@@ -1,23 +1,29 @@
 import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/services/media_rtc_bridge.dart';
 import '../core/state/app_state.dart';
+import '../theme/dl_share_profile_tokens.dart';
+import '../widgets/dl_settings_kit.dart';
 import '../widgets/notification_badge.dart';
 import '../widgets/pull_to_refresh.dart';
 import 'ad_detail_screen.dart';
-import 'auth_screen.dart';
 import 'chat_room_screen.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
-/// Grouped iOS-style Notifications Screen matching SettingsScreen (#F2F3F7 canvas + white cards):
-/// - Real backend integration with `GET /notifications`
-/// - Mark all as read with server sync (`POST /notifications/read-all`)
-/// - Direct deep-link navigation to real Ad or real Chat Room
-/// - Clean Empty, Logged-Out, and Offline states
+/// Dynamic Layer v5.1 Notification Screen (`Notification / Default`, `45849:25601`):
+/// - Pure `#FFFFFF` canvas with `56px` top navigation (`40×40` `#EEEEEE` circular back button)
+/// - Exact `330 × 240 px` `# notification-img` phone & floating message banner illustration
+/// - Bottom-anchored `Notification` heading, subtitle, and `56px` pill `ButtonDock` (`Continue`)
+///   that activates real browser/OS notifications (`MediaRtcBridge.requestBrowserNotificationPermission`)
+/// - Seamless Dynamic Layer grouped notification feed when `/notifications` items arrive
 class NotificationsScreen extends StatefulWidget {
   final bool initialSimulateOffline;
   const NotificationsScreen({super.key, this.initialSimulateOffline = false});
@@ -27,22 +33,26 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  static const String _prefActivatedKey = 'apolo_notifications_activated_v1';
+
   final AppState _state = AppState();
   int _selectedFilter = 0; // 0: All, 1: Messages & Offers, 2: Activity
   late bool _isOffline;
   bool _isLoading = true;
   bool _isReconnecting = false;
+  bool _isActivated = false;
+  bool _isActivating = false;
 
   List<Map<String, dynamic>> _items = [];
 
-  static const Color _bg = Color(0xFFF2F3F7);
-  static const Color _cardBg = Colors.white;
-  static const Color _ink = Color(0xFF0A0A0A);
+  static const Color _bg = Color(0xFFFFFFFF);
+  static const Color _cardBg = Color(0xFFF7F7F7);
+  static const Color _ink = Color(0xFF000000);
   static const Color _red = Color(0xFFE31B23);
-  static const Color _surface = Color(0xFFF5F6F8);
-  static const Color _muted = Color(0xFF6B7280);
+  static const Color _pillGrey = Color(0xFFEEEEEE);
+  static const Color _muted = Color(0xFF757575);
   static const Color _timeMuted = Color(0xFF8E8E93);
-  static const Color _divider = Color(0xFFF1F2F6);
+  static const Color _divider = Color(0xFFEEEEEE);
 
   @override
   void initState() {
@@ -51,7 +61,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // Rule 5: Clear badge immediately on screen open without waiting for API.
     _state.clearUnreadNotificationsOptimistically(syncRemote: false);
     _state.addListener(_onStateChanged);
+    _loadActivationState();
     _loadNotifications();
+  }
+
+  Future<void> _loadActivationState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getBool(_prefActivatedKey) ?? false;
+      if (mounted && saved != _isActivated) {
+        setState(() => _isActivated = saved);
+      }
+    } catch (_) {}
   }
 
   void _onStateChanged() {
@@ -62,6 +83,56 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void dispose() {
     _state.removeListener(_onStateChanged);
     super.dispose();
+  }
+
+  Future<void> _activateNotifications() async {
+    if (_isActivating) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _isActivating = true);
+
+    try {
+      MediaRtcBridge.requestBrowserNotificationPermission();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefActivatedKey, true);
+    } catch (_) {}
+
+    if (!mounted) return;
+    setState(() {
+      _isActivated = true;
+      _isActivating = false;
+    });
+
+    final s = _state.s;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: _ink,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          duration: const Duration(seconds: 2),
+          content: Text(
+            s.tr(
+              'تم تفعيل الإشعارات بنجاح',
+              'Notifications activées avec succès',
+              'Notifications activated',
+            ),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+
+    if (_state.isLoggedIn) {
+      await _loadNotifications();
+    }
   }
 
   Future<void> _loadNotifications() async {
@@ -184,7 +255,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _updateUnreadBadge() {
-    // Global badge stays cleared optimistically once the user opens NotificationsScreen.
     _state.setUnreadNotificationsCount(0);
   }
 
@@ -225,7 +295,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         MaterialPageRoute(
           builder: (_) => ChatRoomScreen(
             conversationId: convId ?? senderId!,
-            backendConversationId: (convId != null && convId > 0) ? convId : null,
+            backendConversationId:
+                (convId != null && convId > 0) ? convId : null,
             adId: adId,
             peerId: senderId,
             firestoreDocId: firestoreDocId,
@@ -266,229 +337,562 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     await _loadNotifications();
   }
 
+  /// Exact Figma `TopNavigation` (`56px` height, `16px` horizontal padding,
+  /// `40×40` circular `#EEEEEE` back button, optional centered title & trailing action
+  /// when notification feed items exist).
+  Widget _buildDlTopBar({
+    required bool isAr,
+    required bool hasFeedItems,
+  }) {
+    final s = _state.s;
+    final topInset = MediaQuery.paddingOf(context).top;
+    final backIcon =
+        isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left;
+    final hasUnread =
+        !_isOffline && _state.isLoggedIn && _items.any((e) => e['unread'] == true);
+
+    return SizedBox(
+      key: const Key('dl-notification-top-nav'),
+      height: topInset + DlShareProfileLayout.topNavHeight,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(
+          height: DlShareProfileLayout.topNavHeight,
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DlShareProfileLayout.topNavHorizontalPadding,
+            ),
+            child: Row(
+              children: [
+                ApoloDlIconCircleButton(
+                  key: const Key('dl-notification-back-button'),
+                  icon: backIcon,
+                  backgroundColor: _pillGrey,
+                  iconColor: _ink,
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: hasFeedItems
+                      ? Text(
+                          s.tr('الإشعارات', 'Notifications', 'Notifications'),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            height: 1.5,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                const SizedBox(width: 16),
+                if (hasUnread)
+                  ApoloDlIconCircleButton(
+                    key: const Key('dl-notification-mark-all-read'),
+                    icon: CupertinoIcons.checkmark_alt,
+                    backgroundColor: _pillGrey,
+                    iconColor: _ink,
+                    tooltip: s.tr(
+                      'تحديد الكل كمقروء',
+                      'Tout marquer comme lu',
+                      'Mark all as read',
+                    ),
+                    onPressed: _markAllRead,
+                  )
+                else if (kDebugMode && hasFeedItems)
+                  ApoloDlIconCircleButton(
+                    icon: _isOffline
+                        ? CupertinoIcons.wifi_slash
+                        : CupertinoIcons.wifi,
+                    backgroundColor:
+                        _isOffline ? const Color(0xFFFEF2F2) : _pillGrey,
+                    iconColor: _isOffline ? _red : _muted,
+                    onPressed: () {
+                      setState(() => _isOffline = !_isOffline);
+                      if (!_isOffline) _loadNotifications();
+                    },
+                  )
+                else
+                  const SizedBox(width: 40, height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Exact Figma `# notification-img` (`330 × 240 px`, `top: 205px`, `left: 23px` on `375×812`):
+  /// - Centered rounded matte-grey iOS phone silhouette (`206 × 240 px`) with top speaker pill
+  ///   and soft bottom white fade
+  /// - Overlapping floating `#FFFFFF` notification banner card (`borderRadius: 16px`, `1px` border,
+  ///   `16px` vertical padding, `44×44` rounded icon placeholder, bold title + `"now"` + 2-line preview).
+  Widget _buildDlNotificationIllustration(bool isAr) {
+    final s = _state.s;
+    final previewTitle = s.tr(
+      'مرحباً، معك Apolo!',
+      'Bonjour, c’est Apolo !',
+      "Hey, it's Apolo!",
+    );
+    final previewBody = s.tr(
+      'أنا جاهز لمساعدتك في رسائلك وعروضك الجديدة. ماذا عنك؟',
+      'Je suis prêt à vous alerter dès qu’un message arrive. Et vous ?',
+      'I am ready to help you out. How about you?',
+    );
+    final nowLabel = s.tr('الآن', 'maintenant', 'now');
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 330.0),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            key: const Key('dl-notification-img'),
+            width: 330.0,
+            height: 240.0,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.none,
+              children: [
+                // Phone top silhouette (`206 × 240 px`)
+                Container(
+                  width: 206.0,
+                  height: 240.0,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEEEEE),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(34.0),
+                    ),
+                    border: Border.all(
+                      color: const Color(0xFFE4E4E4),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Container(
+                        width: 40,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD4D4D4),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Soft bottom fade into white canvas matching Figma `Notification / Default`
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 52,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            _bg.withValues(alpha: 0.0),
+                            _bg.withValues(alpha: 0.86),
+                            _bg,
+                          ],
+                          stops: const [0.0, 0.65, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Floating Notification Banner Card (`330 × 96..100 px`, `radius: 16`, `1px` border)
+                Positioned(
+                  top: 76.0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    key: const Key('dl-notification-preview-card'),
+                    constraints: const BoxConstraints(minHeight: 96.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0,
+                      vertical: 16.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16.0),
+                      border: Border.all(
+                        color: const Color(0xFFEBEBEB),
+                        width: 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.055),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 44.0,
+                          height: 44.0,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE5E5E5),
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                        ),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      previewTitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _ink,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.25,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    nowLabel,
+                                    style: const TextStyle(
+                                      color: _muted,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w400,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3.0),
+                              Text(
+                                previewBody,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF4B5563),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Exact Figma `Notification / Default` (`45849:25601`) full-screen layout:
+  /// - `# notification-img` (`330 × 240 px`) positioned cleanly in upper-center (`~101px` below TopNav on `812` height)
+  /// - Bottom `wrapper` (`Notification` + `Activate notifications to receive messages`)
+  /// - Bottom `ButtonDock` (`56px` full-width pill `#000000` `Continue` CTA).
+  Widget _buildDlDefaultActivationLayout({
+    required bool isAr,
+    required Size screenSize,
+    required EdgeInsets mediaPadding,
+  }) {
+    final s = _state.s;
+    final bottomSafe =
+        DlShareProfileLayout.resolveBottomSafeInset(screenSize, mediaPadding);
+    final bottomDockPad = math.max(20.0, bottomSafe + 8.0);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableH = constraints.maxHeight;
+        // On a 812px screen (`availableH ≈ 708px` below 104px header), top gap is ~101px (`205 - 104`).
+        final topIllustrationGap =
+            ((availableH - 460.0) * 0.40).clamp(20.0, 101.0);
+
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: availableH),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: topIllustrationGap),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 22.5),
+                    child: _buildDlNotificationIllustration(isAr),
+                  ),
+                  const Spacer(),
+                  const SizedBox(height: 24),
+                  // `wrapper`: Title + Subtitle above `ButtonDock`
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          s.tr('الإشعارات', 'Notifications', 'Notification'),
+                          key: const Key('dl-notification-title'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 24.0,
+                            fontWeight: FontWeight.w700,
+                            height: 32.0 / 24.0,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 8.0),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 280.0),
+                          child: Text(
+                            _isActivated
+                                ? s.tr(
+                                    'الإشعارات مفعّلة. ستتوصل بالرسائل والعروض فور وصولها',
+                                    'Notifications activées. Vous recevrez vos nouveaux messages ici',
+                                    'Activate notifications to receive messages',
+                                  )
+                                : s.tr(
+                                    'فعّل الإشعارات للتوصل بالرسائل',
+                                    'Activez les notifications pour recevoir des messages',
+                                    'Activate notifications to receive messages',
+                                  ),
+                            key: const Key('dl-notification-subtitle'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: _muted,
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w400,
+                              height: 22.0 / 15.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28.0),
+                  // `ButtonDock` (`16px` horizontal padding, `56px` black `roundedFull` pill CTA)
+                  Padding(
+                    key: const Key('dl-notification-button-dock'),
+                    padding: EdgeInsets.fromLTRB(16.0, 0, 16.0, bottomDockPad),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 56.0,
+                          child: Material(
+                            color: _ink,
+                            shape: const StadiumBorder(),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              key: const Key('dl-notification-continue-button'),
+                              customBorder: const StadiumBorder(),
+                              onTap: _isActivating ? null : _activateNotifications,
+                              child: Center(
+                                child: Text(
+                                  s.tr('متابعة', 'Continuer', 'Continue'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w600,
+                                    height: 24.0 / 16.0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
     final isAr = s.isAr;
+    final screenSize = MediaQuery.sizeOf(context);
+    final mediaPadding = MediaQuery.paddingOf(context);
     final filtered = _filteredItems;
     final unreadItems = filtered.where((e) => e['unread'] == true).toList();
     final readItems = filtered.where((e) => e['unread'] != true).toList();
+    final bool showDefaultDlScreen =
+        !_isOffline && !_isLoading && _items.isEmpty;
 
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: _bg,
-        appBar: AppBar(
-          backgroundColor: _bg,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          toolbarHeight: 48,
-          centerTitle: true,
-          leading: IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: Icon(
-              isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left,
-              color: _ink,
-              size: 22,
+        body: Column(
+          children: [
+            _buildDlTopBar(
+              isAr: isAr,
+              hasFeedItems: !showDefaultDlScreen,
             ),
-          ),
-          title: Text(
-            s.tr('الإشعارات', 'Notifications', 'Notifications'),
-            style: const TextStyle(
-              color: _ink,
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          actions: [
-            if (kDebugMode)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 6),
-                child: PressableScale(
-                  onTap: () {
-                    setState(() => _isOffline = !_isOffline);
-                    if (!_isOffline) _loadNotifications();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _isOffline ? const Color(0xFFFEF2F2) : _cardBg,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Icon(
-                      _isOffline
-                          ? CupertinoIcons.wifi_slash
-                          : CupertinoIcons.wifi,
-                      size: 14,
-                      color: _isOffline ? _red : _muted,
-                    ),
-                  ),
-                ),
-              ),
-            if (!_isOffline &&
-                _state.isLoggedIn &&
-                _items.any((e) => e['unread'] == true))
-              IconButton(
-                tooltip: s.tr('تحديد الكل كمقروء', 'Tout marquer comme lu',
-                    'Mark all as read'),
-                onPressed: _markAllRead,
-                icon: const Icon(
-                  CupertinoIcons.checkmark_alt_circle,
-                  color: _ink,
-                  size: 22,
-                ),
-              ),
-          ],
-        ),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: PullToRefresh(
-                brandColor: _red,
-                backgroundColor: _cardBg,
-                onRefresh: _loadNotifications,
-                child: ListView(
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
-                  children: [
-                    // Filter Pills (Shown only when logged in, online, and has notifications)
-                    if (!_isOffline && _state.isLoggedIn && _items.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Row(
+            Expanded(
+              child: showDefaultDlScreen
+                  ? _buildDlDefaultActivationLayout(
+                      isAr: isAr,
+                      screenSize: screenSize,
+                      mediaPadding: mediaPadding,
+                    )
+                  : Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: PullToRefresh(
+                          brandColor: _ink,
+                          backgroundColor: _bg,
+                          onRefresh: _loadNotifications,
+                          child: ListView(
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
+                            ),
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 36),
                             children: [
-                              _buildFilterChip(
-                                0,
-                                s.tr('الكل', 'Tout', 'All'),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                1,
-                                s.tr('الرسائل والعروض', 'Messages & Offres',
-                                    'Messages & Offers'),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                2,
-                                s.tr('نشاط الحساب', 'Activité', 'Activity'),
-                              ),
+                              if (!_isOffline &&
+                                  _state.isLoggedIn &&
+                                  _items.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const BouncingScrollPhysics(),
+                                    child: Row(
+                                      children: [
+                                        _buildFilterChip(
+                                          0,
+                                          s.tr('الكل', 'Tout', 'All'),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildFilterChip(
+                                          1,
+                                          s.tr(
+                                            'الرسائل والعروض',
+                                            'Messages & Offres',
+                                            'Messages & Offers',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildFilterChip(
+                                          2,
+                                          s.tr(
+                                            'نشاط الحساب',
+                                            'Activité',
+                                            'Activity',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              if (_isOffline)
+                                _buildStateCard(
+                                  IllustratedStateView(
+                                    assetPath:
+                                        'assets/images/state_no_internet.png',
+                                    fallbackIcon: CupertinoIcons.wifi_slash,
+                                    imageSize: 156,
+                                    title: s.tr(
+                                      'لا يوجد اتصال بالإنترنت',
+                                      'Aucune connexion Internet',
+                                      'No Internet connection',
+                                    ),
+                                    subtitle: s.tr(
+                                      'تأكد من اتصالك بشبكة Wi-Fi أو بيانات الهاتف لتحميل آخر الإشعارات والرسائل.',
+                                      'Vérifiez votre connexion Wi-Fi ou mobile pour actualiser vos notifications.',
+                                      'Check your Wi-Fi or mobile data to refresh your notifications.',
+                                    ),
+                                    actionLabel: _isReconnecting
+                                        ? s.tr(
+                                            'جاري الاتصال...',
+                                            'Connexion...',
+                                            'Connecting...',
+                                          )
+                                        : s.tr(
+                                            'إعادة المحاولة الآن',
+                                            'Réessayer maintenant',
+                                            'Try again',
+                                          ),
+                                    onAction: _retryConnection,
+                                  ),
+                                )
+                              else if (_isLoading)
+                                const NotificationsSkeleton()
+                              else if (filtered.isEmpty)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 48),
+                                  child: Center(
+                                    child: Text(
+                                      s.tr(
+                                        'لا توجد إشعارات في هذا التصنيف',
+                                        'Aucune notification dans cette catégorie',
+                                        'No notifications in this category',
+                                      ),
+                                      style: const TextStyle(
+                                        color: _muted,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else ...[
+                                if (unreadItems.isNotEmpty) ...[
+                                  _buildSectionHeader(
+                                    s.tr('جديد', 'Nouveau', 'New'),
+                                  ),
+                                  _buildNotificationGroup(unreadItems, isAr),
+                                ],
+                                if (readItems.isNotEmpty) ...[
+                                  _buildSectionHeader(
+                                    s.tr('الأقدم', 'Plus ancien', 'Earlier'),
+                                  ),
+                                  _buildNotificationGroup(readItems, isAr),
+                                ],
+                              ],
                             ],
                           ),
                         ),
                       ),
-
-                    // 1. Logged Out State
-                    if (!_state.isLoggedIn)
-                      _buildStateCard(
-                        IllustratedStateView(
-                          assetPath: 'assets/images/state_notifications.png',
-                          fallbackIcon: CupertinoIcons.bell,
-                          imageSize: 156,
-                          title: s.tr(
-                            'سجل الدخول لتلقي الإشعارات',
-                            'Connectez-vous pour voir vos alertes',
-                            'Sign in to see notifications',
-                          ),
-                          subtitle: s.tr(
-                            'توصل فورياً بجديد الرسائل وعروض الأسعار على إعلاناتك المعروضة للبيع.',
-                            'Recevez en temps réel les offres et messages sur vos annonces.',
-                            'Get instant updates on messages and offers for your listings.',
-                          ),
-                          actionLabel: s.tr(
-                            'تسجيل الدخول / إنشاء حساب',
-                            'Connexion / Inscription',
-                            'Sign in / Register',
-                          ),
-                          onAction: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const AuthScreen(initialIsLogin: true),
-                              ),
-                            ).then((_) => _loadNotifications());
-                          },
-                        ),
-                      )
-                    // 2. Offline State
-                    else if (_isOffline)
-                      _buildStateCard(
-                        IllustratedStateView(
-                          assetPath: 'assets/images/state_no_internet.png',
-                          fallbackIcon: CupertinoIcons.wifi_slash,
-                          imageSize: 156,
-                          title: s.tr(
-                            'لا يوجد اتصال بالإنترنت',
-                            'Aucune connexion Internet',
-                            'No Internet connection',
-                          ),
-                          subtitle: s.tr(
-                            'تأكد من اتصالك بشبكة Wi-Fi أو بيانات الهاتف لتحميل آخر الإشعارات والرسائل.',
-                            'Vérifiez votre connexion Wi-Fi ou mobile pour actualiser vos notifications.',
-                            'Check your Wi-Fi or mobile data to refresh your notifications.',
-                          ),
-                          actionLabel: _isReconnecting
-                              ? s.tr('جاري الاتصال...', 'Connexion...',
-                                  'Connecting...')
-                              : s.tr('إعادة المحاولة الآن',
-                                  'Réessayer maintenant', 'Try again'),
-                          onAction: _retryConnection,
-                        ),
-                      )
-                    // 3. Loading State
-                    else if (_isLoading)
-                      const NotificationsSkeleton()
-                    // 4. Empty Notifications State
-                    else if (filtered.isEmpty)
-                      _buildStateCard(
-                        IllustratedStateView(
-                          assetPath: 'assets/images/state_notifications.png',
-                          fallbackIcon: CupertinoIcons.bell_slash,
-                          imageSize: 156,
-                          title: s.tr(
-                            'لا توجد إشعارات جديدة حالياً',
-                            'Aucune notification pour le moment',
-                            'No notifications yet',
-                          ),
-                          subtitle: s.tr(
-                            'سنقوم بتنبيهك فور وصول رسالة من مشتري أو عند تلقي عرض سعر جديد على إعلانك.',
-                            'Nous vous alerterons dès qu’un acheteur vous contacte ou fait une offre.',
-                            'We will notify you when a buyer messages you or sends an offer.',
-                          ),
-                          actionLabel: s.tr(
-                              'تحديث الإشعارات', 'Actualiser', 'Refresh'),
-                          onAction: _loadNotifications,
-                        ),
-                      )
-                    // 5. Grouped White Card Notifications List
-                    else ...[
-                      if (unreadItems.isNotEmpty) ...[
-                        _buildSectionHeader(
-                          s.tr('جديد', 'Nouveau', 'New'),
-                        ),
-                        _buildNotificationGroup(unreadItems, isAr),
-                      ],
-                      if (readItems.isNotEmpty) ...[
-                        _buildSectionHeader(
-                          s.tr('الأقدم', 'Plus ancien', 'Earlier'),
-                        ),
-                        _buildNotificationGroup(readItems, isAr),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
+                    ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -519,7 +923,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         style: const TextStyle(
           color: _muted,
           fontSize: 13,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -533,7 +937,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (i < items.length - 1) {
         rows.add(
           const Padding(
-            padding: EdgeInsetsDirectional.only(start: 68, end: 14),
+            padding: EdgeInsetsDirectional.only(start: 70, end: 16),
             child: Divider(height: 1, thickness: 1, color: _divider),
           ),
         );
@@ -541,10 +945,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _divider, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: rows),
@@ -583,7 +988,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: InkWell(
           onTap: () => _openNotification(item),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -598,7 +1003,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     height: 44,
                     padding: const EdgeInsets.all(7),
                     decoration: const BoxDecoration(
-                      color: _surface,
+                      color: _pillGrey,
                       shape: BoxShape.circle,
                     ),
                     child: Image.asset(
@@ -626,7 +1031,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         style: TextStyle(
                           fontSize: 14.5,
                           fontWeight:
-                              unread ? FontWeight.w600 : FontWeight.w500,
+                              unread ? FontWeight.w700 : FontWeight.w500,
                           color: _ink,
                         ),
                       ),
@@ -683,9 +1088,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? _ink : _cardBg,
+          color: selected ? _ink : _pillGrey,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(

@@ -809,6 +809,84 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(milliseconds: 50));
     });
+
+    testWidgets(
+        'NotificationsScreen renders Dynamic Layer v5.1 Notification / Default (330x240 #notification-img, 40x40 back, 56px Continue pill) across viewports',
+        (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
+        ..httpClientAdapter = _StubAdapter((_) => _json({
+              'status': 'success',
+              'notifications': <dynamic>[],
+            }));
+      state.currentUser = null;
+      await tester.runAsync(() => state.api.setToken(null));
+      await tester.runAsync(() => state.setLocale(const Locale('en')));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(splashFactory: NoSplash.splashFactory),
+          builder: (context, w) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              padding: const EdgeInsets.only(top: 48, bottom: 34),
+              disableAnimations: true,
+            ),
+            child: w!,
+          ),
+          home: const NotificationsScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+
+      // 40x40 circular back button
+      final backRect =
+          tester.getRect(find.byKey(const Key('dl-notification-back-button')));
+      expect(backRect.width, closeTo(40.0, 0.01));
+      expect(backRect.height, closeTo(40.0, 0.01));
+
+      // Exact Figma `# notification-img` = 330 x 240 px centered horizontally (left ~22.5px)
+      final imgRect =
+          tester.getRect(find.byKey(const Key('dl-notification-img')));
+      expect(imgRect.width, closeTo(330.0, 0.01));
+      expect(imgRect.height, closeTo(240.0, 0.01));
+      expect(imgRect.left, closeTo(22.5, 1.0));
+      expect(find.byKey(const Key('dl-notification-preview-card')), findsOneWidget);
+
+      // Heading, subtitle, and 56px pill Continue button in ButtonDock
+      expect(find.text('Notification'), findsOneWidget);
+      expect(
+        find.text('Activate notifications to receive messages'),
+        findsOneWidget,
+      );
+      final continueRect = tester
+          .getRect(find.byKey(const Key('dl-notification-continue-button')));
+      expect(continueRect.height, closeTo(56.0, 0.01));
+      expect(find.text('Continue'), findsOneWidget);
+
+      // Tapping Continue activates notifications cleanly without exception
+      await tester.tap(find.byKey(const Key('dl-notification-continue-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull);
+
+      // Verify Arabic RTL on small 320x568 viewport renders with zero overflow
+      await tester.runAsync(() => state.setLocale(const Locale('ar')));
+      tester.view.physicalSize = const Size(320, 568);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull);
+      expect(find.text('الإشعارات'), findsOneWidget);
+      expect(find.text('متابعة'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    });
   });
 
   group('Nav Bar, Tab Bar, List Item placement smoke checks', () {
