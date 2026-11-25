@@ -243,7 +243,7 @@ void main() {
       expect(find.text('Casa Oliva Villa'), findsOneWidget);
       expect(find.text('212 MAD'), findsOneWidget);
       expect(find.text('Online'), findsNothing);
-      expect(find.text('غير متصل'), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.videocam), findsOneWidget);
       expect(find.text('السلام عليكم، واش باقي متوفر؟'), findsOneWidget);
       expect(find.text('وعليكم السلام، نعم متوفر'), findsOneWidget);
       expect(find.byIcon(CupertinoIcons.mic), findsOneWidget);

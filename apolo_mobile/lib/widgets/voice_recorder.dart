@@ -1059,14 +1059,16 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
-                          child: Icon(
+                            child: Icon(
                             _isPastCancelThreshold
                                 ? CupertinoIcons.trash_fill
                                 : CupertinoIcons.mic,
                             color: _isRecording
                                 ? Colors.white
-                                : const Color(0xFF8E8E93),
-                            size: 20,
+                                : (widget.compactWhenIdle
+                                    ? const Color(0xFFCCCCCC)
+                                    : const Color(0xFF8E8E93)),
+                            size: widget.compactWhenIdle ? 19.5 : 20,
                           ),
                         ),
                       ),

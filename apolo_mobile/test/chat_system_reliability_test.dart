@@ -98,11 +98,17 @@ void main() {
       // iOS 26 iMessage floating Liquid Glass controls & composer
       expect(find.byKey(const Key('chat-ios26-back-button')), findsOneWidget);
       expect(find.byKey(const Key('chat-ios26-call-button')), findsOneWidget);
+      expect(find.byKey(const Key('chat-ios26-avatar-glass')), findsOneWidget);
+      expect(find.byKey(const Key('chat-ios26-name-pill')), findsOneWidget);
       expect(find.byKey(const Key('chat-attach-button')), findsOneWidget);
       expect(find.byKey(const Key('chat-draft')), findsOneWidget);
 
-      // Clean presence status subtitle (does not fake online when no presence event arrived)
+      // Tapping Video Call button reveals presence status & video/voice/safety options
+      await tester.tap(find.byKey(const Key('chat-ios26-call-button')));
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('chat-peer-presence-text')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('chat-ios26-call-button')));
+      await tester.pumpAndSettle();
 
       // Sender and receiver bubbles rendered distinctly
       expect(find.text('السلام عليكم، واش الساعة باقية؟'), findsOneWidget);
@@ -191,18 +197,15 @@ void main() {
       );
       final adTopBeforeScroll = tester.getTopLeft(adBannerFinder).dy;
 
-      // 2. Native iOS Frosted Glass Header (`rgba(255,255,255,0.75)`, `0.5px` bottom border, `Clip.hardEdge`, no TopEdgeFade)
-      expect(find.byType(Ios26FrostedHeaderBar), findsOneWidget);
-      expect(find.byType(Ios26TopEdgeFade), findsNothing);
-      final headerSurface = tester.widget<Container>(
-        find.byKey(const Key('ios26-frosted-header-surface')),
+      // 2. Exact Figma `1:2` White Header Gradient Overlay (`0%: 2% -> 26.504%: 70% -> 61.221%: 90% -> 100%: 100%`)
+      expect(find.byType(Ios26HeaderGradientOverlay), findsOneWidget);
+      final gradientBox = tester.widget<DecoratedBox>(
+        find.byKey(const Key('ios26-header-gradient-box')),
       );
-      expect(headerSurface.clipBehavior, Clip.hardEdge);
-      final headerDeco = headerSurface.decoration! as BoxDecoration;
-      expect(headerDeco.color, Ios26IMessageTokens.headerFrostedLight);
-      final border = headerDeco.border! as Border;
-      expect(border.bottom.width, 0.5);
-      expect(border.bottom.color, Ios26IMessageTokens.headerBorderLight);
+      final gradientDeco = gradientBox.decoration as BoxDecoration;
+      final headerGrad = gradientDeco.gradient! as LinearGradient;
+      expect(headerGrad.colors, Ios26IMessageTokens.headerGradientColors);
+      expect(headerGrad.stops, Ios26IMessageTokens.headerGradientStops);
 
       // 3. Inline image bubble renders actual image with 18px radius, hides raw `scaled_IMG_0865.png`, and shows "Delivered"
       expect(find.byKey(const Key('chat-image-bubble-id_img_1')), findsOneWidget);

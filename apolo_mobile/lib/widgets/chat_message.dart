@@ -260,6 +260,26 @@ class ChatMessage extends StatefulWidget {
     return true;
   }
 
+  /// Formats centered iMessage timestamp divider (`"Monday at 11:04PM"`, `"Yesterday at 8:34PM"`).
+  static String formatIMessageTimestampDivider(DateTime t, AppStrings s) {
+    final dayPart = formatChatDayLabel(t, s);
+    final bool hasClock = t.hour != 0 || t.minute != 0;
+    if (!hasClock) return dayPart;
+
+    final int h12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    final String mm = t.minute.toString().padLeft(2, '0');
+    final bool isPm = t.hour >= 12;
+
+    if (s.isEn) {
+      return '$dayPart at $h12:$mm${isPm ? "PM" : "AM"}';
+    }
+    if (s.isAr) {
+      return '$dayPart \u2066$h12:$mm\u2069 ${isPm ? "م" : "ص"}';
+    }
+    final String hh = t.hour.toString().padLeft(2, '0');
+    return '$dayPart à $hh:$mm';
+  }
+
   /// Precomputes O(N) grouping and date-divider metadata for a virtualized message list.
   static List<ChatMessageGroupMeta> computeGrouping(
     List<Map<String, dynamic>> messages, {
@@ -295,7 +315,7 @@ class ChatMessage extends StatefulWidget {
         if (lastExplicitDate == null ||
             !isSameChatDay(lastExplicitDate, currDt)) {
           dateChanged = true;
-          resolvedLabel = formatChatDayLabel(currDt, s);
+          resolvedLabel = formatIMessageTimestampDivider(currDt, s);
           lastExplicitDate = currDt;
         }
       }
@@ -479,7 +499,10 @@ class _ChatMessageState extends State<ChatMessage> {
         ),
       );
     } else if (isPureImageBubble) {
-      // Native iOS inline image bubble: rounded-2xl (18px), object-fit cover, zero raw filename
+      // Exact Figma `1:2` photo message bubble (`(25, -58, 170, 222)`):
+      // `170 × 216` rounded `18px` image body + `6px` sender-side tail at bottom.
+      final double photoHeight =
+          Ios26IMessageTokens.photoBubbleBodyHeight + tailDrop;
       bubbleCore = GestureDetector(
         key: Key('chat-bubble-${widget.messageKey}'),
         onTap: widget.onImageTap,
@@ -487,41 +510,43 @@ class _ChatMessageState extends State<ChatMessage> {
         onSecondaryTap: widget.onOpenActions,
         child: Container(
           key: Key('chat-image-bubble-${widget.messageKey}'),
-          constraints: const BoxConstraints(
-            minWidth: 164,
-            maxWidth: 232,
-            minHeight: 140,
-            maxHeight: 272,
+          width: Ios26IMessageTokens.photoBubbleWidth,
+          height: photoHeight,
+          constraints: BoxConstraints(
+            minWidth: Ios26IMessageTokens.photoBubbleWidth,
+            maxWidth: 210,
+            minHeight: 156 + tailDrop,
+            maxHeight: 246 + tailDrop,
           ),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2F2F7),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.black.withValues(alpha: 0.08),
-              width: 0.5,
+          child: ClipPath(
+            clipper: IMessageBubbleClipper(
+              tailOnRight: tailOnRight,
+              showTail: showTail,
+              radius: Ios26IMessageTokens.bubbleRadius,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+            child: ColoredBox(
+              color: const Color(0xFFF2F2F7),
+              child: buildMediaImage(
+                width: Ios26IMessageTokens.photoBubbleWidth,
+                height: photoHeight,
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(17.5),
-            child: buildMediaImage(width: 232),
+            ),
           ),
         ),
       );
     } else {
-      // Exact Figma SVG capsule padding: text centers inside the 36px body while
-      // the delicate iMessage tail dips 6px below the bottom edge (`tailDrop`).
+      // Exact Figma `1:2` bubble metrics:
+      // - Rounded body height: 36px, corner radius: 18px
+      // - Total bubble height with tail: 42px (`tailDrop = 6px`)
+      // - Font: SF Pro Semibold (590 / w600), 15.2px, line-height 22px, letter-spacing -0.43
+      final double effectiveTracking = bodyTextDir == TextDirection.rtl
+          ? 0.0
+          : Ios26IMessageTokens.messageTracking;
       final EdgeInsetsDirectional bubblePadding = EdgeInsetsDirectional.only(
-        start: 14,
-        end: 14,
-        top: 8,
-        bottom: 8 + tailDrop,
+        start: 13,
+        end: 13,
+        top: 7,
+        bottom: 7 + tailDrop,
       );
 
       bubbleCore = GestureDetector(
@@ -531,9 +556,7 @@ class _ChatMessageState extends State<ChatMessage> {
         child: CustomPaint(
           painter: IMessageBubblePainter(
             color: bubbleBg,
-            gradient: (isMine && !isDeleted && !isFailed)
-                ? Ios26IMessageTokens.bubbleMineGradient
-                : null,
+            gradient: null,
             borderColor: isFailed
                 ? Ios26IMessageTokens.errorRed.withValues(alpha: 0.45)
                 : null,
@@ -543,7 +566,7 @@ class _ChatMessageState extends State<ChatMessage> {
           child: Container(
             key: Key('chat-bubble-${widget.messageKey}'),
             constraints: BoxConstraints(
-              minHeight: 36 + tailDrop,
+              minHeight: Ios26IMessageTokens.bubbleBodyHeight + tailDrop,
               maxWidth: maxBubbleWidth,
             ),
             padding: bubblePadding,
@@ -595,9 +618,10 @@ class _ChatMessageState extends State<ChatMessage> {
                       style: TextStyle(
                         fontSize: Ios26IMessageTokens.messageFontSize,
                         height: Ios26IMessageTokens.messageLineHeight,
-                        letterSpacing: Ios26IMessageTokens.messageTracking,
+                        letterSpacing: effectiveTracking,
                         color: textColor,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
+                        fontVariations: const [FontVariation('wght', 590)],
                       ),
                     ),
                   ],
@@ -609,9 +633,10 @@ class _ChatMessageState extends State<ChatMessage> {
                       style: TextStyle(
                         fontSize: Ios26IMessageTokens.messageFontSize,
                         height: Ios26IMessageTokens.messageLineHeight,
-                        letterSpacing: Ios26IMessageTokens.messageTracking,
+                        letterSpacing: effectiveTracking,
                         color: textColor,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
+                        fontVariations: const [FontVariation('wght', 590)],
                       ),
                     ),
                   )
@@ -622,12 +647,15 @@ class _ChatMessageState extends State<ChatMessage> {
                     style: TextStyle(
                       fontSize: Ios26IMessageTokens.messageFontSize,
                       height: Ios26IMessageTokens.messageLineHeight,
-                      letterSpacing: Ios26IMessageTokens.messageTracking,
+                      letterSpacing: effectiveTracking,
                       fontStyle:
                           isDeleted ? FontStyle.italic : FontStyle.normal,
                       color: textColor,
                       fontWeight:
-                          isDeleted ? FontWeight.w400 : FontWeight.w500,
+                          isDeleted ? FontWeight.w400 : FontWeight.w600,
+                      fontVariations: isDeleted
+                          ? null
+                          : const [FontVariation('wght', 590)],
                     ),
                   ),
                 if (widget.isPinned ||
@@ -678,20 +706,21 @@ class _ChatMessageState extends State<ChatMessage> {
       );
     }
 
-    // Wrap bubble with floating Figma Tapback badge (`4:1047`) when reactions exist
+    // Wrap bubble with floating Figma `1:2` Tapback badge (`(236, 282, 20, 20)`)
+    // overlapping the bubble's lower-right (incoming) / lower-left (outgoing) edge.
     Widget bubbleWithTapback = widget.reactions.isEmpty
         ? bubbleCore
         : Stack(
             clipBehavior: Clip.none,
             children: [
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: bubbleCore,
               ),
               PositionedDirectional(
                 bottom: 0,
-                end: isMine ? null : -6,
-                start: isMine ? -6 : null,
+                end: isMine ? null : -5,
+                start: isMine ? -5 : null,
                 child: Ios26TapbackBadge(
                   reactions: widget.reactions,
                   onTap: widget.onOpenActions,
@@ -906,8 +935,8 @@ class _ChatMessageState extends State<ChatMessage> {
   }
 }
 
-/// Exact Figma iOS 26 Date Separator (`4:1050` / `4:1246`):
-/// Clean centered `#8E8E93` `12px` Medium (`510`) label directly on white canvas.
+/// Exact Figma `1:2` Timestamps (`(95, 226, 186, 16)` / `(95, 309, 186, 16)`):
+/// SF Pro Medium (`w500`), `12px`, `#8E8E93`, center-aligned.
 class ChatDateDivider extends StatelessWidget {
   final String label;
 
@@ -916,7 +945,7 @@ class ChatDateDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 14, bottom: 10),
+      padding: const EdgeInsets.only(top: 11, bottom: 9),
       child: Center(
         child: Semantics(
           header: true,
@@ -928,7 +957,7 @@ class ChatDateDivider extends StatelessWidget {
               fontSize: Ios26IMessageTokens.dateFontSize,
               fontWeight: FontWeight.w500,
               color: Ios26IMessageTokens.dateGray,
-              letterSpacing: -0.1,
+              height: 16.0 / 12.0,
             ),
           ),
         ),
