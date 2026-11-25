@@ -546,6 +546,31 @@
       }
     },
 
+    getPermissionStatus: function () {
+      try {
+        if (typeof Notification === 'undefined') return 'unsupported';
+        return Notification.permission || 'default';
+      } catch (_) {
+        return 'unsupported';
+      }
+    },
+
+    requestPermissionAsync: async function () {
+      try {
+        if (typeof Notification === 'undefined') return 'unsupported';
+        if (Notification.permission === 'granted') return 'granted';
+        const result = await Notification.requestPermission();
+        return result || Notification.permission || 'default';
+      } catch (_) {
+        try {
+          if (typeof Notification !== 'undefined') {
+            return Notification.permission || 'default';
+          }
+        } catch (_) {}
+        return 'unsupported';
+      }
+    },
+
     requestPermission: function () {
       try {
         if (typeof Notification !== 'undefined' && Notification.permission === 'default') {

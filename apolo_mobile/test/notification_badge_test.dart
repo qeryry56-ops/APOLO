@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:apolo_mobile/core/services/media_rtc_bridge.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/chat_list_screen.dart';
 import 'package:apolo_mobile/screens/home_screen.dart';
@@ -811,13 +812,18 @@ void main() {
     });
 
     testWidgets(
-        'NotificationsScreen renders Dynamic Layer v5.1 Notification / Default (330x240 #notification-img, 40x40 back, 56px Continue pill) across viewports',
+        'NotificationsScreen verifies active permission: stays on Default gate when denied, and navigates to Figma 47390:2792 Apolo Notifications feed when granted',
         (tester) async {
       tester.view.physicalSize = const Size(375, 812);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(() {
+        MediaRtcBridge.debugPermissionOverride = null;
+        MediaRtcBridge.debugRequestPermissionHandler = null;
+      });
 
+      MediaRtcBridge.debugPermissionOverride = 'default';
       state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
         ..httpClientAdapter = _StubAdapter((_) => _json({
               'status': 'success',
@@ -840,49 +846,72 @@ void main() {
           home: const NotificationsScreen(),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(tester.takeException(), isNull);
 
-      // 40x40 circular back button
+      // Stage 1: `Notification / Default` (`330 × 240` `# notification-img` + `56px` `Continue` button)
       final backRect =
           tester.getRect(find.byKey(const Key('dl-notification-back-button')));
       expect(backRect.width, closeTo(40.0, 0.01));
       expect(backRect.height, closeTo(40.0, 0.01));
 
-      // Exact Figma `# notification-img` = 330 x 240 px centered horizontally (left ~22.5px)
       final imgRect =
           tester.getRect(find.byKey(const Key('dl-notification-img')));
       expect(imgRect.width, closeTo(330.0, 0.01));
       expect(imgRect.height, closeTo(240.0, 0.01));
       expect(imgRect.left, closeTo(22.5, 1.0));
-      expect(find.byKey(const Key('dl-notification-preview-card')), findsOneWidget);
-
-      // Heading, subtitle, and 56px pill Continue button in ButtonDock
       expect(find.text('Notification'), findsOneWidget);
-      expect(
-        find.text('Activate notifications to receive messages'),
-        findsOneWidget,
-      );
-      final continueRect = tester
-          .getRect(find.byKey(const Key('dl-notification-continue-button')));
-      expect(continueRect.height, closeTo(56.0, 0.01));
-      expect(find.text('Continue'), findsOneWidget);
+      expect(find.byKey(const Key('dl-notifications-main-container')), findsNothing);
 
-      // Tapping Continue activates notifications cleanly without exception
+      // Case 1: Permission denied -> does NOT navigate to Stage 2, shows blocked guidance sheet
+      MediaRtcBridge.debugRequestPermissionHandler = () async {
+        MediaRtcBridge.debugPermissionOverride = 'denied';
+        return 'denied';
+      };
       await tester.tap(find.byKey(const Key('dl-notification-continue-button')));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.byKey(const Key('dl-notification-blocked-dismiss')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('dl-notification-blocked-dismiss')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.byKey(const Key('dl-notification-continue-button')), findsOneWidget);
+      expect(find.byKey(const Key('dl-notifications-main-container')), findsNothing);
+
+      // Case 2: Permission granted -> verified active -> transitions to Figma `47390:2792` Apolo Notifications feed
+      MediaRtcBridge.debugRequestPermissionHandler = () async {
+        MediaRtcBridge.debugPermissionOverride = 'granted';
+        return 'granted';
+      };
+      await tester.tap(find.byKey(const Key('dl-notification-continue-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
       expect(tester.takeException(), isNull);
 
-      // Verify Arabic RTL on small 320x568 viewport renders with zero overflow
+      expect(find.byKey(const Key('dl-notifications-header-title')), findsOneWidget);
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.byKey(const Key('dl-notifications-header-separator')), findsOneWidget);
+
+      final mainContainer = tester.widget<Padding>(
+        find.byKey(const Key('dl-notifications-main-container')),
+      );
+      expect(mainContainer.padding, const EdgeInsets.fromLTRB(16.0, 32.0, 16.0, 32.0));
+      expect(find.byKey(const Key('dl-notifications-section-today')), findsOneWidget);
+      expect(find.byKey(const Key('dl-notifications-section-week')), findsOneWidget);
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('This week'), findsOneWidget);
+
+      // Verify Arabic RTL on small 320x568 viewport renders Apolo feed cleanly with zero overflow
       await tester.runAsync(() => state.setLocale(const Locale('ar')));
       tester.view.physicalSize = const Size(320, 568);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull);
       expect(find.text('الإشعارات'), findsOneWidget);
-      expect(find.text('متابعة'), findsOneWidget);
+      expect(find.text('اليوم'), findsOneWidget);
+      expect(find.text('هذا الأسبوع'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 3));

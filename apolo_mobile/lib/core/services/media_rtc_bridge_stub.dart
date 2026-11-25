@@ -75,6 +75,20 @@ class MediaRtcBridge {
 
   static void stopRingtone() {}
 
+  static String? debugPermissionOverride;
+  static Future<String> Function()? debugRequestPermissionHandler;
+
+  static String getNotificationPermissionStatus() {
+    return debugPermissionOverride ?? 'unsupported';
+  }
+
+  static Future<String> requestNotificationPermissionWithResult() async {
+    if (debugRequestPermissionHandler != null) {
+      return await debugRequestPermissionHandler!();
+    }
+    return debugPermissionOverride ?? 'unsupported';
+  }
+
   static void requestBrowserNotificationPermission() {}
 
   static void showBrowserNotification(String title, String body) {}

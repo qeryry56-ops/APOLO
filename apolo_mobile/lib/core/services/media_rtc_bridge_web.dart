@@ -256,6 +256,35 @@ class MediaRtcBridge {
     } catch (_) {}
   }
 
+  static String? debugPermissionOverride;
+  static Future<String> Function()? debugRequestPermissionHandler;
+
+  static String getNotificationPermissionStatus() {
+    if (debugPermissionOverride != null) return debugPermissionOverride!;
+    try {
+      final res = _alerts?.callMethod<JSString?>('getPermissionStatus'.toJS);
+      final val = res?.toDart ?? '';
+      return val.isNotEmpty ? val : 'unsupported';
+    } catch (_) {
+      return 'unsupported';
+    }
+  }
+
+  static Future<String> requestNotificationPermissionWithResult() async {
+    if (debugRequestPermissionHandler != null) {
+      return await debugRequestPermissionHandler!();
+    }
+    try {
+      final promise = _alerts
+          ?.callMethod<JSPromise<JSString>?>('requestPermissionAsync'.toJS);
+      if (promise == null) return getNotificationPermissionStatus();
+      final res = (await promise.toDart).toDart;
+      return res.isNotEmpty ? res : getNotificationPermissionStatus();
+    } catch (_) {
+      return getNotificationPermissionStatus();
+    }
+  }
+
   static void requestBrowserNotificationPermission() {
     try {
       _alerts?.callMethod<JSAny?>('requestPermission'.toJS);
