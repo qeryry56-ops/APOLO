@@ -206,6 +206,7 @@ void main() {
           tester.widget<TextField>(find.byKey(const Key('auth-email')));
       expect(emailField.textAlign, TextAlign.center);
       expect(emailField.style?.fontSize, 28.0);
+      expect(emailField.decoration?.hintText, 'example@gmail.com');
       expect(emailField.decoration?.filled, isFalse);
       expect(emailField.decoration?.border, InputBorder.none);
 
@@ -240,6 +241,7 @@ void main() {
       expect(pwdField.obscureText, isTrue);
       expect(pwdField.textAlign, TextAlign.center);
       expect(pwdField.style?.fontSize, 28.0);
+      expect(pwdField.decoration?.hintText, '••••••••');
 
       // 6. Tapping Forgot password? pill opens Dynamic Layer ForgotPasswordScreen
       await tester.tap(find.byKey(const Key('auth-forgot-password-pill')));

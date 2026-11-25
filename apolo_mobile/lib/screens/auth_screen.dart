@@ -780,6 +780,8 @@ class _AuthScreenState extends State<AuthScreen>
         isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
     final Color disabledText =
         isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
+    final Color placeholderColor =
+        isDark ? const Color(0xFF52525B) : const Color(0xFFC7C7CC);
     const Color errorRed = Color(0xFFE31B23);
 
     final bool isStep1 = _loginStep == 1;
@@ -971,7 +973,15 @@ class _AuthScreenState extends State<AuthScreen>
                                       height: 36.0 / 28.0,
                                       letterSpacing: -0.4,
                                     ),
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
+                                      hintText: 'example@gmail.com',
+                                      hintStyle: TextStyle(
+                                        color: placeholderColor,
+                                        fontSize: dynamicInputFontSize,
+                                        fontWeight: FontWeight.w700,
+                                        height: 36.0 / 28.0,
+                                        letterSpacing: -0.4,
+                                      ),
                                       filled: false,
                                       fillColor: Colors.transparent,
                                       hoverColor: Colors.transparent,
@@ -981,7 +991,8 @@ class _AuthScreenState extends State<AuthScreen>
                                       disabledBorder: InputBorder.none,
                                       errorBorder: InputBorder.none,
                                       isDense: true,
-                                      contentPadding: EdgeInsets.symmetric(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
                                         vertical: 4.0,
                                       ),
                                     ),
@@ -1014,7 +1025,15 @@ class _AuthScreenState extends State<AuthScreen>
                                       height: 36.0 / 28.0,
                                       letterSpacing: 1.0,
                                     ),
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
+                                      hintText: '••••••••',
+                                      hintStyle: TextStyle(
+                                        color: placeholderColor,
+                                        fontSize: 28.0,
+                                        fontWeight: FontWeight.w700,
+                                        height: 36.0 / 28.0,
+                                        letterSpacing: 1.0,
+                                      ),
                                       filled: false,
                                       fillColor: Colors.transparent,
                                       hoverColor: Colors.transparent,
@@ -1024,7 +1043,8 @@ class _AuthScreenState extends State<AuthScreen>
                                       disabledBorder: InputBorder.none,
                                       errorBorder: InputBorder.none,
                                       isDense: true,
-                                      contentPadding: EdgeInsets.symmetric(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
                                         vertical: 2.0,
                                       ),
                                     ),
@@ -1297,18 +1317,35 @@ class _AuthScreenState extends State<AuthScreen>
       }
     }
 
-    const InputDecoration cleanInputDecoration = InputDecoration(
-      filled: false,
-      fillColor: Colors.transparent,
-      hoverColor: Colors.transparent,
-      border: InputBorder.none,
-      enabledBorder: InputBorder.none,
-      focusedBorder: InputBorder.none,
-      disabledBorder: InputBorder.none,
-      errorBorder: InputBorder.none,
-      isDense: true,
-      contentPadding: EdgeInsets.symmetric(vertical: 4.0),
-    );
+    final Color placeholderColor =
+        isDark ? const Color(0xFF52525B) : const Color(0xFFC7C7CC);
+
+    InputDecoration buildCleanInputDecoration({
+      required String hintText,
+      double fontSize = 28.0,
+      double letterSpacing = -0.4,
+    }) {
+      return InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(
+          color: placeholderColor,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+          height: 36.0 / 28.0,
+          letterSpacing: letterSpacing,
+        ),
+        filled: false,
+        fillColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 4.0),
+      );
+    }
 
     Widget stepInput;
     switch (_registerStep) {
@@ -1335,7 +1372,10 @@ class _AuthScreenState extends State<AuthScreen>
               height: 36.0 / 28.0,
               letterSpacing: -0.4,
             ),
-            decoration: cleanInputDecoration,
+            decoration: buildCleanInputDecoration(
+              hintText: 'example@gmail.com',
+              fontSize: emailFontSize,
+            ),
             onSubmitted: (_) => _submit(),
           ),
         );
@@ -1364,7 +1404,10 @@ class _AuthScreenState extends State<AuthScreen>
               height: 36.0 / 28.0,
               letterSpacing: 1.0,
             ),
-            decoration: cleanInputDecoration,
+            decoration: buildCleanInputDecoration(
+              hintText: '••••••••',
+              letterSpacing: 1.0,
+            ),
             onSubmitted: (_) => _submit(),
           ),
         );
@@ -1390,7 +1433,9 @@ class _AuthScreenState extends State<AuthScreen>
             height: 36.0 / 28.0,
             letterSpacing: -0.4,
           ),
-          decoration: cleanInputDecoration,
+          decoration: buildCleanInputDecoration(
+            hintText: s.tr('أمين', 'Amine', 'Amine'),
+          ),
           onSubmitted: (_) => _submit(),
         );
         break;
@@ -1418,7 +1463,9 @@ class _AuthScreenState extends State<AuthScreen>
               height: 36.0 / 28.0,
               letterSpacing: -0.4,
             ),
-            decoration: cleanInputDecoration,
+            decoration: buildCleanInputDecoration(
+              hintText: '@amine',
+            ),
             onSubmitted: (_) => _submit(),
           ),
         );
@@ -1447,7 +1494,10 @@ class _AuthScreenState extends State<AuthScreen>
               height: 36.0 / 28.0,
               letterSpacing: -0.3,
             ),
-            decoration: cleanInputDecoration,
+            decoration: buildCleanInputDecoration(
+              hintText: '0612345678',
+              letterSpacing: -0.3,
+            ),
             onSubmitted: (_) => _submit(),
           ),
         );

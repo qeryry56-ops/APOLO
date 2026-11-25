@@ -68,6 +68,12 @@ void main() {
 
     // STEP 1: "What's your email?"
     expect(find.text("What's your email?"), findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('auth-email')))
+            .decoration
+            ?.hintText,
+        'example@gmail.com');
     expect(find.byKey(const Key('dl-signup-helper-text')), findsNothing);
     expect(submitMat().color, const Color(0xFFEEEEEE));
 

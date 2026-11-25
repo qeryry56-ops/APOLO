@@ -879,7 +879,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     height: 36.0 / 28.0,
                                     letterSpacing: -0.4,
                                   ),
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
+                                    hintText: 'example@gmail.com',
+                                    hintStyle: TextStyle(
+                                      color: isDark
+                                          ? const Color(0xFF52525B)
+                                          : const Color(0xFFC7C7CC),
+                                      fontSize: dynamicInputFontSize,
+                                      fontWeight: FontWeight.w700,
+                                      height: 36.0 / 28.0,
+                                      letterSpacing: -0.4,
+                                    ),
                                     filled: false,
                                     fillColor: Colors.transparent,
                                     hoverColor: Colors.transparent,
@@ -889,7 +899,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     disabledBorder: InputBorder.none,
                                     errorBorder: InputBorder.none,
                                     isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                       vertical: 4.0,
                                     ),
                                   ),
