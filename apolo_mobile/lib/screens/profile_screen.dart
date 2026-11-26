@@ -15,6 +15,7 @@ import 'auth_screen.dart';
 import 'business_switch_screen.dart';
 import 'post_ad_screen.dart';
 import 'pro_plus_screen.dart';
+import 'settings/settings_saved_ads_screen.dart';
 import 'settings_screen.dart';
 import 'share_profile_screen.dart';
 import 'store_detail_screen.dart';
@@ -454,14 +455,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             setState(() => _activeTab = 0),
                                       ),
                                       ApoloDlAccountStat(
-                                        value:
-                                            '${_baseViews ?? _state.favoriteAdIds.length}',
-                                        label: _baseViews != null
-                                            ? s.tr('مشاهدة', 'Vues', 'Views')
-                                            : s.tr(
-                                                'المفضلة', 'Favoris', 'Likes'),
-                                        onTap: () =>
-                                            setState(() => _activeTab = 1),
+                                        value: _state.isBusinessAccount ||
+                                                _baseViews != null
+                                            ? '${_baseViews ?? _state.favoriteAdIds.length}'
+                                            : '${_state.favoriteAdIds.length}',
+                                        label: _state.isBusinessAccount
+                                            ? (_baseViews != null
+                                                ? s.tr('مشاهدة', 'Vues', 'Views')
+                                                : s.tr('المفضلة', 'Favoris',
+                                                    'Likes'))
+                                            : (_baseViews != null
+                                                ? s.tr('مشاهدة', 'Vues', 'Views')
+                                                : s.tr('المحفوظات',
+                                                    'Enregistrés', 'Saved')),
+                                        onTap: () {
+                                          if (_state.isBusinessAccount) {
+                                            setState(() => _activeTab = 1);
+                                          } else {
+                                            Navigator.of(context)
+                                                .push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) =>
+                                                        const SettingsSavedAdsScreen(),
+                                                  ),
+                                                )
+                                                .then((_) {
+                                                  if (mounted) setState(() {});
+                                                });
+                                          }
+                                        },
                                       ),
                                     ],
                                     primaryAction: ApoloDlButton(

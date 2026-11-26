@@ -62,11 +62,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.dispose();
   }
 
-  void _enterMainApp() {
+  void _enterMainApp({bool skipIntentOnboarding = false}) {
     if (!mounted || _leaving) return;
     _leaving = true;
     widget.onContinueAsGuest?.call();
-    if (!_state.hasCompletedIntentOnboarding) {
+    if (!skipIntentOnboarding && !_state.hasCompletedIntentOnboarding) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => ApoloIntentOnboardingScreen(
@@ -97,7 +97,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         pageBuilder: (_, animation, secondaryAnimation) => AuthScreen(
           initialRegisterMode: isRegister,
           initialIsLogin: !isRegister,
-          onSuccess: _enterMainApp,
+          onSuccess: () => _enterMainApp(skipIntentOnboarding: isRegister),
         ),
         transitionsBuilder: (_, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),

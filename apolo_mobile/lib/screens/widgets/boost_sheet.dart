@@ -6,6 +6,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../theme/app_typography.dart';
+import '../pro_plus_screen.dart';
 import 'kinetic_widgets.dart';
 import 'skeleton_loader.dart';
 
@@ -332,6 +333,64 @@ class _BoostSheetState extends State<BoostSheet> {
                           fontWeight: FontWeight.w800,
                           fontSize: 13.5,
                         ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (_state.isLoggedIn && !_state.isProPlusAccount) ...[
+                  InkWell(
+                    key: const Key('boost-open-pro-plus'),
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      final activated = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute<bool>(
+                          builder: (_) => const SubscriptionScreen(),
+                        ),
+                      );
+                      if (activated == true && mounted) {
+                        setState(() {});
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEEEEE),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.workspace_premium_rounded,
+                            size: 18,
+                            color: Color(0xFF000000),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              s.tr(
+                                'احصل على 3 تمويلات VIP مجانية شهرياً مع Apolo Pro+',
+                                '3 Boosts VIP offerts/mois avec Apolo Pro+',
+                                'Get 3 free VIP boosts/month with Apolo Pro+',
+                              ),
+                              style: const TextStyle(
+                                fontSize: 12.8,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF000000),
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            s.isAr
+                                ? Icons.chevron_left_rounded
+                                : Icons.chevron_right_rounded,
+                            size: 18,
+                            color: const Color(0xFF757575),
+                          ),
+                        ],
                       ),
                     ),
                   ),

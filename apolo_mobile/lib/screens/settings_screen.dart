@@ -271,7 +271,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ? s.tr('مفعل PRO+', 'PRO+ Actif', 'PRO+ Active')
                   : s.tr('غير مشترك', 'Non abonné', 'Not subscribed'),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const ProPlusScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const SubscriptionScreen(),
+                ),
               ),
             ),
           if (isLoggedIn &&
@@ -292,7 +294,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               trailingText: '${_state.vipBoostCredits}',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const ProPlusScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const SubscriptionScreen(),
+                ),
               ),
             ),
         ];
@@ -728,13 +732,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: const Key('settings-row-apolo-account'),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => ApoloAccountCenterScreen(
-              onEditProfile: widget.onOpenEditProfile ?? widget.onEditProfile,
+        onTap: () async {
+          final result = await Navigator.of(context).push<String>(
+            MaterialPageRoute<String>(
+              builder: (_) => ApoloAccountCenterScreen(
+                onEditProfile: widget.onOpenEditProfile ?? widget.onEditProfile,
+              ),
             ),
-          ),
-        ),
+          );
+          if (result == 'open_edit_profile' && mounted) {
+            final callback = widget.onOpenEditProfile ?? widget.onEditProfile;
+            Navigator.of(context).pop();
+            if (callback != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) => callback());
+            }
+          }
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(

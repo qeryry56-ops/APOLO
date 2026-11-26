@@ -14,6 +14,7 @@ import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'account_setup_screen.dart';
 import 'add_friends_screen.dart';
+import 'business_switch_screen.dart';
 import 'forgot_password_screen.dart';
 
 enum _OtpPhase {
@@ -643,8 +644,20 @@ class _AuthScreenState extends State<AuthScreen>
                 auth: _auth,
                 session: result,
                 cityId: _cityId,
-                nextBuilder: (ctx, _) => AddFriendsScreen(
-                  onContinue: () => Navigator.of(ctx).maybePop(),
+                nextBuilder: (ctx, chosenTypes) => AddFriendsScreen(
+                  onContinue: () {
+                    if (chosenTypes.contains('business') &&
+                        !_state.isBusinessAccount) {
+                      Navigator.of(ctx).pushReplacement(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const BusinessSwitchScreen(isEditing: false),
+                        ),
+                      );
+                    } else {
+                      Navigator.of(ctx).maybePop();
+                    }
+                  },
                 ),
               ),
             ),

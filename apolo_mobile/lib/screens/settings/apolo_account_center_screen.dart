@@ -42,8 +42,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
 
   Future<void> _handleEditProfile() async {
     if (widget.onEditProfile != null) {
-      Navigator.of(context).pop();
-      widget.onEditProfile!.call();
+      Navigator.of(context).pop('open_edit_profile');
       return;
     }
     await Navigator.of(context).push(

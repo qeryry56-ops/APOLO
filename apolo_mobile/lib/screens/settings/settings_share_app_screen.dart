@@ -5,8 +5,10 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
+import '../../widgets/dl_qr_code.dart';
 import '../../widgets/dl_settings_kit.dart';
 import '../add_friends_screen.dart';
+import '../share_profile_screen.dart';
 
 /// Dedicated screen for sharing Apolo.ma with friends or copying the official link.
 class SettingsShareAppScreen extends StatefulWidget {
@@ -198,6 +200,50 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                                 ),
                               ),
                             ),
+                            if (_state.isLoggedIn &&
+                                _state.currentUser != null) ...[
+                              const SizedBox(height: 10),
+                              ApoloDlButton(
+                                key: const Key('share-app-open-qr-profile'),
+                                label: s.tr(
+                                  'مشاركة بطاقة QR الخاصة بي',
+                                  'Partager mon profil QR',
+                                  'Share my QR profile',
+                                ),
+                                leadingIcon: CupertinoIcons.qrcode,
+                                variant: ApoloDlButtonVariant.secondary,
+                                fullWidth: true,
+                                onPressed: () {
+                                  final user = _state.currentUser!;
+                                  final name = (user['name'] ?? 'Apolo')
+                                      .toString()
+                                      .trim();
+                                  final handle =
+                                      (user['username'] ?? 'profil')
+                                          .toString()
+                                          .trim();
+                                  final userId = int.tryParse(
+                                    (user['id'] ?? '').toString(),
+                                  );
+                                  final profileUrl =
+                                      ApoloProfileQrParser.buildProfileShareUrl(
+                                    userId: userId,
+                                    displayName: name,
+                                    handle: handle,
+                                  );
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => ShareProfileScreen(
+                                        userId: userId,
+                                        displayName: name,
+                                        handle: handle,
+                                        profileUrl: profileUrl,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ],
                         ),
                       ),

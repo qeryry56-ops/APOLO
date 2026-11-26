@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:apolo_mobile/core/state/app_state.dart';
+import 'package:apolo_mobile/screens/pro_plus_screen.dart';
 import 'package:apolo_mobile/screens/settings/apolo_account_center_screen.dart';
 import 'package:apolo_mobile/screens/settings/settings_saved_ads_screen.dart';
 import 'package:apolo_mobile/screens/settings_screen.dart';
@@ -194,5 +195,62 @@ void main() {
 
     expect(find.byType(SettingsSavedAdsScreen), findsOneWidget);
     expect(find.text('Sign in to view saved listings'), findsOneWidget);
+  });
+
+  testWidgets('Apolo Pro+ row opens SubscriptionScreen', (tester) async {
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings-row-pro-plus')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SubscriptionScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'Apolo Account -> Edit profile pops back through Settings and invokes callback',
+      (tester) async {
+    await tester.runAsync(() async {
+      await AppState().setAuthSession('test_token', {
+        'id': 9,
+        'name': 'Nadia Edit',
+        'username': 'nadia',
+        'email': 'nadia@apolo.ma',
+        'account_type': 'personal',
+      });
+    });
+
+    var editTriggered = 0;
+    await tester.pumpWidget(
+      buildApp(
+        Scaffold(
+          body: Builder(
+            builder: (ctx) => TextButton(
+              onPressed: () => Navigator.of(ctx).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => SettingsScreen(
+                    onOpenEditProfile: () => editTriggered++,
+                  ),
+                ),
+              ),
+              child: const Text('Open Settings'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings-row-apolo-account')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('account-center-edit-profile')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ApoloAccountCenterScreen), findsNothing);
+    expect(find.byType(SettingsScreen), findsNothing);
+    expect(find.text('Open Settings'), findsOneWidget);
+    expect(editTriggered, 1);
   });
 }
