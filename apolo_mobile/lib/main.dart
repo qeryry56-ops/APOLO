@@ -102,9 +102,9 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
         );
       },
       supportedLocales: const [
-        Locale('ar'),
-        Locale('fr'),
         Locale('en'),
+        Locale('fr'),
+        Locale('ar'),
       ],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

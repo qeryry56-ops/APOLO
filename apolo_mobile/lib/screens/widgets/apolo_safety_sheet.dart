@@ -33,19 +33,51 @@ Future<bool?> showApoloReportSheet(
           ? s.tr('الإبلاغ عن هذه الرسالة', 'Signaler ce message', 'Report message')
           : s.tr('الإبلاغ عن المحادثة', 'Signaler la conversation', 'Report chat');
       reasons = [
-        {'ar': 'تحرش أو كلام مسيء', 'fr': 'Harcèlement ou propos abusifs'},
-        {'ar': 'محاولة نصب أو رابط مشبوه', 'fr': 'Tentative d\'arnaque ou lien suspect'},
-        {'ar': 'سبام أو إزعاج متكرر', 'fr': 'Spam ou messages indésirables'},
-        {'ar': 'محتوى غير لائق أو مخالف', 'fr': 'Contenu inapproprié ou interdit'},
+        {
+          'ar': 'تحرش أو كلام مسيء',
+          'fr': 'Harcèlement ou propos abusifs',
+          'en': 'Harassment or abusive language',
+        },
+        {
+          'ar': 'محاولة نصب أو رابط مشبوه',
+          'fr': 'Tentative d\'arnaque ou lien suspect',
+          'en': 'Scam attempt or suspicious link',
+        },
+        {
+          'ar': 'سبام أو إزعاج متكرر',
+          'fr': 'Spam ou messages indésirables',
+          'en': 'Spam or unwanted messages',
+        },
+        {
+          'ar': 'محتوى غير لائق أو مخالف',
+          'fr': 'Contenu inapproprié ou interdit',
+          'en': 'Inappropriate or prohibited content',
+        },
       ];
       break;
     case 'ad':
       headerTitle = s.tr('الإبلاغ عن هذا الإعلان', 'Signaler cette annonce', 'Report listing');
       reasons = [
-        {'ar': 'إعلان احتيالي أو سلعة وهمية', 'fr': 'Annonce frauduleuse ou arnaque'},
-        {'ar': 'ثمن أو صور مضللة', 'fr': 'Prix ou photos trompeurs'},
-        {'ar': 'سلعة أو خدمة ممنوعة', 'fr': 'Article ou service interdit'},
-        {'ar': 'إعلان مكرر أو سبام', 'fr': 'Annonce en double ou spam'},
+        {
+          'ar': 'إعلان احتيالي أو سلعة وهمية',
+          'fr': 'Annonce frauduleuse ou arnaque',
+          'en': 'Fraudulent or fake listing',
+        },
+        {
+          'ar': 'ثمن أو صور مضللة',
+          'fr': 'Prix ou photos trompeurs',
+          'en': 'Misleading price or photos',
+        },
+        {
+          'ar': 'سلعة أو خدمة ممنوعة',
+          'fr': 'Article ou service interdit',
+          'en': 'Prohibited item or service',
+        },
+        {
+          'ar': 'إعلان مكرر أو سبام',
+          'fr': 'Annonce en double ou spam',
+          'en': 'Duplicate listing or spam',
+        },
       ];
       break;
     default:
@@ -53,10 +85,26 @@ Future<bool?> showApoloReportSheet(
           ? s.tr('الإبلاغ عن هذا المتجر', 'Signaler cette boutique', 'Report store')
           : s.tr('الإبلاغ عن هذا الحساب', 'Signaler ce compte', 'Report user');
       reasons = [
-        {'ar': 'متجر أو حساب وهمي / انتحال صفة', 'fr': 'Faux compte ou usurpation d\'identité'},
-        {'ar': 'نصب أو عدم الالتزام بالطلب', 'fr': 'Arnaque ou non-livraison'},
-        {'ar': 'سلوك مسيء أو غير مهني', 'fr': 'Comportement abusif'},
-        {'ar': 'سلع مقلدة أو مخالفة', 'fr': 'Articles contrefaits ou interdits'},
+        {
+          'ar': 'متجر أو حساب وهمي / انتحال صفة',
+          'fr': 'Faux compte ou usurpation d\'identité',
+          'en': 'Fake account or impersonation',
+        },
+        {
+          'ar': 'نصب أو عدم الالتزام بالطلب',
+          'fr': 'Arnaque ou non-livraison',
+          'en': 'Scam or non-delivery',
+        },
+        {
+          'ar': 'سلوك مسيء أو غير مهني',
+          'fr': 'Comportement abusif',
+          'en': 'Abusive behavior',
+        },
+        {
+          'ar': 'سلع مقلدة أو مخالفة',
+          'fr': 'Articles contrefaits ou interdits',
+          'en': 'Counterfeit or prohibited items',
+        },
       ];
       break;
   }
@@ -164,7 +212,11 @@ Future<bool?> showApoloReportSheet(
                 const SizedBox(height: 14),
                 ...List.generate(reasons.length, (idx) {
                   final active = selectedReason == idx;
-                  final label = s.isAr ? reasons[idx]['ar']! : reasons[idx]['fr']!;
+                  final label = s.tr(
+                    reasons[idx]['ar']!,
+                    reasons[idx]['fr']!,
+                    reasons[idx]['en']!,
+                  );
                   return GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -320,9 +372,11 @@ Future<bool?> showApoloReportSheet(
                         ? null
                         : () async {
                             setModalState(() => submitting = true);
-                            final chosen = s.isAr
-                                ? reasons[selectedReason]['ar']!
-                                : reasons[selectedReason]['fr']!;
+                            final chosen = s.tr(
+                              reasons[selectedReason]['ar']!,
+                              reasons[selectedReason]['fr']!,
+                              reasons[selectedReason]['en']!,
+                            );
                             final myUserId =
                                 int.tryParse('${state.currentUser?['id'] ?? 0}') ??
                                     0;

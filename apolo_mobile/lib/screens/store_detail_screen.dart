@@ -219,7 +219,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                 DropdownButtonFormField<int>(
                   initialValue: selectedAdId,
                   decoration: InputDecoration(
-                      labelText: s.tr('اختر المنتج', 'Choisir le produit')),
+                      labelText: s.tr('اختر المنتج', 'Choisir le produit',
+                          'Select item')),
                   items: _ads
                       .map((a) => DropdownMenuItem<int>(
                             value: int.tryParse(a['id'].toString()),
@@ -233,28 +234,30 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               TextField(
                   controller: nameCtrl,
                   decoration: InputDecoration(
-                      labelText: s.tr('الاسم الكامل', 'Nom complet'))),
+                      labelText: s.tr('الاسم الكامل', 'Nom complet',
+                          'Full name'))),
               const SizedBox(height: 10),
               TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                      labelText: s.tr('رقم الهاتف', 'Téléphone'))),
+                      labelText: s.tr('رقم الهاتف', 'Téléphone', 'Phone'))),
               const SizedBox(height: 10),
               TextField(
                   controller: cityCtrl,
-                  decoration:
-                      InputDecoration(labelText: s.tr('المدينة', 'Ville'))),
+                  decoration: InputDecoration(
+                      labelText: s.tr('المدينة', 'Ville', 'City'))),
               const SizedBox(height: 10),
               TextField(
                   controller: locCtrl,
                   decoration: InputDecoration(
-                      labelText: s.tr('العنوان', 'Adresse de livraison'))),
+                      labelText: s.tr('العنوان', 'Adresse de livraison',
+                          'Delivery address'))),
               const SizedBox(height: 10),
               TextField(
                   controller: msgCtrl,
                   decoration: InputDecoration(
-                      labelText: s.tr('ملاحظات الطلب', 'Notes'))),
+                      labelText: s.tr('ملاحظات الطلب', 'Notes', 'Order notes'))),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
@@ -293,15 +296,19 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: AppConfig.success,
-                            content: Text(s.tr('تم إرسال طلبك للمتجر بنجاح!',
-                                'Commande envoyée avec succès !')),
+                            content: Text(s.tr(
+                              'تم إرسال طلبك للمتجر بنجاح!',
+                              'Commande envoyée avec succès !',
+                              'Order submitted successfully!',
+                            )),
                           ),
                         );
                       }
                     } catch (_) {}
                   },
                   child: Text(
-                    s.tr('تأكيد الطلب الآن', 'Confirmer la commande'),
+                    s.tr('تأكيد الطلب الآن', 'Confirmer la commande',
+                        'Confirm order'),
                     style: const TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 15.5),
                   ),
@@ -329,7 +336,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
         backgroundColor: const Color(0xFFF2F3F7),
         appBar: AppBar(backgroundColor: const Color(0xFFF2F3F7), elevation: 0),
         body: Center(
-            child: Text(s.tr('المتجر غير موجود', 'Boutique introuvable'))),
+            child: Text(s.tr('المتجر غير موجود', 'Boutique introuvable',
+                'Store not found'))),
       );
     }
     final logo = store['logo_url'] ?? store['logo'];
@@ -345,7 +353,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               elevation: 4,
               icon: const Icon(Icons.shopping_bag_outlined, size: 20),
               label: Text(
-                s.tr('اطلب الآن', 'Commander'),
+                s.tr('اطلب الآن', 'Commander', 'Order now'),
                 style: const TextStyle(
                     fontWeight: FontWeight.w700, fontSize: 14.5),
               ),
@@ -808,7 +816,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              s.tr('المنتجات', 'Produits'),
+                                              s.tr('المنتجات', 'Produits', 'Products'),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
@@ -839,7 +847,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              s.tr('موثوق', 'Vérifié'),
+                                              s.tr('موثوق', 'Vérifié', 'Verified'),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
@@ -870,7 +878,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              s.tr('التوصيل', 'Livraison'),
+                                              s.tr('التوصيل', 'Livraison', 'Delivery'),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(

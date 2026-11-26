@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../core/config/app_config.dart';
+import '../core/state/app_state.dart';
 
 /// Website origin only: no undocumented account route is guessed.
 Uri get accountWebsite => Uri.parse(AppConfig.prodBaseUrl)
@@ -449,13 +450,19 @@ class AccountAuth {
 }
 
 String accountError(Object error, bool ar) {
+  final isEn = !ar && AppState().s.isEn;
+  String pick(String arText, String frText, String enText) =>
+      ar ? arText : (isEn ? enText : frText);
+
   if (error is AccountFailure) {
     final msg = error.message?.trim();
     if (msg != null && msg.isNotEmpty) return msg;
     if (error.kind == 'verification') {
-      return ar
-          ? 'رمز التحقق غير صحيح أو انتهت صلاحيته.'
-          : 'Code de vérification invalide ou expiré.';
+      return pick(
+        'رمز التحقق غير صحيح أو انتهت صلاحيته.',
+        'Code de vérification invalide ou expiré.',
+        'Invalid or expired verification code.',
+      );
     }
   }
   if (error is DioException) {
@@ -463,14 +470,18 @@ String accountError(Object error, bool ar) {
     final serverMsg = data is Map ? data['message']?.toString().trim() : null;
     final status = error.response?.statusCode;
     if (status == 429) {
-      return ar
-          ? 'محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة.'
-          : 'Trop de tentatives. Patientez avant de réessayer.';
+      return pick(
+        'محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة.',
+        'Trop de tentatives. Patientez avant de réessayer.',
+        'Too many attempts. Please wait before trying again.',
+      );
     }
     if (status == 401 || status == 403) {
-      return ar
-          ? 'تعذر تأكيد بيانات الدخول أو رمز التحقق.'
-          : 'Identifiants ou code de vérification refusés.';
+      return pick(
+        'تعذر تأكيد بيانات الدخول أو رمز التحقق.',
+        'Identifiants ou code de vérification refusés.',
+        'Could not verify credentials or verification code.',
+      );
     }
     if (status == 422) {
       if (data is Map && data['errors'] is Map) {
@@ -483,9 +494,11 @@ String accountError(Object error, bool ar) {
         }
       }
       if (serverMsg != null && serverMsg.isNotEmpty) return serverMsg;
-      return ar
-          ? 'تحقق من البيانات المدخلة. قد يكون البريد أو رقم الهاتف مستخدماً بالفعل.'
-          : 'Vérifiez les informations. Cet e-mail ou numéro est peut-être déjà utilisé.';
+      return pick(
+        'تحقق من البيانات المدخلة. قد يكون البريد أو رقم الهاتف مستخدماً بالفعل.',
+        'Vérifiez les informations. Cet e-mail ou numéro est peut-être déjà utilisé.',
+        'Please check your details. This email or phone may already be in use.',
+      );
     }
     if (status != null && status >= 500) {
       if (serverMsg != null &&
@@ -494,19 +507,25 @@ String accountError(Object error, bool ar) {
           serverMsg.length < 220) {
         return serverMsg;
       }
-      return ar
-          ? 'حدث خطأ مؤقت في الخادم. يرجى المحاولة بعد قليل.'
-          : 'Erreur temporaire du serveur. Veuillez réessayer dans un instant.';
+      return pick(
+        'حدث خطأ مؤقت في الخادم. يرجى المحاولة بعد قليل.',
+        'Erreur temporaire du serveur. Veuillez réessayer dans un instant.',
+        'Temporary server error. Please try again shortly.',
+      );
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
-      return ar
-          ? 'تعذر الاتصال. تحقق من الإنترنت وأعد المحاولة.'
-          : 'Connexion impossible. Vérifiez Internet et réessayez.';
+      return pick(
+        'تعذر الاتصال. تحقق من الإنترنت وأعد المحاولة.',
+        'Connexion impossible. Vérifiez Internet et réessayez.',
+        'Connection failed. Check your internet and try again.',
+      );
     }
   }
-  return ar
-      ? 'تعذر إتمام العملية حالياً. يرجى المحاولة مرة أخرى.'
-      : 'Impossible de finaliser l’opération. Veuillez réessayer.';
+  return pick(
+    'تعذر إتمام العملية حالياً. يرجى المحاولة مرة أخرى.',
+    'Impossible de finaliser l’opération. Veuillez réessayer.',
+    'Could not complete the request. Please try again.',
+  );
 }

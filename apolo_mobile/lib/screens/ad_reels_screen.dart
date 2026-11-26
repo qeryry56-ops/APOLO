@@ -153,8 +153,11 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
       if (!mounted) return;
       if (result == previous) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(_state.s.tr('تعذر تحديث المفضلة. حاول مرة أخرى.',
-                'Impossible de modifier les favoris. Réessayez.'))));
+            content: Text(_state.s.tr(
+              'تعذر تحديث المفضلة. حاول مرة أخرى.',
+              'Impossible de modifier les favoris. Réessayez.',
+              'Could not update favorites. Please try again.',
+            ))));
       } else {
         HapticFeedback.selectionClick();
       }
@@ -189,7 +192,7 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
                 padding: const EdgeInsetsDirectional.fromSTEB(8, 4, 12, 8),
                 child: Row(children: [
                   IconButton(
-                    tooltip: s.tr('رجوع', 'Retour'),
+                    tooltip: s.tr('رجوع', 'Retour', 'Back'),
                     onPressed: () => Navigator.maybePop(context),
                     icon: const BackButtonIcon(),
                     color: Colors.white,
@@ -205,8 +208,8 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
                                       const EdgeInsetsDirectional.only(end: 8),
                                   child: ChoiceChip(
                                     label: Text([
-                                      s.tr('الكل', 'Tout'),
-                                      s.tr('الأحدث', 'Récents'),
+                                      s.tr('الكل', 'Tout', 'All'),
+                                      s.tr('الأحدث', 'Récents', 'Recent'),
                                       'VIP'
                                     ][index]),
                                     selected: _filter == index,
@@ -223,7 +226,7 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
                                 ))),
                   )),
                   IconButton(
-                      tooltip: s.tr('تحديث', 'Actualiser'),
+                      tooltip: s.tr('تحديث', 'Actualiser', 'Refresh'),
                       onPressed: _loading ? null : _load,
                       icon: const Icon(CupertinoIcons.refresh),
                       color: Colors.white),
@@ -249,9 +252,11 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
                             Text(
                                 _failed
                                     ? s.tr('تعذر تحميل الإعلانات',
-                                        'Impossible de charger les annonces')
+                                        'Impossible de charger les annonces',
+                                        'Could not load listings')
                                     : s.tr('لا توجد إعلانات في هذا التبويب',
-                                        'Aucune annonce dans cet onglet'),
+                                        'Aucune annonce dans cet onglet',
+                                        'No listings in this tab'),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                     color: Colors.white,
@@ -261,18 +266,20 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
                             Text(
                                 _failed
                                     ? s.tr('تحقق من الاتصال وحاول مرة أخرى.',
-                                        'Vérifiez votre connexion et réessayez.')
+                                        'Vérifiez votre connexion et réessayez.',
+                                        'Check your connection and try again.')
                                     : s.tr(
                                         'اختر تبويباً آخر أو حدّث الإعلانات.',
-                                        'Choisissez un autre onglet ou actualisez.'),
+                                        'Choisissez un autre onglet ou actualisez.',
+                                        'Choose another tab or refresh.'),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(color: Colors.white70)),
                             const SizedBox(height: 20),
                             FilledButton(
                                 onPressed: _load,
                                 child: Text(_failed
-                                    ? s.tr('إعادة المحاولة', 'Réessayer')
-                                    : s.tr('تحديث', 'Actualiser'))),
+                                    ? s.tr('إعادة المحاولة', 'Réessayer', 'Retry')
+                                    : s.tr('تحديث', 'Actualiser', 'Refresh'))),
                           ]),
                         )))
                       : RefreshIndicator(
@@ -314,7 +321,7 @@ class _AdReelsScreenState extends State<AdReelsScreen> {
                                             builder: (_) => SellerProfileScreen(
                                                   sellerId: sellerId,
                                                   sellerName:
-                                                      '${seller['name'] ?? s.tr('بائع', 'Vendeur')}',
+                                                      '${seller['name'] ?? s.tr('بائع', 'Vendeur', 'Seller')}',
                                                   sellerAvatar:
                                                       seller['avatar_url']
                                                           ?.toString(),
@@ -385,7 +392,7 @@ class _ReelCardState extends State<_ReelCard> {
     final seller = ad['seller'] is Map ? ad['seller'] as Map : const {};
     final city = ad['city'] is Map ? ad['city'] as Map : const {};
     final cityName =
-        '${city[s.isAr ? 'name_ar' : 'name_fr'] ?? city['name'] ?? ad['city_name'] ?? ''}';
+        '${city[s.isAr ? 'name_ar' : (s.isEn ? 'name_en' : 'name_fr')] ?? city['name_fr'] ?? city['name'] ?? ad['city_name'] ?? ''}';
     final price =
         '${ad['price_formatted'] ?? (ad['price'] != null ? '${ad['price']} DH' : '')}';
     return LayoutBuilder(builder: (context, constraints) {
@@ -451,12 +458,12 @@ class _ReelCardState extends State<_ReelCard> {
                               foregroundColor: Colors.white70,
                               disabledForegroundColor: Colors.white70),
                           child: Text(
-                              '${seller['name'] ?? s.tr('بائع', 'Vendeur')}',
+                              '${seller['name'] ?? s.tr('بائع', 'Vendeur', 'Seller')}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis),
                         )),
                         IconButton(
-                            tooltip: s.tr('المفضلة', 'Favoris'),
+                            tooltip: s.tr('المفضلة', 'Favoris', 'Favorites'),
                             onPressed:
                                 widget.isSaving ? null : widget.onFavorite,
                             icon: Icon(
@@ -467,7 +474,7 @@ class _ReelCardState extends State<_ReelCard> {
                                     ? const Color(0xFFE31B23)
                                     : Colors.white)),
                         IconButton(
-                            tooltip: s.tr('مشاركة', 'Partager'),
+                            tooltip: s.tr('مشاركة', 'Partager', 'Share'),
                             onPressed: () => Share.share(
                                 '${ad['title']}\n$price\nhttps://apolo.ma/ads/${ad['id']}'),
                             icon: const Icon(CupertinoIcons.share,
@@ -502,7 +509,7 @@ class _ReelCardState extends State<_ReelCard> {
                               backgroundColor: const Color(0xFFE31B23),
                               foregroundColor: Colors.white),
                           onPressed: widget.onDetails,
-                          child: Text(s.tr('التفاصيل', 'Détails'),
+                          child: Text(s.tr('التفاصيل', 'Détails', 'Details'),
                               maxLines: 1, overflow: TextOverflow.ellipsis),
                         )),
                         const SizedBox(width: 8),
@@ -511,7 +518,7 @@ class _ReelCardState extends State<_ReelCard> {
                           style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white),
                           onPressed: widget.onContact,
-                          child: Text(s.tr('رسالة', 'Message'),
+                          child: Text(s.tr('رسالة', 'Message', 'Message'),
                               maxLines: 1, overflow: TextOverflow.ellipsis),
                         )),
                       ]),

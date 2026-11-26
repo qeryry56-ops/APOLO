@@ -173,8 +173,14 @@ void main() {
     expect(find.byType(Switch), findsNothing);
     expect(find.byIcon(Icons.verified), findsNothing);
     expect(find.text('Amine'), findsNothing);
-    expect(find.byIcon(Icons.help_outline), findsOneWidget);
-    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-row-help')),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('settings-row-help')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-privacy')), findsOneWidget);
   });
 
   group('Dynamic Layer v5.1 2-Step Login UI', () {

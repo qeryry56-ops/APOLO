@@ -14,7 +14,7 @@ class AppState extends ChangeNotifier {
 
   final ApiClient api = ApiClient();
 
-  Locale _locale = const Locale('ar');
+  Locale _locale = const Locale('en');
   Map<String, dynamic>? currentUser;
   List<dynamic> categories = [];
   List<dynamic> cities = [];
@@ -88,27 +88,40 @@ class AppState extends ChangeNotifier {
           .toList();
     }
     if (!isBusinessAccount) return const [];
+    final lang = _locale.languageCode;
     return [
       {
         'id': 'avail',
-        'shortcut': _locale.languageCode == 'fr' ? 'Disponible' : 'متوفر',
-        'text': _locale.languageCode == 'fr'
-            ? 'Bonjour ! Oui, cet article est toujours disponible.'
-            : 'السلام عليكم! نعم المنتج مازال متوفراً، مرحباً بك.',
+        'shortcut': lang == 'en'
+            ? 'Available'
+            : (lang == 'fr' ? 'Disponible' : 'متوفر'),
+        'text': lang == 'en'
+            ? 'Hello! Yes, this item is still available.'
+            : (lang == 'fr'
+                  ? 'Bonjour ! Oui, cet article est toujours disponible.'
+                  : 'السلام عليكم! نعم المنتج مازال متوفراً، مرحباً بك.'),
       },
       {
         'id': 'delivery',
-        'shortcut': _locale.languageCode == 'fr' ? 'Livraison' : 'التوصيل',
-        'text': _locale.languageCode == 'fr'
-            ? 'Livraison rapide partout au Maroc avec paiement à la livraison.'
-            : 'يتوفر لدينا التوصيل السريع لجميع المدن المغربية والدفع عند الاستلام.',
+        'shortcut': lang == 'en'
+            ? 'Delivery'
+            : (lang == 'fr' ? 'Livraison' : 'التوصيل'),
+        'text': lang == 'en'
+            ? 'Fast nationwide delivery with cash on delivery.'
+            : (lang == 'fr'
+                  ? 'Livraison rapide partout au Maroc avec paiement à la livraison.'
+                  : 'يتوفر لدينا التوصيل السريع لجميع المدن المغربية والدفع عند الاستلام.'),
       },
       {
         'id': 'location',
-        'shortcut': _locale.languageCode == 'fr' ? 'Adresse' : 'المحل',
-        'text': _locale.languageCode == 'fr'
-            ? 'Retrouvez notre adresse et nos horaires sur la page de notre boutique.'
-            : 'تفضل بزيارة محلنا، تجد الموقع وأوقات العمل في صفحة المتجر.',
+        'shortcut': lang == 'en'
+            ? 'Location'
+            : (lang == 'fr' ? 'Adresse' : 'المحل'),
+        'text': lang == 'en'
+            ? 'Find our store address and opening hours on our store page.'
+            : (lang == 'fr'
+                  ? 'Retrouvez notre adresse et nos horaires sur la page de notre boutique.'
+                  : 'تفضل بزيارة محلنا، تجد الموقع وأوقات العمل في صفحة المتجر.'),
       },
     ];
   }
@@ -139,7 +152,7 @@ class AppState extends ChangeNotifier {
   static const Set<String> supportedLanguageCodes = {'ar', 'fr', 'en'};
 
   static String _normalizeLanguageCode(String code) =>
-      supportedLanguageCodes.contains(code) ? code : 'ar';
+      supportedLanguageCodes.contains(code) ? code : 'en';
 
   static const String _cachedUserPrefsKey = 'apolo_cached_user_v1';
   static const String _followedSellersPrefsKey = 'apolo_followed_sellers_v1';
@@ -449,12 +462,12 @@ class AppState extends ChangeNotifier {
 
   String activeZoneCityLabel(AppStrings s) {
     final stored = s.isAr ? zoneCityNameAr : zoneCityNameFr;
-    if (stored != null && stored.trim().isNotEmpty) return stored.trim();
     if (preferredCityId != null) {
       final taxCity =
           MarketplaceLocation.resolveTaxonomyCity(preferredCityId, cities);
       if (taxCity != null) return taxCity.labelForLang(s.lang);
     }
+    if (stored != null && stored.trim().isNotEmpty) return stored.trim();
     return s.allCities;
   }
 
@@ -921,9 +934,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> toggleLanguage() async {
-    final nextLang = _locale.languageCode == 'ar'
+    final nextLang = _locale.languageCode == 'en'
         ? 'fr'
-        : (_locale.languageCode == 'fr' ? 'en' : 'ar');
+        : (_locale.languageCode == 'fr' ? 'ar' : 'en');
     await setLocale(Locale(nextLang));
   }
 

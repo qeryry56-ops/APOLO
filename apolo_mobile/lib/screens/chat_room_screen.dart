@@ -644,7 +644,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       setState(() {
         _loading = false;
         _loadError = _state.s.tr('تعذر الاتصال بالمحادثة. حاول مجدداً.',
-            'Connexion impossible. Réessayez.');
+            'Connexion impossible. Réessayez.', 'Unable to connect. Please try again.');
       });
     });
 
@@ -898,7 +898,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         setState(() {
           _loading = false;
           _loadError = _state.s.tr('تعذر تحميل الرسائل. حاول مجدداً.',
-              'Chargement impossible. Réessayez.');
+              'Chargement impossible. Réessayez.', 'Failed to load messages. Please try again.');
         });
       }
     } finally {

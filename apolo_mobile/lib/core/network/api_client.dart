@@ -12,7 +12,7 @@ class ApiClient {
 
   late Dio dio;
   String? _token;
-  String _locale = 'ar';
+  String _locale = 'en';
 
   static String _encodeTokenEnvelope(String raw) {
     final secretBytes = utf8.encode(_envelopeSecret);
@@ -81,7 +81,19 @@ class ApiClient {
     final prefs = await SharedPreferences.getInstance();
     final secureToken = _decodeTokenEnvelope(prefs.getString('auth_token_secure'));
     _token = secureToken ?? prefs.getString('auth_token');
-    _locale = prefs.getString('app_locale') ?? 'ar';
+    final migratedToEn = prefs.getBool('apolo_default_locale_en_v1') ?? false;
+    final savedLocale = prefs.getString('app_locale');
+    if (!migratedToEn) {
+      await prefs.setBool('apolo_default_locale_en_v1', true);
+      if (savedLocale == null || savedLocale == 'ar') {
+        _locale = 'en';
+        await prefs.setString('app_locale', 'en');
+      } else {
+        _locale = savedLocale;
+      }
+    } else {
+      _locale = savedLocale ?? 'en';
+    }
     final savedEnv = prefs.getString('api_base_url');
     if (savedEnv != null && savedEnv.isNotEmpty) {
       AppConfig.currentBaseUrl = savedEnv;

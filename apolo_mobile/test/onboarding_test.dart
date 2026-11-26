@@ -34,7 +34,7 @@ class _OfflineAdapter implements HttpClientAdapter {
 Widget _app(Widget home, {double scale = 1, bool reducedMotion = false}) {
   return MaterialApp(
     locale: AppState().locale,
-    supportedLocales: const [Locale('ar'), Locale('fr')],
+    supportedLocales: const [Locale('en'), Locale('fr'), Locale('ar')],
     localizationsDelegates: const [
       GlobalMaterialLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
@@ -69,7 +69,7 @@ void main() {
     AppState().api.dio.httpClientAdapter = originalAdapter;
   });
 
-  for (final language in ['ar', 'fr']) {
+  for (final language in ['en', 'fr', 'ar']) {
     for (final size in [
       const Size(320, 568),
       const Size(390, 844),
@@ -84,9 +84,7 @@ void main() {
           tester.view.physicalSize = size;
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
-          if (language == 'fr') {
-            await tester.runAsync(() => AppState().toggleLanguage());
-          }
+          await tester.runAsync(() => AppState().setLocale(Locale(language)));
           var completed = 0;
           await tester.pumpWidget(_app(
             WelcomeScreen(onContinueAsGuest: () => completed++),

@@ -42,7 +42,8 @@ class _SupportScreenState extends State<SupportScreen> {
       if (mounted) {
         setState(() => _error = AppState().s.tr(
             'تعذر فتح تطبيق البريد. يمكنك مراسلة support@apolo.ma يدوياً.',
-            'Impossible d’ouvrir votre messagerie. Écrivez à support@apolo.ma manuellement.'));
+            'Impossible d’ouvrir votre messagerie. Écrivez à support@apolo.ma manuellement.',
+            'Could not open your mail app. Please email support@apolo.ma manually.'));
       }
     } finally {
       if (mounted) setState(() => _opening = false);

@@ -115,8 +115,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           categoryId: _ad == null ? null : _state.extractAdCategoryId(_ad!));
       if (mounted && result == previous) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(_state.s.tr('تعذر تحديث المفضلة. حاول مرة أخرى.',
-                'Impossible de modifier les favoris. Réessayez.'))));
+            content: Text(_state.s.tr(
+              'تعذر تحديث المفضلة. حاول مرة أخرى.',
+              'Impossible de modifier les favoris. Réessayez.',
+              'Could not update favorites. Please try again.',
+            ))));
       }
     } finally {
       _savingFavorite = false;
@@ -221,7 +224,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               content: Text(
-                                s.tr('تم نسخ رقم الهاتف', 'Numéro copié'),
+                                s.tr('تم نسخ رقم الهاتف', 'Numéro copié',
+                                    'Phone number copied'),
                               ),
                             ),
                           );
@@ -242,7 +246,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                s.tr('نسخ الرقم', 'Copier'),
+                                s.tr('نسخ الرقم', 'Copier', 'Copy'),
                                 style: const TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w800,
@@ -283,7 +287,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                s.tr('اتصال الآن', 'Appeler'),
+                                s.tr('اتصال الآن', 'Appeler', 'Call'),
                                 style: const TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w800,
@@ -523,6 +527,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           content: Text(_state.s.tr(
         'تعذر فتح المحادثة. حاول مرة أخرى.',
         'Impossible de démarrer la conversation. Réessayez.',
+        'Could not start conversation. Please try again.',
       ))));
     }
   }
@@ -585,7 +590,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           behavior: SnackBarBehavior.floating,
           backgroundColor: _ink,
           content: Text(
-            _state.s.tr('تم حظر هذا المستخدم بنجاح', 'Utilisateur bloqué'),
+            _state.s.tr(
+              'تم حظر هذا المستخدم بنجاح',
+              'Utilisateur bloqué',
+              'User blocked',
+            ),
           ),
         ),
       );
@@ -628,10 +637,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   title: s.tr(
                     'الإبلاغ عن هذا الإعلان أو محتوى AI',
                     'Signaler cette annonce / contenu IA',
+                    'Report this listing or AI content',
                   ),
                   subtitle: s.tr(
                     'مراجعة فورية من فريق الثقة والأمان',
                     'Vérification rapide par notre équipe',
+                    'Quick review by our Trust & Safety team',
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -653,6 +664,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     subtitle: s.tr(
                       'إخفاء جميع إعلانات هذا البائع',
                       'Masquer les annonces de ce vendeur',
+                      'Hide all listings from this seller',
                     ),
                     onTap: () {
                       Navigator.pop(ctx);
@@ -717,10 +729,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 _SheetActionRow(
                   icon: CupertinoIcons.chat_bubble_2_fill,
                   iconColor: const Color(0xFF4A4EED),
-                  title: s.tr('محادثة فورية عبر Apolo', 'Message sur Apolo'),
+                  title: s.tr('محادثة فورية عبر Apolo', 'Message sur Apolo',
+                      'Message on Apolo'),
                   subtitle: s.tr(
                     'تواصل مباشرة مع $sellerDisplayName داخل التطبيق',
                     'Discuter directement avec $sellerDisplayName',
+                    'Chat directly with $sellerDisplayName',
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -732,7 +746,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   _SheetActionRow(
                     icon: CupertinoIcons.phone_fill,
                     iconColor: _red,
-                    title: s.tr('اتصال هاتفي مباشر', 'Appeler $sellerDisplayName'),
+                    title: s.tr('اتصال هاتفي مباشر',
+                        'Appeler $sellerDisplayName', 'Call $sellerDisplayName'),
                     subtitle: phone,
                     onTap: () {
                       Navigator.pop(ctx);
@@ -925,16 +940,16 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         _buildQuickSpecCards(ad, s, isStayListing, viewsCount, cityName, metadata, rawSpecs);
 
     final List<MapEntry<String, String>> structuredSpecs = [
-      MapEntry(s.tr('القسم', 'Catégorie'), categoryName),
-      MapEntry(s.tr('المدينة', 'Ville'), cityName),
+      MapEntry(s.tr('القسم', 'Catégorie', 'Category'), categoryName),
+      MapEntry(s.tr('المدينة', 'Ville', 'City'), cityName),
       MapEntry(
-        s.tr('الحالة', 'État'),
+        s.tr('الحالة', 'État', 'Condition'),
         (ad['condition'] ??
                 metadata['condition'] ??
-                s.tr('غير محددة', 'Non précisé'))
+                s.tr('غير محددة', 'Non précisé', 'Not specified'))
             .toString(),
       ),
-      MapEntry(s.tr('رقم الإعلان', 'Référence'), '#AP-${widget.adId}'),
+      MapEntry(s.tr('رقم الإعلان', 'Référence', 'Reference'), '#AP-${widget.adId}'),
       ...rawSpecs,
     ];
 
@@ -1698,6 +1713,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     s.tr(
                       'ترقية الإعلان ومضاعفة المشاهدات (Boost ⚡)',
                       'Booster cette annonce ⚡',
+                      'Boost this listing ⚡',
                     ),
                     style: const TextStyle(
                       fontSize: 14,
@@ -2343,9 +2359,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         : (seller?['joined_label']?.toString().trim().isNotEmpty == true
             ? seller!['joined_label'].toString().trim()
             : (store != null
-                ? s.tr('متجر على Apolo · $cityName', 'Boutique Apolo · $cityName')
+                ? s.tr('متجر على Apolo · $cityName', 'Boutique Apolo · $cityName',
+                    'Apolo Store · $cityName')
                 : s.tr('بائع على Apolo · $cityName',
-                    'Vendeur Apolo · $cityName')));
+                    'Vendeur Apolo · $cityName', 'Apolo Seller · $cityName')));
 
     final String hostInitials =
         (ad['host_initials'] ?? _initialsFromName(sellerDisplayName))
@@ -3222,14 +3239,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             ? (ad['total_subtitle'] ?? ad['stay_dates_label']).toString().trim()
             : (isStayListing
                 ? 'taxes incl.'
-                : '${isNegotiable ? s.tr('ثمن قابل للنقاش', 'Prix négociable') : s.tr('توصيل / معاينة مباشرة', 'Remise en main propre')} · $cityName');
+                : '${isNegotiable ? s.tr('ثمن قابل للنقاش', 'Prix négociable', 'Negotiable') : s.tr('توصيل / معاينة مباشرة', 'Remise en main propre', 'Meetup / Delivery')} · $cityName');
     final String ctaLabel = (ad['cta_label'] ?? '').toString().trim().isNotEmpty
         ? ad['cta_label'].toString().trim()
         : (isOwner
-            ? s.tr('ترقية الإعلان ⚡', 'Booster ⚡')
+            ? s.tr('ترقية الإعلان ⚡', 'Booster ⚡', 'Boost ⚡')
             : (isStayListing
                 ? s.tr('احجز الآن', 'Réserver', 'Book now')
-                : s.tr('تواصل للشراء', 'Contacter', 'Book now')));
+                : s.tr('تواصل للشراء', 'Contacter', 'Message seller')));
 
     return Container(
       decoration: BoxDecoration(

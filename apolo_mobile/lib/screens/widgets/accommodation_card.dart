@@ -241,7 +241,12 @@ class _AccommodationCardState extends State<AccommodationCard> {
       final cityMap = ad['city'] as Map;
       final cityName = (_state.s.isAr
               ? (cityMap['name_ar'] ?? cityMap['name'] ?? cityMap['name_fr'])
-              : (cityMap['name_fr'] ?? cityMap['name'] ?? cityMap['name_ar']))
+              : (_state.s.isEn
+                  ? (cityMap['name_en'] ??
+                      cityMap['name_fr'] ??
+                      cityMap['name'] ??
+                      cityMap['name_ar'])
+                  : (cityMap['name_fr'] ?? cityMap['name'] ?? cityMap['name_ar'])))
           .toString()
           .trim();
       if (cityName.isNotEmpty) return cityName;
@@ -249,7 +254,12 @@ class _AccommodationCardState extends State<AccommodationCard> {
 
     final cityStr = (_state.s.isAr
             ? (ad['city_ar'] ?? ad['city_name'] ?? ad['city_fr'])
-            : (ad['city_fr'] ?? ad['city_name'] ?? ad['city_ar']))
+            : (_state.s.isEn
+                ? (ad['city_en'] ??
+                    ad['city_fr'] ??
+                    ad['city_name'] ??
+                    ad['city_ar'])
+                : (ad['city_fr'] ?? ad['city_name'] ?? ad['city_ar'])))
         .toString()
         .trim();
     if (cityStr.isNotEmpty) return cityStr;

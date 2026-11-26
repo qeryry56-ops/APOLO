@@ -480,24 +480,28 @@ class _PostAdScreenState extends State<PostAdScreen>
         msg = s.tr(
           'يرجى اختيار القسم والمدينة للمتابعة',
           'Veuillez choisir une catégorie et une ville',
+          'Please select a category and city',
         );
         break;
       case 1:
         msg = s.tr(
           'أضف صورة واحدة على الأقل لإعلانك',
           'Ajoutez au moins une photo de votre article',
+          'Add at least one photo for your listing',
         );
         break;
       case 2:
         msg = s.tr(
           'أدخل عنواناً واضحاً للإعلان (3 أحرف على الأقل)',
           'Saisissez un titre clair (au moins 3 caractères)',
+          'Enter a clear title (at least 3 characters)',
         );
         break;
       default:
         msg = s.tr(
           'حدد ثمناً صحيحاً أو اختر مجاني، وتحقق من رقم الهاتف',
           'Indiquez un prix valide ou Gratuit et vérifiez le téléphone',
+          'Enter a valid price or Free and verify your phone number',
         );
     }
     HapticFeedback.heavyImpact();
@@ -591,9 +595,11 @@ class _PostAdScreenState extends State<PostAdScreen>
     if (!_state.isLoggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_state.s.isAr
-              ? 'يجب تسجيل الدخول أولاً لتتمكن من نشر إعلانك على المنصة'
-              : 'Veuillez vous connecter pour publier votre annonce'),
+          content: Text(_state.s.tr(
+            'يجب تسجيل الدخول أولاً لتتمكن من نشر إعلانك على المنصة',
+            'Veuillez vous connecter pour publier votre annonce',
+            'Please sign in to publish your listing',
+          )),
           backgroundColor: const Color(0xFFE31B23),
           behavior: SnackBarBehavior.floating,
         ),
@@ -610,7 +616,7 @@ class _PostAdScreenState extends State<PostAdScreen>
     try {
       final desc = _descCtrl.text.trim().length >= 20
           ? _descCtrl.text.trim()
-          : '${_titleCtrl.text.trim()} — ${_descCtrl.text.trim().isEmpty ? s.tr('متوفر بحالة ممتازة على أبولو', 'Disponible en très bon état sur Apolo.ma') : _descCtrl.text.trim()}';
+          : '${_titleCtrl.text.trim()} — ${_descCtrl.text.trim().isEmpty ? s.tr('متوفر بحالة ممتازة على أبولو', 'Disponible en très bon état sur Apolo.ma', 'Available in great condition on Apolo') : _descCtrl.text.trim()}';
 
       final map = <String, dynamic>{
         'title': _titleCtrl.text.trim(),
@@ -678,9 +684,11 @@ class _PostAdScreenState extends State<PostAdScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _submitting = false);
-        String errMsg = _state.s.isAr
-            ? 'تعذر نشر الإعلان، يرجى التأكد من البيانات والمحاولة مجدداً'
-            : 'Échec de la publication de votre annonce';
+        String errMsg = _state.s.tr(
+          'تعذر نشر الإعلان، يرجى التأكد من البيانات والمحاولة مجدداً',
+          'Échec de la publication de votre annonce',
+          'Failed to publish your listing',
+        );
         try {
           final dynamic dynErr = e;
           if (dynErr.response?.data is Map) {
@@ -751,8 +759,11 @@ class _PostAdScreenState extends State<PostAdScreen>
                   if (mounted) setState(() {});
                 },
                 icon: const Icon(Icons.refresh),
-                label: Text(s.tr('تعذر تحميل الأقسام والمدن. أعد المحاولة',
-                    'Catégories et villes indisponibles. Réessayer')),
+                label: Text(s.tr(
+                  'تعذر تحميل الأقسام والمدن. أعد المحاولة',
+                  'Catégories et villes indisponibles. Réessayer',
+                  'Categories and cities unavailable. Retry',
+                )),
               ),
             // 1. Minimalist Apple Top Bar (Back + 4-Segment Progress Pills + Step Fraction)
             Padding(
@@ -873,31 +884,51 @@ class _PostAdScreenState extends State<PostAdScreen>
 
     switch (_currentStep) {
       case 0:
-        title = s.tr('فين بغيتي تحط إعلانك؟', 'Où souhaitez-vous publier ?');
+        title = s.tr(
+          'فين بغيتي تحط إعلانك؟',
+          'Où souhaitez-vous publier ?',
+          'Where are you listing?',
+        );
         subtitle = s.tr(
           'اختر القسم المناسب والمدينة باش المشترين القراب ليك يلقاوه بسهولة',
           'Choisissez la catégorie et votre ville pour cibler les acheteurs',
+          'Choose a category and city so nearby buyers can find it easily',
         );
         break;
       case 1:
-        title = s.tr('أضف صور واضحة لإعلانك', 'Ajoutez des photos nettes');
+        title = s.tr(
+          'أضف صور واضحة لإعلانك',
+          'Ajoutez des photos nettes',
+          'Add clear photos',
+        );
         subtitle = s.tr(
           'الإعلانات اللي فيها صور حقيقية وواضحة كتتباع أسرع بـ 3 مرات',
           'Les annonces avec photos réelles se vendent 3x plus vite',
+          'Listings with real, clear photos sell up to 3x faster',
         );
         break;
       case 2:
-        title = s.tr('شنو كتبيع؟ عطيه عنوان قوي', 'Décrivez votre article');
+        title = s.tr(
+          'شنو كتبيع؟ عطيه عنوان قوي',
+          'Décrivez votre article',
+          'Describe your item',
+        );
         subtitle = s.tr(
           'اكتب الماركة، الموديل، والحالة باش تجاوب على أسئلة المشتري',
           'Un titre précis et une description honnête inspirent confiance',
+          'A clear title and honest description build buyer trust',
         );
         break;
       default:
-        title = s.tr('حدد الثمن وطريقة التواصل', 'Fixez votre prix et contact');
+        title = s.tr(
+          'حدد الثمن وطريقة التواصل',
+          'Fixez votre prix et contact',
+          'Set price and contact',
+        );
         subtitle = s.tr(
           'حدد ثمن مناسب للسوق وراجع معاينة الإعلان قبل النشر',
           'Indiquez un prix attractif et vérifiez l\'aperçu avant de publier',
+          'Set a fair price and review your listing before publishing',
         );
         break;
     }
@@ -963,7 +994,7 @@ class _PostAdScreenState extends State<PostAdScreen>
       children: [
         // 1. Horizontal City Pills
         Text(
-          s.tr('المدينة', 'Ville'),
+          s.tr('المدينة', 'Ville', 'City'),
           style: const TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w800,
@@ -1129,7 +1160,7 @@ class _PostAdScreenState extends State<PostAdScreen>
 
         // 2. 2-Column Soft 3D Category Bento Grid
         Text(
-          s.tr('اختر القسم', 'Catégorie'),
+          s.tr('اختر القسم', 'Catégorie', 'Category'),
           style: const TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w800,
@@ -1250,10 +1281,16 @@ class _PostAdScreenState extends State<PostAdScreen>
                 const SizedBox(height: 14),
                 Text(
                   totalPhotos == 0
-                      ? s.tr('اضغط لإضافة صور الإعلان',
-                          'Appuyez pour ajouter des photos')
-                      : s.tr('إضافة المزيد من الصور ($totalPhotos/8)',
-                          'Ajouter plus de photos ($totalPhotos/8)'),
+                      ? s.tr(
+                          'اضغط لإضافة صور الإعلان',
+                          'Appuyez pour ajouter des photos',
+                          'Tap to add photos',
+                        )
+                      : s.tr(
+                          'إضافة المزيد من الصور ($totalPhotos/8)',
+                          'Ajouter plus de photos ($totalPhotos/8)',
+                          'Add more photos ($totalPhotos/8)',
+                        ),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -1265,6 +1302,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                   s.tr(
                     'الصورة الأولى غادي تكون هي صورة الغلاف الرئيسية',
                     'La première photo sera la couverture principale',
+                    'The first photo will be used as the main cover',
                   ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 12.5, color: _muted),
@@ -1275,13 +1313,13 @@ class _PostAdScreenState extends State<PostAdScreen>
                   children: [
                     _miniActionChip(
                       icon: CupertinoIcons.photo_fill,
-                      label: s.tr('المعرض', 'Galerie'),
+                      label: s.tr('المعرض', 'Galerie', 'Gallery'),
                       onTap: () => _pickImages(),
                     ),
                     const SizedBox(width: 10),
                     _miniActionChip(
                       icon: CupertinoIcons.camera_fill,
-                      label: s.tr('الكاميرا', 'Caméra'),
+                      label: s.tr('الكاميرا', 'Caméra', 'Camera'),
                       onTap: () =>
                           _pickImages(singleSource: ImageSource.camera),
                     ),
@@ -1297,7 +1335,7 @@ class _PostAdScreenState extends State<PostAdScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                s.tr('الصور المختارة', 'Photos sélectionnées'),
+                s.tr('الصور المختارة', 'Photos sélectionnées', 'Selected photos'),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -1377,7 +1415,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          s.tr('الغلاف', 'Principale'),
+                          s.tr('الغلاف', 'Principale', 'Cover'),
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -1468,7 +1506,7 @@ class _PostAdScreenState extends State<PostAdScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              s.tr('عنوان الإعلان', 'Titre de l\'annonce'),
+              s.tr('عنوان الإعلان', 'Titre de l\'annonce', 'Listing title'),
               style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
@@ -1476,7 +1514,9 @@ class _PostAdScreenState extends State<PostAdScreen>
               ),
             ),
             Text(
-              titleLen >= 3 ? s.tr('ممتاز ✓', 'Parfait ✓') : '$titleLen / 3+',
+              titleLen >= 3
+                  ? s.tr('ممتاز ✓', 'Parfait ✓', 'Great ✓')
+                  : '$titleLen / 3+',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -1497,13 +1537,14 @@ class _PostAdScreenState extends State<PostAdScreen>
             s.tr(
               'مثال: iPhone 15 Pro Max 256GB بحالة الجديد',
               'Ex: iPhone 15 Pro Max 256Go comme neuf',
+              'e.g. iPhone 15 Pro Max 256GB like new',
             ),
             icon: CupertinoIcons.textbox,
           ),
         ),
         const SizedBox(height: 20),
         Text(
-          s.tr('الوصف التفصيلي', 'Description détaillée'),
+          s.tr('الوصف التفصيلي', 'Description détaillée', 'Detailed description'),
           style: const TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w800,
@@ -1523,13 +1564,18 @@ class _PostAdScreenState extends State<PostAdScreen>
             s.tr(
               'اذكر الحالة، الملحقات، وسبب البيع لزيادة ثقة المشترين...',
               'Précisez l\'état, les accessoires et les détails importants...',
+              'Mention condition, included accessories, and key details...',
             ),
           ),
         ),
         if (dynamicFields.isNotEmpty) ...[
           const SizedBox(height: 22),
           Text(
-            s.tr('مواصفات إضافية', 'Caractéristiques spécifiques'),
+            s.tr(
+              'مواصفات إضافية',
+              'Caractéristiques spécifiques',
+              'Specifications',
+            ),
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w800,
@@ -1585,7 +1631,7 @@ class _PostAdScreenState extends State<PostAdScreen>
   // ---------------------------------------------------------------------------
   Widget _buildStep4PriceContactAndPreview(AppStrings s) {
     final String previewPrice = _free
-        ? s.tr('مجاني', 'Gratuit')
+        ? s.tr('مجاني', 'Gratuit', 'Free')
         : (_priceCtrl.text.trim().isNotEmpty
             ? '${_priceCtrl.text.trim()} MAD'
             : '— MAD');
@@ -1595,7 +1641,7 @@ class _PostAdScreenState extends State<PostAdScreen>
       children: [
         if (!_free) ...[
           Text(
-            s.tr('الثمن (بالدرهم)', 'Prix (en MAD)'),
+            s.tr('الثمن (بالدرهم)', 'Prix (en MAD)', 'Price (MAD)'),
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w800,
@@ -1613,7 +1659,7 @@ class _PostAdScreenState extends State<PostAdScreen>
               color: _red,
             ),
             decoration: _softDecoration(
-              s.tr('أدخل الثمن بالدرهم', 'Ex: 2500'),
+              s.tr('أدخل الثمن بالدرهم', 'Ex: 2500', 'e.g. 2500'),
               icon: CupertinoIcons.tag_solid,
               suffix: Padding(
                 padding: const EdgeInsetsDirectional.only(end: 14),
@@ -1650,19 +1696,20 @@ class _PostAdScreenState extends State<PostAdScreen>
           runSpacing: 8,
           children: [
             _OptionPill(
-              label: s.tr('قابل للتفاوض', 'Prix négociable'),
+              label: s.tr('قابل للتفاوض', 'Prix négociable', 'Negotiable'),
               icon: CupertinoIcons.hand_thumbsup_fill,
               active: _negotiable,
               onTap: () => setState(() => _negotiable = !_negotiable),
             ),
             _OptionPill(
-              label: s.tr('مجاني', 'Gratuit'),
+              label: s.tr('مجاني', 'Gratuit', 'Free'),
               icon: CupertinoIcons.gift_fill,
               active: _free,
               onTap: () => setState(() => _free = !_free),
             ),
             _OptionPill(
-              label: s.tr('إخفاء الرقم (شات فقط)', 'Masquer le numéro'),
+              label: s.tr(
+                  'إخفاء الرقم (شات فقط)', 'Masquer le numéro', 'Hide number'),
               icon: CupertinoIcons.lock_shield_fill,
               active: _hidePhone,
               onTap: () => setState(() => _hidePhone = !_hidePhone),
@@ -1672,7 +1719,8 @@ class _PostAdScreenState extends State<PostAdScreen>
         if (!_hidePhone) ...[
           const SizedBox(height: 20),
           Text(
-            s.tr('رقم الهاتف والواتساب', 'Téléphone & WhatsApp'),
+            s.tr('رقم الهاتف والواتساب', 'Téléphone & WhatsApp',
+                'Phone & WhatsApp'),
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w800,
@@ -1697,7 +1745,8 @@ class _PostAdScreenState extends State<PostAdScreen>
         ],
         const SizedBox(height: 24),
         Text(
-          s.tr('معاينة الإعلان قبل النشر', 'Aperçu de votre annonce'),
+          s.tr('معاينة الإعلان قبل النشر', 'Aperçu de votre annonce',
+              'Listing preview'),
           style: const TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w800,
@@ -1754,7 +1803,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                   children: [
                     Text(
                       _titleCtrl.text.trim().isEmpty
-                          ? s.tr('عنوان الإعلان', 'Titre de l\'annonce')
+                          ? s.tr('عنوان الإعلان', 'Titre de l\'annonce',
+                              'Listing title')
                           : _titleCtrl.text.trim(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1836,7 +1886,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  s.tr('السابق', 'Retour'),
+                  s.tr('السابق', 'Retour', 'Back'),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -1882,10 +1932,11 @@ class _PostAdScreenState extends State<PostAdScreen>
                           Text(
                             isLast
                                 ? (_isEditing
-                                    ? s.tr('حفظ التعديلات', 'Enregistrer')
+                                    ? s.tr('حفظ التعديلات', 'Enregistrer',
+                                        'Save changes')
                                     : s.tr('نشر الإعلان الآن',
-                                        'Publier mon annonce'))
-                                : s.tr('المتابعة', 'Continuer'),
+                                        'Publier mon annonce', 'Publish now'))
+                                : s.tr('المتابعة', 'Continuer', 'Continue'),
                             style: const TextStyle(
                               fontSize: 15.5,
                               fontWeight: FontWeight.w800,
@@ -2006,9 +2057,10 @@ class _PostAdScreenState extends State<PostAdScreen>
                   Text(
                     _isEditing
                         ? s.tr('تم تحديث إعلانك بنجاح! 🎉',
-                            'Annonce mise à jour ! 🎉')
+                            'Annonce mise à jour ! 🎉', 'Listing updated! 🎉')
                         : s.tr('مبروك! تم نشر إعلانك بنجاح 🎉',
-                            'Félicitations ! Annonce publiée 🎉'),
+                            'Félicitations ! Annonce publiée 🎉',
+                            'Congrats! Your listing is live 🎉'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 25,
@@ -2023,6 +2075,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                     s.tr(
                       'إعلانك دابا واجد وغادي يبان لآلاف المشترين فـ Apolo.ma.',
                       'Votre annonce est maintenant visible par des milliers d\'acheteurs sur Apolo.ma.',
+                      'Your listing is now live for thousands of buyers on Apolo.',
                     ),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
@@ -2061,7 +2114,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                               Text(
                                 _titleCtrl.text.trim().isEmpty
                                     ? s.tr('إعلانك الجديد',
-                                        'Votre nouvelle annonce')
+                                        'Votre nouvelle annonce',
+                                        'Your new listing')
                                     : _titleCtrl.text.trim(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -2109,7 +2163,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                       alignment: Alignment.center,
                       child: Text(
                         s.tr('العودة للرئيسية ومشاهدة الإعلانات',
-                            'Retour à l\'accueil'),
+                            'Retour à l\'accueil', 'Back to home'),
                         style: const TextStyle(
                           fontSize: 15.5,
                           fontWeight: FontWeight.w800,
@@ -2122,7 +2176,11 @@ class _PostAdScreenState extends State<PostAdScreen>
                   TextButton(
                     onPressed: _resetWizard,
                     child: Text(
-                      s.tr('إضافة إعلان آخر +', 'Publier une autre annonce +'),
+                      s.tr(
+                        'إضافة إعلان آخر +',
+                        'Publier une autre annonce +',
+                        'Post another listing +',
+                      ),
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
@@ -2143,7 +2201,11 @@ class _PostAdScreenState extends State<PostAdScreen>
                         color: _red,
                       ),
                       label: Text(
-                        s.tr('ربط الإعلان بحسابي', 'Lier à mon compte'),
+                        s.tr(
+                          'ربط الإعلان بحسابي',
+                          'Lier à mon compte',
+                          'Link to my account',
+                        ),
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w800,

@@ -182,7 +182,7 @@ class _BoostSheetState extends State<BoostSheet> {
               backgroundColor: AppConfig.success,
               content: Text(res.data['message']?.toString() ??
                   _state.s.tr('تم تمييز إعلانك بنجاح!',
-                      'Annonce boostée avec succès !')),
+                      'Annonce boostée avec succès !', 'Listing boosted!')),
             ),
           );
           return true;
@@ -195,7 +195,8 @@ class _BoostSheetState extends State<BoostSheet> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(_state.s.tr(
               'لم يتم تأكيد الدفع. تواصل مع الدعم قبل إعادة الشراء.',
-              'Paiement non confirmé. Contactez l’assistance avant de racheter.'))));
+              'Paiement non confirmé. Contactez l’assistance avant de racheter.',
+              'Payment not confirmed. Contact support before retrying.'))));
     }
     return false;
   }
@@ -226,6 +227,7 @@ class _BoostSheetState extends State<BoostSheet> {
                   _state.s.tr(
                     'تم تفعيل VIP مجاناً من رصيد Pro Plus!',
                     'Boost VIP activé via votre crédit Pro Plus !',
+                    'VIP Boost activated using your Pro+ credit!',
                   ),
             ),
           ),
@@ -279,7 +281,7 @@ class _BoostSheetState extends State<BoostSheet> {
                         children: [
                           Text(
                             s.tr('ميّز إعلانك وضاعف مبيعاتك',
-                                'Boostez votre annonce'),
+                                'Boostez votre annonce', 'Boost your listing'),
                             style: TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
@@ -324,6 +326,7 @@ class _BoostSheetState extends State<BoostSheet> {
                         s.tr(
                           'تفعيل VIP مجاناً من رصيد Pro Plus (${_state.vipBoostCredits})',
                           'Activer VIP gratuit via Pro Plus (${_state.vipBoostCredits})',
+                          'Activate free VIP with Pro+ (${_state.vipBoostCredits})',
                         ),
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
@@ -336,13 +339,15 @@ class _BoostSheetState extends State<BoostSheet> {
                 ],
                 if (_plans.isEmpty)
                   Text(s.tr('العروض غير متوفرة حالياً. أعد المحاولة لاحقاً.',
-                      'Les offres sont indisponibles. Réessayez plus tard.')),
+                      'Les offres sont indisponibles. Réessayez plus tard.',
+                      'Plans are currently unavailable. Please try again later.')),
                 if (kIsWeb)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Text(
                       s.tr('الدفع الفوري عبر الويب متاح لحسابك.',
-                          'Le paiement instantané sur le Web est activé pour votre compte.'),
+                          'Le paiement instantané sur le Web est activé pour votre compte.',
+                          'Instant web checkout is enabled for your account.'),
                       style: const TextStyle(
                           fontSize: 12.5,
                           color: _muted,
@@ -352,11 +357,18 @@ class _BoostSheetState extends State<BoostSheet> {
                 ..._plans.map((plan) {
                   final String id = plan['id'].toString();
                   final bool selected = _selectedPlanId == id;
-                  final String name =
-                      (s.isAr ? plan['name_ar'] : plan['name_fr']).toString();
-                  final List features =
-                      (s.isAr ? plan['features_ar'] : plan['features_fr']) ??
-                          [];
+                  final String name = (s.isAr
+                          ? plan['name_ar']
+                          : (s.isEn
+                              ? (plan['name_en'] ?? plan['name_fr'])
+                              : plan['name_fr']))
+                      .toString();
+                  final List features = (s.isAr
+                          ? plan['features_ar']
+                          : (s.isEn
+                              ? (plan['features_en'] ?? plan['features_fr'])
+                              : plan['features_fr'])) ??
+                      [];
                   return PressableScale(
                     onTap: _purchasing
                         ? null
@@ -463,7 +475,8 @@ class _BoostSheetState extends State<BoostSheet> {
                                 strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.bolt_rounded, size: 20),
                     label: Text(
-                      s.tr('تفعيل التمييز الآن', 'Activer le Boost maintenant'),
+                      s.tr('تفعيل التمييز الآن', 'Activer le Boost maintenant',
+                          'Activate Boost now'),
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15.5),
                     ),

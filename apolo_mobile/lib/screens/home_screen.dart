@@ -290,13 +290,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? IllustratedStateView(
                     assetPath: 'assets/images/state_no_internet.png',
                     imageSize: 184,
-                    title: isAr
-                        ? 'انقطع الاتصال بالإنترنت'
-                        : 'Connexion Internet interrompue',
-                    subtitle: isAr
-                        ? 'تحقق من الشبكة وحاول مرة أخرى لعرض أحدث العروض والإعلانات في المغرب.'
-                        : 'Vérifiez votre connexion réseau et réessayez pour charger les annonces.',
-                    actionLabel: isAr ? 'إعادة المحاولة' : 'Réessayer',
+                    title: _state.s.tr(
+                      'انقطع الاتصال بالإنترنت',
+                      'Connexion Internet interrompue',
+                      'Internet connection lost',
+                    ),
+                    subtitle: _state.s.tr(
+                      'تحقق من الشبكة وحاول مرة أخرى لعرض أحدث العروض والإعلانات في المغرب.',
+                      'Vérifiez votre connexion réseau et réessayez pour charger les annonces.',
+                      'Check your network connection and try again to load listings.',
+                    ),
+                    actionLabel: _state.s.tr('إعادة المحاولة', 'Réessayer', 'Try again'),
                     onAction: () {
                       setState(() => _loading = true);
                       _loadData();
@@ -746,9 +750,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        isAr
-                                            ? 'تصفح الإعلانات في المغرب'
-                                            : 'Explorer toutes les annonces au Maroc',
+                                        _state.s.tr(
+                                          'تصفح الإعلانات في المغرب',
+                                          'Explorer toutes les annonces au Maroc',
+                                          'Browse all listings in Morocco',
+                                        ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
@@ -880,9 +886,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         child: Text(
-                          isAr
-                              ? 'سوقك الأول فالمغرب 🇲🇦'
-                              : 'Marketplace #1 au Maroc 🇲🇦',
+                          _state.s.tr(
+                            'سوقك الأول فالمغرب 🇲🇦',
+                            'Marketplace #1 au Maroc 🇲🇦',
+                            '#1 Marketplace in Morocco 🇲🇦',
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -894,9 +902,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        isAr
-                            ? 'بيع واشري بأمان وبلا وسيط'
-                            : 'Achetez et vendez en toute sécurité',
+                        _state.s.tr(
+                          'بيع واشري بأمان وبلا وسيط',
+                          'Achetez et vendez en toute sécurité',
+                          'Buy and sell safely without middlemen',
+                        ),
                         maxLines: 2,
                         style: TextStyle(
                           fontSize: 20,
@@ -909,9 +919,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        isAr
-                            ? 'طوموبيلات، هواتف وعقارات. اكتشف الإعلانات القريبة منك.'
-                            : 'Voitures, smartphones, immobilier. Découvrez les annonces près de chez vous.',
+                        _state.s.tr(
+                          'طوموبيلات، هواتف وعقارات. اكتشف الإعلانات القريبة منك.',
+                          'Voitures, smartphones, immobilier. Découvrez les annonces près de chez vous.',
+                          'Cars, phones, real estate. Discover listings near you.',
+                        ),
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.35,
@@ -943,9 +955,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  isAr
-                                      ? 'استكشف الإعلانات'
-                                      : 'Explorer les annonces',
+                                  _state.s.tr(
+                                    'استكشف الإعلانات',
+                                    'Explorer les annonces',
+                                    'Explore listings',
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -1036,7 +1050,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      isAr ? 'تصفح حسب الفئات' : 'Catégories',
+                      _state.s.tr('تصفح حسب الفئات', 'Catégories', 'Categories'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1054,7 +1068,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Row(
                       children: [
                         Text(
-                          isAr ? 'عرض الكل' : 'Tout voir',
+                          _state.s.tr('عرض الكل', 'Tout voir', 'See all'),
                           style: const TextStyle(
                             color: _primary,
                             fontWeight: FontWeight.w800,
@@ -1190,7 +1204,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            isAr ? 'عروض حصرية مميزة' : 'Offres exclusives',
+                            _state.s.tr('عروض حصرية مميزة',
+                                'Offres exclusives', 'Exclusive Deals'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1286,7 +1301,11 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isAr ? 'علاش تختار Apolo؟' : 'Pourquoi choisir Apolo ?',
+            _state.s.tr(
+              'علاش تختار Apolo؟',
+              'Pourquoi choisir Apolo ?',
+              'Why choose Apolo?',
+            ),
             style: TextStyle(
               fontSize: 18.5,
               fontWeight: FontWeight.w900,
@@ -1310,10 +1329,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildOverviewRow(
                   icon: CupertinoIcons.tag_fill,
                   iconColor: _primary,
-                  title: isAr ? '\u20660%\u2069 عمولة وبالمجان' : '0% Commission',
-                  subtitle: isAr
-                      ? 'بيع وشري فابور بدون أي اقتطاعات أو وسطاء.'
-                      : 'Vendez et achetez gratuitement sans aucun intermédiaire.',
+                  title: _state.s.tr(
+                    '\u20660%\u2069 عمولة وبالمجان',
+                    '0% Commission',
+                    '0% Commission & Free',
+                  ),
+                  subtitle: _state.s.tr(
+                    'بيع وشري فابور بدون أي اقتطاعات أو وسطاء.',
+                    'Vendez et achetez gratuitement sans aucun intermédiaire.',
+                    'Buy and sell for free with zero middlemen.',
+                  ),
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
@@ -1322,10 +1347,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildOverviewRow(
                   icon: CupertinoIcons.chat_bubble_2_fill,
                   iconColor: _ink,
-                  title: isAr ? 'شات واتصال مباشر' : 'Discussion directe',
-                  subtitle: isAr
-                      ? 'تواصل فالحين مع البائع وقدم عرض سعر بضغطة وحدة.'
-                      : 'Discutez en direct avec le vendeur et négociez le prix.',
+                  title: _state.s.tr(
+                    'شات واتصال مباشر',
+                    'Discussion directe',
+                    'Direct Chat & Call',
+                  ),
+                  subtitle: _state.s.tr(
+                    'تواصل فالحين مع البائع وقدم عرض سعر بضغطة وحدة.',
+                    'Discutez en direct avec le vendeur et négociez le prix.',
+                    'Message the seller directly and make an offer in one tap.',
+                  ),
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
@@ -1334,10 +1365,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildOverviewRow(
                   icon: CupertinoIcons.checkmark_shield_fill,
                   iconColor: const Color(0xFF10B981),
-                  title: isAr ? 'إعلانات مفحوصة وموثقة' : 'Annonces vérifiées',
-                  subtitle: isAr
-                      ? 'فحص مستمر للإعلانات لحماية جميع المعاملات.'
-                      : 'Contrôle continu pour des transactions en toute sécurité.',
+                  title: _state.s.tr(
+                    'إعلانات مفحوصة وموثقة',
+                    'Annonces vérifiées',
+                    'Verified Listings',
+                  ),
+                  subtitle: _state.s.tr(
+                    'فحص مستمر للإعلانات لحماية جميع المعاملات.',
+                    'Contrôle continu pour des transactions en toute sécurité.',
+                    'Continuous review to keep all transactions safe.',
+                  ),
                 ),
               ],
             ),
@@ -1439,9 +1476,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isAr
-                          ? 'عندك ما تبيع؟ انشر إعلانك دابا'
-                          : 'Un article à vendre ? Publiez maintenant',
+                      _state.s.tr(
+                        'عندك ما تبيع؟ انشر إعلانك دابا',
+                        'Un article à vendre ? Publiez maintenant',
+                        'Got something to sell? Post now',
+                      ),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -1450,9 +1489,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isAr
-                          ? 'انشر فـ 30 ثانية بالمجان وتوصل باتصالات المشترين'
-                          : 'Publiez gratuitement et recevez des offres rapidement',
+                      _state.s.tr(
+                        'انشر فـ 30 ثانية بالمجان وتوصل باتصالات المشترين',
+                        'Publiez gratuitement et recevez des offres rapidement',
+                        'Publish free in 30 seconds and get buyer inquiries fast',
+                      ),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.72),
                         fontSize: 12,
@@ -1473,7 +1514,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  isAr ? 'نشر +' : 'Publier +',
+                  _state.s.tr('نشر +', 'Publier +', 'Post +'),
                   style: const TextStyle(
                     color: _ink,
                     fontSize: 12.5,
@@ -1528,9 +1569,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Flexible(
                           child: Text(
-                            isAr
-                                ? 'المتاجر الرسمية الموثقة'
-                                : 'Boutiques Pro Vérifiées',
+                            _state.s.tr(
+                              'المتاجر الرسمية الموثقة',
+                              'Boutiques Pro Vérifiées',
+                              'Verified Official Stores',
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1552,9 +1595,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isAr
-                          ? 'تصفح عروض الوكالات والمتاجر المعتمدة في المغرب'
-                          : 'Découvrez les offres des professionnels certifiés',
+                      _state.s.tr(
+                        'تصفح عروض الوكالات والمتاجر المعتمدة في المغرب',
+                        'Découvrez les offres des professionnels certifiés',
+                        'Browse deals from certified stores and agencies',
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

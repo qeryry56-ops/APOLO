@@ -527,7 +527,7 @@ class _SearchScreenState extends State<SearchScreen>
                             });
                           },
                           child: Text(
-                            s.tr('إعادة ضبط', 'Réinitialiser'),
+                            s.tr('إعادة ضبط', 'Réinitialiser', 'Reset'),
                             style: const TextStyle(
                               color: _red,
                               fontWeight: FontWeight.w800,
@@ -541,7 +541,7 @@ class _SearchScreenState extends State<SearchScreen>
 
                     // 1. City Chips
                     Text(
-                      s.tr('المدينة', 'Ville'),
+                      s.tr('المدينة', 'Ville', 'City'),
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -554,7 +554,8 @@ class _SearchScreenState extends State<SearchScreen>
                       runSpacing: 8,
                       children: [
                         _ModalFilterChip(
-                          label: s.tr('كل المغرب 🌍', 'Tout le Maroc 🌍'),
+                          label: s.tr('كل المغرب 🌍', 'Tout le Maroc 🌍',
+                              'All of Morocco 🌍'),
                           active: tempCityId == null,
                           onTap: () => setModalState(() => tempCityId = null),
                         ),
@@ -562,7 +563,9 @@ class _SearchScreenState extends State<SearchScreen>
                           final id = int.tryParse(c['id'].toString());
                           final lbl = (s.isAr
                                   ? (c['name_ar'] ?? c['name'])
-                                  : (c['name_fr'] ?? c['name']))
+                                  : (s.isEn
+                                      ? (c['name_en'] ?? c['name_fr'] ?? c['name'])
+                                      : (c['name_fr'] ?? c['name'])))
                               .toString();
                           return _ModalFilterChip(
                             label: lbl,
@@ -577,7 +580,7 @@ class _SearchScreenState extends State<SearchScreen>
 
                     // 2. Category Chips
                     Text(
-                      s.tr('القسم', 'Catégorie'),
+                      s.tr('القسم', 'Catégorie', 'Category'),
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -590,7 +593,7 @@ class _SearchScreenState extends State<SearchScreen>
                       runSpacing: 8,
                       children: [
                         _ModalFilterChip(
-                          label: s.tr('جميع الأقسام', 'Toutes'),
+                          label: s.tr('جميع الأقسام', 'Toutes', 'All'),
                           active: tempCatId == null,
                           onTap: () => setModalState(() => tempCatId = null),
                         ),
@@ -610,7 +613,8 @@ class _SearchScreenState extends State<SearchScreen>
 
                     // 3. Price Range Soft Inputs
                     Text(
-                      s.tr('نطاق الثمن (بالدرهم)', 'Fourchette de prix (DH)'),
+                      s.tr('نطاق الثمن (بالدرهم)', 'Fourchette de prix (DH)',
+                          'Price range (MAD)'),
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -632,7 +636,7 @@ class _SearchScreenState extends State<SearchScreen>
                               color: _ink,
                             ),
                             decoration: InputDecoration(
-                              hintText: s.tr('أقل ثمن', 'Prix min'),
+                              hintText: s.tr('أقل ثمن', 'Prix min', 'Min price'),
                               hintTextDirection: s.isAr
                                   ? TextDirection.rtl
                                   : TextDirection.ltr,
@@ -662,7 +666,7 @@ class _SearchScreenState extends State<SearchScreen>
                               color: _ink,
                             ),
                             decoration: InputDecoration(
-                              hintText: s.tr('أقصى ثمن', 'Prix max'),
+                              hintText: s.tr('أقصى ثمن', 'Prix max', 'Max price'),
                               hintTextDirection: s.isAr
                                   ? TextDirection.rtl
                                   : TextDirection.ltr,
@@ -711,6 +715,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   s.tr(
                                     'إظهار الإعلانات القابلة للتفاوض فقط',
                                     'Annonces négociables uniquement',
+                                    'Negotiable listings only',
                                   ),
                                   style: const TextStyle(
                                     fontSize: 13.5,
@@ -758,7 +763,8 @@ class _SearchScreenState extends State<SearchScreen>
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          s.tr('تطبيق الفلتر', 'Appliquer les filtres'),
+                          s.tr('تطبيق الفلتر', 'Appliquer les filtres',
+                              'Apply filters'),
                           style: const TextStyle(
                             fontSize: 15.5,
                             fontWeight: FontWeight.w800,
@@ -1367,7 +1373,7 @@ class _SearchScreenState extends State<SearchScreen>
                     selected: active,
                     label: s.tr('جميع الأقسام', 'Toutes', 'All categories'),
                     child: Tooltip(
-                      message: s.tr('جميع الأقسام', 'Toutes'),
+                      message: s.tr('جميع الأقسام', 'Toutes', 'All categories'),
                       child: PressableScale(
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -1550,6 +1556,7 @@ class _SearchScreenState extends State<SearchScreen>
                               : s.tr(
                                   'جرب تبدل القسم أو توسع نطاق البحث والمدينة.',
                                   'Essayez une autre catégorie ou élargissez vos filtres.',
+                                  'Try another category or broaden your filters.',
                                 ),
                           actionLabel: _state.hasActiveZone
                               ? s.tr(
@@ -1560,6 +1567,7 @@ class _SearchScreenState extends State<SearchScreen>
                               : s.tr(
                                   'إعادة ضبط الفلاتر',
                                   'Réinitialiser les filtres',
+                                  'Reset filters',
                                 ),
                           onAction: () async {
                             _setChromeVisible(true);

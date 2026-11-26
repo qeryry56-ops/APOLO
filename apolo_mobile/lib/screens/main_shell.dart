@@ -359,25 +359,25 @@ class _MainShellState extends State<MainShell>
         pageIndex: 0,
         icon: CupertinoIcons.house,
         activeIcon: CupertinoIcons.house_fill,
-        label: s.tr('الرئيسية', 'Accueil'),
+        label: s.tr('الرئيسية', 'Accueil', 'Home'),
       ),
       _TabSpec(
         pageIndex: 2,
         icon: CupertinoIcons.compass,
         activeIcon: CupertinoIcons.compass_fill,
-        label: s.tr('إعلانات', 'Annonces'),
+        label: s.tr('إعلانات', 'Annonces', 'Browse'),
       ),
       _TabSpec(
         pageIndex: 3,
         icon: CupertinoIcons.chat_bubble_2,
         activeIcon: CupertinoIcons.chat_bubble_2_fill,
-        label: s.tr('رسائل', 'Messages'),
+        label: s.tr('رسائل', 'Messages', 'Messages'),
       ),
       _TabSpec(
         pageIndex: 4,
         icon: CupertinoIcons.person,
         activeIcon: CupertinoIcons.person_fill,
-        label: s.tr('حسابي', 'Profil'),
+        label: s.tr('حسابي', 'Profil', 'Profile'),
       ),
     ];
 
@@ -741,7 +741,7 @@ class _MainShellState extends State<MainShell>
                               child: Semantics(
                                 button: true,
                                 selected: isPostAdSelected,
-                                label: s.tr('نشر إعلان', 'Publier'),
+                                label: s.tr('نشر إعلان', 'Publier', 'Post Ad'),
                                 child: AnimatedBuilder(
                                   animation: _squashCtrl,
                                   builder: (context, child) {

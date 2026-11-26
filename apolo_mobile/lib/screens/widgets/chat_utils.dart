@@ -65,7 +65,7 @@ String formatChatListTime(DateTime t, AppStrings s) {
   final now = DateTime.now();
   if (isSameChatDay(t, now)) return formatChatClock(t);
   final yesterday = now.subtract(const Duration(days: 1));
-  if (isSameChatDay(t, yesterday)) return s.tr('أمس', 'Hier');
+  if (isSameChatDay(t, yesterday)) return s.tr('أمس', 'Hier', 'Yesterday');
   if (now.difference(t).inDays < 7) return _weekday(t.weekday, s);
   return '${_two(t.day)}/${_two(t.month)}/${t.year % 100}';
 }
@@ -73,9 +73,9 @@ String formatChatListTime(DateTime t, AppStrings s) {
 /// Day separator label inside a conversation.
 String formatChatDayLabel(DateTime t, AppStrings s) {
   final now = DateTime.now();
-  if (isSameChatDay(t, now)) return s.tr('اليوم', "Aujourd'hui");
+  if (isSameChatDay(t, now)) return s.tr('اليوم', "Aujourd'hui", 'Today');
   if (isSameChatDay(t, now.subtract(const Duration(days: 1)))) {
-    return s.tr('أمس', 'Hier');
+    return s.tr('أمس', 'Hier', 'Yesterday');
   }
   if (now.difference(t).inDays < 7) return _weekday(t.weekday, s);
   return '${_two(t.day)}/${_two(t.month)}/${t.year}';

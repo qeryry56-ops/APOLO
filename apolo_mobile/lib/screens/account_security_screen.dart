@@ -66,7 +66,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     if (!AccountValidation.email(email)) {
       setState(() {
         _error = s.tr('أدخل بريداً إلكترونياً صالحاً.',
-            'Entrez une adresse e-mail valide.');
+            'Entrez une adresse e-mail valide.', 'Enter a valid email address.');
         _successMessage = null;
       });
       return;
@@ -75,8 +75,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         phone.isEmpty ? null : AccountValidation.phone(phone);
     if (phone.isNotEmpty && normalizedPhone == null) {
       setState(() {
-        _error = s.tr(
-            'أدخل رقم هاتف مغربي صالح.', 'Entrez un numéro marocain valide.');
+        _error = s.tr('أدخل رقم هاتف مغربي صالح.',
+            'Entrez un numéro marocain valide.', 'Enter a valid phone number.');
         _successMessage = null;
       });
       return;
@@ -109,7 +109,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       if (mounted) {
         setState(() => _successMessage = s.tr(
             'تم تحديث بيانات الاتصال بنجاح.',
-            'Coordonnées mises à jour avec succès.'));
+            'Coordonnées mises à jour avec succès.',
+            'Contact details updated successfully.'));
       }
     } catch (e) {
       if (mounted) {
@@ -130,8 +131,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     if (!AccountValidation.password(currentPassword) ||
         !AccountValidation.password(newPassword)) {
       setState(() {
-        _error = s.tr('كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
-            'Le mot de passe doit contenir au moins 8 caractères.');
+        _error = s.tr(
+            'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
+            'Le mot de passe doit contenir au moins 8 caractères.',
+            'Password must be at least 8 characters.');
         _successMessage = null;
       });
       return;
@@ -139,7 +142,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     if (newPassword != confirmPassword) {
       setState(() {
         _error = s.tr('كلمتا المرور غير متطابقتين.',
-            'Les mots de passe ne correspondent pas.');
+            'Les mots de passe ne correspondent pas.', 'Passwords do not match.');
         _successMessage = null;
       });
       return;
@@ -162,7 +165,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       if (mounted) {
         setState(() => _successMessage = s.tr(
             'تم تحديث كلمة المرور بنجاح.',
-            'Mot de passe mis à jour avec succès.'));
+            'Mot de passe mis à jour avec succès.',
+            'Password updated successfully.'));
       }
     } catch (e) {
       if (mounted) {
@@ -364,8 +368,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             keyboardType: TextInputType.emailAddress,
                             textDirection: TextDirection.ltr,
                             decoration: _fieldDecoration(
-                              label:
-                                  s.tr('البريد الإلكتروني', 'Adresse e-mail'),
+                              label: s.tr('البريد الإلكتروني', 'Adresse e-mail',
+                                  'Email address'),
                               icon: CupertinoIcons.at,
                             ),
                           ),
@@ -376,7 +380,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             keyboardType: TextInputType.phone,
                             textDirection: TextDirection.ltr,
                             decoration: _fieldDecoration(
-                              label: s.tr('رقم الهاتف', 'Numéro de téléphone'),
+                              label: s.tr('رقم الهاتف', 'Numéro de téléphone',
+                                  'Phone number'),
                               icon: CupertinoIcons.phone,
                             ),
                           ),
@@ -404,8 +409,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                       ),
                                     )
                                   : Text(
-                                      s.tr('حفظ بيانات الاتصال',
-                                          'Enregistrer les coordonnées'),
+                                      s.tr(
+                                          'حفظ بيانات الاتصال',
+                                          'Enregistrer les coordonnées',
+                                          'Save contact details'),
                                       style: const TextStyle(
                                         fontSize: 14.5,
                                         fontWeight: FontWeight.w600,
@@ -438,8 +445,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             obscureText: _obscureCurrent,
                             textDirection: TextDirection.ltr,
                             decoration: _fieldDecoration(
-                              label: s.tr(
-                                  'كلمة المرور الحالية', 'Mot de passe actuel'),
+                              label: s.tr('كلمة المرور الحالية',
+                                  'Mot de passe actuel', 'Current password'),
                               icon: Icons.lock_outline,
                               suffixIcon: IconButton(
                                 onPressed: () => setState(
@@ -462,7 +469,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             textDirection: TextDirection.ltr,
                             decoration: _fieldDecoration(
                               label: s.tr('كلمة المرور الجديدة',
-                                  'Nouveau mot de passe'),
+                                  'Nouveau mot de passe', 'New password'),
                               icon: Icons.password,
                               suffixIcon: IconButton(
                                 onPressed: () =>
@@ -484,8 +491,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             obscureText: _obscureConfirm,
                             textDirection: TextDirection.ltr,
                             decoration: _fieldDecoration(
-                              label: s.tr('تأكيد كلمة المرور الجديدة',
-                                  'Confirmer le nouveau mot de passe'),
+                              label: s.tr(
+                                  'تأكيد كلمة المرور الجديدة',
+                                  'Confirmer le nouveau mot de passe',
+                                  'Confirm new password'),
                               icon: Icons.password,
                               suffixIcon: IconButton(
                                 onPressed: () => setState(
@@ -524,8 +533,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                       ),
                                     )
                                   : Text(
-                                      s.tr('تحديث كلمة المرور',
-                                          'Mettre à jour le mot de passe'),
+                                      s.tr(
+                                          'تحديث كلمة المرور',
+                                          'Mettre à jour le mot de passe',
+                                          'Update password'),
                                       style: const TextStyle(
                                         fontSize: 14.5,
                                         fontWeight: FontWeight.w600,
@@ -551,10 +562,11 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                         children: [
                           _buildInfoRow(
                             icon: Icons.password,
-                            title: s.tr('كلمة المرور', 'Mot de passe'),
+                            title: s.tr('كلمة المرور', 'Mot de passe', 'Password'),
                             subtitle: s.tr(
                                 'سجّل الدخول في التطبيق لتعديل هذه البيانات',
-                                'Connectez-vous dans l’application pour modifier ces informations'),
+                                'Connectez-vous dans l’application pour modifier ces informations',
+                                'Sign in to update this information'),
                           ),
                           const Padding(
                             padding:
@@ -564,10 +576,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                           ),
                           _buildInfoRow(
                             icon: CupertinoIcons.at,
-                            title: s.tr('البريد الإلكتروني', 'Adresse e-mail'),
+                            title: s.tr('البريد الإلكتروني', 'Adresse e-mail',
+                                'Email address'),
                             subtitle: s.tr(
                                 'سجّل الدخول في التطبيق لتعديل هذه البيانات',
-                                'Connectez-vous dans l’application pour modifier ces informations'),
+                                'Connectez-vous dans l’application pour modifier ces informations',
+                                'Sign in to update this information'),
                           ),
                           const Padding(
                             padding:
@@ -577,10 +591,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                           ),
                           _buildInfoRow(
                             icon: CupertinoIcons.phone,
-                            title: s.tr('رقم الهاتف', 'Numéro de téléphone'),
+                            title: s.tr('رقم الهاتف', 'Numéro de téléphone',
+                                'Phone number'),
                             subtitle: s.tr(
                                 'سجّل الدخول في التطبيق لتعديل هذه البيانات',
-                                'Connectez-vous dans l’application pour modifier ces informations'),
+                                'Connectez-vous dans l’application pour modifier ces informations',
+                                'Sign in to update this information'),
                           ),
                         ],
                       ),

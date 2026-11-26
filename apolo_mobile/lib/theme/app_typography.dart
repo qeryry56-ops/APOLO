@@ -256,7 +256,7 @@ class AppTypography {
     FontWeight weight = FontWeight.w700,
     Color? color,
   }) {
-    final effectiveLocale = locale ?? const Locale('ar');
+    final effectiveLocale = locale ?? const Locale('en');
     final family = resolveFontFamily(effectiveLocale, platform: platform);
     final fallback =
         resolveFontFamilyFallback(effectiveLocale, platform: platform);

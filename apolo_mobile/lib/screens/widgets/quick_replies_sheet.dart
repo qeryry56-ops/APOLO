@@ -414,7 +414,7 @@ class BusinessQuickRepliesBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isAr ? 'تعديل' : 'Gérer',
+                      AppState().s.tr('تعديل', 'Gérer', 'Manage'),
                       style: const TextStyle(
                         fontSize: 11.8,
                         fontWeight: FontWeight.w700,

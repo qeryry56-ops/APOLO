@@ -40,11 +40,17 @@ class AdCard extends StatelessWidget {
     final String cityName = ad['city'] is Map
         ? (state.s.isAr
                 ? (ad['city']['name_ar'] ?? ad['city']['name'])
-                : (ad['city']['name_fr'] ?? ad['city']['name']))
+                : (state.s.isEn
+                    ? (ad['city']['name_en'] ??
+                        ad['city']['name_fr'] ??
+                        ad['city']['name'])
+                    : (ad['city']['name_fr'] ?? ad['city']['name'])))
             .toString()
         : (state.s.isAr
                 ? (ad['city_ar'] ?? ad['city_name'] ?? '')
-                : (ad['city_fr'] ?? ad['city_name'] ?? ''))
+                : (state.s.isEn
+                    ? (ad['city_en'] ?? ad['city_fr'] ?? ad['city_name'] ?? '')
+                    : (ad['city_fr'] ?? ad['city_name'] ?? '')))
             .toString();
 
     final Map<String, dynamic> catMap = ad['category'] is Map
@@ -237,7 +243,7 @@ class AdCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 3),
                   Text(
-                    state.s.tr('مميز', 'VIP'),
+                    state.s.tr('مميز', 'VIP', 'VIP'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -365,7 +371,7 @@ class AdCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        state.s.tr('تفاوض', 'Négo'),
+                        state.s.tr('تفاوض', 'Négo', 'Negotiable'),
                         style: const TextStyle(
                           color: _emerald,
                           fontSize: 9.5,

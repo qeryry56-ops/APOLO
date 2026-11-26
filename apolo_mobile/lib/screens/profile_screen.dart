@@ -142,8 +142,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted || identity != _identity) return;
       setState(() {
         _loadingAds = false;
-        _adsError = _state.s.tr('تعذر تحميل الإعلانات. اسحب للمحاولة مجدداً.',
-            'Impossible de charger les annonces. Réessayez en actualisant.');
+        _adsError = _state.s.tr(
+          'تعذر تحميل الإعلانات. اسحب للمحاولة مجدداً.',
+          'Impossible de charger les annonces. Réessayez en actualisant.',
+          'Could not load listings. Pull to retry.',
+        );
       });
     }
   }
@@ -162,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _displayName(bool isAr) =>
       _state.currentUser?['name']?.toString().trim() ??
-      (isAr ? 'حسابي' : 'Mon compte');
+      _state.s.tr('حسابي', 'Mon compte', 'My account');
   String get _displayHandle =>
       _state.currentUser?['username']?.toString() ?? 'profil';
   String _displayBio(bool isAr) => _state.currentUser?['bio']?.toString() ?? '';
@@ -513,16 +516,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         children: [
                                           _buildSegmentButton(
                                             index: 0,
-                                            label: isAr
-                                                ? 'إعلاناتي'
-                                                : 'Mes annonces',
+                                            label: _state.s.tr(
+                                              'إعلاناتي',
+                                              'Mes annonces',
+                                              'My Listings',
+                                            ),
                                             icon: CupertinoIcons.square_grid_2x2,
                                           ),
                                           _buildSegmentButton(
                                             index: 1,
-                                            label: isAr
-                                                ? 'لوحة الأعمال والإحصائيات'
-                                                : 'Tableau Pro & Boost',
+                                            label: _state.s.tr(
+                                              'لوحة الأعمال والإحصائيات',
+                                              'Tableau Pro & Boost',
+                                              'Pro Insights & Boost',
+                                            ),
                                             icon: CupertinoIcons.chart_bar,
                                           ),
                                         ],
@@ -945,11 +952,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: IllustratedStateView(
           assetPath: 'assets/images/state_empty_ads.png',
           imageSize: 160,
-          title: isAr ? 'لا توجد إعلانات منشورة' : 'Aucune annonce publiée',
-          subtitle: isAr
-              ? 'انشر إعلانك الأول ليظهر هنا في معرضك الخاص.'
-              : 'Publiez votre première annonce pour l’afficher ici.',
-          actionLabel: isAr ? 'إضافة إعلان' : 'Publier une annonce',
+          title: _state.s.tr(
+            'لا توجد إعلانات منشورة',
+            'Aucune annonce publiée',
+            'No listings yet',
+          ),
+          subtitle: _state.s.tr(
+            'انشر إعلانك الأول ليظهر هنا في معرضك الخاص.',
+            'Publiez votre première annonce pour l’afficher ici.',
+            'Publish your first listing to showcase it here.',
+          ),
+          actionLabel: _state.s.tr(
+            'إضافة إعلان',
+            'Publier une annonce',
+            'Post a listing',
+          ),
           onAction: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const PostAdScreen()),
@@ -976,7 +993,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
             final priceStr = (ad['price_formatted'] ??
                     (ad['price'] != null
-                        ? '${ad['price']} ${isAr ? 'د.م' : 'DH'}'
+                        ? '${ad['price']} ${_state.s.tr('د.م', 'DH', 'MAD')}'
                         : ''))
                 .toString();
 
@@ -1159,7 +1176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _buildAnalyticsKpiCard(
                   icon: CupertinoIcons.eye_fill,
-                  label: isAr ? 'إجمالي المشاهدات' : 'Vues totales',
+                  label: _state.s.tr('إجمالي المشاهدات', 'Vues totales', 'Total views'),
                   value: _baseViews?.toString() ?? '0',
                 ),
               ),
@@ -1167,7 +1184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _buildAnalyticsKpiCard(
                   icon: CupertinoIcons.square_grid_2x2_fill,
-                  label: isAr ? 'الإعلانات النشطة' : 'Annonces actives',
+                  label: _state.s.tr('الإعلانات النشطة', 'Annonces actives', 'Active listings'),
                   value: '$totalAds',
                 ),
               ),
@@ -1179,7 +1196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _buildAnalyticsKpiCard(
                   icon: CupertinoIcons.chart_bar_fill,
-                  label: isAr ? 'متوسط المشاهدات' : 'Moy. / annonce',
+                  label: _state.s.tr('متوسط المشاهدات', 'Moy. / annonce', 'Avg. / listing'),
                   value: '$avgViews',
                 ),
               ),
@@ -1187,7 +1204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _buildAnalyticsKpiCard(
                   icon: CupertinoIcons.bolt_fill,
-                  label: isAr ? 'إعلانات ممولة' : 'Annonces Boost',
+                  label: _state.s.tr('إعلانات ممولة', 'Annonces Boost', 'Boosted listings'),
                   value: '$boostedCount',
                 ),
               ),
@@ -1203,7 +1220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: _buildAnalyticsKpiCard(
                     icon: CupertinoIcons.phone_fill,
-                    label: isAr ? 'نقرات الاتصال' : 'Appels reçus',
+                    label: _state.s.tr('نقرات الاتصال', 'Appels reçus', 'Call taps'),
                     value: '${_businessInsights?['phone_clicks'] ?? 0}',
                   ),
                 ),
@@ -1211,7 +1228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: _buildAnalyticsKpiCard(
                     icon: CupertinoIcons.chat_bubble_2_fill,
-                    label: isAr ? 'محادثات الزبناء' : 'Conversations',
+                    label: _state.s.tr('محادثات الزبناء', 'Conversations', 'Customer chats'),
                     value:
                         '${_businessInsights?['chat_conversations_count'] ?? 0}',
                   ),
@@ -1224,7 +1241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: _buildAnalyticsKpiCard(
                     icon: CupertinoIcons.bag_fill,
-                    label: isAr ? 'طلبيات المتجر' : 'Commandes directes',
+                    label: _state.s.tr('طلبيات المتجر', 'Commandes directes', 'Direct orders'),
                     value: '${_businessInsights?['direct_orders_count'] ?? 0}',
                   ),
                 ),
@@ -1232,7 +1249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: _buildAnalyticsKpiCard(
                     icon: CupertinoIcons.sparkles,
-                    label: isAr ? 'رصيد VIP المجاني' : 'Crédits VIP offerts',
+                    label: _state.s.tr('رصيد VIP المجاني', 'Crédits VIP offerts', 'Free VIP credits'),
                     value: '${_state.vipBoostCredits}',
                   ),
                 ),
@@ -1279,9 +1296,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isAr
-                                ? 'افتح إحصائيات النقرات والطلبيات + شارة PRO+ 👑'
-                                : 'Débloquez les stats d’appels & commandes + Badge PRO+ 👑',
+                            _state.s.tr(
+                              'افتح إحصائيات النقرات والطلبيات + شارة PRO+ 👑',
+                              'Débloquez les stats d’appels & commandes + Badge PRO+ 👑',
+                              'Unlock call & order stats + PRO+ Badge 👑',
+                            ),
                             style: const TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
@@ -1290,9 +1309,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            isAr
-                                ? 'احصل على 3 تمويلات VIP مجانية شهرياً وتصدر المتاجر عبر Google Pay.'
-                                : '3 Boosts VIP gratuits/mois et priorité d’affichage via Google Pay.',
+                            _state.s.tr(
+                              'احصل على 3 تمويلات VIP مجانية شهرياً وتصدر المتاجر عبر Google Pay.',
+                              '3 Boosts VIP gratuits/mois et priorité d’affichage via Google Pay.',
+                              'Get 3 free VIP boosts/month and priority visibility.',
+                            ),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.white.withValues(alpha: 0.78),
@@ -1323,7 +1344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      isAr ? 'توزيع المشاهدات' : 'Répartition des vues',
+                      _state.s.tr('توزيع المشاهدات', 'Répartition des vues', 'Views breakdown'),
                       style: const TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w800,
@@ -1340,7 +1361,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        isAr ? 'مباشر' : 'En direct',
+                        _state.s.tr('مباشر', 'En direct', 'Live'),
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -1356,9 +1377,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Center(
                       child: Text(
-                        isAr
-                            ? 'انشر إعلانك الأول لتبدأ متابعة المشاهدات والأداء هنا.'
-                            : 'Publiez votre première annonce pour suivre vos vues ici.',
+                        _state.s.tr(
+                          'انشر إعلانك الأول لتبدأ متابعة المشاهدات والأداء هنا.',
+                          'Publiez votre première annonce pour suivre vos vues ici.',
+                          'Publish your first listing to track views and performance here.',
+                        ),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 13,
@@ -1442,7 +1465,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isAr ? 'أفضل إعلاناتك أداءً' : 'Vos meilleures annonces',
+                    _state.s.tr(
+                      'أفضل إعلاناتك أداءً',
+                      'Vos meilleures annonces',
+                      'Top performing listings',
+                    ),
                     style: const TextStyle(
                       fontSize: 15.5,
                       fontWeight: FontWeight.w800,
@@ -1499,7 +1526,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '$views ${isAr ? 'مشاهدة' : 'vues'}',
+                                      '$views ${_state.s.tr('مشاهدة', 'vues', 'views')}',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -1597,7 +1624,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAr ? 'نصيحة لزيادة المبيعات' : 'Conseil de vente',
+                        _state.s.tr(
+                          'نصيحة لزيادة المبيعات',
+                          'Conseil de vente',
+                          'Sales tip',
+                        ),
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w800,
@@ -1607,12 +1638,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 3),
                       Text(
                         sortedAds.isEmpty
-                            ? (isAr
-                                ? 'أضف صوراً واضحة وثمناً مناسباً في إعلانك الأول لجذب المشترين بسرعة.'
-                                : 'Ajoutez des photos nettes et un prix clair pour attirer plus d’acheteurs.')
-                            : (isAr
-                                ? 'تحديث الصور والوصف أو تمويل إعلانك الأكثر مشاهدة يضاعف فرص البيع.'
-                                : 'Mettre à jour vos photos ou booster votre meilleure annonce accélère la vente.'),
+                            ? _state.s.tr(
+                                'أضف صوراً واضحة وثمناً مناسباً في إعلانك الأول لجذب المشترين بسرعة.',
+                                'Ajoutez des photos nettes et un prix clair pour attirer plus d’acheteurs.',
+                                'Add clear photos and a fair price on your first listing to attract buyers fast.',
+                              )
+                            : _state.s.tr(
+                                'تحديث الصور والوصف أو تمويل إعلانك الأكثر مشاهدة يضاعف فرص البيع.',
+                                'Mettre à jour vos photos ou booster votre meilleure annonce accélère la vente.',
+                                'Refreshing photos or boosting your top listing helps it sell faster.',
+                              ),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.white.withValues(alpha: 0.78),
@@ -1769,9 +1804,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          isAr
-                              ? 'تغيير صورة الملف الشخصي'
-                              : 'Changer la photo de profil',
+                          _state.s.tr(
+                            'تغيير صورة الملف الشخصي',
+                            'Changer la photo de profil',
+                            'Change profile photo',
+                          ),
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
@@ -1795,9 +1832,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           title: Text(
-                            isAr
-                                ? 'اختيار صورة من المعرض'
-                                : 'Choisir depuis la galerie',
+                            _state.s.tr(
+                              'اختيار صورة من المعرض',
+                              'Choisir depuis la galerie',
+                              'Choose from gallery',
+                            ),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: _ink,
@@ -1825,9 +1864,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             title: Text(
-                              isAr
-                                  ? 'إزالة الصورة الحالية'
-                                  : 'Supprimer la photo actuelle',
+                              _state.s.tr(
+                                'إزالة الصورة الحالية',
+                                'Supprimer la photo actuelle',
+                                'Remove current photo',
+                              ),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFFE31B23),
@@ -1840,9 +1881,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         const SizedBox(height: 10),
                         Text(
-                          isAr
-                              ? 'أو اختر أفاتار جاهز'
-                              : 'Ou choisir un avatar',
+                          _state.s.tr(
+                            'أو اختر أفاتار جاهز',
+                            'Ou choisir un avatar',
+                            'Or choose an avatar',
+                          ),
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
@@ -1912,7 +1955,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onPressed: saving ? null : () => Navigator.pop(ctx),
                   ),
                   title: Text(
-                    isAr ? 'تعديل الملف الشخصي' : 'Modifier le profil',
+                    _state.s.tr(
+                      'تعديل الملف الشخصي',
+                      'Modifier le profil',
+                      'Edit Profile',
+                    ),
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -2007,9 +2054,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 GestureDetector(
                                   onTap: showAvatarPickerSheet,
                                   child: Text(
-                                    isAr
-                                        ? 'تغيير صورة الملف الشخصي'
-                                        : 'Changer la photo de profil',
+                                    _state.s.tr(
+                                      'تغيير صورة الملف الشخصي',
+                                      'Changer la photo de profil',
+                                      'Change profile photo',
+                                    ),
                                     style: const TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w700,
@@ -2034,16 +2083,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               children: [
                                 _buildEditField(
-                                  label:
-                                      isAr ? 'الاسم الكامل' : 'Nom complet',
+                                  label: _state.s.tr(
+                                    'الاسم الكامل',
+                                    'Nom complet',
+                                    'Full name',
+                                  ),
                                   controller: nameCtrl,
                                   icon: CupertinoIcons.person,
                                 ),
                                 const SizedBox(height: 14),
                                 _buildEditField(
-                                  label: isAr
-                                      ? 'اسم المستخدم (@username)'
-                                      : 'Nom d’utilisateur (@username)',
+                                  label: _state.s.tr(
+                                    'اسم المستخدم (@username)',
+                                    'Nom d’utilisateur (@username)',
+                                    'Username (@username)',
+                                  ),
                                   controller: usernameCtrl,
                                   icon: CupertinoIcons.at,
                                   inputFormatters: [
@@ -2099,9 +2153,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       update(() {
                                         checkingUsername = false;
                                         usernameAvailable = false;
-                                        usernameStatusMsg = isAr
-                                            ? 'يجب أن يكون 3 أحرف على الأقل'
-                                            : 'Minimum 3 caractères requis';
+                                        usernameStatusMsg = _state.s.tr(
+                                          'يجب أن يكون 3 أحرف على الأقل',
+                                          'Minimum 3 caractères requis',
+                                          'Minimum 3 characters required',
+                                        );
                                         usernameSuggestions = [];
                                       });
                                       return;
@@ -2145,13 +2201,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             checkingUsername = false;
                                             usernameAvailable = avail;
                                             usernameStatusMsg = avail
-                                                ? (isAr
-                                                    ? 'اسم المستخدم @$clean متاح!'
-                                                    : '@$clean est disponible !')
+                                                ? _state.s.tr(
+                                                    'اسم المستخدم @$clean متاح!',
+                                                    '@$clean est disponible !',
+                                                    '@$clean is available!',
+                                                  )
                                                 : (msg ??
-                                                    (isAr
-                                                        ? 'اسم المستخدم محجوز بالفعل.'
-                                                        : 'Déjà utilisé.'));
+                                                    _state.s.tr(
+                                                      'اسم المستخدم محجوز بالفعل.',
+                                                      'Déjà utilisé.',
+                                                      'Already taken.',
+                                                    ));
                                             usernameSuggestions = sugg;
                                           });
                                         } catch (_) {
@@ -2202,9 +2262,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             update(() {
                                               checkingUsername = false;
                                               usernameAvailable = true;
-                                              usernameStatusMsg = isAr
-                                                  ? 'اسم المستخدم @$sugg متاح!'
-                                                  : '@$sugg est disponible !';
+                                              usernameStatusMsg = _state.s.tr(
+                                                'اسم المستخدم @$sugg متاح!',
+                                                '@$sugg est disponible !',
+                                                '@$sugg is available!',
+                                              );
                                               usernameSuggestions = [];
                                               error = null;
                                             });
@@ -2239,9 +2301,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                                 const SizedBox(height: 14),
                                 _buildEditField(
-                                  label: isAr
-                                      ? 'النبذة التعريفية (Bio)'
-                                      : 'Biographie (Bio)',
+                                  label: _state.s.tr(
+                                    'النبذة التعريفية (Bio)',
+                                    'Biographie (Bio)',
+                                    'Bio',
+                                  ),
                                   controller: bioCtrl,
                                   icon: CupertinoIcons.text_alignleft,
                                   maxLines: 3,
@@ -2281,9 +2345,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   : () async {
                                       if (identity != _identity) return;
                                       if (nameCtrl.text.trim().isEmpty) {
-                                        update(() => error = isAr
-                                            ? 'الاسم مطلوب.'
-                                            : 'Le nom est requis.');
+                                        update(() => error = _state.s.tr(
+                                              'الاسم مطلوب.',
+                                              'Le nom est requis.',
+                                              'Name is required.',
+                                            ));
                                         return;
                                       }
                                       final cleanUsername = usernameCtrl.text
@@ -2291,16 +2357,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           .replaceAll('@', '')
                                           .toLowerCase();
                                       if (cleanUsername.length < 3) {
-                                        update(() => error = isAr
-                                            ? 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل.'
-                                            : 'Le nom d’utilisateur doit contenir au moins 3 caractères.');
+                                        update(() => error = _state.s.tr(
+                                              'اسم المستخدم يجب أن يكون 3 أحرف على الأقل.',
+                                              'Le nom d’utilisateur doit contenir au moins 3 caractères.',
+                                              'Username must be at least 3 characters.',
+                                            ));
                                         return;
                                       }
                                       if (usernameAvailable == false) {
-                                        update(() => error = usernameStatusMsg ??
-                                            (isAr
-                                                ? 'اسم المستخدم هذا محجوز بالفعل، اختر اسماً آخر.'
-                                                : 'Ce nom d’utilisateur est déjà pris.'));
+                                        update(() => error =
+                                            usernameStatusMsg ??
+                                            _state.s.tr(
+                                              'اسم المستخدم هذا محجوز بالفعل، اختر اسماً آخر.',
+                                              'Ce nom d’utilisateur est déjà pris.',
+                                              'This username is already taken.',
+                                            ));
                                         return;
                                       }
                                       final values = <String, dynamic>{
@@ -2354,9 +2425,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           Navigator.pop(ctx);
                                         }
                                       } catch (e) {
-                                        String errText = isAr
-                                            ? 'تعذر حفظ التغييرات. حاول مجدداً.'
-                                            : 'Enregistrement impossible. Réessayez.';
+                                        String errText = _state.s.tr(
+                                          'تعذر حفظ التغييرات. حاول مجدداً.',
+                                          'Enregistrement impossible. Réessayez.',
+                                          'Could not save changes. Please try again.',
+                                        );
                                         if (e is DioException &&
                                             e.response?.data is Map) {
                                           final serverMsg = e.response!
@@ -2379,10 +2452,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     },
                               child: Text(
                                 saving
-                                    ? (isAr
-                                        ? 'جارٍ الحفظ...'
-                                        : 'Enregistrement...')
-                                    : (isAr ? 'حفظ التغييرات' : 'Enregistrer'),
+                                    ? _state.s.tr(
+                                        'جارٍ الحفظ...',
+                                        'Enregistrement...',
+                                        'Saving...',
+                                      )
+                                    : _state.s.tr(
+                                        'حفظ التغييرات',
+                                        'Enregistrer',
+                                        'Save changes',
+                                      ),
                                 style: const TextStyle(
                                   fontSize: 15.5,
                                   fontWeight: FontWeight.w700,
@@ -2494,7 +2573,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ListTile(
                 leading: const Icon(CupertinoIcons.pencil, color: _ink),
                 title: Text(
-                  isAr ? 'تعديل الإعلان' : 'Modifier l’annonce',
+                  _state.s.tr(
+                    'تعديل الإعلان',
+                    'Modifier l’annonce',
+                    'Edit listing',
+                  ),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: _ink,
@@ -2513,7 +2596,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ListTile(
                 leading: const Icon(CupertinoIcons.bolt_fill, color: _ink),
                 title: Text(
-                  isAr ? 'تمويل الإعلان (Boost)' : 'Booster cette annonce',
+                  _state.s.tr(
+                    'تمويل الإعلان (Boost)',
+                    'Booster cette annonce',
+                    'Boost this listing',
+                  ),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: _ink,
@@ -2530,7 +2617,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Color(0xFFE31B23),
                 ),
                 title: Text(
-                  isAr ? 'حذف الإعلان' : 'Supprimer l’annonce',
+                  _state.s.tr(
+                    'حذف الإعلان',
+                    'Supprimer l’annonce',
+                    'Delete listing',
+                  ),
                   style: const TextStyle(
                     color: Color(0xFFE31B23),
                     fontWeight: FontWeight.w700,
@@ -2573,7 +2664,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final deleted = await showGeneralDialog<bool>(
         context: context,
         barrierDismissible: true,
-        barrierLabel: isAr ? 'إغلاق' : 'Fermer',
+        barrierLabel: _state.s.tr('إغلاق', 'Fermer', 'Close'),
         barrierColor: Colors.black.withValues(alpha: 0.48),
         transitionDuration: const Duration(milliseconds: 240),
         pageBuilder: (dialogCtx, animation, secondaryAnimation) {
@@ -2607,9 +2698,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (ctx.mounted) {
                     setDialogState(() {
                       deleting = false;
-                      dialogError = isAr
-                          ? 'تعذر حذف الإعلان حالياً. حاول مرة أخرى.'
-                          : 'Impossible de supprimer l’annonce. Réessayez.';
+                      dialogError = _state.s.tr(
+                        'تعذر حذف الإعلان حالياً. حاول مرة أخرى.',
+                        'Impossible de supprimer l’annonce. Réessayez.',
+                        'Could not delete listing. Please try again.',
+                      );
                     });
                   }
                 }
@@ -2670,9 +2763,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                 // Headline
                                 Text(
-                                  isAr
-                                      ? 'حذف هذا الإعلان؟'
-                                      : 'Supprimer cette annonce ?',
+                                  _state.s.tr(
+                                    'حذف هذا الإعلان؟',
+                                    'Supprimer cette annonce ?',
+                                    'Delete this listing?',
+                                  ),
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 19,
@@ -2686,9 +2781,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                 // Reassuring Warning Subtitle
                                 Text(
-                                  isAr
-                                      ? 'سيتم حذف الإعلان نهائياً من حسابك ومن نتائج البحث ولا يمكن التراجع عن هذه العملية.'
-                                      : 'Cette annonce sera définitivement retirée de votre profil et des résultats. Cette action est irréversible.',
+                                  _state.s.tr(
+                                    'سيتم حذف الإعلان نهائياً من حسابك ومن نتائج البحث ولا يمكن التراجع عن هذه العملية.',
+                                    'Cette annonce sera définitivement retirée de votre profil et des résultats. Cette action est irréversible.',
+                                    'This listing will be permanently removed from your profile and search results. This action cannot be undone.',
+                                  ),
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 13.5,
@@ -2830,9 +2927,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             ),
                                           )
                                         : Text(
-                                            isAr
-                                                ? 'نعم، احذف الإعلان'
-                                                : 'Supprimer définitivement',
+                                            _state.s.tr(
+                                              'نعم، احذف الإعلان',
+                                              'Supprimer définitivement',
+                                              'Delete permanently',
+                                            ),
                                             style: const TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w700,
@@ -2857,7 +2956,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       shape: const StadiumBorder(),
                                     ),
                                     child: Text(
-                                      isAr ? 'إلغاء' : 'Annuler',
+                                      _state.s.tr('إلغاء', 'Annuler', 'Cancel'),
                                       style: const TextStyle(
                                         fontSize: 14.5,
                                         fontWeight: FontWeight.w700,
@@ -2916,9 +3015,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    isAr
-                        ? 'تم حذف الإعلان بنجاح'
-                        : 'Annonce supprimée avec succès',
+                    _state.s.tr(
+                      'تم حذف الإعلان بنجاح',
+                      'Annonce supprimée avec succès',
+                      'Listing deleted successfully',
+                    ),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Colors.white,

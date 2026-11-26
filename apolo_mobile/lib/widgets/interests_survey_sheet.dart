@@ -303,8 +303,11 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                         children: _categories.map((cat) {
                           final id = int.tryParse('${cat['id']}') ?? 0;
                           final isSelected = _selectedCategoryIds.contains(id);
-                          final label = (cat[isAr ? 'name_ar' : 'name_fr'] ??
+                          final label = (cat[isAr
+                                      ? 'name_ar'
+                                      : (s.isEn ? 'name_en' : 'name_fr')] ??
                                   cat['name'] ??
+                                  cat['name_fr'] ??
                                   '')
                               .toString();
                           final icon = cat['icon'] as IconData? ??
@@ -388,9 +391,14 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                       )
                     : Text(
                         _selectedCategoryIds.isEmpty
-                            ? s.tr('اكتشاف المنتجات', 'Discover products')
+                            ? s.tr(
+                                'اكتشاف المنتجات',
+                                'Découvrir les produits',
+                                'Discover products',
+                              )
                             : s.tr(
                                 'حفظ وتأكيد (${_selectedCategoryIds.length})',
+                                'Enregistrer et continuer (${_selectedCategoryIds.length})',
                                 'Save & continue (${_selectedCategoryIds.length})',
                               ),
                         style: const TextStyle(
@@ -415,7 +423,7 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                         widget.onFinished?.call();
                       },
                 child: Text(
-                  s.tr('تخطي الآن', 'Skip for now'),
+                  s.tr('تخطي الآن', 'Passer pour le moment', 'Skip for now'),
                   style: const TextStyle(
                     fontSize: 13.5,
                     color: Color(0xFF9CA3AF),

@@ -130,9 +130,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_state.s.isAr
-                ? 'رقم هاتف البائع غير متوفر حالياً'
-                : 'Numéro non disponible'),
+            content: Text(_state.s.tr(
+              'رقم هاتف البائع غير متوفر حالياً',
+              'Numéro non disponible',
+              'Seller phone number not available',
+            )),
             backgroundColor: _red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -152,8 +154,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     final id = int.tryParse((ad?['id'] ?? '').toString());
     if (ad == null || id == null || id <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppState().s.tr('اختر إعلاناً للبائع لبدء المحادثة.',
-              'Choisissez une annonce pour contacter ce vendeur.'))));
+          content: Text(AppState().s.tr(
+            'اختر إعلاناً للبائع لبدء المحادثة.',
+            'Choisissez une annonce pour contacter ce vendeur.',
+            'Select a listing to message this seller.',
+          ))));
       return;
     }
     Navigator.push(
@@ -170,7 +175,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       builder: (ctx) => CupertinoActionSheet(
         title: Text(widget.sellerName),
         message: Text(
-          isAr ? 'خيارات الملف الشخصي للبائع' : 'Options du profil vendeur',
+          _state.s.tr(
+            'خيارات الملف الشخصي للبائع',
+            'Options du profil vendeur',
+            'Seller profile options',
+          ),
         ),
         actions: [
           CupertinoActionSheetAction(
@@ -183,7 +192,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               children: [
                 const Icon(CupertinoIcons.share, size: 18),
                 const SizedBox(width: 8),
-                Text(isAr ? 'مشاركة البروفايل' : 'Partager le profil'),
+                Text(_state.s.tr(
+                  'مشاركة البروفايل',
+                  'Partager le profil',
+                  'Share profile',
+                )),
               ],
             ),
           ),
@@ -197,7 +210,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               children: [
                 const Icon(CupertinoIcons.flag, size: 18),
                 const SizedBox(width: 8),
-                Text(isAr ? 'الإبلاغ عن البائع' : 'Signaler le vendeur'),
+                Text(_state.s.tr(
+                  'الإبلاغ عن البائع',
+                  'Signaler le vendeur',
+                  'Report seller',
+                )),
               ],
             ),
           ),
@@ -212,14 +229,18 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               children: [
                 const Icon(CupertinoIcons.nosign, size: 18),
                 const SizedBox(width: 8),
-                Text(isAr ? 'حظر هذا البائع' : 'Bloquer le vendeur'),
+                Text(_state.s.tr(
+                  'حظر هذا البائع',
+                  'Bloquer le vendeur',
+                  'Block seller',
+                )),
               ],
             ),
           ),
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.pop(ctx),
-          child: Text(isAr ? 'إلغاء' : 'Annuler'),
+          child: Text(_state.s.tr('إلغاء', 'Annuler', 'Cancel')),
         ),
       ),
     );
@@ -249,7 +270,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          isAr ? 'تم حظر البائع بنجاح' : 'Vendeur bloqué avec succès',
+          _state.s.tr(
+            'تم حظر البائع بنجاح',
+            'Vendeur bloqué avec succès',
+            'Seller blocked successfully',
+          ),
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: _red,
@@ -511,19 +536,27 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                       children: [
                                         _buildTabBtn(
                                           0,
-                                          isAr
-                                              ? 'الإعلانات (${_sellerAds.length})'
-                                              : 'Annonces (${_sellerAds.length})',
+                                          _state.s.tr(
+                                            'الإعلانات (${_sellerAds.length})',
+                                            'Annonces (${_sellerAds.length})',
+                                            'Listings (${_sellerAds.length})',
+                                          ),
                                         ),
                                         _buildTabBtn(
                                           1,
-                                          isAr ? 'التقييمات (48)' : 'Avis (48)',
+                                          _state.s.tr(
+                                            'التقييمات (48)',
+                                            'Avis (48)',
+                                            'Reviews (48)',
+                                          ),
                                         ),
                                         _buildTabBtn(
                                           2,
-                                          isAr
-                                              ? 'حول والضمانات'
-                                              : 'Garanties',
+                                          _state.s.tr(
+                                            'حول والضمانات',
+                                            'Garanties',
+                                            'Trust & Info',
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -623,9 +656,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
           child: Center(
             child: Text(
-              isAr
-                  ? 'لا توجد إعلانات منشورة حالياً'
-                  : 'Aucune annonce disponible',
+              _state.s.tr(
+                'لا توجد إعلانات منشورة حالياً',
+                'Aucune annonce disponible',
+                'No listings available right now',
+              ),
               style: const TextStyle(color: _muted, fontSize: 14),
             ),
           ),
@@ -721,7 +756,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  isAr ? 'تفاوض' : 'Négociable',
+                                  _state.s.tr('تفاوض', 'Négociable', 'Negotiable'),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 9.5,
@@ -811,41 +846,49 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       {
         'name': 'حمزة التازي',
         'rating': 5,
-        'date': isAr ? 'منذ 3 أيام' : 'Il y a 3 jours',
+        'date': _state.s.tr('منذ 3 أيام', 'Il y a 3 jours', '3 days ago'),
         'item': 'Porsche Macan GTS',
-        'comment': isAr
-            ? 'البائع معقول بزاف، السلعة نقية كيف فالتصاور والمعاملة ممتازة، كيشرح ليك كلشي بالتفصيل.'
-            : 'Vendeur très sérieux, produit impeccable conforme aux photos et excellente communication.',
+        'comment': _state.s.tr(
+          'البائع معقول بزاف، السلعة نقية كيف فالتصاور والمعاملة ممتازة، كيشرح ليك كلشي بالتفصيل.',
+          'Vendeur très sérieux, produit impeccable conforme aux photos et excellente communication.',
+          'Very reliable seller, item matched the photos and great communication throughout.',
+        ),
         'verified': true,
       },
       {
         'name': 'هدى بناني',
         'rating': 5,
-        'date': isAr ? 'منذ أسبوع' : 'Il y a 1 semaine',
+        'date': _state.s.tr('منذ أسبوع', 'Il y a 1 semaine', '1 week ago'),
         'item': 'iPhone 16 Pro Max',
-        'comment': isAr
-            ? 'تجربة شراء سريعة وموثوقة، التيليفون مختوم بالباكية وجربتو عاد خلصت. الله يعطيه الصحة.'
-            : 'Expérience d\'achat fluide, téléphone scellé vérifié avant paiement. Je recommande vivement!',
+        'comment': _state.s.tr(
+          'تجربة شراء سريعة وموثوقة، التيليفون مختوم بالباكية وجربتو عاد خلصت. الله يعطيه الصحة.',
+          'Expérience d\'achat fluide, téléphone scellé vérifié avant paiement. Je recommande vivement!',
+          'Smooth buying experience, inspected before payment. Highly recommended!',
+        ),
         'verified': true,
       },
       {
         'name': 'رشيد الإدريسي',
         'rating': 5,
-        'date': isAr ? 'منذ أسبوعين' : 'Il y a 2 semaines',
+        'date': _state.s.tr('منذ أسبوعين', 'Il y a 2 semaines', '2 weeks ago'),
         'item': 'MacBook Pro M3 Max',
-        'comment': isAr
-            ? 'ما شاء الله إنسان صادق ومحترم، جا حتى لعندي وخلاني نفحص البيسي كامل على خاطري.'
-            : 'Personne honnête et respectueuse. J\'ai pu tester la machine tranquillement.',
+        'comment': _state.s.tr(
+          'ما شاء الله إنسان صادق ومحترم، جا حتى لعندي وخلاني نفحص البيسي كامل على خاطري.',
+          'Personne honnête et respectueuse. J\'ai pu tester la machine tranquillement.',
+          'Honest and respectful seller. Let me inspect the laptop thoroughly.',
+        ),
         'verified': true,
       },
       {
         'name': 'سفيان الفيلالي',
         'rating': 4,
-        'date': isAr ? 'منذ شهر' : 'Il y a 1 mois',
+        'date': _state.s.tr('منذ شهر', 'Il y a 1 mois', '1 month ago'),
         'item': 'Montre Rolex Submariner',
-        'comment': isAr
-            ? 'معاملة ممتازة وثقة كاملة. استجابة سريعة فـ شات Apolo.'
-            : 'Très bonne transaction en toute confiance. Réponse rapide.',
+        'comment': _state.s.tr(
+          'معاملة ممتازة وثقة كاملة. استجابة سريعة فـ شات Apolo.',
+          'Très bonne transaction en toute confiance. Réponse rapide.',
+          'Great transaction with full trust. Fast replies on Apolo chat.',
+        ),
         'verified': true,
       },
     ];
@@ -889,7 +932,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isAr ? '48 تقييم حقيقي' : '48 avis réels',
+                        _state.s.tr('48 تقييم حقيقي', '48 avis réels',
+                            '48 verified reviews'),
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1074,30 +1118,44 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             _buildTrustRow(
               icon: CupertinoIcons.person_badge_plus_fill,
               iconColor: _blueVerified,
-              title: isAr
-                  ? 'بطاقة التعريف الوطنية مؤكدة'
-                  : 'Pièce d\'identité vérifiée',
-              desc: isAr
-                  ? 'تم فحص ومصادقة وثائق الهوية الوطنية من طرف فريق التوثيق في Apolo.'
-                  : 'Document d\'identité officiel validé par l\'équipe de conformité Apolo.',
+              title: _state.s.tr(
+                'بطاقة التعريف الوطنية مؤكدة',
+                'Pièce d\'identité vérifiée',
+                'Government ID Verified',
+              ),
+              desc: _state.s.tr(
+                'تم فحص ومصادقة وثائق الهوية الوطنية من طرف فريق التوثيق في Apolo.',
+                'Document d\'identité officiel validé par l\'équipe de conformité Apolo.',
+                'Official identity document reviewed and verified by Apolo Trust Team.',
+              ),
             ),
             _buildTrustRow(
               icon: CupertinoIcons.phone_circle_fill,
               iconColor: _emerald,
-              title: isAr ? 'رقم هاتف مغربي موثق' : 'Numéro marocain vérifié',
-              desc: isAr
-                  ? 'رقم الهاتف مفعل عبر رمز التحقق OTP ومربوط مباشرة بحساب البائع.'
-                  : 'Numéro de téléphone validé par code SMS OTP.',
+              title: _state.s.tr(
+                'رقم هاتف مغربي موثق',
+                'Numéro marocain vérifié',
+                'Verified Phone Number',
+              ),
+              desc: _state.s.tr(
+                'رقم الهاتف مفعل عبر رمز التحقق OTP ومربوط مباشرة بحساب البائع.',
+                'Numéro de téléphone validé par code SMS OTP.',
+                'Phone number confirmed via SMS OTP verification.',
+              ),
             ),
             _buildTrustRow(
               icon: CupertinoIcons.shield_lefthalf_fill,
               iconColor: _red,
-              title: isAr
-                  ? 'حماية المعاملات Apolo Safety'
-                  : 'Protection Apolo Safety',
-              desc: isAr
-                  ? 'ينصح فريق Apolo بمعاينة وفحص السلعة شخصياً قبل دفع أي مبلغ.'
-                  : 'Nous vous recommandons de vérifier l\'article en personne avant tout paiement.',
+              title: _state.s.tr(
+                'حماية المعاملات Apolo Safety',
+                'Protection Apolo Safety',
+                'Apolo Safety Protection',
+              ),
+              desc: _state.s.tr(
+                'ينصح فريق Apolo بمعاينة وفحص السلعة شخصياً قبل دفع أي مبلغ.',
+                'Nous vous recommandons de vérifier l\'article en personne avant tout paiement.',
+                'We recommend inspecting the item in person before making any payment.',
+              ),
             ),
             _buildTrustRow(
               icon: CupertinoIcons.cube_box_fill,

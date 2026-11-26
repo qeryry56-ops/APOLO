@@ -38,9 +38,11 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
           .where((item) => (_id(item) ?? 0) > 0)
           .toList()
       : [];
-  String _label(Map<String, dynamic> item) =>
-      (item[AppState().s.isAr ? 'name_ar' : 'name_fr'] ?? item['name'] ?? '')
-          .toString();
+  String _label(Map<String, dynamic> item) {
+    final s = AppState().s;
+    final key = s.isAr ? 'name_ar' : (s.isEn ? 'name_en' : 'name_fr');
+    return (item[key] ?? item['name_fr'] ?? item['name'] ?? '').toString();
+  }
 
   Future<void> _load() async {
     setState(() {
@@ -92,18 +94,19 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
   Widget build(BuildContext context) {
     final s = AppState().s;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(s.tr('أكمل إعداد حسابك', 'Complétez votre compte'),
+      Text(s.tr('أكمل إعداد حسابك', 'Complétez votre compte', 'Finish setting up your account'),
           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
       Text(s.tr(
           'اختر مدينتك والمجالات التي تهمك. يمكنك التحويل إلى حساب أعمال (Business) مجاناً في أي وقت من الإعدادات.',
-          'Choisissez votre ville et vos centres d’intérêt. Vous pourrez passer en compte Business gratuitement à tout moment.')),
+          'Choisissez votre ville et vos centres d’intérêt. Vous pourrez passer en compte Business gratuitement à tout moment.',
+          'Choose your city and interests. You can switch to a Business account for free anytime in Settings.')),
       const SizedBox(height: 24),
       if (_cities.isNotEmpty && _categories.isNotEmpty) ...[
         DropdownButtonFormField<int>(
             initialValue: _city,
             isExpanded: true,
-            decoration: InputDecoration(labelText: s.tr('المدينة', 'Ville')),
+            decoration: InputDecoration(labelText: s.tr('المدينة', 'Ville', 'City')),
             items: _cities
                 .map((item) => DropdownMenuItem(
                     value: _id(item),
@@ -112,7 +115,8 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
             onChanged: _busy ? null : (value) => setState(() => _city = value)),
         const SizedBox(height: 24),
         Text(s.tr('اختر مجالاً واحداً على الأقل',
-            'Choisissez au moins un centre d’intérêt')),
+            'Choisissez au moins un centre d’intérêt',
+            'Choose at least one interest')),
         const SizedBox(height: 12),
         Wrap(
             spacing: 8,
@@ -132,7 +136,7 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
         FilledButton(
             onPressed:
                 _busy || _city == null || _selected.isEmpty ? null : _save,
-            child: Text(s.tr('حفظ ومتابعة', 'Enregistrer et continuer'))),
+            child: Text(s.tr('حفظ ومتابعة', 'Enregistrer et continuer', 'Save & continue'))),
       ],
       if (_busy)
         const Padding(
@@ -146,7 +150,7 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
         if (_cities.isEmpty || _categories.isEmpty)
           TextButton(
               onPressed: _busy ? null : _load,
-              child: Text(s.tr('إعادة تحميل الخيارات', 'Recharger les choix'))),
+              child: Text(s.tr('إعادة تحميل الخيارات', 'Recharger les choix', 'Reload options'))),
       ],
     ]);
   }

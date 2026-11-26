@@ -1,8 +1,13 @@
+import 'dart:ui' show Locale;
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
   group('AppStrings Localization Tests', () {
     test('Arabic and French localization keys return non-empty strings', () {
       final ar = AppStrings('ar');
@@ -55,13 +60,20 @@ void main() {
           state.assetForCategory(catImmo), 'assets/images/cat_realestate.png');
     });
 
-    test('Category label formatting keeps clean non-overflowing text', () {
+    test('Category label formatting keeps clean non-overflowing text',
+        () async {
       final state = AppState();
       final catVoiture = {'name_ar': 'سيارات ومركبات', 'slug': 'auto'};
       final catImmo = {'name_ar': 'شقق ومنازل وعقارات', 'slug': 'immobilier'};
 
+      await state.setLocale(const Locale('en'));
+      expect(state.formatCategoryLabel(catVoiture), 'Vehicles');
+      expect(state.formatCategoryLabel(catImmo), 'Real Estate');
+
+      await state.setLocale(const Locale('ar'));
       expect(state.formatCategoryLabel(catVoiture), 'وسائل النقل');
       expect(state.formatCategoryLabel(catImmo), 'عقارات');
+      await state.setLocale(const Locale('en'));
     });
 
     test('Personalized ranking algorithm ranks preferred categories higher',

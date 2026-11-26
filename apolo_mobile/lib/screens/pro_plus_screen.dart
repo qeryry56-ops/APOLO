@@ -1326,8 +1326,11 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
 
   String _tierHeaderForPlan(Map<String, dynamic> plan, AppStrings s) {
     final id = (plan['id'] ?? '').toString().toLowerCase();
-    final customBadge =
-        (s.isAr ? plan['badge_ar'] : plan['badge_fr'])?.toString().trim();
+    final customBadge = (s.isAr
+            ? plan['badge_ar']
+            : (s.isEn ? (plan['badge_en'] ?? plan['badge_fr']) : plan['badge_fr']))
+        ?.toString()
+        .trim();
     if (customBadge != null && customBadge.isNotEmpty) return customBadge;
     if (plan['tier_ar'] != null || plan['tier_en'] != null) {
       return s.tr(
@@ -1374,7 +1377,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
     final priceText = priceRaw is num && priceRaw == priceRaw.roundToDouble()
         ? '${priceRaw.toInt()}'
         : '$priceRaw';
-    final currency = s.isAr ? 'د.م' : 'DH';
+    final currency = s.tr('د.م', 'DH', 'MAD');
     final headerText = _tierHeaderForPlan(plan, s);
     final periodText = _periodLabelForPlan(plan, s);
 

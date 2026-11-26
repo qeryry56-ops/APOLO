@@ -163,9 +163,11 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
     _greetingCtrl = TextEditingController(
       text: _state.autoGreeting.isNotEmpty
           ? _state.autoGreeting
-          : (_state.s.isAr
-              ? 'مرحباً بك في متجرنا على Apolo! كيف يمكننا مساعدتك اليوم؟'
-              : 'Bienvenue dans notre boutique sur Apolo ! Comment pouvons-nous vous aider ?'),
+          : _state.s.tr(
+              'مرحباً بك في متجرنا على Apolo! كيف يمكننا مساعدتك اليوم؟',
+              'Bienvenue dans notre boutique sur Apolo ! Comment pouvons-nous vous aider ?',
+              'Welcome to our store on Apolo! How can we help you today?',
+            ),
     );
   }
 

@@ -171,6 +171,7 @@ class _AuthScreenState extends State<AuthScreen>
           _notice = _state.s.tr(
             'تعذر فتح صفحة الدخول عبر Google حالياً.',
             'Impossible d’ouvrir Google sign-in pour le moment.',
+            'Unable to open Google sign-in right now.',
           );
         });
       }
@@ -180,6 +181,7 @@ class _AuthScreenState extends State<AuthScreen>
           _notice = _state.s.tr(
             'تعذر بدء تسجيل الدخول عبر Google حالياً.',
             'Impossible de démarrer la connexion Google.',
+            'Unable to start Google sign-in.',
           );
         });
       }

@@ -21,18 +21,22 @@ Future<void> showAiContentReportSheet(
     {
       'ar': 'محتوى ذكاء اصطناعي غير دقيق أو مضلل',
       'fr': 'Contenu IA inexact ou trompeur',
+      'en': 'Inaccurate or misleading AI content',
     },
     {
       'ar': 'محتوى مسيء أو غير لائق أو مخالف للسياسات',
       'fr': 'Contenu offensant, inapproprié ou interdit',
+      'en': 'Offensive, inappropriate, or prohibited content',
     },
     {
       'ar': 'إعلان احتيالي أو انتهاك لحقوق الملكية',
       'fr': 'Annonce frauduleuse ou violation de droits',
+      'en': 'Fraudulent listing or policy violation',
     },
     {
       'ar': 'خلل تقني في اقتراحات المساعد الذكي',
       'fr': 'Problème technique avec l\'assistant IA',
+      'en': 'Technical issue with AI suggestions',
     },
   ];
 
@@ -92,6 +96,7 @@ Future<void> showAiContentReportSheet(
                             s.tr(
                               'الإبلاغ عن محتوى الذكاء الاصطناعي (AI)',
                               'Signaler un contenu IA',
+                              'Report AI Content',
                             ),
                             style: const TextStyle(
                               fontSize: 18,
@@ -118,6 +123,7 @@ Future<void> showAiContentReportSheet(
                   s.tr(
                     'نلتزم بسلامة المحتوى وفق معايير Google Play. اختر سبب البلاغ ليتم فحصه فوراً داخل التطبيق:',
                     'Conformément aux règles Google Play sur l\'IA, sélectionnez le motif du signalement :',
+                    'Select a reason to report this AI-generated content for immediate in-app review:',
                   ),
                   style: const TextStyle(
                     fontSize: 13,
@@ -128,8 +134,11 @@ Future<void> showAiContentReportSheet(
                 const SizedBox(height: 12),
                 ...List.generate(reasons.length, (idx) {
                   final active = selectedReason == idx;
-                  final label =
-                      s.isAr ? reasons[idx]['ar']! : reasons[idx]['fr']!;
+                  final label = s.tr(
+                    reasons[idx]['ar']!,
+                    reasons[idx]['fr']!,
+                    reasons[idx]['en']!,
+                  );
                   return GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -189,6 +198,7 @@ Future<void> showAiContentReportSheet(
                     hintText: s.tr(
                       'أضف تفاصيل إضافية (اختياري)...',
                       'Détails supplémentaires (optionnel)...',
+                      'Additional details (optional)...',
                     ),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
@@ -214,9 +224,11 @@ Future<void> showAiContentReportSheet(
                         ? null
                         : () async {
                             setModalState(() => submitting = true);
-                            final chosen = s.isAr
-                                ? reasons[selectedReason]['ar']!
-                                : reasons[selectedReason]['fr']!;
+                            final chosen = s.tr(
+                              reasons[selectedReason]['ar']!,
+                              reasons[selectedReason]['fr']!,
+                              reasons[selectedReason]['en']!,
+                            );
                             try {
                               final response = await state.api.dio.post(
                                 '/reports',
@@ -239,33 +251,37 @@ Future<void> showAiContentReportSheet(
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context)
                                     .showSnackBar(SnackBar(
-                                  content: Text(s.tr(
-                                      'تعذر إرسال البلاغ. حاول مجدداً.',
-                                      'Signalement non envoyé. Réessayez.')),
-                                ));
+                                    content: Text(s.tr(
+                                        'تعذر إرسال البلاغ. حاول مجدداً.',
+                                        'Signalement non envoyé. Réessayez.',
+                                        'Could not send report. Please try again.')),
+                                  ));
+                                }
+                                return;
                               }
-                              return;
-                            }
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: AppConfig.success,
-                                  content: Text(
-                                    s.tr(
-                                      'تم إرسال بلاغك بنجاح داخل التطبيق. شكراً لمساهمتك في أمان مجتمع Apolo.ma ✓',
-                                      'Signalement envoyé avec succès. Merci de contribuer à la sécurité d\'Apolo.ma ✓',
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppConfig.success,
+                                    content: Text(
+                                      s.tr(
+                                        'تم إرسال بلاغك بنجاح داخل التطبيق. شكراً لمساهمتك في أمان مجتمع Apolo.ma ✓',
+                                        'Signalement envoyé avec succès. Merci de contribuer à la sécurité d\'Apolo.ma ✓',
+                                        'Report submitted successfully. Thank you for helping keep Apolo safe ✓',
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            }
-                          },
+                                );
+                              }
+                            },
                     icon: const Icon(CupertinoIcons.paperplane_fill, size: 17),
                     label: Text(
                       submitting
-                          ? s.tr('جاري الإرسال...', 'Envoi en cours...')
-                          : s.tr('إرسال البلاغ الآن', 'Envoyer le signalement'),
+                          ? s.tr('جاري الإرسال...', 'Envoi en cours...',
+                              'Sending...')
+                          : s.tr('إرسال البلاغ الآن', 'Envoyer le signalement',
+                              'Submit report'),
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
@@ -322,7 +338,8 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _state.s.tr('تم نسخ الرابط: $url', 'Lien copié : $url'),
+              _state.s.tr('تم نسخ الرابط: $url', 'Lien copié : $url',
+                  'Link copied: $url'),
             ),
           ),
         );
@@ -342,26 +359,31 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           title: Text(
-            s.tr('تأكيد حذف الحساب نهائياً',
-                'Confirmer la suppression du compte'),
+            s.tr(
+              'تأكيد حذف الحساب نهائياً',
+              'Confirmer la suppression du compte',
+              'Confirm account deletion',
+            ),
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
           content: Text(
             s.tr(
               'هل أنت متأكد من حذف حسابك وجميع بياناتك الشخصية وإعلاناتك ومحادثاتك نهائياً من خوادم Apolo.ma؟ لا يمكن التراجع عن هذا الإجراء.',
               'Voulez-vous vraiment supprimer définitivement votre compte, vos données personnelles, vos annonces et vos messages des serveurs Apolo.ma ?',
+              'Are you sure you want to permanently delete your account, personal data, listings, and messages from Apolo? This cannot be undone.',
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(s.tr('إلغاء', 'Annuler')),
+              child: Text(s.tr('إلغاء', 'Annuler', 'Cancel')),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: _red),
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                s.tr('حذف حسابي وبياناتي', 'Supprimer définitivement'),
+                s.tr('حذف حسابي وبياناتي', 'Supprimer définitivement',
+                    'Delete permanently'),
                 style: const TextStyle(color: Colors.white),
               ),
             ),
@@ -385,15 +407,20 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: AppConfig.success,
-        content: Text(s.tr('تم حذف الحساب والبيانات بنجاح.',
-            'Votre compte et vos données ont été supprimés.')),
+        content: Text(s.tr(
+          'تم حذف الحساب والبيانات بنجاح.',
+          'Votre compte et vos données ont été supprimés.',
+          'Your account and data have been deleted.',
+        )),
       ));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(s.tr(
-              'تعذر تأكيد حذف الحساب. لم يتم تسجيل خروجك. حاول مجدداً.',
-              'Suppression non confirmée. Vous restez connecté. Réessayez.')),
+            'تعذر تأكيد حذف الحساب. لم يتم تسجيل خروجك. حاول مجدداً.',
+            'Suppression non confirmée. Vous restez connecté. Réessayez.',
+            'Could not confirm deletion. You remain signed in. Please try again.',
+          )),
         ));
       }
     } finally {
@@ -453,13 +480,14 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                     children: [
                       _buildTabPill(
                         0,
-                        s.tr('سياسة الخصوصية', 'Confidentialité'),
+                        s.tr('سياسة الخصوصية', 'Confidentialité', 'Privacy Policy'),
                         CupertinoIcons.shield_lefthalf_fill,
                       ),
                       const SizedBox(width: 6),
                       _buildTabPill(
                         1,
-                        s.tr('حذف الحساب والبيانات', 'Suppression du compte'),
+                        s.tr('حذف الحساب والبيانات', 'Suppression du compte',
+                            'Delete Account'),
                         CupertinoIcons.trash_fill,
                       ),
                     ],
@@ -531,6 +559,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             '1. البيانات التي نجمعها (Data Collection)',
             '1. Données que nous collectons',
+            '1. Data We Collect',
           ),
           body: s.tr(
             '• معلومات الحساب: الاسم، البريد الإلكتروني، رقم الهاتف، أو معرف تسجيل الدخول عبر Google OAuth عند إنشاء حساب.\n'
@@ -541,6 +570,10 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                 '• Contenu des annonces : Photos, titres, descriptions, prix et ville choisie.\n'
                 '• Messagerie : Messages échangés entre acheteurs et vendeurs.\n'
                 '• Données techniques : Informations d\'appareil pour la sécurité et les notifications.',
+            '• Account info: Name, email, phone number, or Google sign-in identifier.\n'
+                '• Listing content: Photos, titles, descriptions, prices, and selected city.\n'
+                '• Messages: Chats exchanged directly between buyers and sellers.\n'
+                '• Technical data: Device details used for security and push notifications.',
           ),
         ),
         const SizedBox(height: 14),
@@ -549,6 +582,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             '2. كيف نستخدم بياناتك (How We Use Data)',
             '2. Comment nous utilisons vos données',
+            '2. How We Use Your Data',
           ),
           body: s.tr(
             '• تمكين نشر وإدارة الإعلانات المبوبة والمتاجر الإلكترونية على منصة Apolo.ma.\n'
@@ -559,6 +593,10 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                 '• Permettre la communication directe entre acheteurs et vendeurs.\n'
                 '• Prévenir la fraude et modérer les contenus signalés.\n'
                 '• Nous ne vendons jamais vos données personnelles à des tiers.',
+            '• Publish and manage your listings and stores on Apolo.\n'
+                '• Enable direct communication between buyers and sellers.\n'
+                '• Prevent fraud and review reported content.\n'
+                '• We never sell your personal data to third parties.',
           ),
         ),
         const SizedBox(height: 14),
@@ -567,10 +605,12 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             '3. الذكاء الاصطناعي والإبلاغ عن المحتوى (AI Safety)',
             '3. Intelligence Artificielle & Signalement',
+            '3. AI Safety & Reporting',
           ),
           body: s.tr(
             'يوفر التطبيق أدوات مساعدة ذكية لتنظيم الإعلانات والبحث. يمكنك في أي وقت الإبلاغ عن أي محتوى ذكاء اصطناعي أو إعلان غير لائق مباشرة من داخل التطبيق عبر زر الإبلاغ دون مغادرة التطبيق.',
             'L\'application intègre un bouton de signalement direct permettant de signaler tout contenu généré par IA ou toute annonce inappropriée sans quitter l\'application.',
+            'The app includes an in-app report button allowing you to flag any AI-generated content or inappropriate listing at any time.',
           ),
         ),
         const SizedBox(height: 14),
@@ -579,6 +619,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             '4. التواصل معنا وحقوق المستخدم (Contact & CNDP)',
             '4. Nous contacter & Vos droits',
+            '4. Contact Us & Your Rights',
           ),
           body: s.tr(
             'وفقاً للقانون المغربي 09-08 المتعلق بحماية الأشخاص الذاتيين تجاه معالجة المعطيات ذات الطابع الشخصي ومتطلبات Google Play:\n'
@@ -589,6 +630,10 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                 '• Email : support@apolo.ma / contact@apolo.ma\n'
                 '• Site officiel : https://apolo.ma\n'
                 '• Vous disposez d\'un droit d\'accès, de rectification et de suppression définitive.',
+            'In compliance with Law 09-08 and platform privacy standards:\n'
+                '• Email: support@apolo.ma / contact@apolo.ma\n'
+                '• Website: https://apolo.ma\n'
+                '• You have the right to access, update, or permanently delete your data anytime.',
           ),
         ),
         const SizedBox(height: 18),
@@ -607,6 +652,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
             s.tr(
               'فتح رابط سياسة الخصوصية الخارجي (Web URL)',
               'Ouvrir le lien externe de Politique de Confidentialité',
+              'Open external Privacy Policy (Web URL)',
             ),
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
           ),
@@ -630,6 +676,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
             s.tr(
               'الإبلاغ عن محتوى الذكاء الاصطناعي (AI) داخل التطبيق',
               'Signaler un contenu IA dans l\'application',
+              'Report AI Content In-App',
             ),
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
           ),
@@ -673,6 +720,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                       s.tr(
                         'حذف الحساب والبيانات الشخصية نهائياً',
                         'Suppression définitive du compte et des données',
+                        'Permanent Account & Data Deletion',
                       ),
                       style: const TextStyle(
                         fontSize: 17,
@@ -696,6 +744,11 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                       '• Toutes vos annonces publiées et photos.\n'
                       '• Votre historique de messages et favoris.\n\n'
                       'Vous pouvez supprimer votre compte directement ci-dessous ou via notre formulaire web externe :',
+                  'Deleting your account permanently removes:\n'
+                      '• Personal info (name, email, phone number).\n'
+                      '• All published listings and photos.\n'
+                      '• Chat history, messages, and saved items.\n\n'
+                      'You can delete your account directly below or via the external web request link:',
                 ),
                 style: const TextStyle(
                   fontSize: 13.5,
@@ -724,6 +777,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                     s.tr(
                       'حذف حسابي وجميع بياناتي الآن (داخل التطبيق)',
                       'Supprimer mon compte maintenant (In-App)',
+                      'Delete My Account Now (In-App)',
                     ),
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
@@ -754,6 +808,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                     s.tr(
                       'رابط حذف الحساب والبيانات على الموقع (Web)',
                       'Lien web externe de suppression des données',
+                      'External Web Data Deletion Link',
                     ),
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,

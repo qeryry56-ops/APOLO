@@ -278,7 +278,12 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       final city = ad['city'] as Map;
       final name = (_state.s.isAr
               ? (city['name_ar'] ?? city['name'] ?? city['name_fr'])
-              : (city['name_fr'] ?? city['name'] ?? city['name_ar']))
+              : (_state.s.isEn
+                  ? (city['name_en'] ??
+                      city['name_fr'] ??
+                      city['name'] ??
+                      city['name_ar'])
+                  : (city['name_fr'] ?? city['name'] ?? city['name_ar'])))
           .toString()
           .trim();
       if (name.isNotEmpty) return name;
@@ -286,7 +291,12 @@ class _ExploreListingCardState extends State<ExploreListingCard>
 
     final flat = (_state.s.isAr
             ? (ad['city_ar'] ?? ad['city_name'] ?? ad['city_fr'])
-            : (ad['city_fr'] ?? ad['city_name'] ?? ad['city_ar']))
+            : (_state.s.isEn
+                ? (ad['city_en'] ??
+                    ad['city_fr'] ??
+                    ad['city_name'] ??
+                    ad['city_ar'])
+                : (ad['city_fr'] ?? ad['city_name'] ?? ad['city_ar'])))
         .toString()
         .trim();
     return flat;

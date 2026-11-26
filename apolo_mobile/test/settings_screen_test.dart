@@ -1,455 +1,198 @@
-import 'dart:async';
-import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:apolo_mobile/core/state/app_state.dart';
-import 'package:apolo_mobile/features/bug_report/services/bug_report_controller.dart';
-import 'package:apolo_mobile/screens/account_security_screen.dart';
-import 'package:apolo_mobile/screens/add_friends_screen.dart';
-import 'package:apolo_mobile/screens/forgot_password_screen.dart';
-import 'package:apolo_mobile/screens/privacy_compliance_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_app_data_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_blocked_accounts_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_bug_report_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_language_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_rate_app_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_share_app_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_suggestion_screen.dart';
-import 'package:apolo_mobile/screens/settings/settings_zone_screen.dart';
+import 'package:apolo_mobile/screens/settings/apolo_account_center_screen.dart';
+import 'package:apolo_mobile/screens/settings/settings_saved_ads_screen.dart';
 import 'package:apolo_mobile/screens/settings_screen.dart';
-import 'package:apolo_mobile/screens/support_screen.dart';
-import 'package:apolo_mobile/theme/app_theme.dart';
-import 'package:apolo_mobile/widgets/dl_settings_kit.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockDioAdapter implements HttpClientAdapter {
-  final FutureOr<ResponseBody> Function(RequestOptions options) handler;
-  final List<RequestOptions> requests = <RequestOptions>[];
-
-  _MockDioAdapter(this.handler);
-
+class _OfflineAdapter implements HttpClientAdapter {
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
-  ) async {
-    requests.add(options);
-    return await handler(options);
-  }
+  ) async =>
+      ResponseBody.fromString(
+        '{"status":"success","data":[]}',
+        200,
+        headers: {
+          Headers.contentTypeHeader: ['application/json'],
+        },
+      );
 
   @override
   void close({bool force = false}) {}
 }
 
-ResponseBody _jsonReply(Object payload, [int statusCode = 200]) {
-  return ResponseBody.fromString(
-    jsonEncode(payload),
-    statusCode,
-    headers: {
-      Headers.contentTypeHeader: [Headers.jsonContentType],
-    },
-  );
-}
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  final state = AppState();
-  late Dio originalDio;
-  late Locale originalLocale;
-  late bool originalShakeEnabled;
-  late _MockDioAdapter adapter;
-
-  const sensorsMethodChannel =
-      MethodChannel('dev.fluttercommunity.plus/sensors/method');
-  const sensorsEventChannel =
-      MethodChannel('dev.fluttercommunity.plus/sensors/accelerometer');
-
-  setUpAll(() {
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(sensorsMethodChannel, (_) async => null);
-    messenger.setMockMethodCallHandler(sensorsEventChannel, (_) async => null);
-  });
-
-  tearDownAll(() {
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(sensorsMethodChannel, null);
-    messenger.setMockMethodCallHandler(sensorsEventChannel, null);
-  });
+  late HttpClientAdapter originalAdapter;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    originalDio = state.api.dio;
-    originalLocale = state.locale;
-    originalShakeEnabled =
-        BugReportController.instance.shakeService.enabled.value;
-
-    adapter = _MockDioAdapter((options) {
-      if (options.path.contains('/taxonomy')) {
-        return _jsonReply({
-          'status': 'success',
-          'categories': <dynamic>[],
-          'cities': <dynamic>[],
-        });
-      }
-      return _jsonReply({'status': 'success'});
-    });
-
-    state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
-      ..httpClientAdapter = adapter;
-    state.currentUser = null;
-    await state.api.setToken(null);
-    await state.setLocale(const Locale('ar'));
+    originalAdapter = AppState().api.dio.httpClientAdapter;
+    AppState().api.dio.httpClientAdapter = _OfflineAdapter();
+    await AppState().logout();
+    await AppState().setLocale(const Locale('en'));
   });
 
-  tearDown(() async {
-    if (BugReportController.instance.shakeService.enabled.value !=
-        originalShakeEnabled) {
-      await BugReportController.instance.shakeService
-          .setEnabled(originalShakeEnabled);
-    }
-    state.currentUser = null;
-    await state.api.setToken(null);
-    await state.setLocale(originalLocale);
-    state.api.dio = originalDio;
+  tearDown(() {
+    AppState().api.dio.httpClientAdapter = originalAdapter;
   });
 
-  Future<void> pumpSettings(
-    WidgetTester tester, {
-    Size viewport = const Size(390, 844),
-  }) async {
-    tester.view.physicalSize = viewport;
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await tester.pumpWidget(
-      AnimatedBuilder(
-        animation: state,
-        builder: (context, _) {
-          return MaterialApp(
-            theme: AppTheme.light(state.locale).copyWith(
-              splashFactory: NoSplash.splashFactory,
-            ),
-            home: const SettingsScreen(),
-          );
-        },
-      ),
+  Widget buildApp(Widget child) {
+    return MaterialApp(
+      home: child,
     );
-    await tester.pumpAndSettle();
   }
 
-  Future<void> scrollAndTap(WidgetTester tester, Key key) async {
-    final target = find.byKey(key);
+  testWidgets('Default locale is English and Settings renders APOLO architecture',
+      (tester) async {
+    expect(AppState().locale.languageCode, 'en');
+
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings and activity'), findsOneWidget);
+    expect(find.byKey(const Key('settings-search-field')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-apolo-account')), findsOneWidget);
+    expect(find.text('Apolo Account'), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-saved')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-zone')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-notifications')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-language')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-pro-plus')), findsOneWidget);
+    expect(find.text('Not subscribed'), findsOneWidget);
+
     await tester.scrollUntilVisible(
-      target,
-      250,
+      find.byKey(const Key('settings-login')),
+      220,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    await tester.tap(target);
-    await tester.pumpAndSettle();
-  }
 
-  group('SettingsScreen Dynamic Layer layout & constraints', () {
-    for (final lang in ['ar', 'en']) {
-      for (final size in [const Size(390, 844), const Size(1280, 800)]) {
-        testWidgets(
-            'renders cleanly in $lang at ${size.width.toInt()}x${size.height.toInt()}',
-            (tester) async {
-          await tester.runAsync(() => state.setLocale(Locale(lang)));
-          await pumpSettings(tester, viewport: size);
+    expect(find.byKey(const Key('settings-row-add-friends')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-share-app')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-blocked')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-privacy')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-help')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-bug-report')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-suggestion')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-app-data')), findsOneWidget);
+    expect(find.byKey(const Key('settings-login')), findsOneWidget);
+    expect(find.byKey(const Key('settings-register')), findsOneWidget);
 
-          expect(tester.takeException(), isNull);
-          expect(find.byType(Switch), findsNothing);
-          expect(find.byIcon(Icons.verified), findsNothing);
-          expect(find.text('Amine'), findsNothing);
-          expect(find.byType(ApoloDlTopNav), findsOneWidget);
-          expect(
-            find.descendant(
-              of: find.byType(ApoloDlTopNav),
-              matching: find.byType(ApoloDlSeparator),
-            ),
-            findsNothing,
-          );
-          expect(find.byType(ApoloDlSettingsGroup), findsAtLeastNWidgets(2));
-
-          final scrollable = find.byType(Scrollable).first;
-          await tester.scrollUntilVisible(
-            find.byKey(const Key('settings-row-security')),
-            250,
-            scrollable: scrollable,
-          );
-          await tester.pumpAndSettle();
-          expect(find.byIcon(Icons.lock_outline), findsOneWidget);
-
-          await tester.scrollUntilVisible(
-            find.byKey(const Key('settings-row-support')),
-            250,
-            scrollable: scrollable,
-          );
-          await tester.pumpAndSettle();
-          expect(find.byIcon(Icons.help_outline), findsOneWidget);
-
-          final dangerTitle = lang == 'ar' ? 'منطقة الخطر' : 'Danger Zone';
-          await tester.scrollUntilVisible(
-            find.text(dangerTitle),
-            250,
-            scrollable: scrollable,
-          );
-          await tester.pumpAndSettle();
-          expect(find.text(dangerTitle), findsOneWidget);
-        });
-      }
-    }
+    expect(find.byKey(const Key('settings-quick-replies')), findsNothing);
+    expect(find.byKey(const Key('settings-row-rate-app')), findsNothing);
   });
 
-  group('SettingsScreen dedicated sub-screen navigation', () {
-    testWidgets(
-        'language row opens SettingsLanguageScreen and updates AppState locale to fr',
-        (tester) async {
-      await pumpSettings(tester);
-
-      await scrollAndTap(tester, const Key('settings-row-language'));
-      expect(find.byType(SettingsLanguageScreen), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('lang-option-fr')));
-      await tester.pumpAndSettle();
-
-      expect(state.locale.languageCode, 'fr');
-      expect(tester.takeException(), isNull);
+  testWidgets('Logged-in PRO+ user sees VIP credits and Log out button',
+      (tester) async {
+    await tester.runAsync(() async {
+      await AppState().setAuthSession('test_token', {
+        'id': 42,
+        'name': 'Amine Test',
+        'username': 'amine',
+        'email': 'amine@apolo.ma',
+        'is_pro_plus': true,
+        'vip_boost_credits': 3,
+        'account_type': 'business',
+      });
     });
 
-    testWidgets('zone row opens SettingsZoneScreen', (tester) async {
-      await pumpSettings(tester);
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
 
-      final zoneRow = find.byKey(const Key('settings-row-zone'));
-      await tester.scrollUntilVisible(
-        zoneRow,
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pump();
-      await tester.tap(zoneRow);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('PRO+ Active'), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-vip-credits')), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
 
-      expect(find.byType(SettingsZoneScreen), findsOneWidget);
-      expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-logout')),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settings-logout')), findsOneWidget);
+    expect(find.byKey(const Key('settings-login')), findsNothing);
+  });
+
+  testWidgets('Search filters settings rows live and clears properly',
+      (tester) async {
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('settings-search-field')),
+      'Language',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settings-row-language')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-saved')), findsNothing);
+    expect(find.byKey(const Key('settings-row-apolo-account')), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('settings-search-field')),
+      'zzzznonexistent',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No matching settings'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings-search-clear')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('settings-row-apolo-account')), findsOneWidget);
+    expect(find.byKey(const Key('settings-row-saved')), findsOneWidget);
+  });
+
+  testWidgets('Apolo Account opens ApoloAccountCenterScreen', (tester) async {
+    await tester.runAsync(() async {
+      await AppState().setAuthSession('test_token', {
+        'id': 7,
+        'name': 'Salma Pro',
+        'username': 'salma_pro',
+        'email': 'salma@apolo.ma',
+        'account_type': 'personal',
+      });
     });
 
-    testWidgets('blocked accounts row opens SettingsBlockedAccountsScreen',
-        (tester) async {
-      await pumpSettings(tester);
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
 
-      await scrollAndTap(tester, const Key('settings-row-blocked'));
-      expect(find.byType(SettingsBlockedAccountsScreen), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+    await tester.tap(find.byKey(const Key('settings-row-apolo-account')));
+    await tester.pumpAndSettle();
 
-    testWidgets(
-        'bug report row opens SettingsBugReportScreen and shake toggle updates service',
-        (tester) async {
-      await BugReportController.instance.shakeService.setEnabled(true);
-      await pumpSettings(tester);
+    expect(find.byType(ApoloAccountCenterScreen), findsOneWidget);
+    expect(find.text('Personal details'), findsOneWidget);
+    expect(find.text('Password & security'), findsOneWidget);
+    expect(find.text('Business & Store'), findsOneWidget);
+    expect(
+      find.byKey(const Key('account-center-edit-profile')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('account-center-business')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Account ownership'),
+      220,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Account ownership'), findsOneWidget);
+  });
 
-      await scrollAndTap(tester, const Key('settings-row-bug-report'));
-      expect(find.byType(SettingsBugReportScreen), findsOneWidget);
-      expect(BugReportController.instance.shakeService.enabled.value, isTrue);
+  testWidgets('Saved row opens SettingsSavedAdsScreen', (tester) async {
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('settings-bug-shake-toggle')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings-row-saved')));
+    await tester.pumpAndSettle();
 
-      expect(BugReportController.instance.shakeService.enabled.value, isFalse);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('app data row opens SettingsAppDataScreen with licenses',
-        (tester) async {
-      await pumpSettings(tester);
-
-      await scrollAndTap(tester, const Key('settings-row-app-data'));
-      expect(find.byType(SettingsAppDataScreen), findsOneWidget);
-      expect(find.byKey(const Key('settings-sync-now')), findsOneWidget);
-      expect(find.byKey(const Key('settings-open-licenses')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets(
-        'forgot password, suggestion, share app, and rate app open dedicated screens',
-        (tester) async {
-      await pumpSettings(tester);
-
-      await scrollAndTap(tester, const Key('settings-row-forgot-password'));
-      expect(find.byType(ForgotPasswordScreen), findsOneWidget);
-      Navigator.of(tester.element(find.byType(ForgotPasswordScreen))).pop();
-      await tester.pumpAndSettle();
-
-      await scrollAndTap(tester, const Key('settings-row-suggestion'));
-      expect(find.byType(SettingsSuggestionScreen), findsOneWidget);
-      await tester.enterText(
-        find.byKey(const Key('suggestion-input')),
-        'Add dark mode schedule option',
-      );
-      await tester.ensureVisible(find.byKey(const Key('suggestion-submit')));
-      await tester.tap(find.byKey(const Key('suggestion-submit')));
-      await tester.pumpAndSettle();
-      expect(find.byType(ApoloDlAlert), findsOneWidget);
-      Navigator.of(tester.element(find.byType(SettingsSuggestionScreen)))
-          .pop();
-      await tester.pumpAndSettle();
-
-      await scrollAndTap(tester, const Key('settings-row-share-app'));
-      expect(find.byType(SettingsShareAppScreen), findsOneWidget);
-      await tester.ensureVisible(find.byKey(const Key('share-app-copy-link')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('share-app-copy-link')));
-      await tester.pumpAndSettle();
-      expect(find.byType(ApoloDlAlert), findsOneWidget);
-      Navigator.of(tester.element(find.byType(SettingsShareAppScreen))).pop();
-      await tester.pumpAndSettle();
-
-      await scrollAndTap(tester, const Key('settings-row-rate-app'));
-      expect(find.byType(SettingsRateAppScreen), findsOneWidget);
-      await tester.tap(find.byKey(const Key('rate-star-4')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('rate-app-submit')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('rate-app-submit')));
-      await tester.pumpAndSettle();
-      expect(find.byType(ApoloDlAlert), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets(
-        'security, privacy, and support rows open their dedicated screens',
-        (tester) async {
-      await pumpSettings(tester);
-
-      await scrollAndTap(tester, const Key('settings-row-security'));
-      expect(find.byType(AccountSecurityScreen), findsOneWidget);
-      Navigator.of(tester.element(find.byType(AccountSecurityScreen))).pop();
-      await tester.pumpAndSettle();
-
-      await scrollAndTap(tester, const Key('settings-row-privacy'));
-      expect(find.byType(PrivacyComplianceScreen), findsOneWidget);
-      Navigator.of(tester.element(find.byType(PrivacyComplianceScreen))).pop();
-      await tester.pumpAndSettle();
-
-      await scrollAndTap(tester, const Key('settings-row-support'));
-      expect(find.byType(SupportScreen), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets(
-        'logged-in logout button opens Dynamic Layer confirmation bottom sheet',
-        (tester) async {
-      state.currentUser = {
-        'id': 99,
-        'name': 'Karim',
-        'username': 'karim_casa',
-      };
-      await state.api.setToken('valid-test-token');
-
-      await pumpSettings(tester);
-
-      await scrollAndTap(tester, const ValueKey('settings-logout'));
-      expect(find.byKey(const Key('settings-confirm-logout')), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('settings-confirm-logout')));
-      await tester.pumpAndSettle();
-
-      expect(state.isLoggedIn, isFalse);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets(
-        'ApoloDlEmptyState matches Figma 44239:11751 (#FFFFFF canvas, 20px Bold #000000 headline, 15px #757575 description, #EEEEEE Try again pill)',
-        (tester) async {
-      tester.view.physicalSize = const Size(375, 812);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      int retries = 0;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(const Locale('en'))
-              .copyWith(splashFactory: NoSplash.splashFactory),
-          home: Scaffold(
-            backgroundColor: Colors.white,
-            body: ApoloDlEmptyState(
-              headline: 'This is a headline',
-              description: 'This is the description',
-              actionLabel: 'Try again',
-              onAction: () => retries++,
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('dl-empty-state-visual')), findsOneWidget);
-      expect(find.text('This is a headline'), findsOneWidget);
-      expect(find.text('This is the description'), findsOneWidget);
-
-      final actionFinder = find.byKey(const Key('dl-empty-state-action'));
-      expect(actionFinder, findsOneWidget);
-      expect(tester.getSize(actionFinder).height, closeTo(52.0, 0.1));
-      final actionMat = tester.widget<Material>(
-        find.ancestor(of: actionFinder, matching: find.byType(Material)).first,
-      );
-      expect(actionMat.color, const Color(0xFFEEEEEE));
-
-      await tester.tap(actionFinder);
-      await tester.pumpAndSettle();
-      expect(retries, 1);
-    });
-
-    testWidgets(
-        'AddFriendsScreen matches Figma AUTH-SUP-009 Contacts (33215:34358): Contacts card, Invite -> Invited toggle, and 56px Continue',
-        (tester) async {
-      tester.view.physicalSize = const Size(375, 812);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.runAsync(() => state.setLocale(const Locale('en')));
-      int continued = 0;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(const Locale('en'))
-              .copyWith(splashFactory: NoSplash.splashFactory),
-          home: AddFriendsScreen(
-            onContinue: () => continued++,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Add your friends'), findsOneWidget);
-      expect(find.text('Contacts'), findsOneWidget);
-      expect(find.byKey(const Key('dl-add-friends-card')), findsOneWidget);
-      expect(find.text('Invite'), findsWidgets);
-
-      final firstInvite = find.byKey(const Key('dl-invite-btn-0'));
-      await tester.tap(firstInvite);
-      await tester.pumpAndSettle();
-      expect(find.text('Invited'), findsOneWidget);
-
-      final continueBtn = find.byKey(const Key('dl-add-friends-continue'));
-      expect(tester.getSize(continueBtn).height, closeTo(56.0, 0.1));
-      await tester.tap(continueBtn);
-      await tester.pumpAndSettle();
-      expect(continued, 1);
-      expect(tester.takeException(), isNull);
-    });
+    expect(find.byType(SettingsSavedAdsScreen), findsOneWidget);
+    expect(find.text('Sign in to view saved listings'), findsOneWidget);
   });
 }

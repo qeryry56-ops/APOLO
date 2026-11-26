@@ -277,7 +277,8 @@ class _StoresScreenState extends State<StoresScreen> {
                             fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: s.tr('ابحث عن متجر احترافي معتمد...',
-                              'Rechercher une boutique officielle...'),
+                              'Rechercher une boutique officielle...',
+                              'Search official stores...'),
                           hintStyle: const TextStyle(
                               color: _muted,
                               fontSize: 14,
@@ -645,7 +646,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                         const SizedBox(width: 4),
                                                         Flexible(
                                                           child: Text(
-                                                            '$count ${s.tr('منتج', 'produits')}',
+                                                            '$count ${s.tr('منتج', 'produits', 'items')}',
                                                             maxLines: 1,
                                                             overflow:
                                                                 TextOverflow
@@ -682,7 +683,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                     children: [
                                                       Text(
                                                         s.tr('زيارة المتجر',
-                                                            'Visiter'),
+                                                            'Visiter', 'Visit'),
                                                         maxLines: 1,
                                                         overflow: TextOverflow
                                                             .ellipsis,

@@ -573,7 +573,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                               _allMorocco
                                   ? s.tr(
                                       'نطاق مفتوح', 'Sans limite', 'Nationwide')
-                                  : '$activeCityLabel · ${_radiusKm.round()} ${s.tr("كم", "km")}',
+                                  : '$activeCityLabel · ${_radiusKm.round()} ${s.tr("كم", "km", "km")}',
                               style: const TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
@@ -676,8 +676,8 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                         const SizedBox(width: 8),
                         Text(
                           _allMorocco
-                              ? s.tr('كل المغرب', 'Tout le Maroc')
-                              : '${_radiusKm.round()} ${s.tr("كم", "km")}',
+                              ? s.tr('كل المغرب', 'Tout le Maroc', 'All of Morocco')
+                              : '${_radiusKm.round()} ${s.tr("كم", "km", "km")}',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -714,7 +714,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
-                                  '${km.round()} ${s.tr("كم", "km")}',
+                                  '${km.round()} ${s.tr("كم", "km", "km")}',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
