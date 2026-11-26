@@ -115,19 +115,45 @@ void main() {
     }
   }
 
-  testWidgets('renders Google and email authentication providers without Apple',
+  testWidgets(
+      'WelcomeScreen matches Dynamic Layer v5.1 (45786:49327): falling notifications hero, 56px Google + or + Create account + I have an account without Apple',
       (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(_app(const WelcomeScreen()));
     await tester.pumpAndSettle();
+
     expect(find.byKey(const ValueKey('welcome-apple')), findsNothing);
-    expect(find.text('Continue with Apple'), findsNothing);
-    expect(find.byKey(const ValueKey('welcome-google')), findsOneWidget);
-    expect(find.byKey(const ValueKey('welcome-sign-in')), findsOneWidget);
-    expect(find.text('Continue with Google'), findsOneWidget);
-    expect(find.text('Continue with email'), findsOneWidget);
+    expect(find.byKey(const Key('dl-welcome-hero')), findsOneWidget);
+    expect(find.byKey(const Key('dl-welcome-notif-card-1')), findsOneWidget);
+    expect(find.byKey(const Key('dl-welcome-notif-card-2')), findsOneWidget);
+    expect(find.byKey(const Key('dl-welcome-chat-bubble-3')), findsOneWidget);
+    expect(find.byKey(const Key('dl-welcome-or-divider')), findsOneWidget);
+
+    final googleBtn = find.byKey(const ValueKey('welcome-google'));
+    final createBtn = find.byKey(const ValueKey('welcome-create-account'));
+    final signInBtn = find.byKey(const ValueKey('welcome-sign-in'));
+    expect(googleBtn, findsOneWidget);
+    expect(createBtn, findsOneWidget);
+    expect(signInBtn, findsOneWidget);
+
+    expect(tester.getSize(googleBtn).height, closeTo(56.0, 0.1));
+    expect(tester.getSize(createBtn).height, closeTo(56.0, 0.1));
+    expect(tester.getSize(signInBtn).height, closeTo(56.0, 0.1));
+    expect(tester.getSize(googleBtn).width, closeTo(343.0, 0.1));
     expect(tester.takeException(), isNull);
+
+    // Tapping Create an account opens AuthScreen in Sign-up mode
+    await tester.tap(createBtn);
+    await tester.pumpAndSettle();
+    final registerAuth = tester.widget<AuthScreen>(find.byType(AuthScreen));
+    expect(registerAuth.initialRegisterMode, isTrue);
+    expect(registerAuth.initialIsLogin, isFalse);
   });
 
   testWidgets('sign in opens auth and cancellation returns to welcome', (

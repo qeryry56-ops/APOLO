@@ -1,30 +1,31 @@
+import 'dart:math' as math;
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../account/account_helpers.dart';
+import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../theme/dl_share_profile_tokens.dart';
 import 'auth_screen.dart';
 import 'intent_onboarding_screen.dart';
 import 'main_shell.dart';
-import 'privacy_compliance_screen.dart';
 
-/// APOLO — Premium Mobile Welcome & Authentication Screen.
-///
-/// Faithfully implements the exact reference design:
-/// - Full-screen brand gradient: Deep vibrant APOLO red (#E31828) at top,
-///   softly transitioning into rose/light pink and fading to white at the bottom.
-/// - Prominent official APOLO white logo centered horizontally.
-/// - Two-line bold white welcome text:
-///     "Millions of Products.
-///      Free on Apolo."
-/// - Three capsule / stadium action buttons positioned lower on the screen:
-///     1. Continue with Apple (white background, black Apple icon)
-///     2. Continue with Google (white background, official multicolor Google icon)
-///     3. Continue with email (dark charcoal #202020 background, white text)
-/// - Clean footer links: "Privacy policy" and "Terms of services" in medium gray.
+/// Dynamic Layer v5.1 Welcome Screen (`45786:49327`, `375 × 812` reference):
+/// - Pure `#FFFFFF` canvas with dark status bar icons.
+/// - Upper Interactive Hero (`Key('dl-welcome-hero')`):
+///   Dynamic Layer `# notification-img` device frame silhouette paired with
+///   smoothly cascading Apolo push notification & live buyer chat message cards
+///   (tap to replay subtle spring cascade; respects Reduce Motion).
+/// - Bottom Fixed `wrapper` (`Key('dl-welcome-wrapper')`, `padding: 16px`, `gap: 16px`):
+///   1. `Continue with Google` (`56px` outlined `#FFFFFF` stadium pill, `1px` `#E2E2E2` border)
+///   2. `or` divider (`1px` `#EEEEEE` hairlines + `14px` `#757575` label)
+///   3. `Create an account` (`56px` `#000000` solid black stadium pill -> Sign up)
+///   4. `I have an account` (`56px` `#EEEEEE` soft grey stadium pill -> Log in)
 class WelcomeScreen extends StatefulWidget {
   final VoidCallback? onContinueAsGuest;
 
@@ -37,6 +38,13 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen> {
   final AppState _state = AppState();
   bool _leaving = false;
+
+  static const Color _bg = DlShareProfileColors.colorGreyWhite;
+  static const Color _ink = DlShareProfileColors.colorGreyBlack;
+  static const Color _pillGrey = DlShareProfileColors.colorGrey100;
+  static const Color _muted = DlShareProfileColors.colorGrey500;
+  static const Color _outlineBorder = Color(0xFFE2E2E2);
+  static const Color _divider = Color(0xFFEEEEEE);
 
   @override
   void initState() {
@@ -77,7 +85,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  void _openEmailAuth() {
+  void _openAuth({required bool isRegister}) {
+    HapticFeedback.selectionClick();
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     Navigator.of(context).push(
       PageRouteBuilder<void>(
@@ -86,7 +95,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         reverseTransitionDuration:
             reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
         pageBuilder: (_, animation, secondaryAnimation) => AuthScreen(
-          initialIsLogin: true,
+          initialRegisterMode: isRegister,
+          initialIsLogin: !isRegister,
           onSuccess: _enterMainApp,
         ),
         transitionsBuilder: (_, animation, secondaryAnimation, child) =>
@@ -113,6 +123,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               _state.s.tr(
                 'تعذر فتح تسجيل الدخول عبر Google حالياً.',
                 'Impossible d’ouvrir la connexion Google pour le moment.',
+                'Unable to open Google sign-in right now.',
               ),
             ),
           ),
@@ -126,6 +137,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               _state.s.tr(
                 'تعذر بدء تسجيل الدخول عبر Google حالياً.',
                 'Impossible de démarrer la connexion Google.',
+                'Unable to start Google sign-in right now.',
               ),
             ),
           ),
@@ -134,194 +146,199 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
   }
 
-  void _openPrivacy() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const PrivacyComplianceScreen(initialTab: 0),
-      ),
-    );
-  }
-
-  void _openTerms() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const PrivacyComplianceScreen(initialTab: 0),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final logoWidth = (size.width * 0.60).clamp(210.0, 270.0);
+    final s = _state.s;
+    final media = MediaQuery.of(context);
+    final screenSize = media.size;
+    final resolvedBottomSafe = DlShareProfileLayout.resolveBottomSafeInset(
+      screenSize,
+      media.padding,
+    );
+    // SafeArea already consumes media.padding.bottom when > 0; add extra clearance only for mobile web/PWA
+    final extraWebBottom =
+        media.padding.bottom > 0 ? 0.0 : resolvedBottomSafe;
+    final wrapperBottomPad = math.max(10.0, 16.0 - 6.0) + extraWebBottom;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark, // iOS white status bar icons
-        systemNavigationBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: _bg,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFE31828), // Deep vibrant APOLO red top
-                Color(
-                    0xFFE31828), // Solid vibrant red through logo and headline
-                Color(0xFFEA3B4A), // Smooth transition initiation
-                Color(0xFFF67584), // Light rose transition
-                Color(0xFFFFBCC6), // Soft light pink
-                Color(0xFFFFEEF1), // Very pale pink
-                Colors.white, // Fading cleanly into pure white at bottom
-              ],
-              stops: [0.0, 0.48, 0.58, 0.68, 0.80, 0.91, 1.0],
-            ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isCompact = constraints.maxHeight < 620;
+        backgroundColor: _bg,
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440.0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxHeight < 640.0;
 
-                    return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
-                        ),
-                        child: IntrinsicHeight(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Upper spacing to center logo in the upper red region
-                                if (isCompact)
-                                  const SizedBox(height: 16)
-                                else
-                                  const Spacer(flex: 3),
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (isCompact)
+                              const SizedBox(height: 16.0)
+                            else
+                              const Spacer(flex: 5),
 
-                                // Official White APOLO Logo
-                                SizedBox(
-                                  width: logoWidth,
-                                  child: Image.asset(
-                                    'assets/images/apolo_logo_white_transparent.png',
-                                    fit: BoxFit.contain,
-                                    semanticLabel: 'APOLO',
-                                  ),
-                                ),
-
-                                SizedBox(height: isCompact ? 14 : 24),
-
-                                // Welcome Message
-                                Text(
-                                  'Millions of Products.\nFree on Apolo.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 27,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.25,
-                                    color: Colors.white,
-                                    letterSpacing:
-                                        AppTypography.trackingForContext(
-                                            context, -0.4),
-                                  ),
-                                ),
-
-                                // Transition area negative space
-                                if (isCompact)
-                                  const SizedBox(height: 24)
-                                else
-                                  const Spacer(flex: 4),
-
-                                // Button 1: Continue with Google
-                                _buildCapsuleButton(
-                                  key: const ValueKey('welcome-google'),
-                                  backgroundColor: Colors.white,
-                                  textColor: Colors.black,
-                                  icon: const _GoogleIcon(size: 20),
-                                  text: 'Continue with Google',
-                                  onPressed: _openGoogleAuth,
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                // Button 3: Continue with email
-                                _buildCapsuleButton(
-                                  key: const ValueKey('welcome-sign-in'),
-                                  backgroundColor: const Color(0xFF202020),
-                                  textColor: Colors.white,
-                                  text: 'Continue with email',
-                                  onPressed: _openEmailAuth,
-                                ),
-
-                                const SizedBox(height: 22),
-
-                                // Footer Links: Privacy policy | Terms of services
-                                Wrap(
-                                  alignment: WrapAlignment.center,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 24,
-                                  runSpacing: 8,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: _openPrivacy,
-                                      child: const Text(
-                                        'Privacy policy',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF737373),
-                                        ),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: _openTerms,
-                                      child: const Text(
-                                        'Terms of services',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF737373),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                // Accessible guest fallback target (hidden from visible UI)
-                                Semantics(
-                                  button: true,
-                                  label: 'Continue as guest',
-                                  child: GestureDetector(
-                                    key: const ValueKey('welcome-guest'),
-                                    onTap: _enterMainApp,
-                                    behavior: HitTestBehavior.opaque,
-                                    child: const SizedBox(
-                                      width: 48,
-                                      height: 12,
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 8),
-                              ],
+                            // Upper Hero: Falling Apolo Notifications & Buyer Chat Messages
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20.0),
+                              child: _ApoloWelcomeFallingMessagesHero(
+                                key: const Key('dl-welcome-hero'),
+                                strings: s,
+                                compact: isCompact,
+                              ),
                             ),
-                          ),
+
+                            if (isCompact)
+                              const SizedBox(height: 16.0)
+                            else
+                              const Spacer(flex: 6),
+
+                            // Bottom Dynamic Layer `wrapper` (`padding: 16px`, `gap: 16px`)
+                            Padding(
+                              key: const Key('dl-welcome-wrapper'),
+                              padding: EdgeInsets.fromLTRB(
+                                16.0,
+                                16.0,
+                                16.0,
+                                wrapperBottomPad,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // 1. Continue with Google (`56px` outlined capsule)
+                                  _buildDlWelcomeButton(
+                                    key: const ValueKey('welcome-google'),
+                                    backgroundColor: _bg,
+                                    textColor: _ink,
+                                    borderColor: _outlineBorder,
+                                    icon: const _GoogleIcon(size: 20.0),
+                                    text: s.tr(
+                                      'المتابعة عبر Google',
+                                      'Continuer avec Google',
+                                      'Continue with Google',
+                                    ),
+                                    onPressed: _openGoogleAuth,
+                                  ),
+
+                                  const SizedBox(height: 16.0),
+
+                                  // 2. `or` Divider (`1px` `#EEEEEE` + `14px` `#757575`)
+                                  Row(
+                                    key: const Key('dl-welcome-or-divider'),
+                                    children: [
+                                      const Expanded(
+                                        child: SizedBox(
+                                          height: 1.0,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              color: _divider,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                        ),
+                                        child: Text(
+                                          s.tr('أو', 'ou', 'or'),
+                                          style: const TextStyle(
+                                            color: _muted,
+                                            fontSize: 14.0,
+                                            fontWeight: FontWeight.w400,
+                                            height: 20.0 / 14.0,
+                                          ),
+                                        ),
+                                      ),
+                                      const Expanded(
+                                        child: SizedBox(
+                                          height: 1.0,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              color: _divider,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16.0),
+
+                                  // 3. Create an account (`56px` solid `#000000` capsule)
+                                  _buildDlWelcomeButton(
+                                    key: const ValueKey(
+                                        'welcome-create-account'),
+                                    backgroundColor: _ink,
+                                    textColor: _bg,
+                                    text: s.tr(
+                                      'إنشاء حساب جديد',
+                                      'Créer un compte',
+                                      'Create an account',
+                                    ),
+                                    onPressed: () =>
+                                        _openAuth(isRegister: true),
+                                  ),
+
+                                  const SizedBox(height: 16.0),
+
+                                  // 4. I have an account (`56px` `#EEEEEE` capsule)
+                                  _buildDlWelcomeButton(
+                                    key: const ValueKey('welcome-sign-in'),
+                                    backgroundColor: _pillGrey,
+                                    textColor: _ink,
+                                    text: s.tr(
+                                      'لدي حساب بالفعل',
+                                      'J’ai déjà un compte',
+                                      'I have an account',
+                                    ),
+                                    onPressed: () =>
+                                        _openAuth(isRegister: false),
+                                  ),
+
+                                  // Accessible guest fallback target (preserves exact 16px visual bottom margin)
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Semantics(
+                                      button: true,
+                                      label: 'Continue as guest',
+                                      child: GestureDetector(
+                                        key: const ValueKey('welcome-guest'),
+                                        onTap: _enterMainApp,
+                                        behavior: HitTestBehavior.opaque,
+                                        child: const SizedBox(
+                                          width: 48.0,
+                                          height: 6.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -330,26 +347,31 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  Widget _buildCapsuleButton({
+  Widget _buildDlWelcomeButton({
     required Key key,
     required Color backgroundColor,
     required Color textColor,
     required String text,
     required VoidCallback onPressed,
+    Color? borderColor,
     Widget? icon,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56.0),
       child: TextButton(
         key: key,
         onPressed: onPressed,
         style: TextButton.styleFrom(
+          minimumSize: const Size(double.infinity, 56.0),
           backgroundColor: backgroundColor,
           foregroundColor: textColor,
-          shape: const StadiumBorder(),
+          shape: StadiumBorder(
+            side: borderColor != null
+                ? BorderSide(color: borderColor, width: 1.0)
+                : BorderSide.none,
+          ),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 14.0),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -357,23 +379,541 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           children: [
             if (icon != null) ...[
               icon,
-              const SizedBox(width: 10),
+              const SizedBox(width: 10.0),
             ],
             Flexible(
               child: Text(
                 text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.w700,
+                  height: 24.0 / 16.0,
                   color: textColor,
                   letterSpacing:
-                      AppTypography.trackingForContext(context, -0.2),
+                      AppTypography.trackingForContext(context, -0.1),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Interactive Dynamic Layer v5.1 Hero Illustration (`330 × 268 px` reference):
+/// Combines the `# notification-img` device bezel with 3 staggered falling cards:
+/// 1. Official Apolo push notification card (`#E31828` brand icon + live offer alert)
+/// 2. Buyer incoming chat notification card (`#0D8BFF` chat badge + `#FF3B30` unread dot)
+/// 3. Instant `#0D8BFF` outgoing reply bubble
+class _ApoloWelcomeFallingMessagesHero extends StatefulWidget {
+  final AppStrings strings;
+  final bool compact;
+
+  const _ApoloWelcomeFallingMessagesHero({
+    super.key,
+    required this.strings,
+    this.compact = false,
+  });
+
+  @override
+  State<_ApoloWelcomeFallingMessagesHero> createState() =>
+      _ApoloWelcomeFallingMessagesHeroState();
+}
+
+class _ApoloWelcomeFallingMessagesHeroState
+    extends State<_ApoloWelcomeFallingMessagesHero>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  bool _didStartInitial = false;
+
+  static const Color _bg = Color(0xFFFFFFFF);
+  static const Color _ink = Color(0xFF000000);
+  static const Color _muted = Color(0xFF757575);
+  static const Color _apoloRed = Color(0xFFE31828);
+  static const Color _chatBlue = Color(0xFF0D8BFF);
+  static const Color _unreadRed = Color(0xFFFF3B30);
+  static const Color _liveGreen = Color(0xFF16A34A);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (reduceMotion) {
+      _ctrl.value = 1.0;
+      _didStartInitial = true;
+    } else if (!_didStartInitial) {
+      _didStartInitial = true;
+      _ctrl.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _replayCascade() {
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    HapticFeedback.lightImpact();
+    _ctrl.forward(from: 0.0);
+  }
+
+  Widget _buildFallingItem({
+    required double start,
+    required double end,
+    required double dropDistance,
+    required Widget child,
+  }) {
+    final fade = CurvedAnimation(
+      parent: _ctrl,
+      curve: Interval(start, (start + 0.34).clamp(0.0, 1.0),
+          curve: Curves.easeOut),
+    );
+    final slide = CurvedAnimation(
+      parent: _ctrl,
+      curve: Interval(start, end, curve: Curves.easeOutBack),
+    );
+
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, builtChild) {
+        final dy = (1.0 - slide.value) * -dropDistance;
+        final scale = 0.94 + (0.06 * slide.value.clamp(0.0, 1.05));
+        return Opacity(
+          opacity: fade.value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0.0, dy),
+            child: Transform.scale(
+              scale: scale,
+              child: builtChild,
+            ),
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.strings;
+    final nowLabel = s.tr('الآن', 'maintenant', 'now');
+    final maxHeroWidth = widget.compact ? 280.0 : 330.0;
+
+    return GestureDetector(
+      onTap: _replayCascade,
+      behavior: HitTestBehavior.opaque,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxHeroWidth),
+          child: MediaQuery.withNoTextScaling(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox(
+                width: 330.0,
+                height: 268.0,
+                child: Stack(
+                  alignment: Alignment.topCenter,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 1. Dynamic Layer `# notification-img` rounded phone silhouette
+                    Positioned(
+                      top: 8.0,
+                      child: Container(
+                        width: 212.0,
+                        height: 256.0,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEEEEE),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(36.0),
+                          ),
+                          border: Border.all(
+                            color: const Color(0xFFE4E4E4),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 15.0),
+                            Container(
+                              width: 44.0,
+                              height: 5.0,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD4D4D4),
+                                borderRadius: BorderRadius.circular(999.0),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Soft bottom white fade matching `Notification / Default` (`45849:25601`)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 62.0,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                _bg.withValues(alpha: 0.0),
+                                _bg.withValues(alpha: 0.88),
+                                _bg,
+                              ],
+                              stops: const [0.0, 0.65, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // 2. Card 1 (Top falling card — Official Apolo active notification)
+                    Positioned(
+                      top: 38.0,
+                      width: 304.0,
+                      child: _buildFallingItem(
+                        start: 0.00,
+                        end: 0.56,
+                        dropDistance: 34.0,
+                        child: Container(
+                          key: const Key('dl-welcome-notif-card-1'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 13.0,
+                            vertical: 11.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _bg,
+                            borderRadius: BorderRadius.circular(16.0),
+                            border: Border.all(
+                              color: const Color(0xFFEBEBEB),
+                              width: 1.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.045),
+                                blurRadius: 16.0,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 38.0,
+                                height: 38.0,
+                                padding: const EdgeInsets.all(5.0),
+                                decoration: BoxDecoration(
+                                  color: _apoloRed,
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+                                child: Image.asset(
+                                  'assets/images/apolo_logo_white_transparent.png',
+                                  fit: BoxFit.contain,
+                                  semanticLabel: 'Apolo',
+                                ),
+                              ),
+                              const SizedBox(width: 11.0),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Apolo',
+                                          style: TextStyle(
+                                            color: _ink,
+                                            fontSize: 13.0,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.2,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6.0),
+                                        Container(
+                                          width: 6.0,
+                                          height: 6.0,
+                                          decoration: const BoxDecoration(
+                                            color: _liveGreen,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          nowLabel,
+                                          style: const TextStyle(
+                                            color: _muted,
+                                            fontSize: 11.0,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3.0),
+                                    Text(
+                                      s.tr(
+                                        'عرض جديد وصل على إعلانك الآن!',
+                                        'Nouvelle offre reçue sur votre annonce !',
+                                        'New offer received on your listing!',
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFF525252),
+                                        fontSize: 12.0,
+                                        fontWeight: FontWeight.w400,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // 3. Card 2 (Middle featured card — Incoming Buyer Message)
+                    Positioned(
+                      top: 112.0,
+                      left: 0,
+                      right: 0,
+                      child: _buildFallingItem(
+                        start: 0.18,
+                        end: 0.78,
+                        dropDistance: 38.0,
+                        child: Container(
+                          key: const Key('dl-welcome-notif-card-2'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14.0,
+                            vertical: 13.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _bg,
+                            borderRadius: BorderRadius.circular(18.0),
+                            border: Border.all(
+                              color: const Color(0xFFE5E5E5),
+                              width: 1.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.07),
+                                blurRadius: 22.0,
+                                offset: const Offset(0, 10),
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 4.0,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 42.0,
+                                height: 42.0,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      width: 42.0,
+                                      height: 42.0,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFF3F4F6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        s.tr('ي', 'Y', 'Y'),
+                                        style: const TextStyle(
+                                          color: _ink,
+                                          fontSize: 16.0,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    PositionedDirectional(
+                                      bottom: -1.0,
+                                      end: -1.0,
+                                      child: Container(
+                                        width: 18.0,
+                                        height: 18.0,
+                                        decoration: BoxDecoration(
+                                          color: _chatBlue,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: _bg,
+                                            width: 2.0,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: const Icon(
+                                          CupertinoIcons.chat_bubble_fill,
+                                          size: 9.5,
+                                          color: _bg,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12.0),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            s.tr(
+                                              'ياسين • الدار البيضاء',
+                                              'Yassine • Casablanca',
+                                              'Yassine • Casablanca',
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: _ink,
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8.0),
+                                        Container(
+                                          width: 18.0,
+                                          height: 18.0,
+                                          decoration: const BoxDecoration(
+                                            color: _unreadRed,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: const Text(
+                                            '1',
+                                            style: TextStyle(
+                                              color: _bg,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4.0),
+                                    Text(
+                                      s.tr(
+                                        'السلام عليكم، واش باقي متوفر؟',
+                                        'Bonjour, toujours disponible ?',
+                                        'Hi, is this still available?',
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _ink,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // 4. Card 3 (Bottom falling bubble — Dynamic Layer `#0D8BFF` instant chat reply)
+                    Positioned(
+                      top: 196.0,
+                      left: 12.0,
+                      right: 12.0,
+                      child: _buildFallingItem(
+                        start: 0.36,
+                        end: 1.00,
+                        dropDistance: 32.0,
+                        child: Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: Container(
+                            key: const Key('dl-welcome-chat-bubble-3'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 15.0,
+                              vertical: 10.0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _chatBlue,
+                              borderRadius: BorderRadius.circular(18.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _chatBlue.withValues(alpha: 0.22),
+                                  blurRadius: 16.0,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  CupertinoIcons.checkmark_alt_circle_fill,
+                                  size: 15.0,
+                                  color: _bg,
+                                ),
+                                const SizedBox(width: 6.0),
+                                Flexible(
+                                  child: Text(
+                                    s.tr(
+                                      'مرحباً! نعم متوفر، تفضل',
+                                      'Oui disponible, bienvenue !',
+                                      'Yes available, welcome!',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: _bg,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
