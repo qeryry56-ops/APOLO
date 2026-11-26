@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_search_suggestions_view.dart';
 import 'ad_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/explore_listing_card.dart';
@@ -16,12 +17,16 @@ import 'widgets/skeleton_loader.dart';
 class SearchScreen extends StatefulWidget {
   final int? initialCategoryId;
   final String? initialQuery;
+  final bool initialSearchActive;
+  final List<ApoloSuggestedAccount>? initialSuggestedAccounts;
   final ValueChanged<bool>? onChromeVisibilityChanged;
 
   const SearchScreen({
     super.key,
     this.initialCategoryId,
     this.initialQuery,
+    this.initialSearchActive = false,
+    this.initialSuggestedAccounts,
     this.onChromeVisibilityChanged,
   });
 
@@ -45,7 +50,9 @@ class _SearchScreenState extends State<SearchScreen>
 
   List<dynamic> _rawAds = [];
   List<Map<String, dynamic>> _ads = [];
+  List<dynamic> _suggestedStores = [];
   bool _loading = true;
+  bool _isSearchModeActive = false;
   bool _chromeVisible = true;
   double _accumulatedScrollDelta = 0.0;
   String? _lastZoneSignature;
@@ -68,15 +75,79 @@ class _SearchScreenState extends State<SearchScreen>
     if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
       _queryCtrl.text = widget.initialQuery!.trim();
     }
+    _isSearchModeActive = widget.initialSearchActive;
     if (_categoryId != null) {
       _state.recordCategoryInterest(_categoryId, weight: 3);
     }
+    _searchFocus.addListener(_onSearchFocusChanged);
     _scrollCtrl.addListener(_onScroll);
     _state.addListener(_onAppStateChanged);
     _state.tabReselectCounter.addListener(_scrollToTop);
     _lastZoneSignature =
         '${_state.zoneFilterEnabled}_${_state.userLat}_${_state.userLng}_${_state.zoneRadiusKm}';
     _searchAds();
+    _loadSuggestedStores();
+    if (_isSearchModeActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _setChromeVisible(false);
+          _searchFocus.requestFocus();
+        }
+      });
+    }
+  }
+
+  void _onSearchFocusChanged() {
+    if (!mounted) return;
+    if (_searchFocus.hasFocus && !_isSearchModeActive) {
+      _enterSearchMode();
+    }
+  }
+
+  void _enterSearchMode() {
+    if (_isSearchModeActive) return;
+    setState(() => _isSearchModeActive = true);
+    _setChromeVisible(false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _isSearchModeActive && !_searchFocus.hasFocus) {
+        _searchFocus.requestFocus();
+      }
+    });
+  }
+
+  void _exitSearchMode() {
+    FocusScope.of(context).unfocus();
+    if (_isSearchModeActive) {
+      setState(() => _isSearchModeActive = false);
+    }
+    _setChromeVisible(true);
+  }
+
+  Future<void> _loadSuggestedStores() async {
+    try {
+      final res = await _state.api.dio.get(
+        '/stores',
+        queryParameters: const <String, dynamic>{'page': 1},
+      );
+      if (!mounted) return;
+      if (res.data is Map && res.data['status'] == 'success') {
+        final list = (res.data['data'] as List?) ?? const <dynamic>[];
+        setState(() => _suggestedStores = list);
+      }
+    } catch (_) {}
+  }
+
+  List<ApoloSuggestedAccount> get _effectiveSuggestedAccounts {
+    if (widget.initialSuggestedAccounts != null &&
+        widget.initialSuggestedAccounts!.isNotEmpty) {
+      return widget.initialSuggestedAccounts!;
+    }
+    final myId = int.tryParse('${_state.currentUser?['id'] ?? 0}');
+    return ApoloSuggestedAccount.extractFromSources(
+      stores: _suggestedStores,
+      ads: _rawAds,
+      excludeUserId: myId != null && myId > 0 ? myId : null,
+    );
   }
 
   void _onAppStateChanged() {
@@ -154,6 +225,7 @@ class _SearchScreenState extends State<SearchScreen>
     _state.removeListener(_onAppStateChanged);
     _state.tabReselectCounter.removeListener(_scrollToTop);
     _scrollCtrl.removeListener(_onScroll);
+    _searchFocus.removeListener(_onSearchFocusChanged);
     _scrollCtrl.dispose();
     _searchFocus.dispose();
     _queryCtrl.dispose();
@@ -1215,15 +1287,20 @@ class _SearchScreenState extends State<SearchScreen>
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
+                      key: const Key('explore-search-bar-field'),
                       controller: _queryCtrl,
                       focusNode: _searchFocus,
                       cursorColor: _ink,
+                      onTap: _enterSearchMode,
                       onChanged: (_) {
                         setState(() {
                           _ads = _filterAndSortAds(_rawAds);
                         });
                       },
-                      onSubmitted: (_) => _searchAds(),
+                      onSubmitted: (_) {
+                        _exitSearchMode();
+                        _searchAds();
+                      },
                       style: const TextStyle(
                         fontSize: 15,
                         color: _ink,
@@ -1458,7 +1535,24 @@ class _SearchScreenState extends State<SearchScreen>
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: NotificationListener<ScrollNotification>(
+        child: _isSearchModeActive
+            ? ApoloSearchSuggestionsView(
+                controller: _queryCtrl,
+                focusNode: _searchFocus,
+                accounts: _effectiveSuggestedAccounts,
+                matchingAds: _ads,
+                onBack: _exitSearchMode,
+                onChanged: (_) {
+                  setState(() {
+                    _ads = _filterAndSortAds(_rawAds);
+                  });
+                },
+                onSubmitQuery: (_) {
+                  _exitSearchMode();
+                  _searchAds();
+                },
+              )
+            : NotificationListener<ScrollNotification>(
           onNotification: _handleVerticalScrollNotification,
           child: RefreshIndicator(
             color: _red,
