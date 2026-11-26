@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
+import '../../widgets/apolo_badges_kit.dart';
 import '../../widgets/dl_settings_kit.dart';
 import '../account_security_screen.dart';
 import '../account_setup_screen.dart';
@@ -412,6 +413,16 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'A';
     final contactLine =
         email.isNotEmpty ? email : (phone.isNotEmpty ? phone : handle);
+    final isVerified = _state.currentUser?['is_verified'] == true ||
+        _state.currentUser?['phone_verified_at'] != null ||
+        _state.isBusinessAccount ||
+        _state.isProPlusAccount;
+    final rank = ApoloSellerRank.resolve(
+      user: _state.currentUser,
+      isProPlus: _state.isProPlusAccount,
+      isBusiness: _state.isBusinessAccount,
+      isVerified: isVerified,
+    );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -465,14 +476,17 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                         ),
                       ),
                     ),
-                    if (_state.isProPlusAccount) ...[
-                      const SizedBox(width: 6),
-                      _StatusPill(
-                        label: 'PRO+',
-                        background: palette.ink,
-                        foreground: palette.onInk,
-                      ),
-                    ] else if (_state.isBusinessAccount) ...[
+                    const SizedBox(width: 6),
+                    ApoloIdentityBadgesRow(
+                      isVerified: isVerified,
+                      rank: rank,
+                      isProPlus: _state.isProPlusAccount,
+                      isBusiness: _state.isBusinessAccount,
+                      showProPill: true,
+                      badgeSize: 16,
+                    ),
+                    if (_state.isBusinessAccount &&
+                        !_state.isProPlusAccount) ...[
                       const SizedBox(width: 6),
                       _StatusPill(
                         label: s.tr('أعمال', 'Pro', 'Business'),

@@ -7,6 +7,7 @@ import '../core/config/app_config.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
@@ -390,13 +391,14 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                           color: palette.iconMuted,
                                         ),
                                   displayName: widget.sellerName,
-                                  nameTrailing: widget.isVerified
-                                      ? const Icon(
-                                          CupertinoIcons.checkmark_seal_fill,
-                                          color: _blueVerified,
-                                          size: 17,
-                                        )
-                                      : null,
+                                  nameTrailing: ApoloIdentityBadgesRow(
+                                    isVerified: widget.isVerified,
+                                    rank: ApoloSellerRank.resolve(
+                                      listingsCount: _sellerAds.length,
+                                      isVerified: widget.isVerified,
+                                    ),
+                                    interactive: true,
+                                  ),
                                   handle: '@${_sellerHandle()}',
                                   stats: [
                                     ApoloDlAccountStat(

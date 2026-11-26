@@ -10,6 +10,7 @@ import '../core/location/marketplace_location.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
 import 'widgets/price_text.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
@@ -2543,22 +2544,18 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 bottom: -1,
                                 end: -1,
                                 child: Container(
-                                  width: 18,
-                                  height: 18,
+                                  width: 20,
+                                  height: 20,
                                   decoration: BoxDecoration(
-                                    color: _fbBlue,
+                                    color: Colors.white,
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: Colors.white,
-                                      width: 1.8,
+                                      width: 1.5,
                                     ),
                                   ),
                                   alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.check_rounded,
-                                    size: 11,
-                                    color: Colors.white,
-                                  ),
+                                  child: const ApoloVerifiedBadge(size: 16),
                                 ),
                               ),
                           ],
@@ -2568,15 +2565,39 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                hostTitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: _ink,
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      hostTitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: _ink,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  ApoloRankBadge(
+                                    rank: ApoloSellerRank.resolve(
+                                      user: seller,
+                                      isProPlus: store?['is_pro_plus'] == true ||
+                                          seller?['is_pro_plus'] == true,
+                                      isBusiness: store != null,
+                                      isVerified: seller?['is_verified'] == true ||
+                                          store != null,
+                                    ),
+                                    size: 17,
+                                    isVerified: seller?['is_verified'] == true ||
+                                        store != null,
+                                    isProPlus: store?['is_pro_plus'] == true ||
+                                        seller?['is_pro_plus'] == true,
+                                    isBusiness: store != null,
+                                    interactive: true,
+                                  ),
+                                ],
                               ),
                               if (ratingVal != null && ratingVal > 0) ...[
                                 const SizedBox(height: 3),

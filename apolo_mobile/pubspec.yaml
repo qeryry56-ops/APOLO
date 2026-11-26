@@ -65,6 +65,7 @@ flutter:
     - assets/images/state_notifications.png
     - assets/images/auth_hero_3d.png
     - assets/images/state_empty_ads.png
+    - assets/badges/
   fonts:
     - family: PlusJakartaSans
       fonts:

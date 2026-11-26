@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
@@ -344,6 +345,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name = _displayName(isAr);
     final handle = _displayHandle;
     final bio = _displayBio(isAr);
+    final userMap = _state.currentUser;
+    final isProPlus = _state.isProPlusAccount;
+    final isBusiness = _state.isBusinessAccount;
+    final isVerified = userMap?['is_verified'] == true ||
+        userMap?['verified'] == true ||
+        userMap?['phone_verified_at'] != null ||
+        isProPlus ||
+        isBusiness;
+    final totalViews = _baseViews ?? 0;
+    final sellerRank = ApoloSellerRank.resolve(
+      user: userMap,
+      listingsCount: _myAds.length,
+      totalViews: totalViews,
+      isProPlus: isProPlus,
+      isBusiness: isBusiness,
+      isVerified: isVerified,
+    );
 
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -431,6 +449,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     onAvatarTap: () =>
                                         _openEditProfileSheet(isAr),
                                     displayName: name,
+                                    nameTrailing: ApoloIdentityBadgesRow(
+                                      rank: sellerRank,
+                                      isVerified: isVerified,
+                                      isProPlus: isProPlus,
+                                      isBusiness: isBusiness,
+                                      badgeSize: 18,
+                                      interactive: true,
+                                    ),
                                     onNameTap: () =>
                                         _openEditProfileSheet(isAr),
                                     handle: '@$handle',
@@ -520,6 +546,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
 
                                   const SizedBox(height: 14),
+
+                                  ApoloRankProgressCard(
+                                    rank: sellerRank,
+                                    listingsCount: _myAds.length,
+                                    totalViews: totalViews,
+                                    isVerified: isVerified,
+                                    isProPlus: isProPlus,
+                                    isBusiness: isBusiness,
+                                  ),
+
+                                  const SizedBox(height: 12),
 
                                   if (!_state.isBusinessAccount)
                                     _buildPersonalSwitchBanner(s, palette)
@@ -725,13 +762,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isProPlus
-                          ? CupertinoIcons.checkmark_seal_fill
-                          : CupertinoIcons.briefcase_fill,
-                      size: 12,
-                      color: Colors.white,
-                    ),
+                    if (isProPlus)
+                      const ApoloVerifiedBadge(size: 13)
+                    else
+                      const Icon(
+                        CupertinoIcons.briefcase_fill,
+                        size: 12,
+                        color: Colors.white,
+                      ),
                     const SizedBox(width: 4),
                     Text(
                       isProPlus ? 'PRO+' : 'Business',

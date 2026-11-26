@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
 import 'business_switch_screen.dart';
 import 'widgets/ad_card.dart';
 import 'widgets/apolo_safety_sheet.dart';
@@ -514,35 +515,61 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                       ),
                                     ),
                                     PositionedDirectional(
-                                      bottom: 2,
-                                      end: 2,
+                                      bottom: 0,
+                                      end: 0,
                                       child: Container(
-                                        width: 24,
-                                        height: 24,
+                                        width: 26,
+                                        height: 26,
                                         decoration: BoxDecoration(
-                                          color: _ink,
+                                          color: Colors.white,
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                              color: Colors.white, width: 2.5),
+                                              color: Colors.white, width: 2),
                                         ),
-                                        child: const Icon(Icons.check_rounded,
-                                            size: 14, color: Colors.white),
+                                        alignment: Alignment.center,
+                                        child:
+                                            const ApoloVerifiedBadge(size: 20),
                                       ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                Text(
-                                  (store['name'] ?? '').toString(),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 21,
-                                    fontWeight: FontWeight.w800,
-                                    color: _ink,
-                                    letterSpacing:
-                                        AppTypography.trackingForContext(
-                                            context, -0.4),
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        (store['name'] ?? '').toString(),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 21,
+                                          fontWeight: FontWeight.w800,
+                                          color: _ink,
+                                          letterSpacing:
+                                              AppTypography.trackingForContext(
+                                                  context, -0.4),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    ApoloIdentityBadgesRow(
+                                      isVerified: true,
+                                      rank: ApoloSellerRank.resolve(
+                                        user: store,
+                                        listingsCount: _ads.length,
+                                        isProPlus: store['is_pro_plus'] == true,
+                                        isBusiness: true,
+                                        isVerified: true,
+                                      ),
+                                      isProPlus: store['is_pro_plus'] == true,
+                                      isBusiness: true,
+                                      badgeSize: 18,
+                                      interactive: true,
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 6),
                                 Wrap(

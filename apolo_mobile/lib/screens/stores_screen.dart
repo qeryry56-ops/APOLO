@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'business_switch_screen.dart';
 import 'store_detail_screen.dart';
@@ -404,6 +405,18 @@ class _StoresScreenState extends State<StoresScreen> {
                                               0)
                                           .toString()) ??
                                   0;
+                              final isProPlus = store['is_pro_plus'] == true;
+                              final isVerified =
+                                  store['is_verified'] == true ||
+                                      store['verified'] == true ||
+                                      isProPlus;
+                              final rank = ApoloSellerRank.resolve(
+                                user: store,
+                                listingsCount: count,
+                                isProPlus: isProPlus,
+                                isBusiness: true,
+                                isVerified: isVerified,
+                              );
                               return PressableScale(
                                 onTap: () {
                                   Navigator.push(
@@ -424,6 +437,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                   child: Row(
                                     children: [
                                       Stack(
+                                        clipBehavior: Clip.none,
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.all(2.5),
@@ -440,30 +454,31 @@ class _StoresScreenState extends State<StoresScreen> {
                                             ),
                                           ),
                                           PositionedDirectional(
-                                            bottom: 0,
-                                            end: 0,
-                                            child: Container(
-                                              width: 20,
-                                              height: 20,
-                                              decoration: BoxDecoration(
-                                                color: store['is_pro_plus'] ==
-                                                        true
-                                                    ? const Color(0xFFD97706)
-                                                    : _ink,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                    color: Colors.white,
-                                                    width: 2),
-                                              ),
-                                              child: Icon(
-                                                store['is_pro_plus'] == true
-                                                    ? CupertinoIcons
-                                                        .checkmark_seal_fill
-                                                    : Icons.check_rounded,
-                                                size: 11.5,
-                                                color: Colors.white,
-                                              ),
-                                            ),
+                                            bottom: -1,
+                                            end: -1,
+                                            child: isVerified
+                                                ? ApoloVerifiedBadge(
+                                                    size: 20,
+                                                    rank: rank,
+                                                    isProPlus: isProPlus,
+                                                    isBusiness: true,
+                                                  )
+                                                : Container(
+                                                    width: 20,
+                                                    height: 20,
+                                                    decoration: BoxDecoration(
+                                                      color: _ink,
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                          color: Colors.white,
+                                                          width: 2),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.check_rounded,
+                                                      size: 11.5,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
                                           ),
                                         ],
                                       ),
@@ -494,8 +509,16 @@ class _StoresScreenState extends State<StoresScreen> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 6),
-                                                if (store['is_pro_plus'] ==
-                                                    true) ...[
+                                                ApoloRankBadge(
+                                                  rank: rank,
+                                                  size: 18,
+                                                  interactive: true,
+                                                  isVerified: isVerified,
+                                                  isProPlus: isProPlus,
+                                                  isBusiness: true,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                if (isProPlus) ...[
                                                   Container(
                                                     padding: const EdgeInsets
                                                         .symmetric(
