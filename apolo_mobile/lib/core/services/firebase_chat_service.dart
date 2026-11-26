@@ -56,7 +56,7 @@ class FirebaseChatService {
             await Firebase.initializeApp();
           } catch (_) {
             await Firebase.initializeApp(
-              options: ApoloFirebaseOptions.web,
+              options: ApoloFirebaseOptions.currentPlatform,
             );
           }
         }
