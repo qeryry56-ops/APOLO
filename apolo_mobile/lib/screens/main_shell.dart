@@ -6,17 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/services/media_rtc_bridge.dart';
+import '../core/services/push_notification_service.dart';
 import '../core/state/app_state.dart';
 import '../features/bug_report/services/bug_report_route_observer.dart';
 import '../widgets/notification_badge.dart';
 import 'call_screen.dart';
-import 'chat_room_screen.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'post_ad_screen.dart';
 import 'chat_list_screen.dart';
 import 'profile_screen.dart';
-import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 
 class MainShell extends StatefulWidget {
@@ -43,8 +42,6 @@ class _MainShellState extends State<MainShell>
   String? _lastHandledGlobalCallId;
   StreamSubscription<List<Map<String, dynamic>>>? _globalConvSub;
   StreamSubscription<Map<String, dynamic>?>? _globalCallSub;
-  Map<String, dynamic>? _bannerData;
-  Timer? _bannerTimer;
 
   late final AnimationController _squashCtrl;
   late final Animation<double> _pillScaleX;
@@ -107,7 +104,6 @@ class _MainShellState extends State<MainShell>
   void dispose() {
     _globalConvSub?.cancel();
     _globalCallSub?.cancel();
-    _bannerTimer?.cancel();
     _state.removeListener(_onStateChanged);
     _squashCtrl.dispose();
     super.dispose();
@@ -141,7 +137,7 @@ class _MainShellState extends State<MainShell>
     _alertUserId = myUserId;
     _initialConvSnapshotDone = false;
     _lastSeenConvMs.clear();
-    MediaRtcBridge.requestBrowserNotificationPermission();
+    unawaited(ApoloPushNotificationService.instance.syncTokenWithBackend());
 
     _globalConvSub?.cancel();
     _globalConvSub = FirebaseChatService.instance
@@ -183,14 +179,23 @@ class _MainShellState extends State<MainShell>
         final sender = (newestIncoming['peer_name'] ?? 'Apolo').toString();
         final body = (newestIncoming['last_message'] ?? '').toString();
         MediaRtcBridge.playMessageSound();
-        MediaRtcBridge.showBrowserNotification(sender, body);
-        _showInAppBanner({
-          'type': 'message',
-          'title': sender,
-          'body': body,
-          'avatar': newestIncoming['peer_avatar']?.toString() ?? '',
-          'conv': newestIncoming,
-        });
+        unawaited(
+          ApoloPushNotificationService.instance.showLocalNotification(
+            title: sender,
+            body: body,
+            channel: ApoloPushNotificationService.channelMessages,
+            payload: <String, dynamic>{
+              'type': 'message',
+              'firestore_doc_id': newestIncoming['firestore_doc_id'],
+              'peer_id': newestIncoming['peer_id'],
+              'peer_name': sender,
+              'peer_avatar': newestIncoming['peer_avatar']?.toString() ?? '',
+              'ad_title': newestIncoming['ad_title']?.toString() ?? '',
+              'ad_price': newestIncoming['ad_price']?.toString(),
+              'ad_image': newestIncoming['ad_image']?.toString(),
+            },
+          ),
+        );
       }
     });
 
@@ -204,13 +209,26 @@ class _MainShellState extends State<MainShell>
       _lastHandledGlobalCallId = callId;
       final callerName = (callData['caller_name'] ?? 'Apolo User').toString();
       final isVideo = callData['is_video'] == true;
-      MediaRtcBridge.showBrowserNotification(
-        callerName,
-        isVideo
-            ? _state.s.tr('مكالمة فيديو واردة...', 'Appel vidéo entrant...',
-                'Incoming video call...')
-            : _state.s.tr('مكالمة صوتية واردة...', 'Appel vocal entrant...',
-                'Incoming voice call...'),
+      unawaited(
+        ApoloPushNotificationService.instance.showLocalNotification(
+          title: callerName,
+          body: isVideo
+              ? _state.s.tr(
+                  'مكالمة فيديو واردة...',
+                  'Appel vidéo entrant...',
+                  'Incoming video call...',
+                )
+              : _state.s.tr(
+                  'مكالمة صوتية واردة...',
+                  'Appel vocal entrant...',
+                  'Incoming voice call...',
+                ),
+          channel: ApoloPushNotificationService.channelCalls,
+          payload: <String, dynamic>{
+            'type': 'call',
+            'call_id': callId,
+          },
+        ),
       );
       Navigator.push(
         context,
@@ -226,15 +244,6 @@ class _MainShellState extends State<MainShell>
           ),
         ),
       );
-    });
-  }
-
-  void _showInAppBanner(Map<String, dynamic> data) {
-    _bannerTimer?.cancel();
-    if (!mounted) return;
-    setState(() => _bannerData = data);
-    _bannerTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _bannerData = null);
     });
   }
 
@@ -255,13 +264,14 @@ class _MainShellState extends State<MainShell>
         'Vous avez une nouvelle notification Apolo',
         'You have a new Apolo notification',
       );
-      MediaRtcBridge.showBrowserNotification('Apolo.ma', msg);
-      _showInAppBanner({
-        'type': 'app',
-        'title': 'Apolo.ma',
-        'body': msg,
-        'avatar': '',
-      });
+      unawaited(
+        ApoloPushNotificationService.instance.showLocalNotification(
+          title: 'Apolo.ma',
+          body: msg,
+          channel: ApoloPushNotificationService.channelAlerts,
+          payload: const <String, dynamic>{'type': 'app'},
+        ),
+      );
     }
     _lastNotifCount = nextNotifCount;
     setState(() {});
@@ -401,127 +411,6 @@ class _MainShellState extends State<MainShell>
                 TickerMode(enabled: _currentIndex == i, child: pages[i])
             ],
           ),
-          // Top Floating In-App Notification Banner (Messages & App Alerts)
-          if (_bannerData != null)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
-              left: 16,
-              right: 16,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: GestureDetector(
-                    onTap: () {
-                      final data = _bannerData;
-                      setState(() => _bannerData = null);
-                      if (data != null &&
-                          data['type'] == 'message' &&
-                          data['conv'] is Map) {
-                        final conv =
-                            Map<String, dynamic>.from(data['conv'] as Map);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatRoomScreen(
-                              conversationId:
-                                  int.tryParse('${conv['id'] ?? 0}') ?? 0,
-                              firestoreDocId:
-                                  conv['firestore_doc_id']?.toString(),
-                              peerId:
-                                  int.tryParse('${conv['peer_id'] ?? ''}'),
-                              peerName:
-                                  (conv['peer_name'] ?? 'Apolo').toString(),
-                              peerAvatar: conv['peer_avatar']?.toString(),
-                              adTitle: (conv['ad_title'] ?? '').toString(),
-                              adPrice: conv['ad_price']?.toString(),
-                              adImage: conv['ad_image']?.toString(),
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: Material(
-                      color: const Color(0xFF0A0A0A),
-                      elevation: 14,
-                      borderRadius: BorderRadius.circular(20),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withValues(alpha: 0.14),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: (_bannerData!['avatar'] ?? '')
-                                      .toString()
-                                      .isNotEmpty
-                                  ? AppImage(
-                                      url: _bannerData!['avatar'].toString(),
-                                      fit: BoxFit.cover,
-                                      width: 38,
-                                      height: 38,
-                                    )
-                                  : Icon(
-                                      _bannerData!['type'] == 'message'
-                                          ? CupertinoIcons.chat_bubble_fill
-                                          : CupertinoIcons.bell_fill,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    (_bannerData!['title'] ?? 'Apolo.ma')
-                                        .toString(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    (_bannerData!['body'] ?? '').toString(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () => setState(() => _bannerData = null),
-                              child: const Icon(
-                                CupertinoIcons.xmark,
-                                color: Colors.white60,
-                                size: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           // Responsive Floating Translucent Pill Dock + Borderless "+" Button with Squash & Stretch
           Positioned(
             key: const Key('main-shell-bottom-dock'),

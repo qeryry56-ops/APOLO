@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/firebase_options.dart';
 import '../../screens/widgets/chat_utils.dart';
+import 'push_notification_service.dart';
 
 /// Real-time Cloud Firestore Chat Service for Apolo (Web + Mobile).
 ///
@@ -46,9 +47,19 @@ class FirebaseChatService {
     if (_isReady) return true;
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(
-          options: ApoloFirebaseOptions.currentPlatform,
-        );
+        if (kIsWeb) {
+          await Firebase.initializeApp(
+            options: ApoloFirebaseOptions.web,
+          );
+        } else {
+          try {
+            await Firebase.initializeApp();
+          } catch (_) {
+            await Firebase.initializeApp(
+              options: ApoloFirebaseOptions.web,
+            );
+          }
+        }
       }
       _isReady = true;
       return true;
@@ -506,6 +517,27 @@ class FirebaseChatService {
       'deleted_for_everyone': false,
       'deleted_for': <String>[],
     });
+
+    if (peerUserId != myUserId) {
+      unawaited(
+        ApoloPushNotificationService.instance.notifyRemoteUser(
+          recipientUserId: peerUserId,
+          title: myName.trim().isNotEmpty ? myName.trim() : 'Apolo.ma',
+          body: trimmed,
+          type: 'message',
+          data: <String, dynamic>{
+            'firestore_doc_id': docId,
+            'peer_id': myKey,
+            'peer_name': myName,
+            'peer_avatar': myAvatar,
+            if (adId > 0) 'ad_id': '$adId',
+            if (adTitle.isNotEmpty) 'ad_title': adTitle,
+            if (adPrice.isNotEmpty) 'ad_price': adPrice,
+            if (adImage.isNotEmpty) 'ad_image': adImage,
+          },
+        ),
+      );
+    }
   }
 
   Future<void> sendImageMessage({
@@ -573,6 +605,28 @@ class FirebaseChatService {
       'deleted_for_everyone': false,
       'deleted_for': <String>[],
     });
+
+    if (peerUserId != myUserId) {
+      final preview = caption.trim().isNotEmpty ? caption.trim() : '📷 Photo';
+      unawaited(
+        ApoloPushNotificationService.instance.notifyRemoteUser(
+          recipientUserId: peerUserId,
+          title: myName.trim().isNotEmpty ? myName.trim() : 'Apolo.ma',
+          body: preview,
+          type: 'message',
+          data: <String, dynamic>{
+            'firestore_doc_id': docId,
+            'peer_id': myKey,
+            'peer_name': myName,
+            'peer_avatar': myAvatar,
+            if (adId > 0) 'ad_id': '$adId',
+            if (adTitle.isNotEmpty) 'ad_title': adTitle,
+            if (adPrice.isNotEmpty) 'ad_price': adPrice,
+            if (adImage.isNotEmpty) 'ad_image': adImage,
+          },
+        ),
+      );
+    }
   }
 
   Future<void> editMessage({
@@ -751,6 +805,27 @@ class FirebaseChatService {
       'deleted_for_everyone': false,
       'deleted_for': <String>[],
     });
+
+    if (peerUserId != myUserId) {
+      unawaited(
+        ApoloPushNotificationService.instance.notifyRemoteUser(
+          recipientUserId: peerUserId,
+          title: myName.trim().isNotEmpty ? myName.trim() : 'Apolo.ma',
+          body: '🎤 $audioDuration',
+          type: 'message',
+          data: <String, dynamic>{
+            'firestore_doc_id': docId,
+            'peer_id': myKey,
+            'peer_name': myName,
+            'peer_avatar': myAvatar,
+            if (adId > 0) 'ad_id': '$adId',
+            if (adTitle.isNotEmpty) 'ad_title': adTitle,
+            if (adPrice.isNotEmpty) 'ad_price': adPrice,
+            if (adImage.isNotEmpty) 'ad_image': adImage,
+          },
+        ),
+      );
+    }
   }
 
   // ───────────────────────── WebRTC Call Signaling ─────────────────────────
@@ -782,6 +857,24 @@ class FirebaseChatService {
       'created_at_ms': nowMs,
       'updated_at_ms': nowMs,
     });
+    if (calleeId != callerId) {
+      unawaited(
+        ApoloPushNotificationService.instance.notifyRemoteUser(
+          recipientUserId: calleeId,
+          title: callerName.trim().isNotEmpty ? callerName.trim() : 'Apolo.ma',
+          body: isVideo ? 'Incoming video call' : 'Incoming voice call',
+          type: 'call',
+          data: <String, dynamic>{
+            'call_id': ref.id,
+            'firestore_doc_id': conversationDocId,
+            'peer_id': '$callerId',
+            'peer_name': callerName,
+            'peer_avatar': callerAvatar,
+            'is_video': isVideo ? 'true' : 'false',
+          },
+        ),
+      );
+    }
     return ref.id;
   }
 

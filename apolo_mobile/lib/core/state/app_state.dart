@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../location/marketplace_location.dart';
 import '../network/api_client.dart';
 import '../config/app_config.dart';
+import '../services/push_notification_service.dart';
 
 class AppState extends ChangeNotifier {
   static final AppState _instance = AppState._internal();
@@ -983,6 +984,7 @@ class AppState extends ChangeNotifier {
           }
         }
         notifyListeners();
+        unawaited(ApoloPushNotificationService.instance.syncTokenWithBackend());
         await Future.wait([
           fetchFavoritesIds(),
           fetchUnreadNotificationsCount(),
@@ -1314,11 +1316,13 @@ class AppState extends ChangeNotifier {
     accountType = effectiveAccountType;
     await _persistCurrentUser();
     await fetchFavoritesIds();
+    unawaited(ApoloPushNotificationService.instance.syncTokenWithBackend());
     notifyListeners();
   }
 
   Future<void> logout() async {
     _sessionRevision++;
+    await ApoloPushNotificationService.instance.unregisterTokenFromBackend();
     try {
       await api.dio.post('/auth/logout');
     } catch (_) {}

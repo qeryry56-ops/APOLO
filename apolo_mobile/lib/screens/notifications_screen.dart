@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/config/app_config.dart';
 import '../core/services/media_rtc_bridge.dart';
+import '../core/services/push_notification_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
@@ -75,7 +76,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _isOffline = widget.initialSimulateOffline;
-    _permissionStatus = MediaRtcBridge.getNotificationPermissionStatus();
+    _permissionStatus =
+        ApoloPushNotificationService.instance.getPermissionStatusSync();
     // Rule 5: Clear badge immediately on screen open without waiting for API.
     _state.clearUnreadNotificationsOptimistically(syncRemote: false);
     _state.addListener(_onStateChanged);
@@ -84,12 +86,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   /// Verifies whether notifications are genuinely active on this device/browser:
-  /// - When browser `Notification` API is available (`granted` / `denied` / `default`),
+  /// - When OS or browser `Notification` API is available (`granted` / `denied` / `default`),
   ///   strictly requires `_permissionStatus == 'granted'`.
-  /// - When `Notification` API is `'unsupported'` (e.g. iOS Chrome/Safari non-PWA tab or test stub),
+  /// - When `'unsupported'` (e.g. non-PWA mobile tab or test stub),
   ///   uses verified Apolo activation state (`_prefsActivated || _items.isNotEmpty`).
   bool get _isNotificationsTrulyActive {
-    final liveStatus = MediaRtcBridge.getNotificationPermissionStatus();
+    final liveStatus =
+        ApoloPushNotificationService.instance.getPermissionStatusSync();
     final effectiveStatus =
         liveStatus != 'unsupported' ? liveStatus : _permissionStatus;
     if (effectiveStatus == 'granted') return true;
@@ -103,7 +106,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getBool(_prefActivatedKey) ?? false;
-      final liveStatus = MediaRtcBridge.getNotificationPermissionStatus();
+      final liveStatus =
+          await ApoloPushNotificationService.instance.getPermissionStatusAsync();
       if (mounted) {
         setState(() {
           _prefsActivated = saved;
@@ -152,14 +156,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
       contentTitle: s.tr(
-        'الإشعارات غير مفعّلة في المتصفح',
-        'Notifications bloquées par le navigateur',
+        'الإشعارات غير مفعّلة على الجهاز',
+        'Notifications désactivées',
         'Notifications are blocked',
       ),
       contentDescription: s.tr(
-        'يرجى السماح بالإشعارات من أيقونة القفل/الإعدادات بجانب رابط الموقع في المتصفح ثم الضغط على "متابعة" مرة أخرى.',
-        'Autorisez les notifications depuis l’icône cadenas/réglages de votre navigateur puis appuyez à nouveau sur Continuer.',
-        'Please allow notifications in your browser or device settings, then tap Continue again.',
+        'يرجى تفعيل الإشعارات من إعدادات التطبيق في الهاتف أو أيقونة القفل في المتصفح ثم الضغط على "متابعة" مرة أخرى.',
+        'Autorisez les notifications dans les réglages de votre appareil ou navigateur puis appuyez sur Continuer.',
+        'Please enable notifications in your phone or browser settings, then tap Continue again.',
       ),
       actions: [
         ApoloDlButton(
@@ -181,9 +185,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     String status = 'unsupported';
     try {
-      status = await MediaRtcBridge.requestNotificationPermissionWithResult();
+      status = await ApoloPushNotificationService.instance.requestPermission();
     } catch (_) {
-      status = MediaRtcBridge.getNotificationPermissionStatus();
+      status = ApoloPushNotificationService.instance.getPermissionStatusSync();
     }
 
     if (!mounted) return;

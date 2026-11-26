@@ -65,7 +65,13 @@ return [
     |--------------------------------------------------------------------------
     */
     'push' => [
-        'fcm_endpoint' => env('CHAT_FCM_ENDPOINT', 'https://fcm.googleapis.com/v1/projects/apolo-ma/messages:send'),
+        'fcm_project_id' => env('FIREBASE_PROJECT_ID', 'apolo-chat-e3ccf'),
+        'fcm_endpoint' => env(
+            'CHAT_FCM_ENDPOINT',
+            'https://fcm.googleapis.com/v1/projects/' . env('FIREBASE_PROJECT_ID', 'apolo-chat-e3ccf') . '/messages:send'
+        ),
+        'fcm_service_account_path' => env('FIREBASE_SERVICE_ACCOUNT_PATH', ''),
+        'fcm_service_account_json' => env('FIREBASE_SERVICE_ACCOUNT_JSON', ''),
         'fcm_server_key' => env('CHAT_FCM_SERVER_KEY', ''),
         'apns_endpoint' => env('CHAT_APNS_ENDPOINT', 'https://api.push.apple.com/3/device'),
         'apns_bundle_id' => env('CHAT_APNS_BUNDLE_ID', 'ma.apolo.mobile'),

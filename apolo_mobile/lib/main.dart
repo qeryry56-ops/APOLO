@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/config/app_config.dart';
 import 'core/services/firebase_chat_service.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/state/app_state.dart';
 import 'features/bug_report/services/bug_report_controller.dart';
 import 'features/bug_report/services/bug_report_log_service.dart';
@@ -31,6 +32,7 @@ void main() async {
 
   await FirebaseChatService.instance.initialize();
   await AppState().initialize(loadRemote: false);
+  await ApoloPushNotificationService.instance.initialize();
   await BugReportController.instance.initialize();
 
   runApp(const ApoloMobileApp());
