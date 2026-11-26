@@ -803,22 +803,25 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
     if (ad == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: Colors.white,
           elevation: 0,
         ),
-        body: Center(
-          child: IllustratedStateView(
-            assetPath: 'assets/images/state_empty_ads.png',
-            title: s.tr('الإعلان غير متوفر', 'Annonce introuvable'),
-            subtitle: s.tr(
-              'ربما تم بيع هذا المنتج أو حذفه من طرف البائع.',
-              'Cet article a peut-être été vendu ou retiré.',
-            ),
-            actionLabel: s.tr('العودة للرئيسية', 'Retour'),
-            onAction: () => Navigator.pop(context),
+        body: IllustratedStateView(
+          assetPath: 'assets/images/state_empty_ads.png',
+          title: s.tr(
+            'الإعلان غير متوفر',
+            'Annonce introuvable',
+            'Listing unavailable',
           ),
+          subtitle: s.tr(
+            'ربما تم بيع هذا المنتج أو حذفه من طرف البائع.',
+            'Cet article a peut-être été vendu ou retiré.',
+            'This item may have been sold or removed by the seller.',
+          ),
+          actionLabel: s.tr('العودة', 'Retour', 'Go back'),
+          onAction: () => Navigator.pop(context),
         ),
       );
     }

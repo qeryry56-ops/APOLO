@@ -1402,4 +1402,213 @@ class ApoloDlAccountHeader extends StatelessWidget {
   }
 }
 
+/// Dynamic Layer v5.1 `Empty State` (`44239:11751`):
+/// - Centered minimalist visual (custom widget, clean asset image, `#EEEEEE` icon circle,
+///   or official `#E31828` Apolo brand squircle)
+/// - `20px Bold` `#000000` headline
+/// - `15px Regular` `#757575` description (`maxWidth: 295px`)
+/// - Hug-width `#EEEEEE` stadium pill CTA (`52px` height, `#000000` `15px Bold` label, e.g. `Try again`)
+class ApoloDlEmptyState extends StatelessWidget {
+  const ApoloDlEmptyState({
+    required this.headline,
+    required this.description,
+    super.key,
+    this.visual,
+    this.assetPath,
+    this.icon,
+    this.imageSize = 128.0,
+    this.actionLabel,
+    this.onAction,
+    this.secondaryLabel,
+    this.onSecondary,
+    this.actionKey,
+  });
+
+  final String headline;
+  final String description;
+  final Widget? visual;
+  final String? assetPath;
+  final IconData? icon;
+  final double imageSize;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
+  final Key? actionKey;
+
+  Widget _buildVisual(ApoloDlPalette palette) {
+    if (visual != null) return visual!;
+
+    if (assetPath != null && assetPath!.trim().isNotEmpty) {
+      return SizedBox(
+        width: imageSize,
+        height: imageSize,
+        child: Image.asset(
+          assetPath!,
+          width: imageSize,
+          height: imageSize,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, __, ___) => Container(
+            width: 88.0,
+            height: 88.0,
+            decoration: BoxDecoration(
+              color: palette.pill,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              icon ?? CupertinoIcons.sparkles,
+              size: 36.0,
+              color: palette.ink,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (icon != null) {
+      return Container(
+        width: 88.0,
+        height: 88.0,
+        decoration: BoxDecoration(
+          color: palette.pill,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          icon,
+          size: 36.0,
+          color: palette.ink,
+        ),
+      );
+    }
+
+    return Container(
+      width: 96.0,
+      height: 96.0,
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE31828),
+        borderRadius: BorderRadius.circular(24.0),
+      ),
+      child: Image.asset(
+        'assets/images/apolo_logo_white_transparent.png',
+        fit: BoxFit.contain,
+        semanticLabel: 'Apolo',
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            KeyedSubtree(
+              key: const Key('dl-empty-state-visual'),
+              child: _buildVisual(palette),
+            ),
+            const SizedBox(height: 28.0),
+            Text(
+              headline,
+              key: const Key('dl-empty-state-headline'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: palette.ink,
+                fontSize: 20.0,
+                fontWeight: FontWeight.w700,
+                height: 28.0 / 20.0,
+                letterSpacing: -0.2,
+              ),
+            ),
+            if (description.trim().isNotEmpty) ...[
+              const SizedBox(height: 8.0),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 295.0),
+                child: Text(
+                  description,
+                  key: const Key('dl-empty-state-description'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: palette.muted,
+                    fontSize: 15.0,
+                    fontWeight: FontWeight.w400,
+                    height: 22.0 / 15.0,
+                  ),
+                ),
+              ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 32.0),
+              Material(
+                color: palette.pill,
+                shape: const StadiumBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  key: actionKey ?? const Key('dl-empty-state-action'),
+                  customBorder: const StadiumBorder(),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onAction!();
+                  },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 52.0),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0,
+                        vertical: 14.0,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              actionLabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: palette.ink,
+                                fontSize: 15.0,
+                                fontWeight: FontWeight.w700,
+                                height: 22.0 / 15.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (secondaryLabel != null && onSecondary != null) ...[
+              const SizedBox(height: 12.0),
+              TextButton(
+                onPressed: onSecondary,
+                child: Text(
+                  secondaryLabel!,
+                  style: TextStyle(
+                    color: palette.muted,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 

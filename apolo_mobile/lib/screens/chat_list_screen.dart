@@ -9,6 +9,7 @@ import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/chat_message.dart';
+import '../widgets/dl_settings_kit.dart';
 import '../widgets/pull_to_refresh.dart';
 import 'auth_screen.dart';
 import 'call_screen.dart';
@@ -957,175 +958,65 @@ class _ChatListScreenState extends State<ChatListScreen> {
           child: _isLoading
               ? const ChatListSkeleton()
               : !_state.isLoggedIn
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 68,
-                              height: 68,
-                              decoration: BoxDecoration(
-                                color: pillBg,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                CupertinoIcons.bubble_left_bubble_right,
-                                color: ink,
-                                size: 30,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              s.tr(
-                                'سجّل الدخول لعرض محادثاتك',
-                                'Connectez-vous pour voir vos discussions',
-                                'Sign in to view your chats',
-                              ),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: ink,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              s.tr(
-                                'تواصل مباشرة مع البائعين والمشترين وتابع رسائلك بأمان.',
-                                'Échangez directement avec les vendeurs et acheteurs en toute sécurité.',
-                                'Message buyers and sellers directly and securely.',
-                              ),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: mutedText,
-                                fontSize: 13.5,
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            PressableScale(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const AuthScreen(),
-                                  ),
-                                ).then((_) => _loadConversations());
-                              },
-                              child: Container(
-                                height: 52,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 28,
-                                ),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: ink,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  s.tr(
-                                    'تسجيل الدخول',
-                                    'Se connecter',
-                                    'Continue',
-                                  ),
-                                  style: TextStyle(
-                                    color:
-                                        isDark ? const Color(0xFF000000) : Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                  ? ApoloDlEmptyState(
+                      icon: CupertinoIcons.bubble_left_bubble_right,
+                      headline: s.tr(
+                        'سجّل الدخول لعرض محادثاتك',
+                        'Connectez-vous pour voir vos discussions',
+                        'Sign in to view your chats',
                       ),
+                      description: s.tr(
+                        'تواصل مباشرة مع البائعين والمشترين وتابع رسائلك بأمان.',
+                        'Échangez directement avec les vendeurs et acheteurs en toute sécurité.',
+                        'Message buyers and sellers directly and securely.',
+                      ),
+                      actionLabel: s.tr(
+                        'تسجيل الدخول',
+                        'Se connecter',
+                        'Sign in',
+                      ),
+                      onAction: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AuthScreen(),
+                          ),
+                        ).then((_) => _loadConversations());
+                      },
                     )
                   : filtered.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: pillBg,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    CupertinoIcons.bubble_left_bubble_right,
-                                    color: mutedText,
-                                    size: 28,
-                                  ),
+                      ? ApoloDlEmptyState(
+                          icon: CupertinoIcons.bubble_left_bubble_right,
+                          headline: _selectedFilterIndex == 1
+                              ? s.tr(
+                                  'لا توجد رسائل غير مقروءة',
+                                  'Aucun message non lu',
+                                  'No unread chats',
+                                )
+                              : s.tr(
+                                  'لا توجد محادثات بعد',
+                                  'Aucune discussion pour le moment',
+                                  'No chats yet',
                                 ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  _selectedFilterIndex == 1
-                                      ? s.tr(
-                                          'لا توجد رسائل غير مقروءة',
-                                          'Aucun message non lu',
-                                          'No unread chats',
-                                        )
-                                      : s.tr(
-                                          'لا توجد محادثات بعد',
-                                          'Aucune discussion pour le moment',
-                                          'No chats yet',
-                                        ),
-                                  style: TextStyle(
-                                    color: ink,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  s.tr(
-                                    'تصفح الإعلانات وتواصل مع البائعين مباشرة بأمان تام.',
-                                    'Parcourez les annonces et discutez directement avec les vendeurs.',
-                                    'Browse listings and message sellers directly.',
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: mutedText,
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                if (widget.onExploreAds != null &&
-                                    _selectedFilterIndex == 0 &&
-                                    _searchQuery.trim().isEmpty) ...[
-                                  const SizedBox(height: 18),
-                                  TextButton(
-                                    onPressed: widget.onExploreAds,
-                                    style: TextButton.styleFrom(
-                                      backgroundColor: pillBg,
-                                      foregroundColor: ink,
-                                      shape: const StadiumBorder(),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 10,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      s.tr(
-                                        'تصفح الإعلانات',
-                                        'Parcourir les annonces',
-                                        'Explore listings',
-                                      ),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                          description: s.tr(
+                            'تصفح الإعلانات وتواصل مع البائعين مباشرة بأمان تام.',
+                            'Parcourez les annonces et discutez directement avec les vendeurs.',
+                            'Browse listings and message sellers directly.',
                           ),
+                          actionLabel: (widget.onExploreAds != null &&
+                                  _selectedFilterIndex == 0 &&
+                                  _searchQuery.trim().isEmpty)
+                              ? s.tr(
+                                  'تصفح الإعلانات',
+                                  'Parcourir les annonces',
+                                  'Explore listings',
+                                )
+                              : null,
+                          onAction: (widget.onExploreAds != null &&
+                                  _selectedFilterIndex == 0 &&
+                                  _searchQuery.trim().isEmpty)
+                              ? widget.onExploreAds
+                              : null,
                         )
                       : PullToRefresh(
                           onRefresh: _loadConversations,

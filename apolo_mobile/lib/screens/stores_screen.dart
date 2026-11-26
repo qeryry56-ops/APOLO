@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'business_switch_screen.dart';
 import 'store_detail_screen.dart';
 import 'widgets/app_image.dart';
@@ -352,31 +353,27 @@ class _StoresScreenState extends State<StoresScreen> {
               child: _loading
                   ? const StoresListSkeleton()
                   : visible.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 68,
-                                height: 68,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.storefront_rounded,
-                                    size: 32, color: _ink),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                s.tr('لا توجد متاجر مطابقة حالياً',
-                                    'Aucune boutique trouvée'),
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: _ink),
-                              ),
-                            ],
+                      ? ApoloDlEmptyState(
+                          icon: Icons.storefront_rounded,
+                          headline: s.tr(
+                            'لا توجد متاجر مطابقة حالياً',
+                            'Aucune boutique trouvée',
+                            'No matching stores',
                           ),
+                          description: s.tr(
+                            'جرب البحث بكلمة أخرى أو إعادة تحميل قائمة المتاجر المعتمدة.',
+                            'Essayez un autre mot-clé ou actualisez la liste des boutiques.',
+                            'Try another keyword or reload the verified stores list.',
+                          ),
+                          actionLabel: s.tr(
+                            'إعادة المحاولة',
+                            'Réessayer',
+                            'Try again',
+                          ),
+                          onAction: () {
+                            _searchCtrl.clear();
+                            _fetchStores();
+                          },
                         )
                       : RefreshIndicator(
                           color: _ink,

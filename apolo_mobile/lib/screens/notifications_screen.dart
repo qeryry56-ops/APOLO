@@ -1253,40 +1253,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// separated by `32px`).
   Widget _buildVerifiedNotificationsFeed(AppStrings s) {
     if (_isOffline) {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-            decoration: BoxDecoration(
-              color: _cardBg,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: IllustratedStateView(
-              assetPath: 'assets/images/state_no_internet.png',
-              fallbackIcon: CupertinoIcons.wifi_slash,
-              imageSize: 156,
-              title: s.tr(
-                'لا يوجد اتصال بالإنترنت',
-                'Aucune connexion Internet',
-                'No Internet connection',
+      return IllustratedStateView(
+        assetPath: 'assets/images/state_no_internet.png',
+        fallbackIcon: CupertinoIcons.wifi_slash,
+        imageSize: 136,
+        title: s.tr(
+          'لا يوجد اتصال بالإنترنت',
+          'Aucune connexion Internet',
+          'No Internet connection',
+        ),
+        subtitle: s.tr(
+          'تأكد من اتصالك بشبكة Wi-Fi أو بيانات الهاتف لتحميل آخر الإشعارات والرسائل.',
+          'Vérifiez votre connexion Wi-Fi ou mobile pour actualiser vos notifications.',
+          'Check your Wi-Fi or mobile data to refresh your notifications.',
+        ),
+        actionLabel: _isReconnecting
+            ? s.tr('جاري الاتصال...', 'Connexion...', 'Connecting...')
+            : s.tr(
+                'إعادة المحاولة',
+                'Réessayer',
+                'Try again',
               ),
-              subtitle: s.tr(
-                'تأكد من اتصالك بشبكة Wi-Fi أو بيانات الهاتف لتحميل آخر الإشعارات والرسائل.',
-                'Vérifiez votre connexion Wi-Fi ou mobile pour actualiser vos notifications.',
-                'Check your Wi-Fi or mobile data to refresh your notifications.',
-              ),
-              actionLabel: _isReconnecting
-                  ? s.tr('جاري الاتصال...', 'Connexion...', 'Connecting...')
-                  : s.tr(
-                      'إعادة المحاولة الآن',
-                      'Réessayer maintenant',
-                      'Try again',
-                    ),
-              onAction: _retryConnection,
-            ),
-          ),
-        ],
+        onAction: _retryConnection,
       );
     }
 

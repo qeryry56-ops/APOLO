@@ -140,50 +140,22 @@ class _SettingsBlockedAccountsScreenState
     if (_blocked.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 56, 24, 32),
+        padding: const EdgeInsets.fromLTRB(16, 48, 16, 32),
         children: [
-          Center(
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: palette.surfaceSubtle,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                CupertinoIcons.shield_lefthalf_fill,
-                size: 32,
-                color: palette.muted,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            s.tr(
+          ApoloDlEmptyState(
+            icon: CupertinoIcons.shield_lefthalf_fill,
+            headline: s.tr(
               'لا توجد حسابات محظورة حالياً',
               'Aucun compte bloqué pour le moment',
               'No blocked accounts yet',
             ),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: palette.ink,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            s.tr(
+            description: s.tr(
               'الحسابات أو المتاجر التي تقوم بحظرها من المحادثات أو الإعلانات ستظهر هنا ويمكنك إلغاء حظرها في أي وقت.',
               'Les comptes ou boutiques que vous bloquez apparaîtront ici et vous pourrez les débloquer à tout moment.',
               'Users or stores you block from chats or listings will appear here so you can unblock them anytime.',
             ),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.45,
-              color: palette.muted,
-            ),
+            actionLabel: s.tr('تحديث', 'Actualiser', 'Try again'),
+            onAction: _loadBlocked,
           ),
         ],
       );

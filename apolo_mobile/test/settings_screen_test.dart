@@ -367,5 +367,48 @@ void main() {
       expect(state.isLoggedIn, isFalse);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+        'ApoloDlEmptyState matches Figma 44239:11751 (#FFFFFF canvas, 20px Bold #000000 headline, 15px #757575 description, #EEEEEE Try again pill)',
+        (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      int retries = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const Locale('en'))
+              .copyWith(splashFactory: NoSplash.splashFactory),
+          home: Scaffold(
+            backgroundColor: Colors.white,
+            body: ApoloDlEmptyState(
+              headline: 'This is a headline',
+              description: 'This is the description',
+              actionLabel: 'Try again',
+              onAction: () => retries++,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('dl-empty-state-visual')), findsOneWidget);
+      expect(find.text('This is a headline'), findsOneWidget);
+      expect(find.text('This is the description'), findsOneWidget);
+
+      final actionFinder = find.byKey(const Key('dl-empty-state-action'));
+      expect(actionFinder, findsOneWidget);
+      expect(tester.getSize(actionFinder).height, closeTo(52.0, 0.1));
+      final actionMat = tester.widget<Material>(
+        find.ancestor(of: actionFinder, matching: find.byType(Material)).first,
+      );
+      expect(actionMat.color, const Color(0xFFEEEEEE));
+
+      await tester.tap(actionFinder);
+      await tester.pumpAndSettle();
+      expect(retries, 1);
+    });
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/dl_settings_kit.dart';
 import '../../widgets/perceived_performance.dart';
 
 /// Spring-physics entrance + scroll-staggered reveal widget.
@@ -332,7 +333,8 @@ class _Floating3DIllustrationState extends State<Floating3DIllustration>
   }
 }
 
-/// High-craft composed state card for No-Internet, Empty Notifications, or Empty Search.
+/// Dynamic Layer v5.1 `Empty State` (`44239:11751`) adapter used for No-Internet,
+/// Empty Listings, Empty Search, and Missing Item states across the app.
 class IllustratedStateView extends StatelessWidget {
   final String assetPath;
   final String title;
@@ -354,97 +356,22 @@ class IllustratedStateView extends StatelessWidget {
     this.secondaryLabel,
     this.onSecondary,
     this.fallbackIcon = CupertinoIcons.wifi_slash,
-    this.imageSize = 168,
+    this.imageSize = 136,
   });
 
   @override
   Widget build(BuildContext context) {
     return ScrollReveal(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Floating3DIllustration(
-                assetPath: assetPath,
-                size: imageSize,
-                fallbackIcon: fallbackIcon,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0F172A),
-                  letterSpacing:
-                      AppTypography.trackingForContext(context, -0.4),
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 310),
-                child: Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
-                    height: 1.5,
-                  ),
-                ),
-              ),
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: 24),
-                PressableScale(
-                  onTap: onAction,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE31B23),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              const Color(0xFFE31B23).withValues(alpha: 0.22),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      actionLabel!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              if (secondaryLabel != null && onSecondary != null) ...[
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: onSecondary,
-                  child: Text(
-                    secondaryLabel!,
-                    style: const TextStyle(
-                      color: Color(0xFF475569),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+      child: ApoloDlEmptyState(
+        assetPath: assetPath,
+        icon: fallbackIcon,
+        imageSize: imageSize.clamp(96.0, 148.0),
+        headline: title,
+        description: subtitle,
+        actionLabel: actionLabel,
+        onAction: onAction,
+        secondaryLabel: secondaryLabel,
+        onSecondary: onSecondary,
       ),
     );
   }
