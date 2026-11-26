@@ -591,10 +591,10 @@ class _ChatInputState extends State<ChatInput> {
                                       style: const TextStyle(
                                         fontSize:
                                             Ios26IMessageTokens.composerFontSize,
-                                        height: 22.0 / 17.0,
+                                        height: 20.0 / 15.0,
                                         color: Ios26IMessageTokens.labelPrimary,
-                                        fontWeight: FontWeight.w500,
-                                        letterSpacing: -0.25,
+                                        fontWeight: FontWeight.w400,
+                                        letterSpacing: -0.15,
                                       ),
                                       decoration: InputDecoration(
                                         filled: false,
@@ -607,8 +607,8 @@ class _ChatInputState extends State<ChatInput> {
                                               .placeholderGray,
                                           fontSize: Ios26IMessageTokens
                                               .composerFontSize,
-                                          height: 22.0 / 17.0,
-                                          fontWeight: FontWeight.w500,
+                                          height: 20.0 / 15.0,
+                                          fontWeight: FontWeight.w400,
                                         ),
                                         border: InputBorder.none,
                                         enabledBorder: InputBorder.none,

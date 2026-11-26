@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'apolo_emoji_reaction_bar.dart';
 import 'perceived_performance.dart';
 
 /// Exact design tokens extracted from Figma `iOS 26 (Community)` — iMessage
@@ -48,11 +49,11 @@ class Ios26IMessageTokens {
     0.0, 0.0, 0.0, 1.0, 0.0,
   ];
 
-  // Dynamic Layer v5.1 Chat Bubbles (`34425:37624`)
-  // Outgoing: Crisp Chat Blue (#0D8BFF), Pure White (#FFFFFF) ink
+  // Dynamic Layer v5.1 Chat Bubbles (`47281:3598`)
+  // Outgoing: Pure Black (#000000), Pure White (#FFFFFF) ink
   // Incoming: dynamic-layer-core-v5.1 grey-100 (#EEEEEE), Pure Black (#000000) ink
-  static const Color bubbleMineTop = Color(0xFF0D8BFF);
-  static const Color bubbleMine = Color(0xFF0D8BFF);
+  static const Color bubbleMineTop = Color(0xFF000000);
+  static const Color bubbleMine = Color(0xFF000000);
   static const LinearGradient bubbleMineGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -69,15 +70,15 @@ class Ios26IMessageTokens {
   static const Color composerPlusIcon = Color(0xFF000000); // Composer `+` icon
   static const Color nameChevron = Color(0xFFBFBFBF); // Profile chevron
   static const Color chevronTertiary = Color(0xFFBFBFBF);
-  static const Color dateGray = Color(0xFF757575); // DL v5.1 grey-500 timestamps
-  static const Color placeholderGray = Color(0xFF757575);
+  static const Color dateGray = Color(0xFF9E9E9E); // DL v5.1 centered timestamp gray
+  static const Color placeholderGray = Color(0xFF9E9E9E);
   static const Color onlineGreen = Color(0xFF15803D);
   static const Color errorRed = Color(0xFFE31B23);
 
-  // Tapback Reaction Badge (`20 × 20` circular `#0D8BFF`)
-  static const Color tapbackBlue = Color(0xFF0D8BFF);
+  // Tapback Reaction Badge
+  static const Color tapbackBlue = Color(0xFF000000);
 
-  // Exact Figma `1:2` / `4:1061` Dimensions
+  // Exact Figma `1:2` / `4:1061` / `47281:3598` Dimensions
   static const double controlCircleSize = 45.0;
   static const double controlRadius = 22.5;
   static const double composerBarWidth = 326.0; // `4:1061` (326 × 45 px)
@@ -95,17 +96,17 @@ class Ios26IMessageTokens {
   static const double avatarSize = 63.0; // (156, 62, 63, 63)
   static const double namePillHeight = 29.0; // (142, 121, 91, 29)
   static const double bubbleBodyHeight = 36.0;
-  static const double bubbleRadius = 18.0;
+  static const double bubbleRadius = 16.0;
   static const double bubbleTailDrop = 6.0; // Total bubble height = 42.0
   static const double photoBubbleWidth = 170.0; // (25, -58, 170, 222)
   static const double photoBubbleBodyHeight = 216.0;
 
-  // Exact Figma `1:2` & Dynamic Layer `34425:37624` Typography
-  static const double messageFontSize = 15.0;
-  static const double messageLineHeight = 20.5 / 15.0;
-  static const double messageTracking = -0.2;
+  // Exact Dynamic Layer `47281:3598` Typography
+  static const double messageFontSize = 14.5;
+  static const double messageLineHeight = 20.0 / 14.5;
+  static const double messageTracking = -0.15;
   static const double dateFontSize = 12.0;
-  static const double composerFontSize = 15.5;
+  static const double composerFontSize = 15.0;
   static const double nameFontSize = 16.0;
 }
 
@@ -642,9 +643,8 @@ class Ios26BottomEdgeFade extends StatelessWidget {
   }
 }
 
-/// Exact Figma `1:2` Tapback reaction badge (`(236, 282, 20, 20)` on Bubble B):
-/// - `20 × 20` circular `#0088FF` fill for single reaction (expands cleanly to pill for multiple)
-/// - `16 × 16` pink heart / emoji centered inside, overlapping the bubble's lower corner.
+/// Elevated Dynamic Layer reaction pill rendering genuine native iOS / Android
+/// color emojis (`Apple Color Emoji` on iOS, `Noto Color Emoji` on Android).
 class Ios26TapbackBadge extends StatelessWidget {
   final List<String> reactions;
   final VoidCallback? onTap;
@@ -655,26 +655,6 @@ class Ios26TapbackBadge extends StatelessWidget {
     this.onTap,
   });
 
-  static Widget _buildReactionGlyph(String emoji) {
-    // Render crisp pink heart matching Figma `(238, 283.5, 16, 16)` when reaction is a heart
-    if (emoji == '❤️' ||
-        emoji == '❤' ||
-        emoji == '💗' ||
-        emoji == '💖' ||
-        emoji == '💕' ||
-        emoji == '🩷') {
-      return const Icon(
-        Icons.favorite_rounded,
-        size: 13.5,
-        color: Color(0xFFFF6B9E),
-      );
-    }
-    return Text(
-      emoji,
-      style: const TextStyle(fontSize: 11.5, height: 1.0),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final cleaned = reactions
@@ -683,6 +663,7 @@ class Ios26TapbackBadge extends StatelessWidget {
         .toList();
     if (cleaned.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final uniqueList = cleaned.toSet().take(3).toList();
     final isSingle = cleaned.length == 1;
 
@@ -690,40 +671,52 @@ class Ios26TapbackBadge extends StatelessWidget {
       onTap: onTap,
       child: Container(
         key: const Key('ios26-tapback-badge'),
-        width: isSingle ? 20.0 : null,
-        height: 20.0,
-        constraints: const BoxConstraints(minWidth: 20.0, minHeight: 20.0),
-        padding: isSingle
-            ? EdgeInsets.zero
-            : const EdgeInsets.symmetric(horizontal: 5.5),
+        height: 22.0,
+        constraints: const BoxConstraints(minWidth: 24.0, minHeight: 22.0),
+        padding: EdgeInsets.symmetric(horizontal: isSingle ? 5.0 : 6.5),
         decoration: BoxDecoration(
-          color: Ios26IMessageTokens.tapbackBlue,
+          color: isDark ? const Color(0xFF262629) : const Color(0xFFFFFFFF),
           borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isDark ? const Color(0xFF3A3A3C) : const Color(0xFFEEEEEE),
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.14),
+              color: Colors.black.withValues(alpha: 0.10),
               blurRadius: 6,
-              offset: const Offset(0, 1.5),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         alignment: Alignment.center,
         child: isSingle
-            ? _buildReactionGlyph(uniqueList.first)
+            ? Text(
+                uniqueList.first,
+                style: ApoloPlatformEmoji.textStyle(
+                  context,
+                  fontSize: 13.0,
+                  height: 1.0,
+                ),
+              )
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     uniqueList.join(''),
-                    style: const TextStyle(fontSize: 11, height: 1.0),
+                    style: ApoloPlatformEmoji.textStyle(
+                      context,
+                      fontSize: 12.0,
+                      height: 1.0,
+                    ),
                   ),
-                  const SizedBox(width: 2.5),
+                  const SizedBox(width: 3.0),
                   Text(
                     '${cleaned.length}',
-                    style: const TextStyle(
-                      fontSize: 10,
+                    style: TextStyle(
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : const Color(0xFF0A0A0A),
                       height: 1.0,
                     ),
                   ),

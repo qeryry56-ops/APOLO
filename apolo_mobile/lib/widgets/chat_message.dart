@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../features/chat/models/chat_ack_models.dart';
 import '../features/chat/widgets/chat_ack_indicator.dart';
 import '../screens/widgets/app_image.dart';
 import '../screens/widgets/chat_utils.dart';
+import 'apolo_emoji_reaction_bar.dart';
 import 'ios26_imessage_kit.dart';
 import 'typing_indicator.dart';
 
@@ -70,6 +72,7 @@ class ChatMessage extends StatefulWidget {
   final VoidCallback? onRetry;
   final VoidCallback? onAvatarTap;
   final VoidCallback? onImageTap;
+  final VoidCallback? onDoubleTap;
   final VoidCallback? onOpenActions;
   final String retryLabel;
   final bool useRichTextForBody;
@@ -110,6 +113,7 @@ class ChatMessage extends StatefulWidget {
     this.onRetry,
     this.onAvatarTap,
     this.onImageTap,
+    this.onDoubleTap,
     this.onOpenActions,
     this.retryLabel = 'Retry',
     this.useRichTextForBody = false,
@@ -175,7 +179,7 @@ class ChatMessage extends StatefulWidget {
   static const double interSenderSpacing = 8.0;
 
   /// Compact vertical spacing between consecutive grouped messages from the same sender.
-  static const double intraGroupSpacing = 2.0;
+  static const double intraGroupSpacing = 4.0;
 
   /// Fixed avatar diameter for sender alignment.
   static const double avatarSize = 28.0;
@@ -369,9 +373,50 @@ class ChatMessage extends StatefulWidget {
   State<ChatMessage> createState() => _ChatMessageState();
 }
 
-class _ChatMessageState extends State<ChatMessage> {
+class _ChatMessageState extends State<ChatMessage>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
   bool _isTimestampPinned = false;
+  late final AnimationController _heartBurstCtrl;
+  late final Animation<double> _heartScale;
+  late final Animation<double> _heartOpacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _heartBurstCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    );
+    _heartScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.25, end: 1.28)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.28, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.85)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 25,
+      ),
+    ]).animate(_heartBurstCtrl);
+    _heartOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_heartBurstCtrl);
+  }
+
+  @override
+  void dispose() {
+    _heartBurstCtrl.dispose();
+    super.dispose();
+  }
 
   bool get _hasReplyQuote =>
       !widget.isDeleted &&
@@ -493,10 +538,23 @@ class _ChatMessageState extends State<ChatMessage> {
     );
   }
 
+  void _handleDoubleTap() {
+    if (widget.isDeleted || widget.onDoubleTap == null) return;
+    HapticFeedback.mediumImpact();
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      _heartBurstCtrl.forward(from: 0.0);
+    }
+    widget.onDoubleTap?.call();
+  }
+
   void _handleLongPress() {
+    HapticFeedback.mediumImpact();
     setState(() {
       _isTimestampPinned = !_isTimestampPinned;
     });
+    if (!widget.isDeleted) {
+      widget.onOpenActions?.call();
+    }
   }
 
   static ChatAckStatus _toAckStatus(ChatMessageStatus s) {
@@ -551,7 +609,7 @@ class _ChatMessageState extends State<ChatMessage> {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isDesktop = screenWidth >= 700;
     final maxBubbleWidth =
-        isDesktop ? 480.0 : (screenWidth * 0.74).clamp(180.0, 340.0);
+        isDesktop ? 480.0 : (screenWidth * 0.72).clamp(180.0, 280.0);
 
     final contextDir = Directionality.of(context);
     final isRtl = contextDir == TextDirection.rtl;
@@ -633,6 +691,9 @@ class _ChatMessageState extends State<ChatMessage> {
     final bool showSwipeTimestamp =
         widget.swipeRevealProgress > 0.05 && widget.timestamp.trim().isNotEmpty;
 
+    final VoidCallback? effectiveDoubleTap =
+        (!isDeleted && widget.onDoubleTap != null) ? _handleDoubleTap : null;
+
     Widget bubbleCore;
     if (widget.isBorderlessCustomContent &&
         widget.customContent != null &&
@@ -640,6 +701,7 @@ class _ChatMessageState extends State<ChatMessage> {
       // Authentic iOS iMessage Die-Cut Sticker: floats cleanly with no bubble box
       bubbleCore = GestureDetector(
         key: Key('chat-bubble-${widget.messageKey}'),
+        onDoubleTap: effectiveDoubleTap,
         onLongPress: _handleLongPress,
         onSecondaryTap: widget.onOpenActions,
         child: Padding(
@@ -649,12 +711,13 @@ class _ChatMessageState extends State<ChatMessage> {
       );
     } else if (isPureImageBubble) {
       // Exact Figma `1:2` photo message bubble (`(25, -58, 170, 222)`):
-      // `170 × 216` rounded `18px` image body + `6px` sender-side tail at bottom.
+      // `170 × 216` rounded `16px` image body.
       final double photoHeight =
           Ios26IMessageTokens.photoBubbleBodyHeight + tailDrop;
       bubbleCore = GestureDetector(
         key: Key('chat-bubble-${widget.messageKey}'),
         onTap: widget.onImageTap,
+        onDoubleTap: effectiveDoubleTap,
         onLongPress: _handleLongPress,
         onSecondaryTap: widget.onOpenActions,
         child: Container(
@@ -684,7 +747,7 @@ class _ChatMessageState extends State<ChatMessage> {
         ),
       );
     } else {
-      // Dynamic Layer v5.1 Chat (`34425:37624`) clean rounded-2xl bubble:
+      // Dynamic Layer v5.1 Chat (`47281:3598`) clean 16px rounded bubble:
       final double effectiveTracking = bodyTextDir == TextDirection.rtl
           ? 0.0
           : Ios26IMessageTokens.messageTracking;
@@ -697,6 +760,7 @@ class _ChatMessageState extends State<ChatMessage> {
 
       bubbleCore = GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onDoubleTap: effectiveDoubleTap,
         onLongPress: _handleLongPress,
         onSecondaryTap: widget.onOpenActions,
         child: CustomPaint(
@@ -712,7 +776,7 @@ class _ChatMessageState extends State<ChatMessage> {
           child: Container(
             key: Key('chat-bubble-${widget.messageKey}'),
             constraints: BoxConstraints(
-              minHeight: 38.0,
+              minHeight: 40.0,
               maxWidth: maxBubbleWidth,
             ),
             padding: bubblePadding,
@@ -766,8 +830,7 @@ class _ChatMessageState extends State<ChatMessage> {
                         height: Ios26IMessageTokens.messageLineHeight,
                         letterSpacing: effectiveTracking,
                         color: textColor,
-                        fontWeight: FontWeight.w600,
-                        fontVariations: const [FontVariation('wght', 590)],
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
@@ -781,8 +844,7 @@ class _ChatMessageState extends State<ChatMessage> {
                         height: Ios26IMessageTokens.messageLineHeight,
                         letterSpacing: effectiveTracking,
                         color: textColor,
-                        fontWeight: FontWeight.w600,
-                        fontVariations: const [FontVariation('wght', 590)],
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   )
@@ -797,11 +859,7 @@ class _ChatMessageState extends State<ChatMessage> {
                       fontStyle:
                           isDeleted ? FontStyle.italic : FontStyle.normal,
                       color: textColor,
-                      fontWeight:
-                          isDeleted ? FontWeight.w400 : FontWeight.w600,
-                      fontVariations: isDeleted
-                          ? null
-                          : const [FontVariation('wght', 590)],
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 if (widget.isPinned ||
@@ -852,21 +910,52 @@ class _ChatMessageState extends State<ChatMessage> {
       );
     }
 
-    // Wrap bubble with floating Figma `1:2` Tapback badge (`(236, 282, 20, 20)`)
-    // overlapping the bubble's lower-right (incoming) / lower-left (outgoing) edge.
+    final Widget bubbleWithBurst = AnimatedBuilder(
+      animation: _heartBurstCtrl,
+      builder: (context, child) {
+        if (!_heartBurstCtrl.isAnimating) return child!;
+        return Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            child!,
+            IgnorePointer(
+              child: Opacity(
+                opacity: _heartOpacity.value.clamp(0.0, 1.0),
+                child: Transform.scale(
+                  scale: _heartScale.value,
+                  child: Text(
+                    '❤️',
+                    key: Key('chat-double-tap-heart-${widget.messageKey}'),
+                    style: ApoloPlatformEmoji.textStyle(
+                      context,
+                      fontSize: 34.0,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      child: bubbleCore,
+    );
+
+    // Wrap bubble with floating reaction badge overlapping the bubble's lower corner.
     Widget bubbleWithTapback = widget.reactions.isEmpty
-        ? bubbleCore
+        ? bubbleWithBurst
         : Stack(
             clipBehavior: Clip.none,
             children: [
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: bubbleCore,
+                padding: const EdgeInsets.only(bottom: 8),
+                child: bubbleWithBurst,
               ),
               PositionedDirectional(
                 bottom: 0,
-                end: isMine ? null : -5,
-                start: isMine ? -5 : null,
+                end: isMine ? null : 8,
+                start: isMine ? 8 : null,
                 child: Ios26TapbackBadge(
                   reactions: widget.reactions,
                   onTap: widget.onOpenActions,
@@ -1116,7 +1205,7 @@ class ChatDateDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 11, bottom: 9),
+      padding: const EdgeInsets.only(top: 14, bottom: 10),
       child: Center(
         child: Semantics(
           header: true,
@@ -1126,7 +1215,7 @@ class ChatDateDivider extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: Ios26IMessageTokens.dateFontSize,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w400,
               color: Ios26IMessageTokens.dateGray,
               height: 16.0 / 12.0,
             ),

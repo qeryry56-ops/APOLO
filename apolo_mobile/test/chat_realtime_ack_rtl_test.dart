@@ -122,11 +122,11 @@ void main() {
     });
   });
 
-  group('Dynamic Layer v5.1 Chat Colors (#0D8BFF / #EEEEEE / #FFFFFF) & RTL ChatRoomScreen', () {
-    testWidgets('uses #0D8BFF outgoing bubbles + #EEEEEE incoming + #FFFFFF canvas with 3-stage ACK ticks in Arabic RTL',
+  group('Dynamic Layer v5.1 Chat Colors (#000000 / #EEEEEE / #FFFFFF) & RTL ChatRoomScreen', () {
+    testWidgets('uses #000000 outgoing bubbles + #EEEEEE incoming + #FFFFFF canvas with 3-stage ACK ticks in Arabic RTL',
         (tester) async {
       SharedPreferences.setMockInitialValues({});
-      expect(Ios26IMessageTokens.bubbleMine, const Color(0xFF0D8BFF));
+      expect(Ios26IMessageTokens.bubbleMine, const Color(0xFF000000));
       expect(Ios26IMessageTokens.bubbleOther, const Color(0xFFEEEEEE));
       expect(Ios26IMessageTokens.bubbleMineText, const Color(0xFFFFFFFF));
       expect(Ios26IMessageTokens.canvasWhite, const Color(0xFFFFFFFF));
@@ -179,11 +179,11 @@ void main() {
       expect(find.byKey(const Key('chat-ack-tick-id_1002')), findsOneWidget);
       expect(find.byKey(const Key('chat-ack-tick-id_1003')), findsOneWidget);
 
-      // Verify listing price uses Dynamic Layer Chat Blue (#0D8BFF)
+      // Verify listing price uses Dynamic Layer primary ink (#000000)
       final priceText = tester.widget<Text>(
         find.byKey(const Key('chat-ad-context-price')),
       );
-      expect(priceText.style?.color, const Color(0xFF0D8BFF));
+      expect(priceText.style?.color, const Color(0xFF000000));
     });
   });
 }

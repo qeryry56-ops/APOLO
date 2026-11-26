@@ -15,6 +15,8 @@ import '../features/chat/models/chat_ack_models.dart';
 import '../features/chat/state/chat_ack_notifier_registry.dart';
 import '../features/chat/theme/apolo_chat_dl_tokens.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
+import '../widgets/apolo_emoji_reaction_bar.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/chat_message.dart';
 import '../widgets/ios26_imessage_drawer.dart';
@@ -54,7 +56,8 @@ class ChatRoomScreen extends StatefulWidget {
   final List<String> initialTypingUsers;
   final List<ChatAttachment> initialAttachments;
   final List<Map<String, dynamic>>? initialMessages;
-  final bool showInlineAvatars;
+  final bool? showInlineAvatars;
+  final bool isPeerVerified;
 
   const ChatRoomScreen({
     super.key,
@@ -73,7 +76,8 @@ class ChatRoomScreen extends StatefulWidget {
     this.initialTypingUsers = const <String>[],
     this.initialAttachments = const <ChatAttachment>[],
     this.initialMessages,
-    this.showInlineAvatars = false,
+    this.showInlineAvatars,
+    this.isPeerVerified = true,
   });
 
   @override
@@ -1213,8 +1217,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final bool isStarred =
         starredBy.contains('$_myUserId') || _starredMessageKeys.contains(key);
 
-    // Authentic iOS 26 iMessage Tapbacks
-    const quickEmojis = ['❤️', '👍', '👎', '😂', '‼️', '❓'];
+    final myReactionKey = '${_myUserId > 0 ? _myUserId : 1}';
+    final existingReactions = <String, String>{
+      if (m['reactions'] is Map)
+        ...Map<String, String>.from(
+          (m['reactions'] as Map).map((k, v) => MapEntry('$k', '$v')),
+        ),
+      if (_localReactions[key] != null) ..._localReactions[key]!,
+    };
+    final String? currentMyReaction = existingReactions[myReactionKey];
 
     Widget buildMenuRow({
       required String label,
@@ -1289,39 +1300,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             ? CrossAxisAlignment.end
                             : CrossAxisAlignment.start,
                         children: [
-                          LiquidGlassSurface(
-                            borderRadius: BorderRadius.circular(999),
-                            fillAlpha: 0.86,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (final emoji in quickEmojis)
-                                    GestureDetector(
-                                      onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        Navigator.pop(dialogCtx);
-                                        _toggleReaction(m, key, emoji);
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6.5,
-                                        ),
-                                        child: Text(
-                                          emoji,
-                                          style: const TextStyle(fontSize: 24),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
+                          ApoloEmojiReactionBar(
+                            selectedEmoji: currentMyReaction,
+                            onSelectEmoji: (emoji) {
+                              Navigator.pop(dialogCtx);
+                              _toggleReaction(m, key, emoji);
+                            },
                           ),
                           const SizedBox(height: 12),
                           Container(
@@ -2190,8 +2174,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     final bool isKeyboardOpen = keyboardInset > 0;
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final listHorizontalPad = screenWidth >= 375 ? 24.0 : 16.0;
+    const double listHorizontalPad = 16.0;
     final hasAdContext = widget.adTitle.trim().isNotEmpty;
     final int adContextOffset = hasAdContext ? 1 : 0;
     final int totalListCount = adContextOffset + totalFlowCount;
@@ -2655,6 +2638,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               )
             : null);
 
+    final bool effectiveHideGutter;
+    final bool effectiveShowAvatar;
+    if (widget.showInlineAvatars == true) {
+      effectiveHideGutter = false;
+      effectiveShowAvatar = meta.showAvatar;
+    } else if (widget.showInlineAvatars == false) {
+      effectiveHideGutter = true;
+      effectiveShowAvatar = false;
+    } else {
+      // Dynamic Layer v5.1 (`47281:3598`): peer avatar on bottom-left of incoming group, none on outgoing.
+      effectiveHideGutter = isMine;
+      effectiveShowAvatar = !isMine && meta.isLastInGroup;
+    }
+
     return ChatMessage(
       key: ValueKey<String>(msgKey),
       messageKey: msgKey,
@@ -2666,8 +2663,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       senderAvatar: senderAvatar,
       timestamp: timeStr,
       status: status,
-      showAvatar: meta.showAvatar,
-      hideAvatarGutter: !widget.showInlineAvatars,
+      showAvatar: effectiveShowAvatar,
+      hideAvatarGutter: effectiveHideGutter,
       deliveryLabel: deliveryLabel,
       ackStatusListenable: ackListenable,
       swipeRevealProgress: _swipeRevealProgress,
@@ -2707,6 +2704,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           : (resolvedImageUrl.isNotEmpty
               ? () => _openImageUrlPreview(resolvedImageUrl)
               : null),
+      onDoubleTap: isDeletedAll
+          ? null
+          : () => _toggleReaction(m, msgKey, '❤️'),
       onOpenActions:
           isDeletedAll ? null : () => _showMessageActionsSheet(m, index),
       useRichTextForBody: m['_use_rich_text'] == true,
@@ -3031,11 +3031,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 ),
               ),
 
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
 
-              // Center: Inline `34 × 34` profile avatar + bold Peer Name (Screenshot 4 style)
+              // Start-aligned `34 × 34` profile avatar + bold Peer Name + Blue Verified Seal (`47281:3598`)
               Expanded(
-                child: Center(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: widget.peerId != null && widget.peerId! > 0
@@ -3043,7 +3044,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         : null,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         NotificationBadge(
                           count: isPeerOnline ? 1 : 0,
@@ -3063,20 +3063,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             child: ClipOval(
                               child: widget.peerAvatar != null &&
                                       widget.peerAvatar!.isNotEmpty
-                                  ? AppImage(
-                                      url: widget.peerAvatar!,
-                                      width: 34.0,
-                                      height: 34.0,
-                                      fit: BoxFit.cover,
-                                      fallback: _buildAvatarFallback(
-                                        widget.peerName,
-                                      ),
-                                    )
-                                  : _buildAvatarFallback(widget.peerName),
+                                    ? AppImage(
+                                        url: widget.peerAvatar!,
+                                        width: 34.0,
+                                        height: 34.0,
+                                        fit: BoxFit.cover,
+                                        fallback: _buildAvatarFallback(
+                                          widget.peerName,
+                                        ),
+                                      )
+                                    : _buildAvatarFallback(widget.peerName),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Flexible(
                           child: Text(
                             widget.peerName,
@@ -3099,6 +3099,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             ),
                           ),
                         ),
+                        if (widget.isPeerVerified) ...[
+                          const SizedBox(width: 6),
+                          const ApoloVerifiedBadge(
+                            key: Key('chat-header-verified-badge'),
+                            size: 16,
+                          ),
+                        ],
                       ],
                     ),
                   ),
