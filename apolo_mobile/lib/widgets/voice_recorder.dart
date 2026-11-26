@@ -1066,7 +1066,9 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                             color: _isRecording
                                 ? Colors.white
                                 : (widget.compactWhenIdle
-                                    ? const Color(0xFFCCCCCC)
+                                    ? (isDark
+                                        ? Colors.white
+                                        : const Color(0xFF000000))
                                     : const Color(0xFF8E8E93)),
                             size: widget.compactWhenIdle ? 19.5 : 20,
                           ),

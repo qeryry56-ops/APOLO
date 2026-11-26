@@ -435,8 +435,9 @@ class _ChatMessageState extends State<ChatMessage> {
     final isRtl = contextDir == TextDirection.rtl;
     // Outgoing bubble aligns to trailing edge (right in LTR, left in RTL).
     final tailOnRight = isRtl ? !isMine : isMine;
-    final showTail = widget.isLastInGroup && !isDeleted;
-    final tailDrop = showTail ? Ios26IMessageTokens.bubbleTailDrop : 0.0;
+    // Dynamic Layer v5.1 Chat (`34425:37624`): clean tail-free 18px rounded bubbles.
+    const bool showTail = false;
+    const double tailDrop = 0.0;
 
     final bubbleBg = isDeleted
         ? const Color(0xFFE5E5EA)
@@ -550,18 +551,15 @@ class _ChatMessageState extends State<ChatMessage> {
         ),
       );
     } else {
-      // Exact Figma `1:2` bubble metrics:
-      // - Rounded body height: 36px, corner radius: 18px
-      // - Total bubble height with tail: 42px (`tailDrop = 6px`)
-      // - Font: SF Pro Semibold (590 / w600), 15.2px, line-height 22px, letter-spacing -0.43
+      // Dynamic Layer v5.1 Chat (`34425:37624`) clean rounded-2xl bubble:
       final double effectiveTracking = bodyTextDir == TextDirection.rtl
           ? 0.0
           : Ios26IMessageTokens.messageTracking;
-      final EdgeInsetsDirectional bubblePadding = EdgeInsetsDirectional.only(
-        start: 13,
-        end: 13,
-        top: 7,
-        bottom: 7 + tailDrop,
+      const EdgeInsetsDirectional bubblePadding = EdgeInsetsDirectional.only(
+        start: 14,
+        end: 14,
+        top: 10,
+        bottom: 10,
       );
 
       bubbleCore = GestureDetector(
@@ -581,7 +579,7 @@ class _ChatMessageState extends State<ChatMessage> {
           child: Container(
             key: Key('chat-bubble-${widget.messageKey}'),
             constraints: BoxConstraints(
-              minHeight: Ios26IMessageTokens.bubbleBodyHeight + tailDrop,
+              minHeight: 38.0,
               maxWidth: maxBubbleWidth,
             ),
             padding: bubblePadding,
@@ -1080,12 +1078,12 @@ class ChatTypingIndicator extends StatelessWidget {
               child: Container(
                 key: const Key('chat-typing-bubble'),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 14,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F3F7),
-                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFFEEEEEE),
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

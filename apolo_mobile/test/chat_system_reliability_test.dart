@@ -95,11 +95,16 @@ void main() {
       expect(find.byKey(const Key('chat-ad-context-price')), findsOneWidget);
       expect(find.text('DH 110.00'), findsOneWidget);
 
-      // iOS 26 iMessage floating Liquid Glass controls & composer
+      // Dynamic Layer v5.1 Chat header (56px, 40x40 back & options, 34x34 avatar + name) & 45px composer
+      expect(find.byKey(const Key('chat-dl-top-nav')), findsOneWidget);
       expect(find.byKey(const Key('chat-ios26-back-button')), findsOneWidget);
       expect(find.byKey(const Key('chat-ios26-call-button')), findsOneWidget);
       expect(find.byKey(const Key('chat-ios26-avatar-glass')), findsOneWidget);
       expect(find.byKey(const Key('chat-ios26-name-pill')), findsOneWidget);
+      expect(tester.getSize(find.byKey(const Key('chat-ios26-back-button'))),
+          const Size(40.0, 40.0));
+      expect(tester.getSize(find.byKey(const Key('chat-ios26-avatar-glass'))),
+          const Size(34.0, 34.0));
       expect(find.byKey(const Key('chat-attach-button')), findsOneWidget);
       expect(find.byKey(const Key('chat-draft')), findsOneWidget);
 

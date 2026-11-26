@@ -122,11 +122,12 @@ void main() {
     });
   });
 
-  group('Apolo.ma Brand Identity (#E31B23 / #FFFFFF) & RTL ChatRoomScreen', () {
-    testWidgets('uses Apolo Red #E31B23 + Pure White #FFFFFF with 3-stage ACK ticks in Arabic RTL',
+  group('Dynamic Layer v5.1 Chat Colors (#0D8BFF / #EEEEEE / #FFFFFF) & RTL ChatRoomScreen', () {
+    testWidgets('uses #0D8BFF outgoing bubbles + #EEEEEE incoming + #FFFFFF canvas with 3-stage ACK ticks in Arabic RTL',
         (tester) async {
       SharedPreferences.setMockInitialValues({});
-      expect(Ios26IMessageTokens.bubbleMine, const Color(0xFFE31B23));
+      expect(Ios26IMessageTokens.bubbleMine, const Color(0xFF0D8BFF));
+      expect(Ios26IMessageTokens.bubbleOther, const Color(0xFFEEEEEE));
       expect(Ios26IMessageTokens.bubbleMineText, const Color(0xFFFFFFFF));
       expect(Ios26IMessageTokens.canvasWhite, const Color(0xFFFFFFFF));
 
@@ -178,11 +179,11 @@ void main() {
       expect(find.byKey(const Key('chat-ack-tick-id_1002')), findsOneWidget);
       expect(find.byKey(const Key('chat-ack-tick-id_1003')), findsOneWidget);
 
-      // Verify listing price uses Apolo Primary Red (#E31B23)
+      // Verify listing price uses Dynamic Layer Chat Blue (#0D8BFF)
       final priceText = tester.widget<Text>(
         find.byKey(const Key('chat-ad-context-price')),
       );
-      expect(priceText.style?.color, const Color(0xFFE31B23));
+      expect(priceText.style?.color, const Color(0xFF0D8BFF));
     });
   });
 }

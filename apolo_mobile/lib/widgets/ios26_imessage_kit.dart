@@ -48,11 +48,11 @@ class Ios26IMessageTokens {
     0.0, 0.0, 0.0, 1.0, 0.0,
   ];
 
-  // Apolo.ma Brand Identity + dynamic-layer-core-v5.1 Chat Bubbles
-  // Outgoing: Apolo Primary Red (#E31B23), Pure White (#FFFFFF) ink
-  // Incoming: dynamic-layer-core-v5.1 grey-100 (#EEEEEE), Obsidian (#0A0A0A) ink
-  static const Color bubbleMineTop = Color(0xFFE31B23);
-  static const Color bubbleMine = Color(0xFFE31B23);
+  // Dynamic Layer v5.1 Chat Bubbles (`34425:37624`)
+  // Outgoing: Crisp Chat Blue (#0D8BFF), Pure White (#FFFFFF) ink
+  // Incoming: dynamic-layer-core-v5.1 grey-100 (#EEEEEE), Pure Black (#000000) ink
+  static const Color bubbleMineTop = Color(0xFF0D8BFF);
+  static const Color bubbleMine = Color(0xFF0D8BFF);
   static const LinearGradient bubbleMineGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -60,22 +60,22 @@ class Ios26IMessageTokens {
   );
   static const Color bubbleMineText = Color(0xFFFFFFFF);
   static const Color bubbleOther = Color(0xFFEEEEEE);
-  static const Color bubbleOtherText = Color(0xFF0A0A0A);
+  static const Color bubbleOtherText = Color(0xFF000000);
 
-  // Labels & Controls (Apolo.ma + dynamic-layer-core-v5.1 tokens)
-  static const Color labelPrimary = Color(0xFF0A0A0A);
-  static const Color labelSecondary = Color(0x993C3C43);
-  static const Color controlIconPrimary = Color(0xFF404040); // Back & Video icons
-  static const Color composerPlusIcon = Color(0xFF0A0A0A); // Composer `+` icon
-  static const Color nameChevron = Color(0xFFBFBFBF); // Profile pill right chevron
+  // Labels & Controls (Dynamic Layer v5.1 tokens)
+  static const Color labelPrimary = Color(0xFF000000);
+  static const Color labelSecondary = Color(0xFF757575);
+  static const Color controlIconPrimary = Color(0xFF000000); // Back & More icons
+  static const Color composerPlusIcon = Color(0xFF000000); // Composer `+` icon
+  static const Color nameChevron = Color(0xFFBFBFBF); // Profile chevron
   static const Color chevronTertiary = Color(0xFFBFBFBF);
   static const Color dateGray = Color(0xFF757575); // DL v5.1 grey-500 timestamps
-  static const Color placeholderGray = Color(0xFF9E9E9E);
+  static const Color placeholderGray = Color(0xFF757575);
   static const Color onlineGreen = Color(0xFF15803D);
   static const Color errorRed = Color(0xFFE31B23);
 
-  // Tapback Reaction Badge (`20 × 20` circular Apolo Red `#E31B23`)
-  static const Color tapbackBlue = Color(0xFFE31B23);
+  // Tapback Reaction Badge (`20 × 20` circular `#0D8BFF`)
+  static const Color tapbackBlue = Color(0xFF0D8BFF);
 
   // Exact Figma `1:2` / `4:1061` Dimensions
   static const double controlCircleSize = 45.0;
@@ -100,13 +100,13 @@ class Ios26IMessageTokens {
   static const double photoBubbleWidth = 170.0; // (25, -58, 170, 222)
   static const double photoBubbleBodyHeight = 216.0;
 
-  // Exact Figma `1:2` Typography
-  static const double messageFontSize = 15.2; // SF Pro Semibold 15.2px (590)
-  static const double messageLineHeight = 22.0 / 15.2; // 22px line-height
-  static const double messageTracking = -0.43; // -0.43px tracking
-  static const double dateFontSize = 12.0; // SF Pro Medium 12px
-  static const double composerFontSize = 17.0; // SF Pro Medium 17px
-  static const double nameFontSize = 17.0; // SF Pro Medium 17px
+  // Exact Figma `1:2` & Dynamic Layer `34425:37624` Typography
+  static const double messageFontSize = 15.0;
+  static const double messageLineHeight = 20.5 / 15.0;
+  static const double messageTracking = -0.2;
+  static const double dateFontSize = 12.0;
+  static const double composerFontSize = 15.5;
+  static const double nameFontSize = 16.0;
 }
 
 /// Clear-glass iOS 26 surface matching Figma `1:2`:

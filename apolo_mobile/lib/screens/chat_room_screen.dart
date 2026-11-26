@@ -193,8 +193,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _myUserId > 0 &&
       _activeFirestoreDocId != null;
 
-  static const Color _chatBlue = ApoloChatDlTokens.primaryRed;
-  static const Color _chatBlueSoft = ApoloChatDlTokens.primaryRedSoft;
+  static const Color _chatBlue = Ios26IMessageTokens.bubbleMine;
+  static const Color _chatBlueSoft = Color(0xFFE8F3FF);
   static const Color _textBlack = ApoloChatDlTokens.inkPrimary;
   static const Color _textMuted = ApoloChatDlTokens.inkSecondary;
   static const Color _textSubtle = Color(0xFF9CA3AF);
@@ -2117,8 +2117,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     // Floating header & 45px composer clearance:
     // - Closed keyboard: `41px` bottom offset + `45px` bar
     // - Open keyboard (`1:2660` / `1:989`): `14px` gap above keyboard + `45px` bar (`Y = 411px` on `375×812`)
-    final double headerTopClearance = topInset + 114.0;
-    final double headerGradientHeight = topInset + 144.0;
+    final double headerTopClearance = topInset + 64.0;
+    final double headerGradientHeight = topInset + 72.0;
     final double restingComposerBottom = _isDrawerOpen
         ? 12.0
         : (isKeyboardOpen
@@ -2879,140 +2879,145 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     return _state.s.tr('غير متصل', 'Hors ligne', 'Offline');
   }
 
-  /// Exact Figma `1:2` floating clear-glass header controls:
-  /// - Back button: `(23, 65, 45, 45)`, circular `68%` white clear-glass, `#404040` chevron
-  /// - Profile: outer circular glass `(155, 61, 65, 65)`, avatar `(156, 62, 63, 63)`,
-  ///   overlapping rounded Name pill `(142, 121, 91, 29)` at `80%` white, `17px` Medium black + `#BFBFBF` chevron
-  /// - Video-call button: `(305, 65, 45, 45)`, circular `68%` white clear-glass, `#404040` video outline
+  /// Combined Dynamic Layer v5.1 Chat Header:
+  /// - Start: `40 × 40` circular `#EEEEEE` `<` back button (plus compact unread badge if `unreadCount > 0`)
+  /// - Center: Clean inline `34 × 34` circular profile avatar + peer name (`16px Bold #000000`) from Screenshot 4 (`Joshi`)
+  /// - End: `40 × 40` circular `#EEEEEE` `•••` button for Voice/Video Call & Safety/Report menu.
   Widget _buildHeader() {
     final topInset = MediaQuery.of(context).padding.top;
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final horizontalInset = screenWidth >= 375 ? 23.0 : 16.0;
-    final maxNamePillWidth =
-        (screenWidth - (horizontalInset * 2) - 106).clamp(91.0, 198.0);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color ink = isDark ? Colors.white : const Color(0xFF000000);
+    final Color pillBg =
+        isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
     final contextDir = Directionality.of(context);
     final isRtl = contextDir == TextDirection.rtl;
     final isPeerOnline = _peerPresence?.isOnline == true;
     final unreadCount = _state.unreadChatCount;
 
     return Padding(
-      padding: EdgeInsetsDirectional.fromSTEB(
-        horizontalInset,
-        topInset + 12,
-        horizontalInset,
-        4,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Start: `(23, 65, 45, 45)` circular clear-glass Back button (`68%` white, `#404040` chevron)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Semantics(
-              button: true,
-              label: 'Back',
-              child: LiquidGlassSurface(
-                key: const Key('chat-ios26-back-button'),
-                width: unreadCount > 0
-                    ? null
-                    : Ios26IMessageTokens.controlCircleSize,
-                height: Ios26IMessageTokens.controlCircleSize,
-                fillAlpha: Ios26IMessageTokens.headerButtonFillAlpha,
-                borderRadius: BorderRadius.circular(
-                  Ios26IMessageTokens.controlRadius,
-                ),
-                padding: unreadCount > 0
-                    ? const EdgeInsets.symmetric(horizontal: 11)
-                    : EdgeInsets.zero,
-                onTap: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isRtl
-                          ? CupertinoIcons.chevron_forward
-                          : CupertinoIcons.chevron_back,
-                      color: Ios26IMessageTokens.controlIconPrimary,
-                      size: 20,
-                    ),
-                    if (unreadCount > 0) ...[
-                      const SizedBox(width: 5),
-                      Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 20,
-                          minHeight: 20,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3A3A3C),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          unreadCount > 99 ? '99+' : '$unreadCount',
-                          textDirection: TextDirection.ltr,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            height: 1.0,
-                            fontFeatures: [FontFeature.tabularFigures()],
+      padding: EdgeInsets.only(top: topInset),
+      child: SizedBox(
+        key: const Key('chat-dl-top-nav'),
+        height: 56.0,
+        width: double.infinity,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Start: `40 × 40` `#EEEEEE` circular `<` back button
+              Semantics(
+                button: true,
+                label: 'Back',
+                child: Material(
+                  key: const Key('chat-ios26-back-button'),
+                  color: pillBg,
+                  shape: unreadCount > 0
+                      ? const StadiumBorder()
+                      : const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    customBorder: unreadCount > 0
+                        ? const StadiumBorder()
+                        : const CircleBorder(),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: Container(
+                      height: 40.0,
+                      width: unreadCount > 0 ? null : 40.0,
+                      padding: unreadCount > 0
+                          ? const EdgeInsets.symmetric(horizontal: 10)
+                          : EdgeInsets.zero,
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isRtl
+                                ? CupertinoIcons.chevron_forward
+                                : CupertinoIcons.chevron_back,
+                            color: ink,
+                            size: 19,
                           ),
-                        ),
+                          if (unreadCount > 0) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              constraints: const BoxConstraints(
+                                minWidth: 18,
+                                minHeight: 18,
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 5),
+                              decoration: BoxDecoration(
+                                color: ink,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                unreadCount > 99 ? '99+' : '$unreadCount',
+                                textDirection: TextDirection.ltr,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? const Color(0xFF000000)
+                                      : Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.0,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          // Center: `(155, 61, 65, 65)` outer glass circle + `(156, 62, 63, 63)` avatar
-          // + `(142, 121, 91, 29)` overlapping `80%` white Name pill (`y: 61..150` -> `89px` stack)
-          Expanded(
-            child: Center(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: widget.peerId != null && widget.peerId! > 0
-                    ? _openPeerProfile
-                    : null,
-                child: SizedBox(
-                  height: 89,
-                  child: Stack(
-                    alignment: Alignment.topCenter,
-                    clipBehavior: Clip.none,
-                    children: [
-                      NotificationBadge(
-                        count: isPeerOnline ? 1 : 0,
-                        type: NotificationBadgeType.dot,
-                        variant: NotificationBadgeVariant.green,
-                        top: 2,
-                        right: 2,
-                        dotSize: 11,
-                        child: LiquidGlassSurface(
-                          key: const Key('chat-ios26-avatar-glass'),
-                          width: Ios26IMessageTokens.avatarOuterGlassSize,
-                          height: Ios26IMessageTokens.avatarOuterGlassSize,
-                          fillAlpha: Ios26IMessageTokens.headerButtonFillAlpha,
-                          borderRadius: BorderRadius.circular(
-                            Ios26IMessageTokens.avatarOuterGlassSize / 2,
-                          ),
-                          padding: const EdgeInsets.all(1.0),
-                          child: ClipOval(
-                            child: SizedBox(
-                              width: Ios26IMessageTokens.avatarSize,
-                              height: Ios26IMessageTokens.avatarSize,
+              const SizedBox(width: 10),
+
+              // Center: Inline `34 × 34` profile avatar + bold Peer Name (Screenshot 4 style)
+              Expanded(
+                child: Center(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.peerId != null && widget.peerId! > 0
+                        ? _openPeerProfile
+                        : null,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        NotificationBadge(
+                          count: isPeerOnline ? 1 : 0,
+                          type: NotificationBadgeType.dot,
+                          variant: NotificationBadgeVariant.green,
+                          top: 0,
+                          right: 0,
+                          dotSize: 9,
+                          child: Container(
+                            key: const Key('chat-ios26-avatar-glass'),
+                            width: 34.0,
+                            height: 34.0,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: pillBg,
+                            ),
+                            child: ClipOval(
                               child: widget.peerAvatar != null &&
                                       widget.peerAvatar!.isNotEmpty
                                   ? AppImage(
                                       url: widget.peerAvatar!,
-                                      width: Ios26IMessageTokens.avatarSize,
-                                      height: Ios26IMessageTokens.avatarSize,
+                                      width: 34.0,
+                                      height: 34.0,
                                       fit: BoxFit.cover,
                                       fallback: _buildAvatarFallback(
                                         widget.peerName,
@@ -3022,104 +3027,70 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        top: 60,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minWidth: 91,
-                            maxWidth: maxNamePillWidth,
-                          ),
-                          child: LiquidGlassSurface(
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            widget.peerName,
                             key: const Key('chat-ios26-name-pill'),
-                            height: Ios26IMessageTokens.namePillHeight,
-                            borderRadius: BorderRadius.circular(999),
-                            fillAlpha: Ios26IMessageTokens.namePillFillAlpha,
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 13,
-                              end: 8,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textDirection: ChatMessage.detectTextDirection(
+                              widget.peerName,
+                              fallback: contextDir,
                             ),
-                            onTap: widget.peerId != null && widget.peerId! > 0
-                                ? _openPeerProfile
-                                : null,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    widget.peerName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textDirection:
-                                        ChatMessage.detectTextDirection(
-                                      widget.peerName,
-                                      fallback: contextDir,
-                                    ),
-                                    style: TextStyle(
-                                      fontSize:
-                                          Ios26IMessageTokens.nameFontSize,
-                                      fontWeight: FontWeight.w500,
-                                      color: Ios26IMessageTokens.labelPrimary,
-                                      height: 1.15,
-                                      letterSpacing:
-                                          AppTypography.trackingForContext(
-                                        context,
-                                        -0.35,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                Icon(
-                                  isRtl
-                                      ? CupertinoIcons.chevron_left
-                                      : CupertinoIcons.chevron_right,
-                                  size: 12,
-                                  color: Ios26IMessageTokens.nameChevron,
-                                ),
-                              ],
+                            style: TextStyle(
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.w700,
+                              color: ink,
+                              height: 20.0 / 16.0,
+                              letterSpacing: AppTypography.trackingForContext(
+                                context,
+                                -0.3,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
 
-          // End: `(305, 65, 45, 45)` circular clear-glass Video-call button (`#404040` video outline)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Semantics(
-              button: true,
-              label: 'Video call and options',
-              child: LiquidGlassSurface(
-                key: const Key('chat-ios26-call-button'),
-                width: Ios26IMessageTokens.controlCircleSize,
-                height: Ios26IMessageTokens.controlCircleSize,
-                fillAlpha: Ios26IMessageTokens.headerButtonFillAlpha,
-                borderRadius: BorderRadius.circular(
-                  Ios26IMessageTokens.controlRadius,
-                ),
-                onTap: () {
-                  setState(() => _showCallMenu = !_showCallMenu);
-                },
-                child: Center(
-                  child: Icon(
-                    CupertinoIcons.videocam,
-                    color: _showCallMenu
-                        ? Ios26IMessageTokens.bubbleMine
-                        : Ios26IMessageTokens.controlIconPrimary,
-                    size: 22,
+              const SizedBox(width: 10),
+
+              // End: `40 × 40` `#EEEEEE` circular `•••` menu button (Video / Voice Call / Safety)
+              Semantics(
+                button: true,
+                label: 'Call and chat options',
+                child: Material(
+                  key: const Key('chat-ios26-call-button'),
+                  color: pillBg,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _showCallMenu = !_showCallMenu);
+                    },
+                    child: SizedBox(
+                      width: 40.0,
+                      height: 40.0,
+                      child: Center(
+                        child: Icon(
+                          CupertinoIcons.ellipsis,
+                          color:
+                              _showCallMenu ? Ios26IMessageTokens.bubbleMine : ink,
+                          size: 20,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -3389,9 +3360,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             });
           },
           hintText: _state.s.tr(
-            'iMessage',
-            'iMessage',
-            'iMessage',
+            'أكتب رسالة...',
+            'Envoyer un message',
+            'Send a message',
           ),
           recordingText: _state.s.tr(
             'جاري التسجيل...',

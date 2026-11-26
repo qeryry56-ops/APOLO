@@ -403,28 +403,37 @@ class _ChatInputState extends State<ChatInput> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (!_isVoiceRecorderActive) ...[
-                  // Exact Figma `1:2` Add button: `(25, 411, 45, 45)` circular clear-glass, 20px black `+`
+                  // Dynamic Layer v5.1 flat `#EEEEEE` circular `+` button (`45 × 45`)
                   Semantics(
                     button: true,
                     label: 'Add attachment',
-                    child: LiquidGlassSurface(
+                    child: Material(
                       key: const Key('chat-attach-button'),
-                      width: Ios26IMessageTokens.controlCircleSize,
-                      height: Ios26IMessageTokens.controlCircleSize,
-                      fillAlpha: Ios26IMessageTokens.headerButtonFillAlpha,
-                      borderRadius: BorderRadius.circular(
-                        Ios26IMessageTokens.controlRadius,
-                      ),
-                      onTap: widget.onAttachTap,
-                      child: Center(
-                        child: AnimatedRotation(
-                          turns: widget.isDrawerOpen ? 0.125 : 0.0,
-                          duration: ApoloMotion.microDuration,
-                          curve: ApoloMotion.easeOutCurve,
-                          child: const Icon(
-                            CupertinoIcons.plus,
-                            color: Ios26IMessageTokens.composerPlusIcon,
-                            size: 20,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF262629)
+                          : const Color(0xFFEEEEEE),
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: widget.onAttachTap,
+                        child: SizedBox(
+                          width: Ios26IMessageTokens.controlCircleSize,
+                          height: Ios26IMessageTokens.controlCircleSize,
+                          child: Center(
+                            child: AnimatedRotation(
+                              turns: widget.isDrawerOpen ? 0.125 : 0.0,
+                              duration: ApoloMotion.microDuration,
+                              curve: ApoloMotion.easeOutCurve,
+                              child: Icon(
+                                CupertinoIcons.plus,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : const Color(0xFF000000),
+                                size: 20,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -433,7 +442,7 @@ class _ChatInputState extends State<ChatInput> {
                   SizedBox(width: controlsGap),
                 ],
 
-                // Exact Figma `I4:1061;1:2659;1:76` Input glass capsule: `262 × 45 px`
+                // Dynamic Layer v5.1 flat `#EEEEEE` Input capsule (`262 × 45 px` on `375px`)
                 Expanded(
                   child: _isVoiceRecorderActive
                       ? VoiceRecorder(
@@ -458,14 +467,19 @@ class _ChatInputState extends State<ChatInput> {
                             widget.onCancelVoice?.call();
                           },
                         )
-                      : LiquidGlassSurface(
+                      : Container(
                           key: const Key('chat-input-capsule'),
-                          fillAlpha: Ios26IMessageTokens.composerFillAlpha,
-                          borderRadius: BorderRadius.circular(
-                            Ios26IMessageTokens.composerRadius,
-                          ),
                           constraints: const BoxConstraints(
                             minHeight: Ios26IMessageTokens.composerMinHeight,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF262629)
+                                    : const Color(0xFFEEEEEE),
+                            borderRadius: BorderRadius.circular(
+                              Ios26IMessageTokens.composerRadius,
+                            ),
                           ),
                           padding: const EdgeInsetsDirectional.only(
                             start: 16,
@@ -510,6 +524,7 @@ class _ChatInputState extends State<ChatInput> {
                                         fillColor: Colors.transparent,
                                         hoverColor: Colors.transparent,
                                         hintText: widget.hintText,
+                                        hintMaxLines: 1,
                                         hintStyle: const TextStyle(
                                           color: Ios26IMessageTokens
                                               .placeholderGray,
@@ -609,9 +624,12 @@ class _ChatInputState extends State<ChatInput> {
                                             child: Container(
                                               width: 33,
                                               height: 33,
-                                              decoration: const BoxDecoration(
-                                                color: Ios26IMessageTokens
-                                                    .bubbleMine,
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context)
+                                                            .brightness ==
+                                                        Brightness.dark
+                                                    ? Colors.white
+                                                    : const Color(0xFF000000),
                                                 shape: BoxShape.circle,
                                               ),
                                               alignment: Alignment.center,
@@ -619,7 +637,11 @@ class _ChatInputState extends State<ChatInput> {
                                                 widget.editingBannerText != null
                                                     ? Icons.check_rounded
                                                     : CupertinoIcons.arrow_up,
-                                                color: Colors.white,
+                                                color: Theme.of(context)
+                                                            .brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFF000000)
+                                                    : Colors.white,
                                                 size: 18,
                                               ),
                                             ),
