@@ -272,6 +272,7 @@ void main() {
       expect(find.byIcon(CupertinoIcons.ellipsis), findsOneWidget);
       expect(find.text('السلام عليكم، واش باقي متوفر؟'), findsOneWidget);
       expect(find.text('وعليكم السلام، نعم متوفر'), findsOneWidget);
+      expect(find.text('رسائل سريعة مقترحة:'), findsNothing);
       expect(find.byIcon(CupertinoIcons.mic), findsOneWidget);
 
       // Typing shows sky-blue send button and sends POST request

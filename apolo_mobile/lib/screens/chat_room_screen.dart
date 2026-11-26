@@ -28,7 +28,6 @@ import 'seller_profile_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
-import 'widgets/quick_replies_sheet.dart';
 import 'widgets/skeleton_loader.dart';
 
 /// Clean, low-noise Real-time Chat Room powered by Firebase Firestore (with REST fallback),
@@ -2673,50 +2672,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'رسائل سريعة مقترحة:',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: _textSubtle,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                _buildQuickPill('السلام عليكم، واش الإعلان باقي متوفر؟'),
-                _buildQuickPill('شحال آخر ثمن من فضلك؟'),
-                _buildQuickPill('فين كاين بالضبط باش نشوف السلعة؟'),
-              ],
-            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickPill(String text) {
-    return InkWell(
-      onTap: () => _sendText(text),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: _textBlack,
-          ),
         ),
       ),
     );
@@ -3301,76 +3257,50 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       );
     }
 
-    final showQuickReplies =
-        _state.isBusinessAccount && !_isRecordingVoice && _state.quickReplies.isNotEmpty;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (showQuickReplies)
-          BusinessQuickRepliesBar(
-            replies: _state.quickReplies,
-            isAr: _state.s.isAr,
-            onSelectReply: (replyText) {
-              setState(() {
-                _msgCtrl.value = TextEditingValue(
-                  text: replyText,
-                  selection: TextSelection.collapsed(offset: replyText.length),
-                );
-              });
-              _focus.requestFocus();
-            },
-            onManageTap: () async {
-              await QuickRepliesManagerSheet.show(context);
-              if (mounted) setState(() {});
-            },
-          ),
-        ChatInput(
-          controller: _msgCtrl,
-          focusNode: _focus,
-          voiceRecorderKey: _voiceRecorderKey,
-          attachments: _stagedAttachments,
-          onSend: (_) => _sendText(),
-          onAttachTap: _toggleIMessageDrawer,
-          isDrawerOpen: _isDrawerOpen,
-          hasBottomSheetBelow: _isDrawerOpen,
-          isKeyboardOpen: isKeyboardOpen,
-          onRemoveAttachment: (att) {
-            setState(() {
-              _stagedAttachments.removeWhere((a) => a.id == att.id);
-            });
-          },
-          onVoiceTap: _startVoiceRecording,
-          onSendVoice: _handleSendVoiceRecording,
-          isRecordingVoice: _isRecordingVoice,
-          recordSeconds: _recordSeconds,
-          onCancelVoice: _cancelVoiceRecording,
-          editingBannerText: _editingMessage != null
-              ? _state.s.tr(
-                  'تعديل الرسالة',
-                  'Modifier le message',
-                  'Editing message',
-                )
-              : null,
-          onCancelEdit: () {
-            setState(() {
-              _editingMessage = null;
-              _editingMessageKey = null;
-              _msgCtrl.clear();
-            });
-          },
-          hintText: _state.s.tr(
-            'أكتب رسالة...',
-            'Envoyer un message',
-            'Send a message',
-          ),
-          recordingText: _state.s.tr(
-            'جاري التسجيل...',
-            'Enregistrement...',
-            'Recording...',
-          ),
-        ),
-      ],
+    return ChatInput(
+      controller: _msgCtrl,
+      focusNode: _focus,
+      voiceRecorderKey: _voiceRecorderKey,
+      attachments: _stagedAttachments,
+      onSend: (_) => _sendText(),
+      onAttachTap: _toggleIMessageDrawer,
+      isDrawerOpen: _isDrawerOpen,
+      hasBottomSheetBelow: _isDrawerOpen,
+      isKeyboardOpen: isKeyboardOpen,
+      onRemoveAttachment: (att) {
+        setState(() {
+          _stagedAttachments.removeWhere((a) => a.id == att.id);
+        });
+      },
+      onVoiceTap: _startVoiceRecording,
+      onSendVoice: _handleSendVoiceRecording,
+      isRecordingVoice: _isRecordingVoice,
+      recordSeconds: _recordSeconds,
+      onCancelVoice: _cancelVoiceRecording,
+      editingBannerText: _editingMessage != null
+          ? _state.s.tr(
+              'تعديل الرسالة',
+              'Modifier le message',
+              'Editing message',
+            )
+          : null,
+      onCancelEdit: () {
+        setState(() {
+          _editingMessage = null;
+          _editingMessageKey = null;
+          _msgCtrl.clear();
+        });
+      },
+      hintText: _state.s.tr(
+        'أكتب رسالة...',
+        'Envoyer un message',
+        'Send a message',
+      ),
+      recordingText: _state.s.tr(
+        'جاري التسجيل...',
+        'Enregistrement...',
+        'Recording...',
+      ),
     );
   }
 

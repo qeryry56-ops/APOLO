@@ -193,7 +193,7 @@ void main() {
     expect(state.pausedStore?['name'], 'Amine Tech Casa');
   });
 
-  testWidgets('Business account shows Quick Replies bar in ChatRoomScreen',
+  testWidgets('Business account hides Quick Replies bar in ChatRoomScreen',
       (tester) async {
     state.currentUser = {
       'id': 55,
@@ -224,12 +224,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.byKey(const Key('chat-business-quick-replies-bar')),
-        findsOneWidget);
-    expect(find.byKey(const Key('chat-qr-chip-0')), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('chat-qr-chip-0')));
-    await tester.pump();
-    expect(find.text('السلعة متوفرة مرحباً بك'), findsOneWidget);
+        findsNothing);
+    expect(find.byKey(const Key('chat-qr-chip-0')), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 1));
