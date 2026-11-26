@@ -16,7 +16,7 @@ class ApoloFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCKMIN3bQGY0ejzmlNnH8768F7Ce9KuSMw',
-    appId: '1:293222708485:android:24ea5ff880a4f29086f36c',
+    appId: '1:293222708485:android:10c9160c0a8f6c6186f36c',
     messagingSenderId: '293222708485',
     projectId: 'apolo-chat-e3ccf',
     storageBucket: 'apolo-chat-e3ccf.firebasestorage.app',

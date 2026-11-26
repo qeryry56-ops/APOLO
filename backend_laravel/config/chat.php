@@ -70,10 +70,15 @@ return [
             'CHAT_FCM_ENDPOINT',
             'https://fcm.googleapis.com/v1/projects/' . env('FIREBASE_PROJECT_ID', 'apolo-chat-e3ccf') . '/messages:send'
         ),
-        'fcm_service_account_path' => env('FIREBASE_SERVICE_ACCOUNT_PATH', ''),
+        'fcm_service_account_path' => env(
+            'FIREBASE_SERVICE_ACCOUNT_PATH',
+            function_exists('storage_path')
+                ? storage_path('app/firebase/firebase-adminsdk-apolo.json')
+                : dirname(__DIR__) . '/storage/app/firebase/firebase-adminsdk-apolo.json'
+        ),
         'fcm_service_account_json' => env('FIREBASE_SERVICE_ACCOUNT_JSON', ''),
         'fcm_server_key' => env('CHAT_FCM_SERVER_KEY', ''),
         'apns_endpoint' => env('CHAT_APNS_ENDPOINT', 'https://api.push.apple.com/3/device'),
-        'apns_bundle_id' => env('CHAT_APNS_BUNDLE_ID', 'ma.apolo.mobile'),
+        'apns_bundle_id' => env('CHAT_APNS_BUNDLE_ID', 'ma.apolo.apoloMobile'),
     ],
 ];
