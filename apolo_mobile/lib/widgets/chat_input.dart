@@ -55,6 +55,9 @@ class ChatInput extends StatefulWidget {
   final VoidCallback? onStopAndSendVoice;
   final String? editingBannerText;
   final VoidCallback? onCancelEdit;
+  final String? replySenderName;
+  final String? replyBody;
+  final VoidCallback? onCancelReply;
   final String hintText;
   final String recordingText;
   final int minLines;
@@ -82,6 +85,9 @@ class ChatInput extends StatefulWidget {
     this.onStopAndSendVoice,
     this.editingBannerText,
     this.onCancelEdit,
+    this.replySenderName,
+    this.replyBody,
+    this.onCancelReply,
     this.hintText = 'Type a message...',
     this.recordingText = 'Recording...',
     this.minLines = 1,
@@ -354,6 +360,77 @@ class _ChatInputState extends State<ChatInput> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (widget.replyBody != null &&
+                widget.replyBody!.trim().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  key: const Key('chat-reply-composer-banner'),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1F1F22)
+                        : const Color(0xFFF6F6F6),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 2.5,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD9D9D9),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (widget.replySenderName != null &&
+                                  widget.replySenderName!.trim().isNotEmpty)
+                                Text(
+                                  widget.replySenderName!.trim(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12.0,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF525252),
+                                  ),
+                                ),
+                              Text(
+                                widget.replyBody!.trim(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13.0,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF525252),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          key: const Key('chat-reply-cancel'),
+                          onTap: widget.onCancelReply,
+                          child: const Icon(
+                            CupertinoIcons.xmark_circle_fill,
+                            size: 18,
+                            color: Ios26IMessageTokens.dateGray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
             if (widget.editingBannerText != null &&
                 widget.editingBannerText!.isNotEmpty)
               Padding(

@@ -79,6 +79,9 @@ class ChatMessage extends StatefulWidget {
   final ValueListenable<ChatAckStatus>? ackStatusListenable;
   final double swipeRevealProgress;
   final bool isBorderlessCustomContent;
+  final String? replySenderName;
+  final String? replySenderAvatar;
+  final String? replyBody;
 
   const ChatMessage({
     super.key,
@@ -116,6 +119,9 @@ class ChatMessage extends StatefulWidget {
     this.ackStatusListenable,
     this.swipeRevealProgress = 0.0,
     this.isBorderlessCustomContent = false,
+    this.replySenderName,
+    this.replySenderAvatar,
+    this.replyBody,
   });
 
   static final RegExp _rawMediaFilenameRegex = RegExp(
@@ -367,9 +373,125 @@ class _ChatMessageState extends State<ChatMessage> {
   bool _isHovered = false;
   bool _isTimestampPinned = false;
 
+  bool get _hasReplyQuote =>
+      !widget.isDeleted &&
+      widget.replyBody != null &&
+      widget.replyBody!.trim().isNotEmpty;
+
   bool get _shouldShowTimestamp =>
       widget.timestamp.trim().isNotEmpty &&
-      (_isHovered || _isTimestampPinned);
+      (_isHovered || _isTimestampPinned || _hasReplyQuote);
+
+  Widget _buildReplyQuotePreview(
+    TextDirection contextDir,
+    double maxBubbleWidth,
+    bool isDark,
+  ) {
+    final quotedAuthor = (widget.replySenderName ?? '').trim();
+    final quotedAvatar = (widget.replySenderAvatar ?? '').trim();
+    final quotedBody = (widget.replyBody ?? '').trim();
+    final lineColor =
+        isDark ? const Color(0xFF404045) : const Color(0xFFD9D9D9);
+    final quoteInk =
+        isDark ? const Color(0xFFA1A1AA) : const Color(0xFF525252);
+
+    return Padding(
+      key: Key('chat-reply-quote-${widget.messageKey}'),
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+        child: IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 2.5,
+                decoration: BoxDecoration(
+                  color: lineColor,
+                  borderRadius: BorderRadius.circular(999.0),
+                ),
+              ),
+              const SizedBox(width: 10.0),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (quotedAuthor.isNotEmpty) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 18.0,
+                            height: 18.0,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFEEEEEE),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: quotedAvatar.isNotEmpty
+                                ? AppImage(
+                                    url: quotedAvatar,
+                                    width: 18.0,
+                                    height: 18.0,
+                                    fit: BoxFit.cover,
+                                    fallback: ChatInitialAvatar(
+                                      name: quotedAuthor,
+                                      size: 18.0,
+                                    ),
+                                  )
+                                : ChatInitialAvatar(
+                                    name: quotedAuthor,
+                                    size: 18.0,
+                                  ),
+                          ),
+                          const SizedBox(width: 6.0),
+                          Flexible(
+                            child: Text(
+                              quotedAuthor,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textDirection: ChatMessage.detectTextDirection(
+                                quotedAuthor,
+                                fallback: contextDir,
+                              ),
+                              style: TextStyle(
+                                color: quoteInk,
+                                fontSize: 12.0,
+                                fontWeight: FontWeight.w600,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3.0),
+                    ],
+                    Text(
+                      quotedBody,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: ChatMessage.detectTextDirection(
+                        quotedBody,
+                        fallback: contextDir,
+                      ),
+                      style: TextStyle(
+                        color: quoteInk,
+                        fontSize: 13.0,
+                        fontWeight: FontWeight.w400,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   void _handleLongPress() {
     setState(() {
@@ -439,21 +561,32 @@ class _ChatMessageState extends State<ChatMessage> {
     const bool showTail = false;
     const double tailDrop = 0.0;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasReply = _hasReplyQuote;
+
     final bubbleBg = isDeleted
         ? const Color(0xFFE5E5EA)
         : isFailed
             ? const Color(0xFFFEF2F2)
-            : (isMine
-                ? Ios26IMessageTokens.bubbleMine
-                : Ios26IMessageTokens.bubbleOther);
+            : (isMine && hasReply
+                ? (isDark
+                    ? const Color(0xFF15324B)
+                    : const Color(0xFFD9F0FF))
+                : (isMine
+                    ? Ios26IMessageTokens.bubbleMine
+                    : Ios26IMessageTokens.bubbleOther));
 
     final textColor = isDeleted
         ? Ios26IMessageTokens.dateGray
         : isFailed
             ? Ios26IMessageTokens.errorRed
-            : (isMine
-                ? Ios26IMessageTokens.bubbleMineText
-                : Ios26IMessageTokens.bubbleOtherText);
+            : (isMine && hasReply
+                ? (isDark
+                    ? const Color(0xFF7CC4FA)
+                    : const Color(0xFF0A78E6))
+                : (isMine
+                    ? Ios26IMessageTokens.bubbleMineText
+                    : Ios26IMessageTokens.bubbleOtherText));
 
     final trimmedImageUrl = widget.imageUrl?.trim() ?? '';
     final bool hasImage =
@@ -792,6 +925,12 @@ class _ChatMessageState extends State<ChatMessage> {
                         : CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (hasReply)
+                        _buildReplyQuotePreview(
+                          contextDir,
+                          maxBubbleWidth,
+                          isDark,
+                        ),
                       bubbleWithTapback,
 
                       // Explicit 3-stage Message ACK row (Sent ✓ / Delivered ✓✓ / Read ✓✓)

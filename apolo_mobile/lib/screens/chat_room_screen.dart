@@ -100,6 +100,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final Set<String> _starredMessageKeys = {};
   Map<String, dynamic>? _editingMessage;
   String? _editingMessageKey;
+  Map<String, dynamic>? _replyingToMessage;
 
   bool _loading = true;
   bool _showCallMenu = false;
@@ -1399,6 +1400,73 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  InkWell(
+                                    key: const Key('chat-action-reply'),
+                                    onTap: () {
+                                      Navigator.pop(dialogCtx);
+                                      final replyAuthor = isMine
+                                          ? _myDisplayName
+                                          : ((m['sender_name'] ?? '')
+                                                  .toString()
+                                                  .trim()
+                                                  .isNotEmpty
+                                              ? m['sender_name']
+                                                  .toString()
+                                                  .trim()
+                                              : widget.peerName);
+                                      final replyAvatar = isMine
+                                          ? (_myAvatarUrl ?? '')
+                                          : (widget.peerAvatar ?? '');
+                                      setState(() {
+                                        _editingMessage = null;
+                                        _editingMessageKey = null;
+                                        _replyingToMessage = <String, dynamic>{
+                                          'id': key,
+                                          'sender_name': replyAuthor,
+                                          'sender_avatar': replyAvatar,
+                                          'body': isAudio
+                                              ? '🎤 ${(m['audio_duration'] ?? '0:01')}'
+                                              : (body.isNotEmpty
+                                                  ? body
+                                                  : '📷 Photo'),
+                                        };
+                                      });
+                                      _focus.requestFocus();
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18,
+                                        vertical: 13,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              s.tr('رد', 'Répondre', 'Reply'),
+                                              style: const TextStyle(
+                                                color: Ios26IMessageTokens
+                                                    .labelPrimary,
+                                                fontSize: 15.5,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          const Icon(
+                                            CupertinoIcons
+                                                .arrowshape_turn_up_left,
+                                            color: Ios26IMessageTokens
+                                                .labelPrimary,
+                                            size: 19,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Divider(
+                                    height: 1,
+                                    thickness: 0.6,
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                  ),
                                   buildMenuRow(
                                     label: isPinned
                                         ? s.tr('إلغاء التثبيت', 'Désépingler',
@@ -1559,6 +1627,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         attachmentsToSend.first.type == ChatAttachmentType.image &&
         attachmentsToSend.first.bytes != null;
 
+    final activeReply = preset == null && _replyingToMessage != null
+        ? Map<String, dynamic>.from(_replyingToMessage!)
+        : null;
+
     final tempMsg = <String, dynamic>{
       'id': tempId,
       'local_id': tempId,
@@ -1575,6 +1647,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       'sender_id': '$_myUserId',
       'sender_name': _myDisplayName,
       'type': isImageAttachment ? 'image' : 'text',
+      if (activeReply != null) 'reply_to': activeReply,
       if (attachmentsToSend.isNotEmpty &&
           attachmentsToSend.first.bytes != null)
         'image_base64': base64Encode(attachmentsToSend.first.bytes!),
@@ -1592,6 +1665,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         _typingController?.onMessageSent();
         _msgCtrl.clear();
         _stagedAttachments.clear();
+        _replyingToMessage = null;
       }
       _isUserReadingHistory = false;
       _unreadIncomingCount = 0;
@@ -1636,6 +1710,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           },
           if (tempMsg['image_base64'] != null)
             'image_base64': tempMsg['image_base64'],
+          if (tempMsg['reply_to'] is Map) 'reply_to': tempMsg['reply_to'],
         },
         adContext: widget.adTitle.trim().isNotEmpty
             ? {
@@ -1704,6 +1779,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             peerName: widget.peerName,
             peerAvatar: widget.peerAvatar ?? '',
             body: text,
+            replyTo: tempMsg['reply_to'] is Map
+                ? Map<String, dynamic>.from(tempMsg['reply_to'] as Map)
+                : null,
             adId: _effectiveAdId,
             adTitle: widget.adTitle,
             adPrice: widget.adPrice ?? '',
@@ -1744,7 +1822,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     try {
       final res = await _state.api.dio.post(
         '/chat/conversations/$conversationId/messages',
-        data: {'body': text, 'message': text},
+        data: {
+          'body': text,
+          'message': text,
+          if (tempMsg['reply_to'] is Map) 'reply_to': tempMsg['reply_to'],
+        },
       );
       if (res.data is! Map || res.data['status'] != 'success') {
         throw StateError('Send not confirmed');
@@ -2565,6 +2647,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
     }
 
+    final Map<String, dynamic>? replyMap = m['reply_to'] is Map
+        ? Map<String, dynamic>.from(m['reply_to'] as Map)
+        : (m['metadata'] is Map && (m['metadata'] as Map)['reply_to'] is Map
+            ? Map<String, dynamic>.from(
+                (m['metadata'] as Map)['reply_to'] as Map,
+              )
+            : null);
+
     return ChatMessage(
       key: ValueKey<String>(msgKey),
       messageKey: msgKey,
@@ -2582,6 +2672,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       ackStatusListenable: ackListenable,
       swipeRevealProgress: _swipeRevealProgress,
       isBorderlessCustomContent: stickerItem != null,
+      replySenderName: replyMap?['sender_name']?.toString(),
+      replySenderAvatar: replyMap?['sender_avatar']?.toString(),
+      replyBody: replyMap?['body']?.toString(),
       isFirstInGroup: meta.isFirstInGroup,
       isLastInGroup: meta.isLastInGroup,
       topSpacing: meta.topSpacing,
@@ -3290,6 +3383,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           _editingMessageKey = null;
           _msgCtrl.clear();
         });
+      },
+      replySenderName: _replyingToMessage?['sender_name']?.toString(),
+      replyBody: _replyingToMessage?['body']?.toString(),
+      onCancelReply: () {
+        setState(() => _replyingToMessage = null);
       },
       hintText: _state.s.tr(
         'أكتب رسالة...',

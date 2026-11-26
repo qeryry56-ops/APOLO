@@ -426,6 +426,8 @@ class FirebaseChatService {
           'starred_by': starredBy,
           'created_at_ms': createdMs,
           'created_at_time': clock,
+          if (data['reply_to'] is Map)
+            'reply_to': Map<String, dynamic>.from(data['reply_to'] as Map),
           '_edited': data['edited'] == true,
           '_deleted_for_everyone': data['deleted_for_everyone'] == true,
         });
@@ -444,6 +446,7 @@ class FirebaseChatService {
     required String peerName,
     String peerAvatar = '',
     required String body,
+    Map<String, dynamic>? replyTo,
     int adId = 0,
     String adTitle = '',
     String adPrice = '',
@@ -496,6 +499,7 @@ class FirebaseChatService {
       'sender_name': myName,
       'type': 'text',
       'body': trimmed,
+      if (replyTo != null && replyTo.isNotEmpty) 'reply_to': replyTo,
       'created_at_ms': nowMs,
       'read_by': [myKey],
       'edited': false,

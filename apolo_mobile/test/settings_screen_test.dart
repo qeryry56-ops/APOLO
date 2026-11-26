@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/features/bug_report/services/bug_report_controller.dart';
 import 'package:apolo_mobile/screens/account_security_screen.dart';
+import 'package:apolo_mobile/screens/add_friends_screen.dart';
 import 'package:apolo_mobile/screens/forgot_password_screen.dart';
 import 'package:apolo_mobile/screens/privacy_compliance_screen.dart';
 import 'package:apolo_mobile/screens/settings/settings_app_data_screen.dart';
@@ -409,6 +410,46 @@ void main() {
       await tester.tap(actionFinder);
       await tester.pumpAndSettle();
       expect(retries, 1);
+    });
+
+    testWidgets(
+        'AddFriendsScreen matches Figma AUTH-SUP-009 Contacts (33215:34358): Contacts card, Invite -> Invited toggle, and 56px Continue',
+        (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.runAsync(() => state.setLocale(const Locale('en')));
+      int continued = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const Locale('en'))
+              .copyWith(splashFactory: NoSplash.splashFactory),
+          home: AddFriendsScreen(
+            onContinue: () => continued++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add your friends'), findsOneWidget);
+      expect(find.text('Contacts'), findsOneWidget);
+      expect(find.byKey(const Key('dl-add-friends-card')), findsOneWidget);
+      expect(find.text('Invite'), findsWidgets);
+
+      final firstInvite = find.byKey(const Key('dl-invite-btn-0'));
+      await tester.tap(firstInvite);
+      await tester.pumpAndSettle();
+      expect(find.text('Invited'), findsOneWidget);
+
+      final continueBtn = find.byKey(const Key('dl-add-friends-continue'));
+      expect(tester.getSize(continueBtn).height, closeTo(56.0, 0.1));
+      await tester.tap(continueBtn);
+      await tester.pumpAndSettle();
+      expect(continued, 1);
+      expect(tester.takeException(), isNull);
     });
   });
 }

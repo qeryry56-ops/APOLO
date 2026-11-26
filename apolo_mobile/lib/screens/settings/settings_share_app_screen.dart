@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../add_friends_screen.dart';
 
 /// Dedicated screen for sharing Apolo.ma with friends or copying the official link.
 class SettingsShareAppScreen extends StatefulWidget {
@@ -179,6 +180,23 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                               variant: ApoloDlButtonVariant.secondary,
                               fullWidth: true,
                               onPressed: _copyLink,
+                            ),
+                            const SizedBox(height: 10),
+                            ApoloDlButton(
+                              key: const Key('share-app-add-friends'),
+                              label: s.tr(
+                                'أضف أصدقاءك (Contacts)',
+                                'Ajouter des amis',
+                                'Add your friends',
+                              ),
+                              leadingIcon: CupertinoIcons.person_2_fill,
+                              variant: ApoloDlButtonVariant.secondary,
+                              fullWidth: true,
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const AddFriendsScreen(),
+                                ),
+                              ),
                             ),
                           ],
                         ),

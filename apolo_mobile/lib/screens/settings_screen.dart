@@ -8,6 +8,7 @@ import '../widgets/dl_settings_kit.dart';
 import '../widgets/notification_badge.dart';
 import 'account_security_screen.dart';
 import 'account_setup_screen.dart';
+import 'add_friends_screen.dart';
 import 'auth_screen.dart';
 import 'business_switch_screen.dart';
 import 'forgot_password_screen.dart';
@@ -391,6 +392,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   disabled: _busy,
                                   onTap: () => _open(
                                     const AccountSetupScreen(),
+                                  ),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-add-friends'),
+                                  icon: CupertinoIcons.person_2_fill,
+                                  title: s.tr(
+                                    'أضف أصدقاءك',
+                                    'Ajouter des amis',
+                                    'Add your friends',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    const AddFriendsScreen(),
                                   ),
                                 ),
                                 ApoloDlGroupedItem(

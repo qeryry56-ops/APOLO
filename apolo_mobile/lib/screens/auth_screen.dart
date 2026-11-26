@@ -13,6 +13,7 @@ import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'account_setup_screen.dart';
+import 'add_friends_screen.dart';
 import 'forgot_password_screen.dart';
 
 enum _OtpPhase {
@@ -630,7 +631,7 @@ class _AuthScreenState extends State<AuthScreen>
       }
       callback?.call();
 
-      // Show Dynamic Layer v5.1 Account Setup (`21825:25569`) if newly registered
+      // Show Dynamic Layer v5.1 Account Setup (`21825:25569`) -> Add Friends (`33215:34358`) if newly registered
       if (isFromRegistration && navigator.context.mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!navigator.context.mounted) return;
@@ -640,6 +641,9 @@ class _AuthScreenState extends State<AuthScreen>
                 auth: _auth,
                 session: result,
                 cityId: _cityId,
+                nextBuilder: (ctx, _) => AddFriendsScreen(
+                  onContinue: () => Navigator.of(ctx).maybePop(),
+                ),
               ),
             ),
           );

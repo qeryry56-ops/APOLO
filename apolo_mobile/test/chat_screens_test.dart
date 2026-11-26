@@ -125,6 +125,28 @@ void main() {
         });
       }
 
+      if (request.path == '/chat/conversations/77/messages' &&
+          request.method == 'GET') {
+        return _jsonBody({
+          'status': 'success',
+          'messages': [
+            {
+              'id': 901,
+              'is_mine': true,
+              'sender_name': 'Amine',
+              'body': 'This is a reply sent to a message',
+              'created_at_time': '5:03 PM',
+              'type': 'text',
+              'reply_to': {
+                'id': '900',
+                'sender_name': 'Joshua',
+                'body': 'This is a message sent from other',
+              },
+            },
+          ],
+        });
+      }
+
       return _jsonBody({'status': 'success', 'data': []});
     });
 
@@ -290,6 +312,30 @@ void main() {
         ),
         isTrue,
       );
+    });
+
+    testWidgets(
+        'ChatRoomScreen renders Dynamic Layer v5.1 reply quote bar, #D9F0FF reply bubble, and timestamp (33215:34358)',
+        (WidgetTester tester) async {
+      await pumpPhone(
+        tester,
+        const ChatRoomScreen(
+          conversationId: 77,
+          peerName: 'Joshua',
+        ),
+        dir: TextDirection.ltr,
+      );
+
+      expect(find.text('Joshua'), findsAtLeastNWidgets(2));
+      expect(find.text('This is a message sent from other'), findsOneWidget);
+      expect(find.text('This is a reply sent to a message'), findsOneWidget);
+      expect(find.text('5:03 PM'), findsOneWidget);
+
+      final replyText = tester.widget<Text>(
+        find.text('This is a reply sent to a message'),
+      );
+      expect(replyText.style?.color, const Color(0xFF0A78E6));
+      expect(tester.takeException(), isNull);
     });
   });
 }
