@@ -7,6 +7,7 @@ import '../core/state/app_state.dart';
 import '../widgets/dl_settings_kit.dart';
 import '../widgets/notification_badge.dart';
 import 'account_security_screen.dart';
+import 'account_setup_screen.dart';
 import 'auth_screen.dart';
 import 'business_switch_screen.dart';
 import 'forgot_password_screen.dart';
@@ -379,6 +380,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     const ApoloIntentOnboardingScreen(),
                                   ),
                                 ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-account-setup'),
+                                  icon: CupertinoIcons.person_badge_plus_fill,
+                                  title: s.tr(
+                                    'نوع الحساب وتخصيص الملف',
+                                    'Type de compte',
+                                    'Account type',
+                                  ),
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    const AccountSetupScreen(),
+                                  ),
+                                ),
+                                ApoloDlGroupedItem(
+                                  key: const Key('settings-row-subscription'),
+                                  icon: CupertinoIcons.star_circle_fill,
+                                  title: s.tr(
+                                    'الاشتراك وباقات Pro Plus',
+                                    'Abonnement Pro Plus',
+                                    'Subscription',
+                                  ),
+                                  trailingText: _state.isProPlusAccount
+                                      ? 'PRO+'
+                                      : null,
+                                  disabled: _busy,
+                                  onTap: () => _open(
+                                    const SubscriptionScreen(),
+                                  ),
+                                ),
                               ],
                             ),
 
@@ -448,17 +478,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       icon: CupertinoIcons.sparkles,
                                       title: _state.isProPlusAccount
                                           ? s.tr(
-                                              'إدارة اشتراك Pro Plus 👑',
-                                              'Gérer mon abonnement Pro Plus 👑',
-                                              'Manage Pro Plus 👑',
+                                              'إدارة اشتراك Pro Plus',
+                                              'Gérer mon abonnement Pro Plus',
+                                              'Manage Pro Plus',
                                             )
                                           : s.tr(
-                                              'الترقية إلى Pro Plus (توثيق وصدارة) 👑',
-                                              'Passer à Pro Plus (Vérifié) 👑',
-                                              'Upgrade to Pro Plus 👑',
+                                              'الترقية إلى Pro Plus (توثيق وصدارة)',
+                                              'Passer à Pro Plus (Vérifié)',
+                                              'Upgrade to Pro Plus',
                                             ),
                                       disabled: _busy,
-                                      onTap: () => _open(const ProPlusScreen()),
+                                      onTap: () =>
+                                          _open(const SubscriptionScreen()),
                                     ),
                                     ApoloDlGroupedItem(
                                       key: const Key(

@@ -12,8 +12,8 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
+import 'account_setup_screen.dart';
 import 'forgot_password_screen.dart';
-import 'intent_onboarding_screen.dart';
 
 enum _OtpPhase {
   idle,
@@ -630,16 +630,15 @@ class _AuthScreenState extends State<AuthScreen>
       }
       callback?.call();
 
-      // Show Dynamic Layer v5.1 intent onboarding screen if newly registered
+      // Show Dynamic Layer v5.1 Account Setup (`21825:25569`) if newly registered
       if (isFromRegistration && navigator.context.mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!navigator.context.mounted) return;
           Navigator.of(navigator.context).push(
             MaterialPageRoute<void>(
-              builder: (_) => ApoloIntentOnboardingScreen(
+              builder: (_) => AccountSetupScreen(
                 auth: _auth,
                 session: result,
-                accountType: _accountType,
                 cityId: _cityId,
               ),
             ),

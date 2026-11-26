@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:apolo_mobile/core/state/app_state.dart';
+import 'package:apolo_mobile/screens/account_setup_screen.dart';
 import 'package:apolo_mobile/screens/business_switch_screen.dart';
 import 'package:apolo_mobile/screens/chat_room_screen.dart';
 import 'package:apolo_mobile/screens/pro_plus_screen.dart';
@@ -231,8 +232,15 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('ProPlusScreen loads plans and renders Google Pay button',
+  testWidgets(
+      'Dynamic Layer v5.1 Subscription -> FreeTrial -> Paywall (ProPlusScreen) flow & cancel subscription',
       (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.runAsync(() => state.setLocale(const Locale('en')));
     state.currentUser = {
       'id': 88,
       'name': 'Auto Pro',
@@ -242,36 +250,123 @@ void main() {
     };
     await tester.runAsync(() => state.api.setToken('tok-88'));
     state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
-      ..httpClientAdapter = _TestBusinessAdapter((options) {
-        if (options.path.contains('/pro-plus/plans')) {
-          return _json({
-            'status': 'success',
-            'plans': [
-              {
-                'id': 'monthly',
-                'iap_product_id': 'ma.apolo.pro_plus.monthly',
-                'name_ar': 'باقة Pro Plus الشهرية',
-                'name_fr': 'Pro Plus Mensuel',
-                'price_mad': 99,
-                'features_ar': ['شارة التوثيق الرسمية PRO+'],
-                'features_fr': ['Badge PRO+'],
-              },
-            ],
-          });
-        }
-        return _json({'status': 'success'});
-      });
+      ..httpClientAdapter = _TestBusinessAdapter(
+        (_) => _json({'status': 'error'}, 404), // exercises 3-tier fallback plans
+      );
 
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.light(const Locale('ar'))
+        theme: AppTheme.light(const Locale('en'))
             .copyWith(splashFactory: NoSplash.splashFactory),
-        home: const ProPlusScreen(),
+        home: const SubscriptionScreen(),
       ),
     );
     await tester.pumpAndSettle();
 
+    // 1. Subscription (Get Premium state, 45786:72976)
+    expect(find.text('Subscription'), findsOneWidget);
+    expect(find.byKey(const Key('dl-subscription-hero')), findsOneWidget);
+    expect(find.text('Get Premium'), findsWidgets);
+    final getPremiumBtn =
+        find.byKey(const Key('dl-subscription-get-premium-btn'));
+    expect(tester.getSize(getPremiumBtn).height, closeTo(56.0, 0.1));
+
+    // Navigate -> FreeTrialScreen (43551:4467)
+    await tester.tap(getPremiumBtn);
+    await tester.pumpAndSettle();
+    expect(find.byType(FreeTrialScreen), findsOneWidget);
+    expect(find.text('How your trial works'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('Day 2'), findsOneWidget);
+    expect(find.text('Day 3'), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('dl-trial-start-btn'))).height,
+        closeTo(56.0, 0.1));
+
+    // Navigate -> View all plans -> ProPlusScreen Paywall (33412:51733)
+    await tester.tap(find.byKey(const Key('dl-trial-view-plans-btn')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProPlusScreen), findsOneWidget);
+    expect(find.text('Unlock full access'), findsOneWidget);
+    expect(find.byKey(const Key('pro-plus-plan-monthly')), findsOneWidget);
+    expect(find.byKey(const Key('pro-plus-plan-yearly')), findsOneWidget);
+    expect(find.byKey(const Key('pro-plus-plan-lifetime')), findsOneWidget);
     expect(find.byKey(const Key('pro-plus-google-pay-btn')), findsOneWidget);
     expect(find.textContaining('Google Pay'), findsWidgets);
+    expect(find.byKey(const Key('dl-paywall-no-thanks-btn')), findsOneWidget);
+
+    // 2. Active subscriber state (`You use Premium` + Cancel my subscription)
+    state.currentUser = {
+      ...state.currentUser!,
+      'account_type': 'pro_plus',
+      'is_pro_plus': true,
+    };
+    state.notifyListeners();
+    Navigator.of(tester.element(find.byType(ProPlusScreen))).pop();
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.byType(FreeTrialScreen))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('You use Premium'), findsOneWidget);
+    final cancelBtn = find.byKey(const Key('dl-subscription-cancel-btn'));
+    expect(cancelBtn, findsOneWidget);
+    await tester.tap(cancelBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('dl-subscription-confirm-cancel')));
+    await tester.pumpAndSettle();
+
+    expect(state.isProPlusAccount, isFalse);
+    expect(find.byKey(const Key('dl-subscription-get-premium-btn')),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      'AccountSetupScreen matches Figma 21825:25569 Default (#EEEEEE disabled Continue) and Active (#000000 chip & Continue)',
+      (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.runAsync(() => state.setLocale(const Locale('en')));
+    Set<String>? savedSelection;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(const Locale('en'))
+            .copyWith(splashFactory: NoSplash.splashFactory),
+        home: AccountSetupScreen(
+          nextBuilder: (_, chosen) {
+            savedSelection = chosen;
+            return const Scaffold(body: Center(child: Text('SETUP_COMPLETE')));
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Material continueMat() => tester.widget<Material>(
+          find
+              .ancestor(
+                of: find.byKey(const Key('dl-account-setup-continue')),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+
+    expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('Account type'), findsOneWidget);
+    expect(continueMat().color, const Color(0xFFEEEEEE));
+
+    // Select `Business` chip -> switches to Active state (#000000)
+    await tester.tap(find.byKey(const Key('dl-account-type-chip-business')));
+    await tester.pumpAndSettle();
+    expect(continueMat().color, const Color(0xFF000000));
+
+    await tester.tap(find.byKey(const Key('dl-account-setup-continue')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SETUP_COMPLETE'), findsOneWidget);
+    expect(savedSelection, contains('business'));
+    expect(state.accountType, 'business');
   });
 }

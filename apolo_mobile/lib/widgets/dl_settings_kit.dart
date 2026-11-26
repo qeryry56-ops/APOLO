@@ -50,7 +50,7 @@ class ApoloDlPalette {
     pill: Color(0xFFEEEEEE),
     border: Color(0xFFE2E2E2),
     separator: Color(0xFFEEEEEE),
-    ink: Color(0xFF0A0A0A),
+    ink: Color(0xFF000000),
     onInk: Color(0xFFFFFFFF),
     muted: Color(0xFF757575),
     iconMuted: Color(0xFF9E9E9E),

@@ -341,6 +341,33 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  Future<void> cancelProPlusSubscription() async {
+    try {
+      final res = await api.dio.post('/pro-plus/cancel');
+      if (res.data is Map &&
+          res.data['status'] == 'success' &&
+          res.data['user'] is Map) {
+        await updateCurrentUser(Map<String, dynamic>.from(res.data['user']));
+        return;
+      }
+    } catch (_) {}
+    if (currentUser != null) {
+      final updated = Map<String, dynamic>.from(currentUser!);
+      updated['is_pro_plus'] = false;
+      if ((updated['account_type'] ?? '').toString().toLowerCase() ==
+          'pro_plus') {
+        updated['account_type'] =
+            updated['is_business'] == true ? 'business' : 'individual';
+      }
+      if (updated['store'] is Map) {
+        final storeMap = Map<String, dynamic>.from(updated['store'] as Map);
+        storeMap['is_pro_plus'] = false;
+        updated['store'] = storeMap;
+      }
+      await updateCurrentUser(updated);
+    }
+  }
+
   Future<void> refreshRemote() async {
     await Future.wait([fetchTaxonomy(), if (api.isAuthenticated) fetchMe()]);
     syncZoneFromPreferredCity();

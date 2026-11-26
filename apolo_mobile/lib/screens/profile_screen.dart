@@ -822,7 +822,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     highlighted: true,
                     onTap: () async {
                       final ok = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(builder: (_) => const ProPlusScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const SubscriptionScreen()),
                       );
                       if (ok == true && mounted) {
                         await _loadProfileData();
@@ -1243,7 +1244,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               key: const Key('profile-upgrade-pro-plus-card'),
               onTap: () async {
                 final ok = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(builder: (_) => const ProPlusScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const SubscriptionScreen()),
                 );
                 if (ok == true && mounted) {
                   await _loadProfileData();
