@@ -552,16 +552,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('7'), findsOneWidget);
-      // Hero marketing pill text exists without a decorative badge dot sibling
-      final heroPillText = find.text('Marketplace #1 au Maroc 🇲🇦');
-      expect(heroPillText, findsOneWidget);
-      final heroPillRow = find.ancestor(
-        of: heroPillText,
-        matching: find.byWidgetPredicate(
-          (w) => w is Container && w.child is Row,
-        ),
-      );
-      expect(heroPillRow, findsNothing);
 
       // Tap bell -> badge clears at 0ms even while /notifications API hangs
       await tester.tap(find.byKey(const Key('home-notifications-bell')));

@@ -79,8 +79,19 @@ class ApiClient {
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    final secureToken = _decodeTokenEnvelope(prefs.getString('auth_token_secure'));
-    _token = secureToken ?? prefs.getString('auth_token');
+    final secureToken =
+        _decodeTokenEnvelope(prefs.getString('auth_token_secure'));
+    final legacyPlainToken = prefs.getString('auth_token');
+    _token = secureToken ?? legacyPlainToken;
+    if (legacyPlainToken != null) {
+      await prefs.remove('auth_token');
+      if (secureToken == null && legacyPlainToken.isNotEmpty) {
+        await prefs.setString(
+          'auth_token_secure',
+          _encodeTokenEnvelope(legacyPlainToken),
+        );
+      }
+    }
     final migratedToEn = prefs.getBool('apolo_default_locale_en_v1') ?? false;
     final savedLocale = prefs.getString('app_locale');
     if (!migratedToEn) {
@@ -103,11 +114,10 @@ class ApiClient {
   Future<void> setToken(String? token) async {
     _token = token;
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
     if (token == null || token.isEmpty) {
-      await prefs.remove('auth_token');
       await prefs.remove('auth_token_secure');
     } else {
-      await prefs.setString('auth_token', token);
       await prefs.setString('auth_token_secure', _encodeTokenEnvelope(token));
     }
   }

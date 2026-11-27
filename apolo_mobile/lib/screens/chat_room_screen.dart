@@ -133,6 +133,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Timer? _focusScrollTimer;
   Timer? _typingTimer;
   Timer? _recordTimer;
+  Timer? _restFallbackTimer;
   TypingIndicatorController? _typingController;
   StreamSubscription<List<Map<String, dynamic>>>? _messagesSub;
   StreamSubscription<Map<String, dynamic>?>? _convMetaSub;
@@ -273,6 +274,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
     if (widget.initialMessages == null && _state.isLoggedIn && _myUserId > 0) {
       unawaited(_initRealtimeWebSocket());
+    }
+
+    if (widget.initialMessages == null) {
+      _restFallbackTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (!mounted ||
+            _useFirestore ||
+            ChatRealtimeClient.instance.isConnected) {
+          return;
+        }
+        unawaited(_loadMessages(silent: true));
+      });
     }
 
     if (widget.autoSendInitialDraft &&
@@ -728,10 +740,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     if (!isBackgrounded) {
       if (ws.isConnected) {
         unawaited(ws.requestChannelSync(_realtimeChannelId));
-      } else if (widget.initialMessages == null &&
-          _state.isLoggedIn &&
-          _myUserId > 0) {
-        unawaited(ws.connect(userId: _myUserId, userName: _myDisplayName));
+      } else {
+        if (!_useFirestore && widget.initialMessages == null) {
+          unawaited(_loadMessages(silent: true));
+        }
+        if (widget.initialMessages == null &&
+            _state.isLoggedIn &&
+            _myUserId > 0) {
+          unawaited(ws.connect(userId: _myUserId, userName: _myDisplayName));
+        }
       }
     }
   }
@@ -762,6 +779,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _wsConnSub?.cancel();
     _typingTimer?.cancel();
     _recordTimer?.cancel();
+    _restFallbackTimer?.cancel();
     if (_isRecordingVoice) {
       MediaRtcBridge.cancelVoiceRecording();
     }
@@ -2470,16 +2488,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: Ios26IMessageTokens.bubbleMine,
+                          color: const Color(0xFF000000),
                           borderRadius: BorderRadius.circular(999),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Ios26IMessageTokens.bubbleMine
-                                  .withValues(alpha: 0.30),
-                              blurRadius: 14,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

@@ -110,7 +110,10 @@ void main() {
         ),
         contains('تعذر الاتصال'),
       );
-      expect(accountError(StateError('unknown'), true), contains('لم يتم تأكيد'));
+      expect(
+        accountError(StateError('unknown'), true),
+        contains('تعذر إتمام العملية'),
+      );
     });
   });
 

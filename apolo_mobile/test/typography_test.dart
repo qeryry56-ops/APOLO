@@ -451,19 +451,19 @@ void main() {
       state.api.dio.httpClientAdapter = _OfflineTaxonomyAdapter();
       try {
         await state.initialize(loadRemote: false);
-        expect(state.locale.languageCode, 'ar');
+        expect(state.locale.languageCode, 'en');
 
         await state.toggleLanguage();
         expect(state.locale.languageCode, 'fr');
 
         await state.toggleLanguage();
-        expect(state.locale.languageCode, 'en');
+        expect(state.locale.languageCode, 'ar');
 
         await state.initialize(loadRemote: false);
-        expect(state.locale.languageCode, 'en');
+        expect(state.locale.languageCode, 'ar');
 
         await state.toggleLanguage();
-        expect(state.locale.languageCode, 'ar');
+        expect(state.locale.languageCode, 'en');
       } finally {
         SharedPreferences.setMockInitialValues({});
         await state.setLocale(const Locale('ar'));
@@ -524,36 +524,36 @@ void main() {
 
         expect(find.text('PushedRouteIntact'), findsOneWidget);
         BuildContext pushedCtx = tester.element(find.text('PushedRouteIntact'));
+        expect(Directionality.of(pushedCtx), TextDirection.ltr);
+        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Inter');
+
+        // Toggle en -> fr
+        await tester.runAsync(() => state.toggleLanguage());
+        await tester.pumpAndSettle();
+        expect(find.text('PushedRouteIntact'), findsOneWidget);
+        pushedCtx = tester.element(find.text('PushedRouteIntact'));
+        expect(Directionality.of(pushedCtx), TextDirection.ltr);
+        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Inter');
+
+        // Toggle fr -> ar
+        await tester.runAsync(() => state.toggleLanguage());
+        await tester.pumpAndSettle();
+        expect(find.text('PushedRouteIntact'), findsOneWidget);
+        pushedCtx = tester.element(find.text('PushedRouteIntact'));
         expect(Directionality.of(pushedCtx), TextDirection.rtl);
         expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Tajawal');
-
-        // Toggle ar -> fr
-        await tester.runAsync(() => state.toggleLanguage());
-        await tester.pumpAndSettle();
-        expect(find.text('PushedRouteIntact'), findsOneWidget);
-        pushedCtx = tester.element(find.text('PushedRouteIntact'));
-        expect(Directionality.of(pushedCtx), TextDirection.ltr);
-        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Inter');
-
-        // Toggle fr -> en
-        await tester.runAsync(() => state.toggleLanguage());
-        await tester.pumpAndSettle();
-        expect(find.text('PushedRouteIntact'), findsOneWidget);
-        pushedCtx = tester.element(find.text('PushedRouteIntact'));
-        expect(Directionality.of(pushedCtx), TextDirection.ltr);
-        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Inter');
 
         // Verify persistence across fresh initialization
         await tester.runAsync(() => state.initialize(loadRemote: false));
         await tester.pumpAndSettle();
-        expect(state.locale.languageCode, 'en');
+        expect(state.locale.languageCode, 'ar');
 
-        // Toggle en -> ar
+        // Toggle ar -> en
         await tester.runAsync(() => state.toggleLanguage());
         await tester.pumpAndSettle();
         pushedCtx = tester.element(find.text('PushedRouteIntact'));
-        expect(Directionality.of(pushedCtx), TextDirection.rtl);
-        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Tajawal');
+        expect(Directionality.of(pushedCtx), TextDirection.ltr);
+        expect(Theme.of(pushedCtx).textTheme.bodyLarge?.fontFamily, 'Inter');
       },
       timeout: const Timeout(Duration(seconds: 30)),
     );

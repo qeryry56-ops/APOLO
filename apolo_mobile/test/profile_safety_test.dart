@@ -136,8 +136,8 @@ void main() {
     await tester.enterText(find.byKey(const Key('chat-draft')), '');
     await tester.pump();
     final count = adapter.requests.length;
-    await tester.tap(find.byIcon(CupertinoIcons.mic_fill));
-    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('voice-recorder-mic-button')));
+    await tester.pump(const Duration(milliseconds: 250));
     expect(adapter.requests.length, count);
     expect(find.text('Online'), findsNothing);
     await tester.pumpWidget(const SizedBox());
@@ -156,14 +156,19 @@ void main() {
     await tester.ensureVisible(button);
     await tester.tap(button);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('حذف حسابي وبياناتي'));
+    final confirmLabel = state.s.tr(
+      'حذف حسابي وبياناتي',
+      'Supprimer définitivement',
+      'Delete permanently',
+    );
+    await tester.tap(find.text(confirmLabel));
     await tester.pumpAndSettle();
     expect(state.isLoggedIn, isTrue);
     expect(adapter.requests.where((r) => r.path == '/auth/logout'), isEmpty);
     fail = false;
     await tester.tap(button);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('حذف حسابي وبياناتي'));
+    await tester.tap(find.text(confirmLabel));
     await tester.pumpAndSettle();
     expect(state.isLoggedIn, isFalse);
   });
