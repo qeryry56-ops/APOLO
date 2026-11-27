@@ -1,3 +1,4 @@
+import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/theme/app_theme.dart';
 import 'package:apolo_mobile/widgets/apolo_badges_kit.dart';
@@ -40,6 +41,20 @@ void main() {
   });
 
   test('ApoloSellerRank.resolve covers all 6 tiers and explicit backend override', () {
+    // Default launch mode: Personal/unverified ignores Business/ProPlus flags
+    expect(
+      ApoloSellerRank.resolve(
+        listingsCount: 0,
+        totalViews: 0,
+        isProPlus: true,
+        isBusiness: true,
+        isVerified: true,
+      ),
+      ApoloSellerRank.bronze,
+    );
+
+    AppConfig.enablePremiumAndBusinessTiers = true;
+    addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = false);
     expect(
       ApoloSellerRank.resolve(
         user: {'rank': 'diamond'},

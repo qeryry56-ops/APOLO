@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/account_setup_screen.dart';
 import 'package:apolo_mobile/screens/business_switch_screen.dart';
@@ -50,6 +51,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    AppConfig.enablePremiumAndBusinessTiers = true;
     originalDio = state.api.dio;
     originalLocale = state.locale;
     state.currentUser = null;
@@ -58,6 +60,7 @@ void main() {
   });
 
   tearDown(() async {
+    AppConfig.enablePremiumAndBusinessTiers = false;
     state.currentUser = null;
     await state.api.setToken(null);
     await state.setLocale(originalLocale);

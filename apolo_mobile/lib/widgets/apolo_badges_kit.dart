@@ -38,17 +38,17 @@ enum ApoloSellerRank {
       }
     }
 
-    final effectiveProPlus = isProPlus ??
-        (user?['is_pro_plus'] == true || user?['pro_plus'] == true);
-    final effectiveBusiness = isBusiness ??
-        (user?['account_type']?.toString().toLowerCase() == 'business' ||
-            user?['is_business'] == true);
-    final effectiveVerified = isVerified ??
-        (user?['is_verified'] == true ||
-            user?['verified'] == true ||
-            user?['phone_verified_at'] != null ||
-            effectiveProPlus ||
-            effectiveBusiness);
+    final tiersEnabled = AppConfig.enablePremiumAndBusinessTiers;
+    final effectiveProPlus = tiersEnabled &&
+        (isProPlus ??
+            (user?['is_pro_plus'] == true || user?['pro_plus'] == true));
+    final effectiveBusiness = tiersEnabled &&
+        (isBusiness ??
+            (user?['account_type']?.toString().toLowerCase() == 'business' ||
+                user?['is_business'] == true));
+    final effectiveVerified = tiersEnabled &&
+        (isVerified ??
+            (user?['is_verified'] == true || effectiveProPlus));
 
     if (effectiveProPlus && (listingsCount >= 20 || totalViews >= 5000)) {
       return ApoloSellerRank.champion;
@@ -209,7 +209,7 @@ class ApoloAccountTypeBadge extends StatelessWidget {
   /// Resolves whether a listing or seller map belongs to a Business/Store account
   /// vs an Individual (`Personal`) user.
   static bool isAdFromBusiness(Map<String, dynamic>? ad) {
-    if (ad == null) return false;
+    if (!AppConfig.enablePremiumAndBusinessTiers || ad == null) return false;
     if (ad['is_business'] == true ||
         ad['seller_is_business'] == true ||
         ad['is_pro_plus'] == true ||

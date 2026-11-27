@@ -707,17 +707,28 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                       ),
                                       const SizedBox(width: 6),
                                       ApoloIdentityBadgesRow(
-                                        isVerified: true,
+                                        isVerified: AppConfig
+                                                .enablePremiumAndBusinessTiers &&
+                                            (store['is_verified'] == true ||
+                                                store['is_pro_plus'] == true),
                                         rank: ApoloSellerRank.resolve(
                                           user: store,
                                           listingsCount: _ads.length,
-                                          isProPlus:
+                                          isProPlus: AppConfig
+                                                  .enablePremiumAndBusinessTiers &&
                                               store['is_pro_plus'] == true,
-                                          isBusiness: true,
-                                          isVerified: true,
+                                          isBusiness: AppConfig
+                                              .enablePremiumAndBusinessTiers,
+                                          isVerified: AppConfig
+                                                  .enablePremiumAndBusinessTiers &&
+                                              (store['is_verified'] == true ||
+                                                  store['is_pro_plus'] == true),
                                         ),
-                                        isProPlus: store['is_pro_plus'] == true,
-                                        isBusiness: true,
+                                        isProPlus: AppConfig
+                                                .enablePremiumAndBusinessTiers &&
+                                            store['is_pro_plus'] == true,
+                                        isBusiness: AppConfig
+                                            .enablePremiumAndBusinessTiers,
                                         badgeSize: 18,
                                         interactive: true,
                                       ),

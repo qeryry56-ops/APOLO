@@ -20,6 +20,20 @@ class AppConfig {
   // Default to production API; switchable to staging in Profile Settings
   static String currentBaseUrl = prodBaseUrl;
 
+  /// Launch-phase gate: while `false`, every user, seller, and listing in Apolo
+  /// renders strictly as `Personal` (`individual`) with `isVerified = false`
+  /// (no blue Verified badge and no free Business mode) until the Premium plan
+  /// entitlements are finalized and enabled.
+  static bool enablePremiumAndBusinessTiers = false;
+
+  /// Strict verification check: never grants Verified automatically from phone
+  /// verification or free store creation; requires Premium/explicit verification
+  /// AND [enablePremiumAndBusinessTiers] to be enabled.
+  static bool isVerifiedEntity(Map<dynamic, dynamic>? entity) {
+    if (!enablePremiumAndBusinessTiers || entity == null) return false;
+    return entity['is_verified'] == true || entity['is_pro_plus'] == true;
+  }
+
   /// Resolves the active API base URL. On Vercel Web (`*.vercel.app`), routes
   /// through same-origin Vercel rewrites (`/api/v1/*`) to avoid browser CORS blocks.
   static String get effectiveBaseUrl => resolveBaseUrl(currentBaseUrl);

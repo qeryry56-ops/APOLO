@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/profile_screen.dart';
 import 'package:apolo_mobile/screens/seller_profile_screen.dart';
 import 'package:apolo_mobile/theme/app_theme.dart';
+import 'package:apolo_mobile/widgets/apolo_badges_kit.dart';
 import 'package:apolo_mobile/widgets/dl_settings_kit.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -156,6 +158,10 @@ void main() {
       expect(find.text('+28%'), findsNothing);
       expect(find.text('Following'), findsOneWidget);
       expect(find.text('Listings'), findsOneWidget);
+      expect(find.byKey(const Key('apolo-account-badge-personal')), findsOneWidget);
+      expect(find.byKey(const Key('apolo-account-badge-business')), findsNothing);
+      expect(find.byType(ApoloVerifiedBadge), findsNothing);
+      expect(find.byKey(const Key('profile-account-mode-switcher')), findsNothing);
 
       await tester.tap(find.byKey(const Key('profile-edit-btn')));
       await tester.pumpAndSettle();
@@ -181,6 +187,8 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(state.isFollowingSeller(sellerId), isFalse);
+      expect(find.byKey(const Key('apolo-account-badge-personal')), findsOneWidget);
+      expect(find.byType(ApoloVerifiedBadge), findsNothing);
       expect(find.text('162'), findsOneWidget);
 
       final initialFollowBtn = tester.widget<ApoloDlButton>(
@@ -301,7 +309,36 @@ void main() {
         findsNothing,
       );
 
-      // 2. Business Store Seller
+      // 2. While enablePremiumAndBusinessTiers == false, even Business/Verified props stay Personal + unverified
+      await pumpScreen(
+        tester,
+        const SellerProfileScreen(
+          sellerId: 702,
+          sellerName: 'Apolo Motors',
+          sellerCity: 'Casablanca',
+          isVerified: true,
+          isBusiness: true,
+          store: {
+            'name': 'Apolo Motors',
+            'subdomain': 'apolo-motors',
+            'business_category': 'vehicles',
+            'working_hours': '09:00 - 20:00',
+          },
+        ),
+      );
+      expect(
+        find.byKey(const Key('apolo-account-badge-personal')),
+        findsOneWidget,
+      );
+      expect(find.byType(ApoloVerifiedBadge), findsNothing);
+      expect(
+        find.byKey(const Key('seller-business-store-card')),
+        findsNothing,
+      );
+
+      // 3. Once Premium/Business tiers are enabled, Business Store Seller renders Business badge & store card
+      AppConfig.enablePremiumAndBusinessTiers = true;
+      addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = false);
       await pumpScreen(
         tester,
         const SellerProfileScreen(

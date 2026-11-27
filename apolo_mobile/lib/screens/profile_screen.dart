@@ -356,11 +356,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userMap = _state.currentUser;
     final isProPlus = _state.isProPlusAccount;
     final isBusiness = _state.isBusinessAccount;
-    final isVerified = userMap?['is_verified'] == true ||
-        userMap?['verified'] == true ||
-        userMap?['phone_verified_at'] != null ||
-        isProPlus ||
-        isBusiness;
+    final isVerified = AppConfig.enablePremiumAndBusinessTiers &&
+        (userMap?['is_verified'] == true || isProPlus);
     final totalViews = _baseViews ?? 0;
     final sellerRank = ApoloSellerRank.resolve(
       user: userMap,
@@ -580,52 +577,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     bio: bio.isNotEmpty ? bio : null,
                                   ),
 
-                                  const SizedBox(height: 14),
-
-                                  // Simple 1-Tap Account Mode Switcher: Personal vs Business
-                                  _buildSimpleAccountTypeToggle(s, palette),
-
-                                  const SizedBox(height: 12),
-
-                                  if (!_state.isBusinessAccount)
-                                    _buildPersonalSwitchBanner(s, palette)
-                                  else ...[
-                                    _buildBusinessIdentityHeader(s, palette),
+                                  if (AppConfig.enablePremiumAndBusinessTiers) ...[
                                     const SizedBox(height: 14),
-                                    // Dynamic Layer v5.1 Pill Segmented Control (`#EEEEEE` outer, `#000000` active)
-                                    Container(
-                                      height: 44,
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: _dlPill,
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          _buildSegmentButton(
-                                            index: 0,
-                                            label: _state.s.tr(
-                                              'إعلاناتي',
-                                              'Mes annonces',
-                                              'My Listings',
+
+                                    // Simple 1-Tap Account Mode Switcher: Personal vs Business
+                                    _buildSimpleAccountTypeToggle(s, palette),
+
+                                    const SizedBox(height: 12),
+
+                                    if (!_state.isBusinessAccount)
+                                      _buildPersonalSwitchBanner(s, palette)
+                                    else ...[
+                                      _buildBusinessIdentityHeader(s, palette),
+                                      const SizedBox(height: 14),
+                                      // Dynamic Layer v5.1 Pill Segmented Control (`#EEEEEE` outer, `#000000` active)
+                                      Container(
+                                        height: 44,
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: _dlPill,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            _buildSegmentButton(
+                                              index: 0,
+                                              label: _state.s.tr(
+                                                'إعلاناتي',
+                                                'Mes annonces',
+                                                'My Listings',
+                                              ),
+                                              icon:
+                                                  CupertinoIcons.square_grid_2x2,
                                             ),
-                                            icon:
-                                                CupertinoIcons.square_grid_2x2,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          _buildSegmentButton(
-                                            index: 1,
-                                            label: _state.s.tr(
-                                              'لوحة الأعمال والإحصائيات',
-                                              'Tableau Pro & Boost',
-                                              'Pro Insights & Boost',
+                                            const SizedBox(width: 4),
+                                            _buildSegmentButton(
+                                              index: 1,
+                                              label: _state.s.tr(
+                                                'لوحة الأعمال والإحصائيات',
+                                                'Tableau Pro & Boost',
+                                                'Pro Insights & Boost',
+                                              ),
+                                              icon: CupertinoIcons.chart_bar,
                                             ),
-                                            icon: CupertinoIcons.chart_bar,
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ],
                               ),

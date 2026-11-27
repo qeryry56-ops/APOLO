@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/account_security_screen.dart';
 import 'package:apolo_mobile/screens/home_screen.dart';
@@ -107,6 +108,8 @@ void main() {
 
   testWidgets('Logged-in PRO+ user sees VIP credits and Log out button',
       (tester) async {
+    AppConfig.enablePremiumAndBusinessTiers = true;
+    addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = false);
     await tester.runAsync(() async {
       await AppState().setAuthSession('test_token', {
         'id': 42,

@@ -46,7 +46,7 @@ class SellerProfileScreen extends StatefulWidget {
     this.sellerAvatar,
     this.sellerPhone,
     this.sellerCity,
-    this.isVerified = true,
+    this.isVerified = false,
     this.isOnline = true,
     this.isBusiness,
     this.store,
@@ -413,14 +413,22 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         final palette = ApoloDlPalette.of(context);
         final city = _resolvedCity;
         final isFollowing = _state.isFollowingSeller(widget.sellerId);
-        final effectiveStore = widget.store ??
-            (widget.initialAd?['store'] is Map
-                ? Map<String, dynamic>.from(widget.initialAd!['store'] as Map)
-                : null);
-        final bool effectiveIsBusiness = widget.isBusiness ??
-            (effectiveStore != null ||
-                ApoloAccountTypeBadge.isAdFromBusiness(widget.initialAd) ||
-                _sellerAds.any(ApoloAccountTypeBadge.isAdFromBusiness));
+        final effectiveStore = AppConfig.enablePremiumAndBusinessTiers
+            ? (widget.store ??
+                (widget.initialAd?['store'] is Map
+                    ? Map<String, dynamic>.from(
+                        widget.initialAd!['store'] as Map,
+                      )
+                    : null))
+            : null;
+        final bool effectiveIsBusiness =
+            AppConfig.enablePremiumAndBusinessTiers &&
+                (widget.isBusiness ??
+                    (effectiveStore != null ||
+                        ApoloAccountTypeBadge.isAdFromBusiness(
+                          widget.initialAd,
+                        ) ||
+                        _sellerAds.any(ApoloAccountTypeBadge.isAdFromBusiness)));
         final String storeSubdomain =
             (effectiveStore?['subdomain'] ??
                     widget.initialAd?['store_subdomain'] ??
@@ -517,13 +525,16 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                   nameTrailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (widget.isVerified ||
-                                          effectiveIsBusiness) ...[
+                                      if (AppConfig
+                                              .enablePremiumAndBusinessTiers &&
+                                          widget.isVerified) ...[
                                         const ApoloVerifiedBadge(size: 17),
                                         const SizedBox(width: 5),
                                       ],
                                       ApoloAccountTypeBadge(
-                                        isBusiness: effectiveIsBusiness,
+                                        isBusiness: AppConfig
+                                                .enablePremiumAndBusinessTiers &&
+                                            effectiveIsBusiness,
                                       ),
                                     ],
                                   ),

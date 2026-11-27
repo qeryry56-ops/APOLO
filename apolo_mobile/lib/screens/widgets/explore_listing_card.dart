@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/apolo_badges_kit.dart';
 import '../../widgets/perceived_performance.dart';
@@ -416,16 +417,20 @@ class _ExploreListingCardState extends State<ExploreListingCard>
   }
 
   bool _isSellerVerified() {
+    if (!AppConfig.enablePremiumAndBusinessTiers) return false;
     final ad = widget.ad;
     final userMap = ad['user'] is Map ? ad['user'] as Map : null;
     final sellerMap = ad['seller'] is Map ? ad['seller'] as Map : null;
     final storeMap = ad['store'] is Map ? ad['store'] as Map : null;
     return ad['seller_verified'] == true ||
         ad['is_verified'] == true ||
-        ad['verified'] == true ||
+        ad['is_pro_plus'] == true ||
         userMap?['is_verified'] == true ||
+        userMap?['is_pro_plus'] == true ||
         sellerMap?['is_verified'] == true ||
-        storeMap != null;
+        sellerMap?['is_pro_plus'] == true ||
+        storeMap?['is_verified'] == true ||
+        storeMap?['is_pro_plus'] == true;
   }
 
   Widget _buildSellerAvatar(String avatarUrl, String sellerName) {

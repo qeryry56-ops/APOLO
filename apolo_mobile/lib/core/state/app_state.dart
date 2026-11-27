@@ -45,6 +45,9 @@ class AppState extends ChangeNotifier {
   String accountType = 'individual'; // 'individual' | 'business' | 'pro_plus'
 
   String get effectiveAccountType {
+    if (!AppConfig.enablePremiumAndBusinessTiers) {
+      return 'individual';
+    }
     final raw = (currentUser?['account_type'] ?? accountType)
         .toString()
         .toLowerCase()

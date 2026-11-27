@@ -445,9 +445,9 @@ class _SearchScreenState extends State<SearchScreen>
       'rating': '4.9',
       'reviews_count': 126,
       'views_count': 340,
-      'seller_name': 'Casa Immobilier',
-      'seller_verified': true,
-      'is_business': true,
+      'seller_name': 'Youssef Alami',
+      'seller_verified': false,
+      'is_business': false,
       'description': 'Villa contemporaine 4 chambres avec piscine chauffée à Marrakech Palmeraie.',
       'price': 2450000,
       'price_formatted': '2 450 000 DH',
@@ -471,9 +471,9 @@ class _SearchScreenState extends State<SearchScreen>
       'rating': '4.9',
       'reviews_count': 94,
       'views_count': 512,
-      'seller_name': 'Apolo Motors',
-      'seller_verified': true,
-      'is_business': true,
+      'seller_name': 'Mehdi Bennani',
+      'seller_verified': false,
+      'is_business': false,
       'description': 'Modèle 2023 · Boîte auto · Toit panoramique · 1ère main Maroc.',
       'price': 385000,
       'price_formatted': '385 000 DH',
@@ -496,9 +496,9 @@ class _SearchScreenState extends State<SearchScreen>
       'rating': '4.8',
       'reviews_count': 78,
       'views_count': 289,
-      'seller_name': 'Tech Store Rabat',
-      'seller_verified': true,
-      'is_business': true,
+      'seller_name': 'Amine Idrissi',
+      'seller_verified': false,
+      'is_business': false,
       'description': 'Neuf scellé avec garantie officielle 12 mois · Batterie 100%.',
       'price': 13900,
       'price_formatted': '13 900 DH',
@@ -519,8 +519,8 @@ class _SearchScreenState extends State<SearchScreen>
       'rating': '4.9',
       'reviews_count': 53,
       'views_count': 198,
-      'seller_name': 'Yassine Pro',
-      'seller_verified': true,
+      'seller_name': 'Yassine Tazi',
+      'seller_verified': false,
       'is_business': false,
       'description': 'État neuf · 14 cycles batterie · Chargeur MagSafe 70W original.',
       'price': 21500,
@@ -542,7 +542,7 @@ class _SearchScreenState extends State<SearchScreen>
       'rating': '4.7',
       'reviews_count': 41,
       'views_count': 142,
-      'seller_name': 'Dar Déco',
+      'seller_name': 'Salma Chraibi',
       'seller_verified': false,
       'is_business': false,
       'description': 'Salon complet sur mesure avec table centrale et coussins anti-taches.',
@@ -565,8 +565,8 @@ class _SearchScreenState extends State<SearchScreen>
       'rating': '4.8',
       'reviews_count': 62,
       'views_count': 176,
-      'seller_name': 'Karim Horlogerie',
-      'seller_verified': true,
+      'seller_name': 'Karim Fassi',
+      'seller_verified': false,
       'is_business': false,
       'description': 'Authentique avec coffret et carte de garantie internationale.',
       'price': 6400,
@@ -2164,48 +2164,51 @@ class _SearchScreenState extends State<SearchScreen>
                                       ],
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    physics: const BouncingScrollPhysics(),
-                                    child: Row(
-                                      children: [
-                                        _buildSellerTypePill(
-                                          pillKey: const Key(
-                                            'explore-seller-type-all',
+                                  if (AppConfig
+                                      .enablePremiumAndBusinessTiers) ...[
+                                    const SizedBox(height: 8),
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      physics: const BouncingScrollPhysics(),
+                                      child: Row(
+                                        children: [
+                                          _buildSellerTypePill(
+                                            pillKey: const Key(
+                                              'explore-seller-type-all',
+                                            ),
+                                            value: 'all',
+                                            label: s.tr('الكل', 'Tous', 'All'),
                                           ),
-                                          value: 'all',
-                                          label: s.tr('الكل', 'Tous', 'All'),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        _buildSellerTypePill(
-                                          pillKey: const Key(
-                                            'explore-seller-type-personal',
+                                          const SizedBox(width: 6),
+                                          _buildSellerTypePill(
+                                            pillKey: const Key(
+                                              'explore-seller-type-personal',
+                                            ),
+                                            value: 'personal',
+                                            icon: CupertinoIcons.person_fill,
+                                            label: s.tr(
+                                              'أفراد',
+                                              'Particuliers',
+                                              'Personal',
+                                            ),
                                           ),
-                                          value: 'personal',
-                                          icon: CupertinoIcons.person_fill,
-                                          label: s.tr(
-                                            'أفراد',
-                                            'Particuliers',
-                                            'Personal',
+                                          const SizedBox(width: 6),
+                                          _buildSellerTypePill(
+                                            pillKey: const Key(
+                                              'explore-seller-type-business',
+                                            ),
+                                            value: 'business',
+                                            icon: Icons.storefront_rounded,
+                                            label: s.tr(
+                                              'متاجر Business',
+                                              'Boutiques',
+                                              'Business',
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        _buildSellerTypePill(
-                                          pillKey: const Key(
-                                            'explore-seller-type-business',
-                                          ),
-                                          value: 'business',
-                                          icon: Icons.storefront_rounded,
-                                          label: s.tr(
-                                            'متاجر Business',
-                                            'Boutiques',
-                                            'Business',
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                   if (activeChips.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     SizedBox(

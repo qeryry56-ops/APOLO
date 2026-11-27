@@ -89,12 +89,12 @@ void main() {
       expect(find.byKey(const Key('dl-search-suggestions-label')), findsOneWidget);
       expect(find.text('Suggestions'), findsOneWidget);
 
-      // Verify Julia Bentz & Joshua Krane cards + blue verified seals
+      // Verify Julia Bentz & Joshua Krane cards render as Personal without free Verified badges
       expect(find.text('Julia Bentz'), findsOneWidget);
       expect(find.text('@julia.be'), findsOneWidget);
       expect(find.text('Joshua Krane'), findsOneWidget);
       expect(find.text('@uxwithjoshua'), findsOneWidget);
-      expect(find.byType(ApoloVerifiedBadge), findsWidgets);
+      expect(find.byType(ApoloVerifiedBadge), findsNothing);
 
       // Unfollowed button starts sky-blue (#2997FF) with "Follow"
       final followBtnFinder = find.byKey(const Key('dl-suggestion-follow-801'));
@@ -202,25 +202,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.byType(ExploreListingCard), findsWidgets);
 
-      // 1-tap Personal vs Business filter pills in Explore
-      await tester.tap(find.byKey(const Key('explore-seller-type-personal')));
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(find.text('Casa Oliva Villa'), findsNothing);
-      expect(
-        find.text('MacBook Pro 14" M3 Pro · 18GB / 512GB SSD'),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.byKey(const Key('explore-seller-type-business')));
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(find.text('Casa Oliva Villa'), findsOneWidget);
-      expect(
-        find.text('MacBook Pro 14" M3 Pro · 18GB / 512GB SSD'),
-        findsNothing,
-      );
-
-      await tester.tap(find.byKey(const Key('explore-seller-type-all')));
-      await tester.pump(const Duration(milliseconds: 200));
+      // By default all Explore sellers are Personal and unverified (no Business pills or Verified badges)
+      expect(find.byType(ApoloVerifiedBadge), findsNothing);
+      expect(find.byKey(const Key('apolo-account-badge-business')), findsNothing);
+      expect(find.byKey(const Key('apolo-account-badge-personal')), findsWidgets);
+      expect(find.byKey(const Key('explore-seller-type-business')), findsNothing);
 
       // Enter Search Suggestions in Dark Mode and submit a query -> saves to Recent searches & shows active chip
       await tester.tap(find.byKey(const Key('explore-search-bar-field')));

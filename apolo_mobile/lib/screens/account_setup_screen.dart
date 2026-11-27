@@ -165,8 +165,10 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
       }
     }
 
-    final resolvedAccountType =
-        chosen.contains('business') ? 'business' : 'individual';
+    final resolvedAccountType = AppConfig.enablePremiumAndBusinessTiers &&
+            chosen.contains('business')
+        ? 'business'
+        : 'individual';
     _state.accountType = resolvedAccountType;
     await _state.saveUserIntents(
       mappedIntents.isEmpty ? const <String>{'buying'} : mappedIntents,

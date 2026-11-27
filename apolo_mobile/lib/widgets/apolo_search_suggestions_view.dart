@@ -26,7 +26,7 @@ class ApoloSuggestedAccount {
     required this.name,
     required this.handle,
     this.avatarUrl,
-    this.isVerified = true,
+    this.isVerified = false,
     this.storeSubdomain,
   });
 
@@ -36,31 +36,31 @@ class ApoloSuggestedAccount {
       id: 801,
       name: 'Julia Bentz',
       handle: 'julia.be',
-      isVerified: true,
+      isVerified: false,
     ),
     ApoloSuggestedAccount(
       id: 802,
       name: 'Joshua Krane',
       handle: 'uxwithjoshua',
-      isVerified: true,
+      isVerified: false,
     ),
     ApoloSuggestedAccount(
       id: 803,
-      name: 'Apolo Motors',
-      handle: 'apolomotors.ma',
-      isVerified: true,
+      name: 'Youssef Alami',
+      handle: 'youssef.alami',
+      isVerified: false,
     ),
     ApoloSuggestedAccount(
       id: 804,
-      name: 'Casa Immobilier',
-      handle: 'casaimmo',
-      isVerified: true,
+      name: 'Salma Chraibi',
+      handle: 'salma.ch',
+      isVerified: false,
     ),
     ApoloSuggestedAccount(
       id: 805,
-      name: 'Sarah Studio',
-      handle: 'sarah.studio',
-      isVerified: true,
+      name: 'Karim Fassi',
+      handle: 'karim.fassi',
+      isVerified: false,
     ),
   ];
 
@@ -109,10 +109,8 @@ class ApoloSuggestedAccount {
       if (id <= 0 || name.isEmpty) continue;
       final subdomain = (raw['subdomain'] ?? '').toString().trim();
       final avatar = (raw['logo_url'] ?? raw['logo'] ?? '').toString().trim();
-      final verified = raw['is_verified'] == true ||
-          raw['verified'] == true ||
-          raw['is_pro_plus'] == true ||
-          subdomain.isNotEmpty;
+      final verified = AppConfig.enablePremiumAndBusinessTiers &&
+          (raw['is_verified'] == true || raw['is_pro_plus'] == true);
       tryAdd(
         ApoloSuggestedAccount(
           id: id,
@@ -120,7 +118,10 @@ class ApoloSuggestedAccount {
           handle: _sanitizeHandle(subdomain, name, id),
           avatarUrl: avatar.isNotEmpty ? avatar : null,
           isVerified: verified,
-          storeSubdomain: subdomain.isNotEmpty ? subdomain : null,
+          storeSubdomain: AppConfig.enablePremiumAndBusinessTiers &&
+                  subdomain.isNotEmpty
+              ? subdomain
+              : null,
         ),
       );
     }
@@ -152,9 +153,10 @@ class ApoloSuggestedAccount {
               '')
           .toString()
           .trim();
-      final verified = raw['seller_verified'] == true ||
-          userMap?['is_verified'] == true ||
-          raw['is_vip'] == true;
+      final verified = AppConfig.enablePremiumAndBusinessTiers &&
+          (raw['seller_verified'] == true ||
+              userMap?['is_verified'] == true ||
+              userMap?['is_pro_plus'] == true);
       tryAdd(
         ApoloSuggestedAccount(
           id: id,

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/apolo_badges_kit.dart';
@@ -436,11 +437,13 @@ class _StoresScreenState extends State<StoresScreen> {
                                           .toString(),
                                     ) ??
                                     0;
-                                final isProPlus = store['is_pro_plus'] == true;
-                                final isVerified =
-                                    store['is_verified'] == true ||
-                                        store['verified'] == true ||
-                                        isProPlus;
+                                final isProPlus = AppConfig
+                                        .enablePremiumAndBusinessTiers &&
+                                    store['is_pro_plus'] == true;
+                                final isVerified = AppConfig
+                                        .enablePremiumAndBusinessTiers &&
+                                    (store['is_verified'] == true ||
+                                        isProPlus);
                                 final rank = ApoloSellerRank.resolve(
                                   user: store,
                                   listingsCount: count,
@@ -486,16 +489,17 @@ class _StoresScreenState extends State<StoresScreen> {
                                                     Icons.storefront_rounded,
                                               ),
                                             ),
-                                            PositionedDirectional(
-                                              bottom: -1,
-                                              end: -1,
-                                              child: ApoloVerifiedBadge(
-                                                size: 19,
-                                                rank: rank,
-                                                isProPlus: isProPlus,
-                                                isBusiness: true,
+                                            if (isVerified)
+                                              PositionedDirectional(
+                                                bottom: -1,
+                                                end: -1,
+                                                child: ApoloVerifiedBadge(
+                                                  size: 19,
+                                                  rank: rank,
+                                                  isProPlus: isProPlus,
+                                                  isBusiness: true,
+                                                ),
                                               ),
-                                            ),
                                           ],
                                         ),
                                         const SizedBox(width: 14),
