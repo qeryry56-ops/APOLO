@@ -10,6 +10,7 @@ import '../account_security_screen.dart';
 import '../account_setup_screen.dart';
 import '../auth_screen.dart';
 import '../business_switch_screen.dart';
+import '../edit_profile_screen.dart';
 import '../forgot_password_screen.dart';
 import '../privacy_compliance_screen.dart';
 import '../widgets/app_image.dart';
@@ -47,8 +48,11 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
       return;
     }
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const AccountSecurityScreen()),
+      MaterialPageRoute<void>(builder: (_) => const EditProfileScreen()),
     );
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _confirmSwitchToPersonal(AppStrings s) async {
