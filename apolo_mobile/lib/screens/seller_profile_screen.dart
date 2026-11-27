@@ -14,18 +14,14 @@ import 'ad_detail_screen.dart';
 import 'share_profile_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
-import 'widgets/price_text.dart';
 import 'widgets/kinetic_widgets.dart';
+import 'widgets/price_text.dart';
 import 'widgets/skeleton_loader.dart';
 
-/// Apple Human Interface Guidelines (HIG) 2026 Public Seller Profile:
-/// - 8pt baseline grid with exact Apple whitespace & margins (16pt / 20pt padding).
-/// - Apple typography, soft elevated cards, hairline borders (0.8pt #E2E8F0).
-/// - Hero Seller Header: 84pt Avatar, Verified Blue Seal, Online Dot, Member Since, Location.
-/// - Apple Metric Pills: Rating (⭐ 4.9), Response Speed (⚡ <15min), Trust (🛡️ 100% Verified).
-/// - 1-Tap Dual Action Bar: "محادثة فورية 💬" (Primary Crimson) & "اتصال مباشر 📞" (Emerald Call).
-/// - Apple Segmented Control: إعلانات البائع | تقييمات المشترين ⭐ | الثقة والضمانات.
-/// - 2-Column Responsive Ads Grid + Reviews with Verified Buyer badges.
+/// Dynamic Layer v5.1 Public Seller Profile Screen:
+/// - Pure #FFFFFF canvas + ApoloDlTopNav + ApoloDlAccountHeader + ApoloIdentityBadgesRow
+/// - Pinned #EEEEEE capsule segmented tabs (#000000 active pill)
+/// - Flat #F6F6F6 2-column listings grid, verified reviews, and seller trust guarantees
 class SellerProfileScreen extends StatefulWidget {
   final int sellerId;
   final String sellerName;
@@ -56,20 +52,18 @@ class SellerProfileScreen extends StatefulWidget {
 
 class _SellerProfileScreenState extends State<SellerProfileScreen> {
   final AppState _state = AppState();
-  int _selectedTab = 0; // 0: الإعلانات, 1: التقييمات, 2: حول البائع
+  int _selectedTab = 0; // 0: Listings, 1: Reviews, 2: Trust & Info
   bool _isLoading = true;
   List<Map<String, dynamic>> _sellerAds = [];
 
-  // Unified 2026 Grouped Card Palette
-  static const Color _surface = Color(0xFFFFFFFF);
-  static const Color _surfaceElevated = Color(0xFFFFFFFF);
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _border = Color(0xFFE7EAF0);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _emerald = Color(0xFF10B981);
-  static const Color _blueVerified = Color(0xFF0866FF);
-  static const Color _starGold = Color(0xFFF59E0B);
+  // Strict Dynamic Layer v5.1 Palette Tokens
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlDanger = Color(0xFFE31B23);
+  static const Color _dlStarAmber = Color(0xFFFFB800);
 
   @override
   void initState() {
@@ -131,12 +125,14 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_state.s.tr(
-              'رقم هاتف البائع غير متوفر حالياً',
-              'Numéro non disponible',
-              'Seller phone number not available',
-            )),
-            backgroundColor: _red,
+            content: Text(
+              _state.s.tr(
+                'رقم هاتف البائع غير متوفر حالياً',
+                'Numéro non disponible',
+                'Seller phone number not available',
+              ),
+            ),
+            backgroundColor: _dlInk,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -154,94 +150,144 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         widget.initialAd ?? (_sellerAds.isNotEmpty ? _sellerAds.first : null);
     final id = int.tryParse((ad?['id'] ?? '').toString());
     if (ad == null || id == null || id <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppState().s.tr(
-            'اختر إعلاناً للبائع لبدء المحادثة.',
-            'Choisissez une annonce pour contacter ce vendeur.',
-            'Select a listing to message this seller.',
-          ))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: _dlInk,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            AppState().s.tr(
+              'اختر إعلاناً للبائع لبدء المحادثة.',
+              'Choisissez une annonce pour contacter ce vendeur.',
+              'Select a listing to message this seller.',
+            ),
+          ),
+        ),
+      );
       return;
     }
     Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) =>
-                AdDetailScreen(adId: id, initialAd: ad, openChatOnLoad: true)));
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            AdDetailScreen(adId: id, initialAd: ad, openChatOnLoad: true),
+      ),
+    );
   }
 
   void _showMoreActions(bool isAr) {
     HapticFeedback.selectionClick();
-    showCupertinoModalPopup(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => CupertinoActionSheet(
-        title: Text(widget.sellerName),
-        message: Text(
-          _state.s.tr(
-            'خيارات الملف الشخصي للبائع',
-            'Options du profil vendeur',
-            'Seller profile options',
+      backgroundColor: _dlBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: _dlPill,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                _buildActionSheetRow(
+                  icon: CupertinoIcons.share,
+                  iconColor: _dlInk,
+                  title: _state.s.tr(
+                    'مشاركة البروفايل',
+                    'Partager le profil',
+                    'Share profile',
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _shareSellerProfile(_state.s);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildActionSheetRow(
+                  icon: CupertinoIcons.flag,
+                  iconColor: _dlInk,
+                  title: _state.s.tr(
+                    'الإبلاغ عن البائع',
+                    'Signaler le vendeur',
+                    'Report seller',
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _reportSeller(isAr);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildActionSheetRow(
+                  icon: CupertinoIcons.nosign,
+                  iconColor: _dlDanger,
+                  titleColor: _dlDanger,
+                  title: _state.s.tr(
+                    'حظر هذا البائع',
+                    'Bloquer le vendeur',
+                    'Block seller',
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _blockSeller(isAr);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _shareSellerProfile(_state.s);
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(CupertinoIcons.share, size: 18),
-                const SizedBox(width: 8),
-                Text(_state.s.tr(
-                  'مشاركة البروفايل',
-                  'Partager le profil',
-                  'Share profile',
-                )),
-              ],
+      ),
+    );
+  }
+
+  Widget _buildActionSheetRow({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required VoidCallback onTap,
+    Color titleColor = _dlInk,
+  }) {
+    return PressableScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: _dlSurface,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                color: _dlBg,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, color: iconColor, size: 18),
             ),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _reportSeller(isAr);
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(CupertinoIcons.flag, size: 18),
-                const SizedBox(width: 8),
-                Text(_state.s.tr(
-                  'الإبلاغ عن البائع',
-                  'Signaler le vendeur',
-                  'Report seller',
-                )),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: titleColor,
+                ),
+              ),
             ),
-          ),
-          CupertinoActionSheetAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.pop(ctx);
-              _blockSeller(isAr);
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(CupertinoIcons.nosign, size: 18),
-                const SizedBox(width: 8),
-                Text(_state.s.tr(
-                  'حظر هذا البائع',
-                  'Bloquer le vendeur',
-                  'Block seller',
-                )),
-              ],
-            ),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(_state.s.tr('إلغاء', 'Annuler', 'Cancel')),
+          ],
         ),
       ),
     );
@@ -278,7 +324,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: _red,
+        backgroundColor: _dlInk,
       ),
     );
   }
@@ -363,14 +409,14 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                     child: CustomScrollView(
                       physics: const BouncingScrollPhysics(),
                       slivers: [
-                        // 1. Dynamic Layer v5.1 Account / Follow & Following Header
+                        // 1. Dynamic Layer v5.1 Account Header
                         SliverToBoxAdapter(
                           child: Center(
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 480),
                               child: Padding(
                                 padding:
-                                    const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                                    const EdgeInsets.fromLTRB(16, 12, 16, 16),
                                 child: ApoloDlAccountHeader(
                                   avatar: widget.sellerAvatar != null &&
                                           widget.sellerAvatar!.isNotEmpty
@@ -379,16 +425,38 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                           width: 72,
                                           height: 72,
                                           fit: BoxFit.cover,
-                                          fallback: Icon(
-                                            CupertinoIcons.person_fill,
-                                            size: 32,
-                                            color: palette.iconMuted,
+                                          fallback: Center(
+                                            child: Text(
+                                              widget.sellerName.trim().isNotEmpty
+                                                  ? widget.sellerName
+                                                      .trim()
+                                                      .characters
+                                                      .first
+                                                      .toUpperCase()
+                                                  : 'S',
+                                              style: const TextStyle(
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.w700,
+                                                color: _dlInk,
+                                              ),
+                                            ),
                                           ),
                                         )
-                                      : Icon(
-                                          CupertinoIcons.person_fill,
-                                          size: 32,
-                                          color: palette.iconMuted,
+                                      : Center(
+                                          child: Text(
+                                            widget.sellerName.trim().isNotEmpty
+                                                ? widget.sellerName
+                                                    .trim()
+                                                    .characters
+                                                    .first
+                                                    .toUpperCase()
+                                                : 'S',
+                                            style: const TextStyle(
+                                              fontSize: 28,
+                                              fontWeight: FontWeight.w700,
+                                              color: _dlInk,
+                                            ),
+                                          ),
                                         ),
                                   displayName: widget.sellerName,
                                   nameTrailing: ApoloIdentityBadgesRow(
@@ -513,7 +581,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                           ),
                         ),
 
-                        // 2. Dynamic Layer Segmented Control Tabs (Pinned Sticky Header)
+                        // 2. Pinned Dynamic Layer v5.1 Capsule Segmented Tabs
                         SliverPersistentHeader(
                           pinned: true,
                           delegate: _SliverTabsDelegate(
@@ -521,18 +589,18 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               color: palette.bg,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 8,
+                                vertical: 7,
                               ),
                               child: Center(
                                 child: ConstrainedBox(
                                   constraints:
                                       const BoxConstraints(maxWidth: 480),
                                   child: Container(
-                                    height: 42,
-                                    padding: const EdgeInsets.all(3.5),
+                                    height: 44,
+                                    padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: palette.groupCard,
-                                      borderRadius: BorderRadius.circular(12),
+                                      color: _dlPill,
+                                      borderRadius: BorderRadius.circular(999),
                                     ),
                                     child: Row(
                                       children: [
@@ -544,6 +612,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                             'Listings (${_sellerAds.length})',
                                           ),
                                         ),
+                                        const SizedBox(width: 4),
                                         _buildTabBtn(
                                           1,
                                           _state.s.tr(
@@ -552,6 +621,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                             'Reviews (48)',
                                           ),
                                         ),
+                                        const SizedBox(width: 4),
                                         _buildTabBtn(
                                           2,
                                           _state.s.tr(
@@ -594,7 +664,6 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
   Widget _buildTabBtn(int index, String label) {
     final active = _selectedTab == index;
-    final palette = ApoloDlPalette.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -604,18 +673,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            color: active ? palette.bg : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
+            color: active ? _dlInk : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
             label,
@@ -623,8 +684,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12.5,
-              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-              color: active ? palette.ink : palette.muted,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+              color: active ? Colors.white : _dlInk,
             ),
           ),
         ),
@@ -632,11 +693,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     );
   }
 
-  // ───────────────────────── TAB 1: ADS GRID ─────────────────────────
   Widget _buildAdsTab(bool isAr) {
     if (_isLoading) {
       return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
         sliver: SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
@@ -663,7 +723,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 'Aucune annonce disponible',
                 'No listings available right now',
               ),
-              style: const TextStyle(color: _muted, fontSize: 14),
+              style: const TextStyle(color: _dlMuted, fontSize: 14),
             ),
           ),
         ),
@@ -671,13 +731,13 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 14,
           crossAxisSpacing: 14,
-          childAspectRatio: 0.69,
+          childAspectRatio: 0.71,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
@@ -706,41 +766,28 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: _surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _border, width: 0.8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _ink.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  color: _dlSurface,
+                  borderRadius: BorderRadius.circular(18),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image with natural aspect ratio container
                     Expanded(
                       flex: 11,
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(15),
-                            ),
-                            child: AppImage(
-                              url: image,
-                              fit: BoxFit.cover,
-                              fallback: Container(
-                                color: const Color(0xFFF1F5F9),
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  CupertinoIcons.photo,
-                                  color: _muted,
-                                  size: 32,
-                                ),
+                          AppImage(
+                            url: image,
+                            fit: BoxFit.cover,
+                            fallback: Container(
+                              color: _dlPill,
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                CupertinoIcons.photo,
+                                color: _dlMuted,
+                                size: 30,
                               ),
                             ),
                           ),
@@ -750,19 +797,23 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               end: 8,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2.5,
+                                  horizontal: 8,
+                                  vertical: 3.5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _emerald.withValues(alpha: 0.92),
-                                  borderRadius: BorderRadius.circular(6),
+                                  color: _dlBg,
+                                  borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
-                                  _state.s.tr('تفاوض', 'Négociable', 'Negotiable'),
+                                  _state.s.tr(
+                                    'تفاوض',
+                                    'Négociable',
+                                    'Negotiable',
+                                  ),
                                   style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
+                                    color: _dlInk,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -770,12 +821,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                         ],
                       ),
                     ),
-
-                    // Details
                     Expanded(
                       flex: 8,
                       child: Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(11),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -787,7 +836,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: _ink,
+                                color: _dlInk,
                                 height: 1.25,
                               ),
                             ),
@@ -798,8 +847,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                   price,
                                   style: const TextStyle(
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    color: _red,
+                                    fontWeight: FontWeight.w800,
+                                    color: _dlInk,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -807,8 +856,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                   children: [
                                     const Icon(
                                       CupertinoIcons.location_solid,
-                                      size: 10,
-                                      color: _muted,
+                                      size: 10.5,
+                                      color: _dlMuted,
                                     ),
                                     const SizedBox(width: 3),
                                     Expanded(
@@ -817,9 +866,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                          fontSize: 10.5,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.w500,
-                                          color: _muted,
+                                          color: _dlMuted,
                                         ),
                                       ),
                                     ),
@@ -842,7 +891,6 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     );
   }
 
-  // ───────────────────────── TAB 2: REVIEWS ─────────────────────────
   Widget _buildReviewsTab(bool isAr) {
     final reviews = [
       {
@@ -864,7 +912,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         'item': 'iPhone 16 Pro Max',
         'comment': _state.s.tr(
           'تجربة شراء سريعة وموثوقة، التيليفون مختوم بالباكية وجربتو عاد خلصت. الله يعطيه الصحة.',
-          'Expérience d\'achat fluide, téléphone scellé vérifié avant paiement. Je recommande vivement!',
+          'Expérience d’achat fluide, téléphone scellé vérifié avant paiement. Je recommande vivement !',
           'Smooth buying experience, inspected before payment. Highly recommended!',
         ),
         'verified': true,
@@ -876,7 +924,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         'item': 'MacBook Pro M3 Max',
         'comment': _state.s.tr(
           'ما شاء الله إنسان صادق ومحترم، جا حتى لعندي وخلاني نفحص البيسي كامل على خاطري.',
-          'Personne honnête et respectueuse. J\'ai pu tester la machine tranquillement.',
+          'Personne honnête et respectueuse. J’ai pu tester la machine tranquillement.',
           'Honest and respectful seller. Let me inspect the laptop thoroughly.',
         ),
         'verified': true,
@@ -896,74 +944,78 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     ];
 
     return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          children: [
-            // Overall Rating Apple Card
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: _surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: _border, width: 0.8),
-              ),
-              child: Row(
-                children: [
-                  Column(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _dlSurface,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        '4.9',
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w900,
-                          color: _ink,
-                          letterSpacing:
-                              AppTypography.trackingForContext(context, -1),
-                        ),
-                      ),
-                      Row(
-                        children: List.generate(
-                          5,
-                          (i) => const Icon(
-                            CupertinoIcons.star_fill,
-                            size: 14,
-                            color: _starGold,
+                      Column(
+                        children: [
+                          Text(
+                            '4.9',
+                            style: TextStyle(
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              color: _dlInk,
+                              letterSpacing:
+                                  AppTypography.trackingForContext(context, -1),
+                            ),
                           ),
-                        ),
+                          Row(
+                            children: List.generate(
+                              5,
+                              (_) => const Icon(
+                                Icons.star_rounded,
+                                size: 15,
+                                color: _dlStarAmber,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _state.s.tr(
+                              '48 تقييم حقيقي',
+                              '48 avis réels',
+                              '48 verified reviews',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _dlMuted,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _state.s.tr('48 تقييم حقيقي', '48 avis réels',
-                            '48 verified reviews'),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _muted,
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _buildRatingBar('5', 0.88),
+                            _buildRatingBar('4', 0.10),
+                            _buildRatingBar('3', 0.02),
+                            _buildRatingBar('2', 0.00),
+                            _buildRatingBar('1', 0.00),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _buildRatingBar('5', 0.88),
-                        _buildRatingBar('4', 0.10),
-                        _buildRatingBar('3', 0.02),
-                        _buildRatingBar('2', 0.00),
-                        _buildRatingBar('1', 0.00),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                ...reviews.map((r) => _buildReviewCard(r, isAr)),
+              ],
             ),
-            const SizedBox(height: 16),
-
-            // Review List
-            ...reviews.map((r) => _buildReviewCard(r, isAr)),
-          ],
+          ),
         ),
       ),
     );
@@ -971,15 +1023,15 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
   Widget _buildRatingBar(String stars, double pct) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
       child: Row(
         children: [
           Text(
             stars,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: _muted,
+              color: _dlInk,
             ),
           ),
           const SizedBox(width: 6),
@@ -988,8 +1040,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
                 value: pct,
-                backgroundColor: const Color(0xFFE2E8F0),
-                valueColor: const AlwaysStoppedAnimation<Color>(_starGold),
+                backgroundColor: _dlPill,
+                valueColor: const AlwaysStoppedAnimation<Color>(_dlInk),
                 minHeight: 6,
               ),
             ),
@@ -1000,13 +1052,13 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   Widget _buildReviewCard(Map<String, dynamic> r, bool isAr) {
+    final author = r['name'].toString();
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _surfaceElevated,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border, width: 0.8),
+        color: _dlSurface,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1014,19 +1066,19 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFE0E7FF),
+                  color: _dlPill,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  r['name'][0],
+                  author.characters.first,
                   style: const TextStyle(
-                    color: Color(0xFF4338CA),
+                    color: _dlInk,
                     fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -1037,30 +1089,30 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          r['name'],
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                            color: _ink,
+                        Flexible(
+                          child: Text(
+                            author,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: _dlInk,
+                            ),
                           ),
                         ),
                         if (r['verified'] == true) ...[
                           const SizedBox(width: 4),
-                          const Icon(
-                            CupertinoIcons.checkmark_seal_fill,
-                            color: _emerald,
-                            size: 13,
-                          ),
+                          const ApoloVerifiedBadge(size: 14),
                         ],
                       ],
                     ),
                     Text(
-                      r['date'],
+                      r['date'].toString(),
                       style: const TextStyle(
-                        fontSize: 11,
-                        color: _muted,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 11.5,
+                        color: _dlMuted,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
@@ -1069,10 +1121,10 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               Row(
                 children: List.generate(
                   r['rating'] as int,
-                  (i) => const Icon(
-                    CupertinoIcons.star_fill,
-                    size: 12,
-                    color: _starGold,
+                  (_) => const Icon(
+                    Icons.star_rounded,
+                    size: 14,
+                    color: _dlStarAmber,
                   ),
                 ),
               ),
@@ -1080,26 +1132,26 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            r['comment'],
+            r['comment'].toString(),
             style: const TextStyle(
-              fontSize: 13,
-              color: _ink,
-              height: 1.4,
-              fontWeight: FontWeight.w500,
+              fontSize: 13.5,
+              color: _dlInk,
+              height: 1.45,
+              fontWeight: FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
             decoration: BoxDecoration(
-              color: _surface,
-              borderRadius: BorderRadius.circular(6),
+              color: _dlBg,
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              '📦 ${r['item']}',
+              r['item'].toString(),
               style: const TextStyle(
-                fontSize: 10.5,
-                color: _muted,
+                fontSize: 11.5,
+                color: _dlMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1109,71 +1161,71 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     );
   }
 
-  // ───────────────────────── TAB 3: TRUST & GUARANTEES ─────────────────────────
   Widget _buildTrustTab(bool isAr) {
     final city = _resolvedCity;
     return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          children: [
-            _buildTrustRow(
-              icon: CupertinoIcons.person_badge_plus_fill,
-              iconColor: _blueVerified,
-              title: _state.s.tr(
-                'بطاقة التعريف الوطنية مؤكدة',
-                'Pièce d\'identité vérifiée',
-                'Government ID Verified',
-              ),
-              desc: _state.s.tr(
-                'تم فحص ومصادقة وثائق الهوية الوطنية من طرف فريق التوثيق في Apolo.',
-                'Document d\'identité officiel validé par l\'équipe de conformité Apolo.',
-                'Official identity document reviewed and verified by Apolo Trust Team.',
-              ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+            child: Column(
+              children: [
+                _buildTrustRow(
+                  icon: CupertinoIcons.person_badge_plus_fill,
+                  title: _state.s.tr(
+                    'بطاقة التعريف الوطنية مؤكدة',
+                    'Pièce d’identité vérifiée',
+                    'Government ID Verified',
+                  ),
+                  desc: _state.s.tr(
+                    'تم فحص ومصادقة وثائق الهوية الوطنية من طرف فريق التوثيق في Apolo.',
+                    'Document d’identité officiel validé par l’équipe de conformité Apolo.',
+                    'Official identity document reviewed and verified by Apolo Trust Team.',
+                  ),
+                ),
+                _buildTrustRow(
+                  icon: CupertinoIcons.phone_circle_fill,
+                  title: _state.s.tr(
+                    'رقم هاتف مغربي موثق',
+                    'Numéro marocain vérifié',
+                    'Verified Phone Number',
+                  ),
+                  desc: _state.s.tr(
+                    'رقم الهاتف مفعل عبر رمز التحقق OTP ومربوط مباشرة بحساب البائع.',
+                    'Numéro de téléphone validé par code SMS OTP.',
+                    'Phone number confirmed via SMS OTP verification.',
+                  ),
+                ),
+                _buildTrustRow(
+                  icon: CupertinoIcons.shield_lefthalf_fill,
+                  title: _state.s.tr(
+                    'حماية المعاملات Apolo Safety',
+                    'Protection Apolo Safety',
+                    'Apolo Safety Protection',
+                  ),
+                  desc: _state.s.tr(
+                    'ينصح فريق Apolo بمعاينة وفحص السلعة شخصياً قبل دفع أي مبلغ.',
+                    'Nous vous recommandons de vérifier l’article en personne avant tout paiement.',
+                    'We recommend inspecting the item in person before making any payment.',
+                  ),
+                ),
+                _buildTrustRow(
+                  icon: CupertinoIcons.cube_box_fill,
+                  title: _state.s.tr(
+                    'طرق التسليم المتاحة',
+                    'Modes de livraison disponibles',
+                    'Available Delivery Methods',
+                  ),
+                  desc: _state.s.tr(
+                    'التسليم يداً بيد في $city، أو الإرسال عبر أمانة كوليس بعد الاتفاق.',
+                    'Remise en main propre à $city ou livraison express sécurisée selon accord.',
+                    'Hand-to-hand pickup in $city, or insured express shipping by agreement.',
+                  ),
+                ),
+              ],
             ),
-            _buildTrustRow(
-              icon: CupertinoIcons.phone_circle_fill,
-              iconColor: _emerald,
-              title: _state.s.tr(
-                'رقم هاتف مغربي موثق',
-                'Numéro marocain vérifié',
-                'Verified Phone Number',
-              ),
-              desc: _state.s.tr(
-                'رقم الهاتف مفعل عبر رمز التحقق OTP ومربوط مباشرة بحساب البائع.',
-                'Numéro de téléphone validé par code SMS OTP.',
-                'Phone number confirmed via SMS OTP verification.',
-              ),
-            ),
-            _buildTrustRow(
-              icon: CupertinoIcons.shield_lefthalf_fill,
-              iconColor: _red,
-              title: _state.s.tr(
-                'حماية المعاملات Apolo Safety',
-                'Protection Apolo Safety',
-                'Apolo Safety Protection',
-              ),
-              desc: _state.s.tr(
-                'ينصح فريق Apolo بمعاينة وفحص السلعة شخصياً قبل دفع أي مبلغ.',
-                'Nous vous recommandons de vérifier l\'article en personne avant tout paiement.',
-                'We recommend inspecting the item in person before making any payment.',
-              ),
-            ),
-            _buildTrustRow(
-              icon: CupertinoIcons.cube_box_fill,
-              iconColor: _red,
-              title: _state.s.tr(
-                'طرق التسليم المتاحة',
-                'Modes de livraison disponibles',
-                'Available Delivery Methods',
-              ),
-              desc: _state.s.tr(
-                'التسليم يداً بيد في $city، أو الإرسال عبر أمانة كوليس بعد الاتفاق.',
-                'Remise en main propre à $city ou livraison express sécurisée selon accord.',
-                'Hand-to-hand pickup in $city, or insured express shipping by agreement.',
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1181,17 +1233,15 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
 
   Widget _buildTrustRow({
     required IconData icon,
-    required Color iconColor,
     required String title,
     required String desc,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border, width: 0.8),
+        color: _dlSurface,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1199,14 +1249,14 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+            decoration: const BoxDecoration(
+              color: _dlBg,
+              shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: _dlInk, size: 18),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1215,18 +1265,18 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
+                    fontWeight: FontWeight.w700,
+                    color: _dlInk,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   desc,
                   style: const TextStyle(
-                    fontSize: 12,
-                    color: _muted,
-                    height: 1.4,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 12.5,
+                    color: _dlMuted,
+                    height: 1.42,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -1244,7 +1294,10 @@ class _SliverTabsDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return child;
   }
 
