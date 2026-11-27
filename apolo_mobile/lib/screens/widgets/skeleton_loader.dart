@@ -498,7 +498,7 @@ class ChatRoomSkeleton extends StatelessWidget {
   }
 }
 
-/// Skeleton for Notifications Screen list
+/// Skeleton for Notifications Screen list (Dynamic Layer v5.1)
 class NotificationsSkeleton extends StatelessWidget {
   final int itemCount;
   const NotificationsSkeleton({super.key, this.itemCount = 6});
@@ -514,14 +514,19 @@ class NotificationsSkeleton extends StatelessWidget {
       itemBuilder: (_, index) => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEDEFF3)),
+          color: const Color(0xFFF6F6F6),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const ShimmerBox(width: 44, height: 44, shape: BoxShape.circle),
+            const ShimmerBox(
+              width: 44,
+              height: 44,
+              shape: BoxShape.circle,
+              baseColor: Color(0xFFEEEEEE),
+              highlightColor: Color(0xFFFFFFFF),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -534,8 +539,16 @@ class NotificationsSkeleton extends StatelessWidget {
                         width: index.isEven ? 140 : 116,
                         height: 14,
                         borderRadius: 6,
+                        baseColor: const Color(0xFFEEEEEE),
+                        highlightColor: const Color(0xFFFFFFFF),
                       ),
-                      const ShimmerBox(width: 44, height: 11, borderRadius: 5),
+                      const ShimmerBox(
+                        width: 44,
+                        height: 11,
+                        borderRadius: 5,
+                        baseColor: Color(0xFFEEEEEE),
+                        highlightColor: Color(0xFFFFFFFF),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -543,12 +556,16 @@ class NotificationsSkeleton extends StatelessWidget {
                     width: double.infinity,
                     height: 12,
                     borderRadius: 6,
+                    baseColor: Color(0xFFEEEEEE),
+                    highlightColor: Color(0xFFFFFFFF),
                   ),
                   const SizedBox(height: 6),
                   ShimmerBox(
                     width: index.isEven ? 180 : 140,
                     height: 12,
                     borderRadius: 6,
+                    baseColor: const Color(0xFFEEEEEE),
+                    highlightColor: const Color(0xFFFFFFFF),
                   ),
                 ],
               ),
