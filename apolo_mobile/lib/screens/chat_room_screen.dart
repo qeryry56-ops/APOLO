@@ -1101,95 +1101,191 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD1D5DB),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const Icon(
-                  CupertinoIcons.exclamationmark_triangle,
-                  color: _textBlack,
-                ),
-                title: Text(
-                  s.tr('الإبلاغ عن المحادثة', 'Signaler la conversation',
-                      'Report conversation'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: _textBlack,
+      builder: (ctx) => Directionality(
+        textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEEEEE),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  showApoloReportSheet(
-                    context,
-                    targetType: 'chat',
-                    targetId:
-                        _activeFirestoreDocId ?? '${widget.conversationId}',
-                    targetName: widget.peerName,
-                    reportedUserId: _peerBlockKey,
-                    reportedUserAvatar: widget.peerAvatar,
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  blocked
-                      ? CupertinoIcons.checkmark_shield
-                      : CupertinoIcons.nosign,
-                  color: blocked ? _textBlack : const Color(0xFFE31B23),
-                ),
-                title: Text(
-                  blocked
-                      ? s.tr(
-                          'إلغاء حظر ${widget.peerName}',
-                          'Débloquer ${widget.peerName}',
-                          'Unblock ${widget.peerName}')
-                      : s.tr(
-                          'حظر ${widget.peerName}',
-                          'Bloquer ${widget.peerName}',
-                          'Block ${widget.peerName}'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: blocked ? _textBlack : const Color(0xFFE31B23),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F6F6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          showApoloReportSheet(
+                            context,
+                            targetType: 'chat',
+                            targetId: _activeFirestoreDocId ??
+                                '${widget.conversationId}',
+                            targetName: widget.peerName,
+                            reportedUserId: _peerBlockKey,
+                            reportedUserAvatar: widget.peerAvatar,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 13,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  CupertinoIcons.flag,
+                                  size: 17,
+                                  color: _textBlack,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  s.tr(
+                                    'الإبلاغ عن المحادثة',
+                                    'Signaler la conversation',
+                                    'Report conversation',
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: _textBlack,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsetsDirectional.only(start: 62),
+                        child: SizedBox(
+                          height: 1,
+                          width: double.infinity,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Color(0xFFEEEEEE),
+                            ),
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(20),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          if (blocked) {
+                            await FirebaseChatService.instance.unblockTarget(
+                              myUserId: _myUserId,
+                              targetId: _peerBlockKey,
+                            );
+                            if (mounted) setState(() {});
+                            _notice(s.tr(
+                              'تم إلغاء الحظر',
+                              'Utilisateur débloqué',
+                              'User unblocked',
+                            ));
+                          } else {
+                            await FirebaseChatService.instance.blockTarget(
+                              myUserId: _myUserId,
+                              targetId: _peerBlockKey,
+                              targetName: widget.peerName,
+                              targetAvatar: widget.peerAvatar ?? '',
+                            );
+                            if (mounted) setState(() {});
+                            _notice(s.tr(
+                              'تم حظر ${widget.peerName}',
+                              '${widget.peerName} a été bloqué',
+                              'User blocked',
+                            ));
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 13,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  blocked
+                                      ? CupertinoIcons.checkmark_shield
+                                      : CupertinoIcons.nosign,
+                                  size: 17,
+                                  color: blocked
+                                      ? _textBlack
+                                      : const Color(0xFFE31B23),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  blocked
+                                      ? s.tr(
+                                          'إلغاء حظر ${widget.peerName}',
+                                          'Débloquer ${widget.peerName}',
+                                          'Unblock ${widget.peerName}',
+                                        )
+                                      : s.tr(
+                                          'حظر ${widget.peerName}',
+                                          'Bloquer ${widget.peerName}',
+                                          'Block ${widget.peerName}',
+                                        ),
+                                  style: TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: blocked
+                                        ? _textBlack
+                                        : const Color(0xFFE31B23),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  if (blocked) {
-                    await FirebaseChatService.instance.unblockTarget(
-                      myUserId: _myUserId,
-                      targetId: _peerBlockKey,
-                    );
-                    if (mounted) setState(() {});
-                    _notice(s.tr('تم إلغاء الحظر', 'Utilisateur débloqué',
-                        'User unblocked'));
-                  } else {
-                    await FirebaseChatService.instance.blockTarget(
-                      myUserId: _myUserId,
-                      targetId: _peerBlockKey,
-                      targetName: widget.peerName,
-                      targetAvatar: widget.peerAvatar ?? '',
-                    );
-                    if (mounted) setState(() {});
-                    _notice(s.tr('تم حظر ${widget.peerName}',
-                        '${widget.peerName} a été bloqué', 'User blocked'));
-                  }
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -2808,18 +2904,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF1C1C1E)
-                      : const Color(0xFFF2F2F7),
+                      : const Color(0xFFF6F6F6),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.10)
-                        : Colors.black.withValues(alpha: 0.06),
-                    width: 0.5,
+                        ? const Color(0xFF2C2C2E)
+                        : const Color(0xFFEEEEEE),
+                    width: 1.0,
                   ),
                 ),
                 child: Row(
                   children: [
-                    // Clean native iOS square product thumbnail on the start/left
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
@@ -2835,11 +2930,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 height: 56,
                                 fit: BoxFit.cover,
                               )
-                            : const Center(
+                            : Center(
                                 child: Icon(
                                   CupertinoIcons.tag_fill,
-                                  size: 22,
-                                  color: Ios26IMessageTokens.bubbleMine,
+                                  size: 20,
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF000000),
                                 ),
                               ),
                       ),
@@ -2864,7 +2961,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               height: 1.25,
                               color: isDark
                                   ? Colors.white
-                                  : Ios26IMessageTokens.labelPrimary,
+                                  : const Color(0xFF000000),
                               letterSpacing: -0.2,
                             ),
                           ),
@@ -2877,11 +2974,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 key: const Key('chat-ad-context-price'),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: Ios26IMessageTokens.bubbleMine,
-                                  fontFeatures: [FontFeature.tabularFigures()],
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF000000),
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
                             ),
@@ -2896,7 +2997,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             ? CupertinoIcons.chevron_left
                             : CupertinoIcons.chevron_right,
                         size: 14,
-                        color: Ios26IMessageTokens.chevronTertiary,
+                        color: const Color(0xFF757575),
                       ),
                     ],
                   ],
@@ -3154,56 +3255,81 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   Widget _buildCallDropdownCard() {
     final liveCalls = _useFirestore && MediaRtcBridge.isRtcSupported;
     final isPeerOnline = _peerPresence?.isOnline == true;
-    return LiquidGlassSurface(
+    return Container(
       width: 248,
-      borderRadius: BorderRadius.circular(22),
-      fillAlpha: 0.86,
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFEEEEEE), width: 1.5),
+      ),
       child: Material(
         color: Colors.transparent,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-              child: Row(
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: isPeerOnline
-                          ? Ios26IMessageTokens.onlineGreen
-                          : Ios26IMessageTokens.dateGray,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _formatPresenceSubtitle(),
-                      key: const Key('chat-peer-presence-text'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF6F6F6),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
                         color: isPeerOnline
                             ? Ios26IMessageTokens.onlineGreen
-                            : Ios26IMessageTokens.dateGray,
+                            : const Color(0xFF9E9E9E),
+                        shape: BoxShape.circle,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _formatPresenceSubtitle(),
+                        key: const Key('chat-peer-presence-text'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isPeerOnline
+                              ? Ios26IMessageTokens.onlineGreen
+                              : const Color(0xFF757575),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
+            const Divider(
+              height: 1,
+              color: Color(0xFFEEEEEE),
+              indent: 14,
+              endIndent: 14,
+            ),
             ListTile(
               dense: true,
-              leading: const Icon(
-                CupertinoIcons.videocam_fill,
-                color: Ios26IMessageTokens.bubbleMine,
-                size: 19,
+              leading: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEEEEEE),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  CupertinoIcons.videocam_fill,
+                  color: Color(0xFF000000),
+                  size: 16,
+                ),
               ),
               title: Text(
                 liveCalls
@@ -3217,19 +3343,33 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Ios26IMessageTokens.labelPrimary,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF000000),
                 ),
               ),
               onTap: () => _startCall(isVideo: true),
             ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
+            const Divider(
+              height: 1,
+              color: Color(0xFFEEEEEE),
+              indent: 14,
+              endIndent: 14,
+            ),
             ListTile(
               dense: true,
-              leading: const Icon(
-                CupertinoIcons.phone_fill,
-                color: Ios26IMessageTokens.bubbleMine,
-                size: 18,
+              leading: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEEEEEE),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  CupertinoIcons.phone_fill,
+                  color: Color(0xFF000000),
+                  size: 15,
+                ),
               ),
               title: Text(
                 liveCalls
@@ -3243,19 +3383,33 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Ios26IMessageTokens.labelPrimary,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF000000),
                 ),
               ),
               onTap: () => _startCall(isVideo: false),
             ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
+            const Divider(
+              height: 1,
+              color: Color(0xFFEEEEEE),
+              indent: 14,
+              endIndent: 14,
+            ),
             ListTile(
               dense: true,
-              leading: const Icon(
-                CupertinoIcons.shield_lefthalf_fill,
-                color: Ios26IMessageTokens.errorRed,
-                size: 19,
+              leading: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEEEEEE),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  CupertinoIcons.shield_lefthalf_fill,
+                  color: Color(0xFFE31B23),
+                  size: 16,
+                ),
               ),
               title: Text(
                 _state.s.tr(
@@ -3267,8 +3421,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Ios26IMessageTokens.errorRed,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFE31B23),
                 ),
               ),
               onTap: () {
@@ -3309,7 +3463,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         padding: EdgeInsetsDirectional.fromSTEB(16, 12, 16, bottomInset + 12),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+          border: Border(top: BorderSide(color: Color(0xFFEEEEEE), width: 1)),
         ),
         child: Row(
           children: [
@@ -3410,14 +3564,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   Widget _buildAvatarFallback(String name) {
+    final trimmed = name.trim();
     return Container(
-      color: _chatBlueSoft,
+      color: const Color(0xFFEEEEEE),
       alignment: Alignment.center,
       child: Text(
-        name.isNotEmpty ? name[0].toUpperCase() : 'R',
+        trimmed.isNotEmpty ? trimmed.characters.first.toUpperCase() : 'A',
         style: const TextStyle(
-          color: _chatBlue,
-          fontSize: 15.5,
+          color: Color(0xFF000000),
+          fontSize: 15,
           fontWeight: FontWeight.w700,
         ),
       ),

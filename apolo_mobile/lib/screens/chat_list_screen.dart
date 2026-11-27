@@ -1,34 +1,35 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/config/app_config.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
 import '../widgets/chat_message.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../widgets/notification_badge.dart';
 import '../widgets/pull_to_refresh.dart';
 import 'auth_screen.dart';
 import 'call_screen.dart';
 import 'chat_room_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
-import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
 /// Dynamic Layer v5.1 `Inbox` / `Chats` Screen (`21768:49231`):
-/// - Large `Chats` title (`16px` horizontal padding, pure `#FFFFFF` / `#121212` canvas).
+/// - Large `Chats` title (`16px` horizontal padding, pure `#FFFFFF` / `#121212` canvas) + 1-tap `Mark all read` pill.
 /// - `#EEEEEE` stadium `Search` bar:
 ///   - `Default`: `#EEEEEE` fill, `#757575` magnifying glass + `Search` hint, no border.
 ///   - `Search / Active` (focused): `#EEEEEE` fill + `1.5px` `#000000` solid border + trailing `×` button.
 ///   - `Search / Filled` (unfocused with query): `#EEEEEE` fill, no border, `#000000` text + `#757575` trailing `×`.
-/// - `All` / `Unread` `36px` stadium filter pills (`#000000` + `#FFFFFF` active, `#EEEEEE` + `#000000` inactive).
-/// - `48 × 48` circular avatars, 2-line message previews (`#757575` read, `#000000` semi-bold unread + `#E31B23` red count badge),
-///   `1px` `#EEEEEE` divider between rows (none after last row), and `🔒 Your personal messages are end-to-end encrypted` footer.
-/// - Responsive Desktop / Web view (`>= 800px`): 2-column split view (`380px` Inbox list + `ChatRoomScreen`).
+/// - `All` / `Unread` (+ `Pinned`) `36px` stadium filter pills (`#000000` + `#FFFFFF` active, `#EEEEEE` + `#000000` inactive).
+/// - `48 × 48` `#EEEEEE` monochrome circular avatars with green online status dot, `ApoloVerifiedBadge` on verified peers,
+///   `#F6F6F6` listing context tag, 2-line message previews (`#757575` read, `#000000` semi-bold unread + `#E31B23` capped count badge),
+///   `1px` `#EEEEEE` divider between rows, Dynamic Layer long-press action sheet, and E2EE footer.
 class ChatListScreen extends StatefulWidget {
   final VoidCallback? onExploreAds;
 
@@ -44,14 +45,6 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final AppState _state = AppState();
 
-  static const List<Color> _avatarPastels = <Color>[
-    Color(0xFFEDE9FE),
-    Color(0xFFDBEAFE),
-    Color(0xFFFCE7F3),
-    Color(0xFFFEF3C7),
-    Color(0xFFD1FAE5),
-  ];
-
   List<Map<String, dynamic>> _conversations = [];
   List<Map<String, dynamic>> _firestoreConversations = [];
   List<Map<String, dynamic>> _backendConversations = [];
@@ -60,7 +53,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final Set<int> _mutedIds = {};
   bool _isLoading = true;
   String _searchQuery = '';
-  int _selectedFilterIndex = 0; // 0: All, 1: Unread
+  int _selectedFilterIndex = 0; // 0: All, 1: Unread, 2: Pinned
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -95,6 +88,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
       _loadedAuthKey = nextKey;
       _optimisticallyReadAtMs.clear();
       _loadConversations();
+    } else {
+      setState(() {});
     }
   }
 
@@ -345,7 +340,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
       'peer_avatar':
           (raw['peer_avatar'] ?? peer['avatar_url'] ?? peer['avatar'] ?? '')
               .toString(),
-      'peer_online': raw['peer_online'] == true,
+      'peer_online': raw['peer_online'] == true || peer['is_online'] == true,
+      'peer_verified': raw['peer_verified'] == true ||
+          raw['is_verified'] == true ||
+          peer['is_verified'] == true ||
+          peer['verified'] == true,
       'last_message': lastBody.isNotEmpty ? lastBody : 'Hello! How are you?',
       'last_message_time':
           (raw['last_message_time'] ?? raw['updated_at_human'] ?? '9:41')
@@ -360,12 +359,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
         final q = _searchQuery.toLowerCase();
         final peer = (conv['peer_name'] ?? '').toString().toLowerCase();
         final msg = (conv['last_message'] ?? '').toString().toLowerCase();
-        if (!peer.contains(q) && !msg.contains(q)) {
+        final adTitle = (conv['ad_title'] ?? '').toString().toLowerCase();
+        if (!peer.contains(q) && !msg.contains(q) && !adTitle.contains(q)) {
           return false;
         }
       }
       if (_selectedFilterIndex == 1) {
         return _effectiveUnread(conv) > 0;
+      }
+      if (_selectedFilterIndex == 2) {
+        final convId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
+        return _pinnedIds.contains(convId);
       }
       return true;
     }).toList();
@@ -380,274 +384,393 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return list;
   }
 
-  void _showAppleContextMenu(Map<String, dynamic> conv) {
-    HapticFeedback.heavyImpact();
+  void _markAllConversationsRead() {
+    HapticFeedback.mediumImpact();
+    int totalCleared = 0;
+    setState(() {
+      for (final conv in _conversations) {
+        final prev = _effectiveUnread(conv);
+        totalCleared += prev;
+        final updatedMs = int.tryParse('${conv['updated_at_ms'] ?? 0}') ?? 0;
+        _optimisticallyReadAtMs[_convKey(conv)] = updatedMs;
+        conv['unread_count'] = 0;
+      }
+    });
+    if (totalCleared > 0) {
+      _state.decrementUnreadChatCountOptimistically(totalCleared);
+    }
+    try {
+      _state.api.dio.post('/chat/read-all');
+    } catch (_) {}
+  }
+
+  /// Dynamic Layer v5.1 Conversation Action Sheet (replaces legacy blurred shadow popup).
+  Future<void> _showChatActionsSheet(Map<String, dynamic> conv) async {
+    HapticFeedback.mediumImpact();
+    final s = _state.s;
     final int convId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
     final String peerName = (conv['peer_name'] ?? 'Jenny Wilson').toString();
     final String? avatarUrl = conv['peer_avatar']?.toString();
     final String lastTime = (conv['last_message_time'] ?? '9:41').toString();
     final bool isPinned = _pinnedIds.contains(convId);
     final bool isMuted = _mutedIds.contains(convId);
+    final bool isVerified = conv['peer_verified'] == true;
+    final int unread = _effectiveUnread(conv);
 
-    showGeneralDialog(
+    await showModalBottomSheet<void>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Dismiss Context Menu',
-      barrierColor: Colors.black.withValues(alpha: 0.22),
-      transitionDuration: const Duration(milliseconds: 220),
-      transitionBuilder: (ctx, anim, secondaryAnim, child) {
-        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutBack);
-        return FadeTransition(
-          opacity: anim,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
-            child: child,
-          ),
-        );
-      },
-      pageBuilder: (dialogCtx, anim1, anim2) {
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.pop(dialogCtx),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Center(
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    constraints: const BoxConstraints(maxWidth: 380),
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetCtx) {
+        return Directionality(
+          textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEEEEE),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFEEEEEE),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: avatarUrl != null && avatarUrl.isNotEmpty
+                            ? AppImage(
+                                url: avatarUrl,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                fallback: _buildAvatarFallback(peerName),
+                              )
+                            : _buildAvatarFallback(peerName),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    peerName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFF000000),
+                                      fontSize: 16.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                if (isVerified) ...[
+                                  const SizedBox(width: 5),
+                                  const ApoloVerifiedBadge(size: 15),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              s.tr(
+                                'آخر رسالة $lastTime',
+                                'Dernier message $lastTime',
+                                'Last message $lastTime',
+                              ),
+                              style: const TextStyle(
+                                color: Color(0xFF757575),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ApoloDlIconCircleButton(
+                        icon: CupertinoIcons.xmark,
+                        iconSize: 16,
+                        backgroundColor: const Color(0xFFEEEEEE),
+                        iconColor: const Color(0xFF000000),
+                        onPressed: () => Navigator.of(sheetCtx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F6F6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 230,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 28,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildAppleMenuItem(
-                                icon: isPinned
-                                    ? CupertinoIcons.pin_slash
-                                    : CupertinoIcons.pin,
-                                label: isPinned ? 'Unpin' : 'Pin',
-                                onTap: () {
-                                  Navigator.pop(dialogCtx);
-                                  HapticFeedback.mediumImpact();
-                                  setState(() {
-                                    if (isPinned) {
-                                      _pinnedIds.remove(convId);
-                                    } else {
-                                      _pinnedIds.add(convId);
-                                    }
-                                  });
-                                  _showActionSnackBar(isPinned
-                                      ? 'تم إلغاء تثبيت المحادثة'
-                                      : 'تم تثبيت المحادثة في الأعلى');
-                                },
-                              ),
-                              _buildAppleMenuItem(
-                                icon: CupertinoIcons.archivebox,
-                                label: 'Archive',
-                                onTap: () {
-                                  Navigator.pop(dialogCtx);
-                                  HapticFeedback.mediumImpact();
-                                  setState(() {
-                                    _conversations
-                                        .removeWhere((c) => c['id'] == convId);
-                                  });
-                                  _showActionSnackBar(
-                                      'تم نقل المحادثة إلى الأرشيف');
-                                },
-                              ),
-                              _buildAppleMenuItem(
-                                icon: isMuted
-                                    ? CupertinoIcons.bell
-                                    : CupertinoIcons.bell_slash,
-                                label: isMuted ? 'Unmute' : 'Mute',
-                                onTap: () {
-                                  Navigator.pop(dialogCtx);
-                                  HapticFeedback.mediumImpact();
-                                  setState(() {
-                                    if (isMuted) {
-                                      _mutedIds.remove(convId);
-                                    } else {
-                                      _mutedIds.add(convId);
-                                    }
-                                  });
-                                  _showActionSnackBar(isMuted
-                                      ? 'تم إلغاء كتم الإشعارات'
-                                      : 'تم كتم إشعارات المحادثة');
-                                },
-                              ),
-                              _buildAppleMenuItem(
-                                icon: CupertinoIcons.nosign,
-                                label: 'Block',
-                                onTap: () {
-                                  Navigator.pop(dialogCtx);
-                                  HapticFeedback.heavyImpact();
-                                  final myUserId = int.tryParse(
-                                          '${_state.currentUser?['id'] ?? 0}') ??
-                                      0;
-                                  final peerKey =
-                                      '${conv['peer_id'] ?? convId}'.trim();
-                                  FirebaseChatService.instance.blockTarget(
-                                    myUserId: myUserId,
-                                    targetId:
-                                        peerKey.isNotEmpty ? peerKey : peerName,
-                                    targetName: peerName,
-                                    targetAvatar: avatarUrl ?? '',
-                                  );
-                                  setState(() {
-                                    _conversations
-                                        .removeWhere((c) => c['id'] == convId);
-                                  });
-                                  _showActionSnackBar('تم حظر $peerName');
-                                },
-                              ),
-                              _buildAppleMenuItem(
-                                icon: CupertinoIcons.flag,
-                                label: 'Report',
-                                onTap: () {
-                                  Navigator.pop(dialogCtx);
-                                  HapticFeedback.mediumImpact();
-                                  showApoloReportSheet(
-                                    context,
-                                    targetType: 'chat',
-                                    targetId:
-                                        '${conv['firestore_doc_id'] ?? convId}',
-                                    targetName: peerName,
-                                    reportedUserId: '${conv['peer_id'] ?? ''}',
-                                    reportedUserAvatar: avatarUrl,
-                                  );
-                                },
-                              ),
-                              _buildAppleMenuItem(
-                                icon: CupertinoIcons.trash,
-                                label: 'Delete',
-                                isDestructive: true,
-                                onTap: () {
-                                  Navigator.pop(dialogCtx);
-                                  HapticFeedback.heavyImpact();
-                                  final docId =
-                                      conv['firestore_doc_id']?.toString();
-                                  final myUserId = int.tryParse(
-                                          '${_state.currentUser?['id'] ?? ''}') ??
-                                      0;
-                                  if (FirebaseChatService.instance.isReady &&
-                                      docId != null &&
-                                      docId.isNotEmpty &&
-                                      myUserId > 0) {
-                                    FirebaseChatService.instance
-                                        .deleteConversationForMe(
-                                      docId: docId,
-                                      myUserId: myUserId,
-                                    );
-                                  }
-                                  setState(() {
-                                    _conversations
-                                        .removeWhere((c) => c['id'] == convId);
-                                  });
-                                  _showActionSnackBar(
-                                      'تم حذف المحادثة نهائياً');
-                                },
-                              ),
-                            ],
-                          ),
+                        _buildDlSheetActionRow(
+                          rowKey: const Key('inbox-sheet-pin'),
+                          icon: isPinned
+                              ? CupertinoIcons.pin_slash
+                              : CupertinoIcons.pin,
+                          label: isPinned
+                              ? s.tr('إلغاء التثبيت', 'Désépingler', 'Unpin chat')
+                              : s.tr('تثبيت في الأعلى', 'Épingler', 'Pin chat'),
+                          onTap: () {
+                            Navigator.of(sheetCtx).pop();
+                            HapticFeedback.mediumImpact();
+                            setState(() {
+                              if (isPinned) {
+                                _pinnedIds.remove(convId);
+                                if (_pinnedIds.isEmpty &&
+                                    _selectedFilterIndex == 2) {
+                                  _selectedFilterIndex = 0;
+                                }
+                              } else {
+                                _pinnedIds.add(convId);
+                              }
+                            });
+                            _showActionSnackBar(
+                              isPinned
+                                  ? s.tr(
+                                      'تم إلغاء تثبيت المحادثة',
+                                      'Discussion désépinglée',
+                                      'Chat unpinned',
+                                    )
+                                  : s.tr(
+                                      'تم تثبيت المحادثة في الأعلى',
+                                      'Discussion épinglée',
+                                      'Chat pinned to top',
+                                    ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 20,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
+                        if (unread > 0) ...[
+                          _buildSheetDivider(),
+                          _buildDlSheetActionRow(
+                            rowKey: const Key('inbox-sheet-mark-read'),
+                            icon: CupertinoIcons.checkmark_alt,
+                            label: s.tr(
+                              'تحديد كمقروء',
+                              'Marquer comme lu',
+                              'Mark as read',
+                            ),
+                            onTap: () {
+                              Navigator.of(sheetCtx).pop();
+                              HapticFeedback.selectionClick();
+                              final updatedMs =
+                                  int.tryParse('${conv['updated_at_ms'] ?? 0}') ??
+                                      0;
+                              _optimisticallyReadAtMs[_convKey(conv)] =
+                                  updatedMs;
+                              setState(() => conv['unread_count'] = 0);
+                              _state.decrementUnreadChatCountOptimistically(
+                                unread,
+                              );
+                            },
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Color(0xFFEEEEEE),
+                        ],
+                        _buildSheetDivider(),
+                        _buildDlSheetActionRow(
+                          rowKey: const Key('inbox-sheet-mute'),
+                          icon: isMuted
+                              ? CupertinoIcons.bell
+                              : CupertinoIcons.bell_slash,
+                          label: isMuted
+                              ? s.tr(
+                                  'تفعيل الإشعارات',
+                                  'Réactiver les alertes',
+                                  'Unmute notifications',
+                                )
+                              : s.tr(
+                                  'كتم الإشعارات',
+                                  'Mettre en sourdine',
+                                  'Mute notifications',
                                 ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: avatarUrl != null &&
-                                          avatarUrl.isNotEmpty
-                                      ? AppImage(
-                                          url: avatarUrl,
-                                          fit: BoxFit.cover,
-                                          fallback: _buildAvatarFallback(
-                                              peerName, convId),
-                                        )
-                                      : _buildAvatarFallback(peerName, convId),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      peerName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: const Color(0xFF000000),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing:
-                                            AppTypography.trackingForContext(
-                                                context, -0.2),
-                                      ),
+                          onTap: () {
+                            Navigator.of(sheetCtx).pop();
+                            HapticFeedback.mediumImpact();
+                            setState(() {
+                              if (isMuted) {
+                                _mutedIds.remove(convId);
+                              } else {
+                                _mutedIds.add(convId);
+                              }
+                            });
+                            _showActionSnackBar(
+                              isMuted
+                                  ? s.tr(
+                                      'تم إلغاء كتم الإشعارات',
+                                      'Notifications réactivées',
+                                      'Notifications unmuted',
+                                    )
+                                  : s.tr(
+                                      'تم كتم إشعارات المحادثة',
+                                      'Discussion mise en sourdine',
+                                      'Chat muted',
                                     ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      _state.s.tr(
-                                        'أُرسلت $lastTime',
-                                        'Envoyé $lastTime',
-                                        'Sent $lastTime',
-                                      ),
-                                      style: const TextStyle(
-                                        color: Color(0xFF757575),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                            );
+                          },
+                        ),
+                        _buildSheetDivider(),
+                        _buildDlSheetActionRow(
+                          rowKey: const Key('inbox-sheet-archive'),
+                          icon: CupertinoIcons.archivebox,
+                          label: s.tr(
+                            'نقل إلى الأرشيف',
+                            'Archiver la discussion',
+                            'Archive chat',
                           ),
+                          onTap: () {
+                            Navigator.of(sheetCtx).pop();
+                            HapticFeedback.mediumImpact();
+                            setState(() {
+                              _conversations
+                                  .removeWhere((c) => c['id'] == convId);
+                            });
+                            _showActionSnackBar(
+                              s.tr(
+                                'تم نقل المحادثة إلى الأرشيف',
+                                'Discussion archivée',
+                                'Chat archived',
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F6F6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildDlSheetActionRow(
+                          rowKey: const Key('inbox-sheet-report'),
+                          icon: CupertinoIcons.flag,
+                          label: s.tr(
+                            'الإبلاغ عن المحادثة',
+                            'Signaler la discussion',
+                            'Report chat',
+                          ),
+                          onTap: () {
+                            Navigator.of(sheetCtx).pop();
+                            HapticFeedback.mediumImpact();
+                            showApoloReportSheet(
+                              context,
+                              targetType: 'chat',
+                              targetId:
+                                  '${conv['firestore_doc_id'] ?? convId}',
+                              targetName: peerName,
+                              reportedUserId: '${conv['peer_id'] ?? ''}',
+                              reportedUserAvatar: avatarUrl,
+                            );
+                          },
+                        ),
+                        _buildSheetDivider(),
+                        _buildDlSheetActionRow(
+                          rowKey: const Key('inbox-sheet-block'),
+                          icon: CupertinoIcons.nosign,
+                          label: s.tr(
+                            'حظر $peerName',
+                            'Bloquer $peerName',
+                            'Block $peerName',
+                          ),
+                          onTap: () {
+                            Navigator.of(sheetCtx).pop();
+                            HapticFeedback.heavyImpact();
+                            final myUserId = int.tryParse(
+                                    '${_state.currentUser?['id'] ?? 0}') ??
+                                0;
+                            final peerKey =
+                                '${conv['peer_id'] ?? convId}'.trim();
+                            FirebaseChatService.instance.blockTarget(
+                              myUserId: myUserId,
+                              targetId:
+                                  peerKey.isNotEmpty ? peerKey : peerName,
+                              targetName: peerName,
+                              targetAvatar: avatarUrl ?? '',
+                            );
+                            setState(() {
+                              _conversations
+                                  .removeWhere((c) => c['id'] == convId);
+                            });
+                            _showActionSnackBar(
+                              s.tr(
+                                'تم حظر $peerName',
+                                '$peerName a été bloqué',
+                                'Blocked $peerName',
+                              ),
+                            );
+                          },
+                        ),
+                        _buildSheetDivider(),
+                        _buildDlSheetActionRow(
+                          rowKey: const Key('inbox-sheet-delete'),
+                          icon: CupertinoIcons.trash,
+                          label: s.tr(
+                            'حذف المحادثة',
+                            'Supprimer la discussion',
+                            'Delete chat',
+                          ),
+                          isDestructive: true,
+                          onTap: () {
+                            Navigator.of(sheetCtx).pop();
+                            HapticFeedback.heavyImpact();
+                            final docId =
+                                conv['firestore_doc_id']?.toString();
+                            final myUserId = int.tryParse(
+                                    '${_state.currentUser?['id'] ?? ''}') ??
+                                0;
+                            if (FirebaseChatService.instance.isReady &&
+                                docId != null &&
+                                docId.isNotEmpty &&
+                                myUserId > 0) {
+                              FirebaseChatService.instance
+                                  .deleteConversationForMe(
+                                docId: docId,
+                                myUserId: myUserId,
+                              );
+                            }
+                            setState(() {
+                              _conversations
+                                  .removeWhere((c) => c['id'] == convId);
+                            });
+                            _showActionSnackBar(
+                              s.tr(
+                                'تم حذف المحادثة',
+                                'Discussion supprimée',
+                                'Chat deleted',
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -656,34 +779,57 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildAppleMenuItem({
+  Widget _buildSheetDivider() {
+    return const Padding(
+      padding: EdgeInsetsDirectional.only(start: 56),
+      child: SizedBox(
+        height: 1,
+        width: double.infinity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: Color(0xFFEEEEEE)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDlSheetActionRow({
+    required Key rowKey,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    final Color itemColor =
+    final Color fg =
         isDestructive ? const Color(0xFFE31B23) : const Color(0xFF000000);
-
     return InkWell(
+      key: rowKey,
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: itemColor,
-              size: 20,
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, size: 17, color: fg),
             ),
-            const SizedBox(width: 14),
-            Text(
-              label,
-              style: TextStyle(
-                color: itemColor,
-                fontSize: 15.5,
-                fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w600,
-                letterSpacing: AppTypography.trackingForContext(context, -0.2),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 14.5,
+                  fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -693,24 +839,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   void _showActionSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF000000),
+          shape: const StadiumBorder(),
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          duration: const Duration(seconds: 2),
         ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF000000),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final Color bgColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final Color ink = isDark ? Colors.white : const Color(0xFF000000);
+    final Color surfaceSubtle =
+        isDark ? const Color(0xFF1E1E22) : const Color(0xFFF6F6F6);
     final Color mutedText =
         isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
     final Color borderColor =
@@ -753,8 +910,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           '${_activeWebConversation!['backend_id'] ?? ''}'),
                       adId: int.tryParse(
                           '${_activeWebConversation!['ad_id'] ?? ''}'),
-                      firestoreDocId: _activeWebConversation!['firestore_doc_id']
-                          ?.toString(),
+                      firestoreDocId:
+                          _activeWebConversation!['firestore_doc_id']
+                              ?.toString(),
                       peerId: int.tryParse(
                           '${_activeWebConversation!['peer_id'] ?? ''}'),
                       peerName: (_activeWebConversation!['peer_name'] ??
@@ -767,15 +925,45 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       adImage:
                           _activeWebConversation!['ad_image']?.toString(),
                       adPrice: _activeWebConversation!['ad_price']?.toString(),
+                      isPeerVerified:
+                          _activeWebConversation!['peer_verified'] == true,
                     )
                   : Center(
-                      child: Text(
-                        _state.s.tr(
-                          'حدد محادثة لبدء المراسلة',
-                          'Sélectionnez une discussion',
-                          'Select a conversation to start messaging',
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: surfaceSubtle,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                CupertinoIcons.chat_bubble_2,
+                                size: 24,
+                                color: ink,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              _state.s.tr(
+                                'حدد محادثة لبدء المراسلة',
+                                'Sélectionnez une discussion',
+                                'Select a conversation to start messaging',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: mutedText,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                        style: TextStyle(color: mutedText, fontSize: 15),
                       ),
                     ),
             ),
@@ -806,6 +994,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final Color ink = isDark ? Colors.white : const Color(0xFF000000);
     final Color pillBg =
         isDark ? const Color(0xFF262629) : const Color(0xFFEEEEEE);
+    final Color surfaceSubtle =
+        isDark ? const Color(0xFF1E1E22) : const Color(0xFFF6F6F6);
     final Color mutedText =
         isDark ? const Color(0xFF9CA3AF) : const Color(0xFF757575);
     final Color dividerColor =
@@ -813,23 +1003,68 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     final bool searchFocused = _searchFocusNode.hasFocus;
     final bool showSearchClear = searchFocused || _searchQuery.isNotEmpty;
+    final bool hasAnyUnread =
+        _state.isLoggedIn && _conversations.any((c) => _effectiveUnread(c) > 0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Dynamic Layer v5.1 Large `Chats` Title (`16px` horizontal padding, clean top)
+        // 1. Dynamic Layer v5.1 Large `Chats` Title + optional `Mark all read` capsule
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Text(
-            s.tr('المحادثات', 'Discussions', 'Chats'),
-            key: const Key('inbox-title'),
-            style: TextStyle(
-              color: ink,
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              height: 36.0 / 28.0,
-              letterSpacing: AppTypography.trackingForContext(context, -0.5),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  s.tr('المحادثات', 'Discussions', 'Chats'),
+                  key: const Key('inbox-title'),
+                  style: TextStyle(
+                    color: ink,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    height: 36.0 / 28.0,
+                    letterSpacing:
+                        AppTypography.trackingForContext(context, -0.5),
+                  ),
+                ),
+              ),
+              if (hasAnyUnread)
+                Material(
+                  color: pillBg,
+                  shape: const StadiumBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    key: const Key('inbox-mark-all-read'),
+                    customBorder: const StadiumBorder(),
+                    onTap: _markAllConversationsRead,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            CupertinoIcons.checkmark_alt,
+                            size: 14,
+                            color: ink,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            s.tr('قراءة الكل', 'Tout lire', 'Mark all read'),
+                            style: TextStyle(
+                              color: ink,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
 
@@ -925,29 +1160,44 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
         const SizedBox(height: 14),
 
-        // 3. Filter Pills (`All` | `Unread` — `36px` stadium pills)
+        // 3. Filter Pills (`All` | `Unread` | `Pinned` — `36px` stadium pills)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              _buildFilterPill(
-                index: 0,
-                key: const Key('inbox-filter-all'),
-                label: s.tr('الكل', 'Tout', 'All'),
-                ink: ink,
-                pillBg: pillBg,
-                isDark: isDark,
-              ),
-              const SizedBox(width: 8),
-              _buildFilterPill(
-                index: 1,
-                key: const Key('inbox-filter-unread'),
-                label: s.tr('غير مقروءة', 'Non lus', 'Unread'),
-                ink: ink,
-                pillBg: pillBg,
-                isDark: isDark,
-              ),
-            ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                _buildFilterPill(
+                  index: 0,
+                  key: const Key('inbox-filter-all'),
+                  label: s.tr('الكل', 'Tout', 'All'),
+                  ink: ink,
+                  pillBg: pillBg,
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 8),
+                _buildFilterPill(
+                  index: 1,
+                  key: const Key('inbox-filter-unread'),
+                  label: s.tr('غير مقروءة', 'Non lus', 'Unread'),
+                  ink: ink,
+                  pillBg: pillBg,
+                  isDark: isDark,
+                ),
+                if (_pinnedIds.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  _buildFilterPill(
+                    index: 2,
+                    key: const Key('inbox-filter-pinned'),
+                    label: s.tr('المثبتة', 'Épinglés', 'Pinned'),
+                    ink: ink,
+                    pillBg: pillBg,
+                    isDark: isDark,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
 
@@ -993,11 +1243,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   'Aucun message non lu',
                                   'No unread chats',
                                 )
-                              : s.tr(
-                                  'لا توجد محادثات بعد',
-                                  'Aucune discussion pour le moment',
-                                  'No chats yet',
-                                ),
+                              : _selectedFilterIndex == 2
+                                  ? s.tr(
+                                      'لا توجد محادثات مثبتة',
+                                      'Aucune discussion épinglée',
+                                      'No pinned chats',
+                                    )
+                                  : s.tr(
+                                      'لا توجد محادثات بعد',
+                                      'Aucune discussion pour le moment',
+                                      'No chats yet',
+                                    ),
                           description: s.tr(
                             'تصفح الإعلانات وتواصل مع البائعين مباشرة بأمان تام.',
                             'Parcourez les annonces et discutez directement avec les vendeurs.',
@@ -1019,6 +1275,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               : null,
                         )
                       : PullToRefresh(
+                          brandColor: ink,
+                          backgroundColor: isDark
+                              ? const Color(0xFF121212)
+                              : Colors.white,
                           onRefresh: _loadConversations,
                           child: ListView.builder(
                             physics: const BouncingScrollPhysics(
@@ -1043,6 +1303,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     ink: ink,
                                     mutedText: mutedText,
                                     pillBg: pillBg,
+                                    surfaceSubtle: surfaceSubtle,
                                   ),
                                   if (!isLast)
                                     Padding(
@@ -1107,7 +1368,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildEncryptedFooter(dynamic s, Color mutedText) {
+  Widget _buildEncryptedFooter(AppStrings s, Color mutedText) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
       child: Center(
@@ -1150,17 +1411,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
     required Color ink,
     required Color mutedText,
     required Color pillBg,
+    required Color surfaceSubtle,
   }) {
     final int convId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
     final String peerName = (conv['peer_name'] ?? 'Jenny Wilson').toString();
     final String lastMsg = (conv['last_message'] ?? '').toString();
     final String lastTime = (conv['last_message_time'] ?? '').toString();
     final String? avatarUrl = conv['peer_avatar']?.toString();
+    final String adTitle = (conv['ad_title'] ?? '').toString().trim();
+    final String adImage = (conv['ad_image'] ?? '').toString().trim();
     final int unread = _effectiveUnread(conv);
     final bool isPinned = _pinnedIds.contains(convId);
     final bool isMuted = _mutedIds.contains(convId);
+    final bool isPeerOnline = conv['peer_online'] == true;
+    final bool isPeerVerified = conv['peer_verified'] == true;
 
     return InkWell(
+      key: Key('inbox-row-$convId'),
       onTap: () {
         HapticFeedback.lightImpact();
         final prevUnread = _effectiveUnread(conv);
@@ -1185,47 +1452,62 @@ class _ChatListScreenState extends State<ChatListScreen> {
               firestoreDocId: conv['firestore_doc_id']?.toString(),
               peerId: int.tryParse('${conv['peer_id'] ?? ''}'),
               peerName: peerName,
-              adTitle: conv['ad_title']?.toString() ?? '',
+              adTitle: adTitle,
               peerAvatar: avatarUrl,
-              adImage: conv['ad_image']?.toString(),
+              adImage: adImage.isNotEmpty ? adImage : null,
               adPrice: conv['ad_price']?.toString(),
+              isPeerVerified: isPeerVerified,
             ),
           ),
         ).then((_) {
           if (mounted) _loadConversations();
         });
       },
-      onLongPress: () => _showAppleContextMenu(conv),
+      onLongPress: () => _showChatActionsSheet(conv),
       child: Container(
-        color: isSelected ? pillBg.withValues(alpha: 0.65) : Colors.transparent,
+        color: isSelected ? surfaceSubtle : Colors.transparent,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 48x48 Circular Avatar (Figma `Inbox` spec)
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _avatarPastelFor(peerName, convId),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
+            // 48x48 Monochrome Dynamic Layer Avatar + Accessible Green Presence Dot
+            NotificationBadge(
+              count: isPeerOnline ? 1 : 0,
+              type: NotificationBadgeType.dot,
+              variant: NotificationBadgeVariant.green,
+              top: 0,
+              right: 0,
+              dotSize: 11,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: pillBg,
+                ),
+                clipBehavior: Clip.antiAlias,
                 child: avatarUrl != null && avatarUrl.isNotEmpty
                     ? AppImage(
                         url: avatarUrl,
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
-                        fallback: _buildAvatarFallback(peerName, convId),
+                        fallback: _buildAvatarFallback(
+                          peerName,
+                          bgColor: pillBg,
+                          fgColor: ink,
+                        ),
                       )
-                    : _buildAvatarFallback(peerName, convId),
+                    : _buildAvatarFallback(
+                        peerName,
+                        bgColor: pillBg,
+                        fgColor: ink,
+                      ),
               ),
             ),
             const SizedBox(width: 12),
 
-            // Middle + Right Column: Top (Name + Time), Bottom (2-line Preview + Red Unread Badge)
+            // Middle + Right Column: Top (Name + Verified + Pin/Mute + Time), Optional Ad Tag, Bottom (Preview + Unread Badge)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1258,6 +1540,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 ),
                               ),
                             ),
+                            if (isPeerVerified) ...[
+                              const SizedBox(width: 4),
+                              const ApoloVerifiedBadge(size: 14),
+                            ],
                             if (isPinned) ...[
                               const SizedBox(width: 5),
                               Icon(
@@ -1295,6 +1581,33 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                     ],
                   ),
+                  if (adTitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          CupertinoIcons.tag_fill,
+                          size: 10.5,
+                          color: mutedText,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            adTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: mutedText,
+                              fontSize: 12.0,
+                              fontWeight: FontWeight.w500,
+                              height: 16.0 / 12.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -1337,12 +1650,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                           child: Text(
                             unread > 99 ? '99+' : '$unread',
+                            textDirection: TextDirection.ltr,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               height: 1.1,
                               fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ),
+                      ] else if (adImage.isNotEmpty) ...[
+                        const SizedBox(width: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            color: surfaceSubtle,
+                            child: AppImage(
+                              url: adImage,
+                              width: 38,
+                              height: 38,
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
@@ -1358,19 +1688,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Color _avatarPastelFor(String name, int seedId) {
-    final hash = (name.hashCode.abs() + seedId.abs());
-    return _avatarPastels[hash % _avatarPastels.length];
-  }
-
-  Widget _buildAvatarFallback(String name, int seedId) {
+  Widget _buildAvatarFallback(
+    String name, {
+    Color bgColor = const Color(0xFFEEEEEE),
+    Color fgColor = const Color(0xFF000000),
+  }) {
+    final trimmed = name.trim();
+    final initial =
+        trimmed.isNotEmpty ? trimmed.characters.first.toUpperCase() : 'A';
     return Container(
-      color: _avatarPastelFor(name, seedId),
+      color: bgColor,
       alignment: Alignment.center,
       child: Text(
-        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'A',
-        style: const TextStyle(
-          color: Color(0xFF111827),
+        initial,
+        style: TextStyle(
+          color: fgColor,
           fontSize: 17,
           fontWeight: FontWeight.w700,
         ),

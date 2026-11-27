@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/services/media_rtc_bridge.dart';
 import '../core/state/app_state.dart';
+import '../widgets/apolo_badges_kit.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'widgets/app_image.dart';
 
 /// Real-time WebRTC Audio & Video Call screen using Firestore signaling.
@@ -304,42 +306,83 @@ class _CallScreenState extends State<CallScreen> {
   Widget build(BuildContext context) {
     final s = _state.s;
     if (!_rtcAvailable) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
+      return Directionality(
+        textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
           backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF0A0A0A),
-          elevation: 0,
-          title: Text(s.tr('المكالمات', 'Appels', 'Calls')),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
+          body: SafeArea(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(CupertinoIcons.phone,
-                    size: 48, color: Color(0xFF0A0A0A)),
-                const SizedBox(height: 20),
-                Text(
-                    s.tr(
-                        'المكالمات غير متاحة على هذا الجهاز حالياً',
-                        'Appels indisponibles sur cet appareil',
-                        'Calls are unavailable on this device'),
-                    key: const Key('calls-unavailable'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0A0A0A),
-                    foregroundColor: Colors.white,
-                    shape: const StadiumBorder(),
+                ApoloDlTopNav(
+                  title: s.tr('المكالمات', 'Appels', 'Calls'),
+                  onBack: () => Navigator.maybePop(context),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 32,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF6F6F6),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  CupertinoIcons.phone_fill,
+                                  size: 24,
+                                  color: Color(0xFF000000),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                s.tr(
+                                  'المكالمات غير متاحة على هذا الجهاز حالياً',
+                                  'Appels indisponibles sur cet appareil',
+                                  'Calls are unavailable on this device',
+                                ),
+                                key: const Key('calls-unavailable'),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFF000000),
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              ApoloDlButton(
+                                label: s.tr(
+                                  'العودة للمحادثة',
+                                  'Revenir à la conversation',
+                                  'Back to Chat',
+                                ),
+                                variant: ApoloDlButtonVariant.primary,
+                                borderRadius: 999,
+                                height: 48,
+                                fullWidth: true,
+                                onPressed: () => Navigator.maybePop(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  onPressed: () => Navigator.maybePop(context),
-                  child: Text(s.tr('العودة للمحادثة',
-                      'Revenir à la conversation', 'Back to Chat')),
                 ),
               ],
             ),
@@ -349,11 +392,11 @@ class _CallScreenState extends State<CallScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: const Color(0xFF000000),
       body: SafeArea(
         child: Column(
           children: [
-            // Top Bar
+            // Dynamic Layer Dark Top Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
@@ -362,7 +405,7 @@ class _CallScreenState extends State<CallScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
+                      color: const Color(0xFF1C1C1E),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
@@ -378,8 +421,10 @@ class _CallScreenState extends State<CallScreen> {
                         const SizedBox(width: 6),
                         Text(
                           widget.isVideo
-                              ? s.tr('مكالمة فيديو', 'Appel vidéo', 'Video Call')
-                              : s.tr('مكالمة صوتية', 'Appel vocal', 'Voice Call'),
+                              ? s.tr(
+                                  'مكالمة فيديو', 'Appel vidéo', 'Video Call')
+                              : s.tr(
+                                  'مكالمة صوتية', 'Appel vocal', 'Voice Call'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -400,7 +445,7 @@ class _CallScreenState extends State<CallScreen> {
                         textDirection:
                             _status == 'connected' ? TextDirection.ltr : null,
                         style: const TextStyle(
-                          color: Colors.white70,
+                          color: Color(0xFF9E9E9E),
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           fontFeatures: [FontFeature.tabularFigures()],
@@ -412,22 +457,18 @@ class _CallScreenState extends State<CallScreen> {
               ),
             ),
 
-            // Center Peer Info (visible for voice calls or while ringing)
+            // Center Peer Info
             Expanded(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 108,
-                      height: 108,
-                      decoration: BoxDecoration(
+                      width: 104,
+                      height: 104,
+                      decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.14),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.28),
-                          width: 2,
-                        ),
+                        color: Color(0xFF1C1C1E),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: widget.peerAvatar != null &&
@@ -435,8 +476,8 @@ class _CallScreenState extends State<CallScreen> {
                           ? AppImage(
                               url: widget.peerAvatar!,
                               fit: BoxFit.cover,
-                              width: 108,
-                              height: 108,
+                              width: 104,
+                              height: 104,
                             )
                           : Center(
                               child: Text(
@@ -445,20 +486,32 @@ class _CallScreenState extends State<CallScreen> {
                                     : 'A',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.w800,
+                                  fontSize: 38,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
                     ),
                     const SizedBox(height: 18),
-                    Text(
-                      widget.peerName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            widget.peerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const ApoloVerifiedBadge(size: 18),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -467,7 +520,7 @@ class _CallScreenState extends State<CallScreen> {
                       textDirection:
                           _status == 'connected' ? TextDirection.ltr : null,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Color(0xFF9E9E9E),
                         fontSize: 14.5,
                         fontWeight: FontWeight.w500,
                         fontFeatures: [FontFeature.tabularFigures()],

@@ -393,7 +393,7 @@ class AdReelsSkeleton extends StatelessWidget {
   }
 }
 
-/// Skeleton for Chat List Screen conversations
+/// Skeleton for Chat List Screen conversations (Dynamic Layer v5.1)
 class ChatListSkeleton extends StatelessWidget {
   final int itemCount;
   const ChatListSkeleton({super.key, this.itemCount = 7});
@@ -402,13 +402,28 @@ class ChatListSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
       itemCount: itemCount,
-      separatorBuilder: (_, __) => const SizedBox(height: 14),
+      separatorBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: SizedBox(
+          height: 1,
+          width: double.infinity,
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: Color(0xFFEEEEEE)),
+          ),
+        ),
+      ),
       itemBuilder: (_, index) => Row(
         children: [
-          const ShimmerBox(width: 54, height: 54, shape: BoxShape.circle),
-          const SizedBox(width: 14),
+          const ShimmerBox(
+            width: 48,
+            height: 48,
+            shape: BoxShape.circle,
+            baseColor: Color(0xFFEEEEEE),
+            highlightColor: Color(0xFFF6F6F6),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,18 +435,28 @@ class ChatListSkeleton extends StatelessWidget {
                       width: index.isEven ? 132 : 108,
                       height: 15,
                       borderRadius: 6,
+                      baseColor: const Color(0xFFEEEEEE),
+                      highlightColor: const Color(0xFFF6F6F6),
                     ),
-                    const ShimmerBox(width: 42, height: 11, borderRadius: 5),
+                    const ShimmerBox(
+                      width: 42,
+                      height: 11,
+                      borderRadius: 5,
+                      baseColor: Color(0xFFEEEEEE),
+                      highlightColor: Color(0xFFF6F6F6),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(
+                    const Expanded(
                       child: ShimmerBox(
                         width: double.infinity,
                         height: 13,
                         borderRadius: 6,
+                        baseColor: Color(0xFFEEEEEE),
+                        highlightColor: Color(0xFFF6F6F6),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -440,6 +465,8 @@ class ChatListSkeleton extends StatelessWidget {
                         width: 20,
                         height: 20,
                         shape: BoxShape.circle,
+                        baseColor: Color(0xFFEEEEEE),
+                        highlightColor: Color(0xFFF6F6F6),
                       ),
                   ],
                 ),

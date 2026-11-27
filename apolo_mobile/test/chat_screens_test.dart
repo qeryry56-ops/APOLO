@@ -263,6 +263,22 @@ void main() {
     final filledDec = searchBox().decoration as BoxDecoration;
     expect((filledDec.border as Border).top.color, Colors.transparent);
     expect(find.byKey(const Key('inbox-search-clear')), findsOneWidget);
+
+    // Clear search, test Dynamic Layer long-press action sheet (Pin -> Pinned pill) & Mark all read
+    await tester.tap(find.byKey(const Key('inbox-search-clear')));
+    await tester.pumpAndSettle();
+    expect(find.text('Casa Oliva Villa'), findsOneWidget);
+
+    await tester.longPress(find.byKey(const Key('inbox-row-1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('inbox-sheet-pin')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('inbox-sheet-pin')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('inbox-filter-pinned')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('inbox-mark-all-read')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('inbox-unread-badge-1')), findsNothing);
   });
 
   group('ChatRoomScreen Arabic RTL', () {
