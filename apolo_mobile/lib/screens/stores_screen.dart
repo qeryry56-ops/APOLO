@@ -440,10 +440,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                 final isProPlus = AppConfig
                                         .enablePremiumAndBusinessTiers &&
                                     store['is_pro_plus'] == true;
-                                final isVerified = AppConfig
-                                        .enablePremiumAndBusinessTiers &&
-                                    (store['is_verified'] == true ||
-                                        isProPlus);
+                                final isVerified = isProPlus;
                                 final rank = ApoloSellerRank.resolve(
                                   user: store,
                                   listingsCount: count,

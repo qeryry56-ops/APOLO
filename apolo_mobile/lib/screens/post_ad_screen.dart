@@ -15,6 +15,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'auth_screen.dart';
+import 'pro_plus_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/real_marketplace_map.dart';
@@ -82,6 +83,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
   @override
   void initState() {
     super.initState();
+    _state.addListener(_onStateChanged);
     _titleCtrl.addListener(_onFieldChanged);
     _descCtrl.addListener(_onFieldChanged);
     _priceCtrl.addListener(_onFieldChanged);
@@ -215,6 +217,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
     } catch (_) {}
   }
 
+  void _onStateChanged() {
+    if (mounted) setState(() {});
+  }
+
   void _onFieldChanged() {
     _scheduleSaveDraft();
     if (mounted) setState(() {});
@@ -222,6 +228,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   @override
   void dispose() {
+    _state.removeListener(_onStateChanged);
     _draftDebounce?.cancel();
     _titleCtrl.dispose();
     _descCtrl.dispose();
@@ -404,6 +411,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
     }
   }
 
+  int get _maxPhotos => _state.isProPlusAccount ? 12 : 5;
+
   Future<void> _pickImages({ImageSource? singleSource}) async {
     HapticFeedback.selectionClick();
     if (singleSource != null) {
@@ -411,7 +420,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         source: singleSource,
         imageQuality: 82,
       );
-      if (file != null && _pickedImages.length < 8) {
+      if (file != null && _pickedImages.length < _maxPhotos) {
         setState(() => _pickedImages.add(file));
       }
       return;
@@ -420,7 +429,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
     if (files.isNotEmpty) {
       setState(() {
         for (final f in files) {
-          if (_pickedImages.length < 8) {
+          if (_pickedImages.length < _maxPhotos) {
             _pickedImages.add(f);
           }
         }
@@ -532,7 +541,78 @@ class _PostAdScreenState extends State<PostAdScreen> {
     _showToast(msg);
   }
 
+  Future<void> _showDailyLimitPaywallSheet() async {
+    HapticFeedback.heavyImpact();
+    final s = _state.s;
+    final palette = ApoloDlPalette.of(context);
+    final wantUpgrade = await showApoloDlBottomSheet<bool>(
+      context,
+      headerTitle: 'Apolo Premium',
+      media: Container(
+        key: const Key('post-ad-daily-limit-sheet'),
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: palette.pill,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          CupertinoIcons.checkmark_seal_fill,
+          size: 26,
+          color: palette.ink,
+        ),
+      ),
+      contentTitle: s.tr(
+        'وصلت للحد اليومي المجاني (${AppConfig.maxDailyFreeAds} إعلانات فـ النهار)',
+        'Limite gratuite atteinte (${AppConfig.maxDailyFreeAds} annonces/jour)',
+        'Daily free limit reached (${AppConfig.maxDailyFreeAds} ads/day)',
+      ),
+      contentDescription: s.tr(
+        'الحساب العادي (Personal) يسمح بنشر حتى ${AppConfig.maxDailyFreeAds} إعلانات مجانية كل يوم. اشترك فـ Apolo Premium بـ ${AppConfig.monthlyPremiumPriceMad} د.م/شهر عبر Google Pay للنشر بلا حدود والحصول على متجر Business وشارة Verified.',
+        'Le compte Personnel inclut ${AppConfig.maxDailyFreeAds} annonces gratuites par jour. Passez à Apolo Premium (${AppConfig.monthlyPremiumPriceMad} DH/mois via Google Pay) pour publier en illimité avec boutique Business et badge Verified.',
+        'Personal accounts include up to ${AppConfig.maxDailyFreeAds} free ads per day. Upgrade to Apolo Premium (${AppConfig.monthlyPremiumPriceMad} MAD/mo via Google Pay) for unlimited daily ads, Business store, and Verified badge.',
+      ),
+      actions: [
+        ApoloDlButton(
+          key: const Key('post-ad-upgrade-premium-btn'),
+          label: s.tr(
+            'اشترك بـ ${AppConfig.monthlyPremiumPriceMad} د.م/شهر • Google Pay',
+            'S’abonner (${AppConfig.monthlyPremiumPriceMad} DH/mois) • Google Pay',
+            'Subscribe (${AppConfig.monthlyPremiumPriceMad} MAD/mo) • Google Pay',
+          ),
+          variant: ApoloDlButtonVariant.primary,
+          borderRadius: 999,
+          fullWidth: true,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+        ApoloDlButton(
+          label: s.tr('حسناً، غداً', 'Plus tard', 'Maybe later'),
+          variant: ApoloDlButtonVariant.secondary,
+          borderRadius: 999,
+          fullWidth: true,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+      ],
+    );
+
+    if (wantUpgrade == true && mounted) {
+      final activated = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => const ProPlusScreen(initialPlanId: 'monthly'),
+        ),
+      );
+      if (activated == true && mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   void _nextStep() {
+    if (!_isEditing && _state.isLoggedIn && _state.hasReachedDailyAdLimit) {
+      _showDailyLimitPaywallSheet();
+      return;
+    }
     if (!_isStepValid(_currentStep)) {
       _showStepError(_currentStep);
       return;
@@ -624,6 +704,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
       );
       return;
     }
+    if (!_isEditing && _state.hasReachedDailyAdLimit) {
+      await _showDailyLimitPaywallSheet();
+      return;
+    }
 
     setState(() => _submitting = true);
     try {
@@ -653,7 +737,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
       };
 
       final List<MultipartFile> allMultipartImages = [];
-      for (int i = 0; i < _pickedImages.length && i < 8; i++) {
+      for (int i = 0; i < _pickedImages.length && i < _maxPhotos; i++) {
         final bytes = await _pickedImages[i].readAsBytes();
         final fileName = _pickedImages[i].name.isNotEmpty
             ? _pickedImages[i].name
@@ -678,6 +762,9 @@ class _PostAdScreenState extends State<PostAdScreen> {
       if (mounted) {
         setState(() => _submitting = false);
         if (res.data is Map && res.data['status'] == 'success') {
+          if (!_isEditing) {
+            await _state.recordAdPostedToday();
+          }
           unawaited(_clearDraft());
           _triggerCelebration();
           return;
@@ -864,6 +951,89 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   ),
                 ),
               ),
+
+              if (!_isEditing)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 540),
+                      child: GestureDetector(
+                        key: const Key('post-ad-daily-quota-pill'),
+                        onTap: _state.isProPlusAccount
+                            ? null
+                            : () async {
+                                final ok =
+                                    await Navigator.of(context).push<bool>(
+                                  MaterialPageRoute<bool>(
+                                    builder: (_) => const ProPlusScreen(
+                                      initialPlanId: 'monthly',
+                                    ),
+                                  ),
+                                );
+                                if (ok == true && mounted) setState(() {});
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _state.hasReachedDailyAdLimit
+                                ? _dlDanger.withValues(alpha: 0.1)
+                                : _dlSurface,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _state.isProPlusAccount
+                                    ? CupertinoIcons.checkmark_seal_fill
+                                    : CupertinoIcons.sparkles,
+                                size: 13.5,
+                                color: _state.hasReachedDailyAdLimit
+                                    ? _dlDanger
+                                    : _dlInk,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  _state.isProPlusAccount
+                                      ? s.tr(
+                                          'نشر غير محدود يومياً · Apolo Premium',
+                                          'Annonces illimitées · Apolo Premium',
+                                          'Unlimited daily ads · Apolo Premium',
+                                        )
+                                      : (_state.hasReachedDailyAdLimit
+                                          ? s.tr(
+                                              'وصلت لـ ${AppConfig.maxDailyFreeAds}/${AppConfig.maxDailyFreeAds} إعلانات اليوم · ترقية بـ ${AppConfig.monthlyPremiumPriceMad} د.م',
+                                              'Limite ${AppConfig.maxDailyFreeAds}/${AppConfig.maxDailyFreeAds} atteinte · Premium ${AppConfig.monthlyPremiumPriceMad} DH',
+                                              '${AppConfig.maxDailyFreeAds}/${AppConfig.maxDailyFreeAds} daily limit reached · Upgrade (${AppConfig.monthlyPremiumPriceMad} MAD)',
+                                            )
+                                          : s.tr(
+                                              'الحد المجاني اليوم: ${_state.todayPostedAdsCount}/${AppConfig.maxDailyFreeAds} إعلانات · غير محدود مع Premium',
+                                              'Quota gratuit : ${_state.todayPostedAdsCount}/${AppConfig.maxDailyFreeAds} aujourd’hui · Illimité en Premium',
+                                              'Today: ${_state.todayPostedAdsCount}/${AppConfig.maxDailyFreeAds} free ads · Unlimited with Premium',
+                                            )),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.8,
+                                    fontWeight: FontWeight.w700,
+                                    color: _state.hasReachedDailyAdLimit
+                                        ? _dlDanger
+                                        : _dlMuted,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
               // 2. Step Stage
               Expanded(

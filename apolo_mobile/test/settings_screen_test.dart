@@ -109,7 +109,7 @@ void main() {
   testWidgets('Logged-in PRO+ user sees VIP credits and Log out button',
       (tester) async {
     AppConfig.enablePremiumAndBusinessTiers = true;
-    addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = false);
+    addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = true);
     await tester.runAsync(() async {
       await AppState().setAuthSession('test_token', {
         'id': 42,

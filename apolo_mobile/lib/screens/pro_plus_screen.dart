@@ -573,7 +573,7 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
     final ok = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => ProPlusScreen(
-          initialPlanId: 'yearly',
+          initialPlanId: 'monthly',
           autoStartCheckout: startCheckout,
         ),
       ),
@@ -782,9 +782,9 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                           constraints: const BoxConstraints(maxWidth: 300.0),
                           child: Text(
                             s.tr(
-                              'وصول مجاني غير محدود لمدة 3 أيام، ثم 899 د.م فقط في السنة',
-                              'Accès gratuit illimité pendant 3 jours, puis 899 DH par an',
-                              'Unlimited free access for 3 days, then only 899 MAD per year',
+                              'وصول مجاني غير محدود لمدة 3 أيام، ثم ${AppConfig.monthlyPremiumPriceMad} د.م فقط في الشهر عبر Google Pay',
+                              'Accès gratuit illimité pendant 3 jours, puis ${AppConfig.monthlyPremiumPriceMad} DH/mois via Google Pay',
+                              'Unlimited free access for 3 days, then only ${AppConfig.monthlyPremiumPriceMad} MAD/month via Google Pay',
                             ),
                             key: const Key('dl-trial-subtitle'),
                             textAlign: TextAlign.center,
@@ -950,7 +950,7 @@ class ProPlusScreen extends StatefulWidget {
 class _ProPlusScreenState extends State<ProPlusScreen> {
   final AppState _state = AppState();
   List<Map<String, dynamic>> _plans = [];
-  String _selectedPlanId = 'yearly';
+  String _selectedPlanId = 'monthly';
   bool _loading = true;
   bool _purchasing = false;
   String? _error;
@@ -961,39 +961,39 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
         {
           'id': 'monthly',
           'iap_product_id': 'ma.apolo.pro_plus.monthly',
-          'name_ar': 'باقة Pro Plus الشهرية',
-          'name_fr': 'Abonnement Pro Plus Mensuel',
-          'tier_ar': 'أساسي',
-          'tier_fr': 'Basic',
-          'tier_en': 'Basic',
+          'name_ar': 'باقة Apolo Premium الشهرية',
+          'name_fr': 'Abonnement Apolo Premium Mensuel',
+          'tier_ar': 'الأكثر طلباً',
+          'tier_fr': 'Populaire',
+          'tier_en': 'Popular',
           'period_ar': 'شهر واحد',
           'period_fr': '1 mois',
           'period_en': '1 month',
-          'price_mad': 99,
+          'price_mad': AppConfig.monthlyPremiumPriceMad,
           'duration_days': 30,
-          'vip_boost_credits': 3,
+          'vip_boost_credits': 5,
         },
         {
           'id': 'yearly',
           'iap_product_id': 'ma.apolo.pro_plus.yearly',
-          'name_ar': 'باقة Pro Plus السنوية (وفّر 25%)',
-          'name_fr': 'Abonnement Pro Plus Annuel (-25%)',
-          'tier_ar': 'وفّر 25%',
-          'tier_fr': 'Économisez 25%',
-          'tier_en': 'Save 25%',
+          'name_ar': 'باقة Apolo Premium السنوية (وفّر 33%)',
+          'name_fr': 'Abonnement Apolo Premium Annuel (-33%)',
+          'tier_ar': 'وفّر 33%',
+          'tier_fr': 'Économisez 33%',
+          'tier_en': 'Save 33%',
           'period_ar': '12 شهراً',
           'period_fr': '12 mois',
           'period_en': '12 months',
           'featured_save': true,
-          'price_mad': 899,
+          'price_mad': 799,
           'duration_days': 365,
-          'vip_boost_credits': 36,
+          'vip_boost_credits': 60,
         },
         {
           'id': 'lifetime',
           'iap_product_id': 'ma.apolo.pro_plus.lifetime',
-          'name_ar': 'باقة Pro Plus مدى الحياة',
-          'name_fr': 'Pro Plus À vie',
+          'name_ar': 'باقة Apolo Premium مدى الحياة',
+          'name_fr': 'Apolo Premium À vie',
           'tier_ar': 'مدى الحياة',
           'tier_fr': 'À vie',
           'tier_en': 'Lifetime',
@@ -1039,15 +1039,21 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
           if (!mounted) return;
           final parsed = raw
               .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
+              .map((e) {
+                final m = Map<String, dynamic>.from(e);
+                if (m['id']?.toString() == 'monthly') {
+                  m['price_mad'] = AppConfig.monthlyPremiumPriceMad;
+                }
+                return m;
+              })
               .toList();
           setState(() {
             _plans = parsed;
             if (!_plans.any((p) => p['id'].toString() == _selectedPlanId)) {
-              final yearlyMatch =
-                  _plans.where((p) => p['id'].toString() == 'yearly');
-              _selectedPlanId = yearlyMatch.isNotEmpty
-                  ? 'yearly'
+              final monthlyMatch =
+                  _plans.where((p) => p['id'].toString() == 'monthly');
+              _selectedPlanId = monthlyMatch.isNotEmpty
+                  ? 'monthly'
                   : (_plans.first['id'] ?? 'monthly').toString();
             }
             _loading = false;
@@ -1061,7 +1067,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
     setState(() {
       _plans = _fallbackPlans();
       if (!_plans.any((p) => p['id'].toString() == _selectedPlanId)) {
-        _selectedPlanId = 'yearly';
+        _selectedPlanId = 'monthly';
       }
       _loading = false;
     });
@@ -1564,7 +1570,71 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 24.0),
+                            const SizedBox(height: 18.0),
+
+                            Container(
+                              key: const Key('dl-paywall-perks-card'),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                                vertical: 14.0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: palette.surfaceSubtle,
+                                borderRadius: BorderRadius.circular(18.0),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for (final perk in <String>[
+                                    s.tr(
+                                      'حساب متجر Business رسمي + شارة التوثيق الزرقاء (Verified)',
+                                      'Boutique Business officielle + badge bleu Verified',
+                                      'Official Business store + blue Verified badge',
+                                    ),
+                                    s.tr(
+                                      'نشر إعلانات غير محدود يومياً (بدل 5 فـ النهار) + حتى 12 صورة',
+                                      'Annonces illimitées par jour (au lieu de 5/j) + 12 photos',
+                                      'Unlimited daily listings (instead of 5/day) + 12 photos',
+                                    ),
+                                    s.tr(
+                                      '5 ترويجات VIP مجانية كل شهر + إحصائيات والردود السريعة',
+                                      '5 boosts VIP gratuits/mois + statistiques & réponses rapides',
+                                      '5 free monthly VIP boosts + Pro Insights & quick replies',
+                                    ),
+                                  ])
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 5.0,
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(
+                                            CupertinoIcons.checkmark_circle_fill,
+                                            size: 17.0,
+                                            color: palette.ink,
+                                          ),
+                                          const SizedBox(width: 9.0),
+                                          Expanded(
+                                            child: Text(
+                                              perk,
+                                              style: TextStyle(
+                                                color: palette.ink,
+                                                fontSize: 13.0,
+                                                fontWeight: FontWeight.w600,
+                                                height: 1.35,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 18.0),
 
                             if (_error != null)
                               Container(

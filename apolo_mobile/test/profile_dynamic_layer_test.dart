@@ -310,6 +310,8 @@ void main() {
       );
 
       // 2. While enablePremiumAndBusinessTiers == false, even Business/Verified props stay Personal + unverified
+      AppConfig.enablePremiumAndBusinessTiers = false;
+      addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = true);
       await pumpScreen(
         tester,
         const SellerProfileScreen(
@@ -338,7 +340,6 @@ void main() {
 
       // 3. Once Premium/Business tiers are enabled, Business Store Seller renders Business badge & store card
       AppConfig.enablePremiumAndBusinessTiers = true;
-      addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = false);
       await pumpScreen(
         tester,
         const SellerProfileScreen(

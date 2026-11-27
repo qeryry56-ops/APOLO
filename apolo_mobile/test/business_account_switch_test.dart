@@ -5,11 +5,11 @@ import 'dart:typed_data';
 import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/account_setup_screen.dart';
-import 'package:apolo_mobile/screens/business_switch_screen.dart';
 import 'package:apolo_mobile/screens/chat_room_screen.dart';
 import 'package:apolo_mobile/screens/pro_plus_screen.dart';
 import 'package:apolo_mobile/screens/profile_screen.dart';
 import 'package:apolo_mobile/theme/app_theme.dart';
+import 'package:apolo_mobile/widgets/apolo_badges_kit.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,7 +60,7 @@ void main() {
   });
 
   tearDown(() async {
-    AppConfig.enablePremiumAndBusinessTiers = false;
+    AppConfig.enablePremiumAndBusinessTiers = true;
     state.currentUser = null;
     await state.api.setToken(null);
     await state.setLocale(originalLocale);
@@ -68,15 +68,16 @@ void main() {
   });
 
   testWidgets(
-      'Personal account shows Switch to Business card and hides analytics tab; switching activates Business store & quick replies',
+      'Business & Verified are exclusive to Apolo Premium (99 MAD/mo via Google Pay); Personal opens Paywall',
       (tester) async {
     Map<String, dynamic> serverUser = {
       'id': 42,
       'name': 'Amine Store',
       'username': 'amine_store',
-      'account_type': 'individual',
-      'is_business': false,
+      'account_type': 'business', // legacy non-Premium business flag must stay Personal!
+      'is_business': true,
       'is_pro_plus': false,
+      'phone_verified_at': '2026-01-01T00:00:00Z',
       'store': null,
     };
 
@@ -86,15 +87,18 @@ void main() {
           final payload = options.data as Map<String, dynamic>;
           serverUser = {
             ...serverUser,
-            'account_type': 'business',
+            'account_type': 'pro_plus',
             'is_business': true,
-            'is_pro_plus': false,
+            'is_pro_plus': true,
+            'is_verified': true,
             'store': {
               'id': 10,
               'name': payload['store_name'],
               'subdomain': 'amine-store',
               'business_category': payload['business_category'],
               'working_hours': payload['working_hours'],
+              'is_pro_plus': true,
+              'is_verified': true,
               'is_open_now': true,
               'is_active': true,
             },
@@ -105,16 +109,6 @@ void main() {
             'store': serverUser['store'],
           });
         }
-        if (options.path.contains('/account/switch-personal')) {
-          serverUser = {
-            ...serverUser,
-            'account_type': 'individual',
-            'is_business': false,
-            'paused_store': serverUser['store'],
-            'store': null,
-          };
-          return _json({'status': 'success', 'user': serverUser});
-        }
         if (options.path.contains('/account/business-insights')) {
           return _json({
             'status': 'success',
@@ -123,9 +117,12 @@ void main() {
               'active_ads_count': 2,
               'avg_views': 60,
               'boosted_ads_count': 0,
-              'pro_plus_locked': true,
+              'pro_plus_locked': false,
             },
           });
+        }
+        if (options.path.contains('/pro-plus/plans')) {
+          return _json({'status': 'error'}, 404);
         }
         if (options.path.contains('/auth/profile')) {
           return _json({'status': 'success', 'user': serverUser});
@@ -157,42 +154,60 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Personal account: shows Switch to Business banner, no Business identity bar
+    // Non-Premium account: strictly Personal & unverified even with legacy is_business/phone_verified_at
+    expect(state.isBusinessAccount, isFalse);
+    expect(state.isProPlusAccount, isFalse);
+    expect(find.byKey(const Key('apolo-account-badge-personal')), findsOneWidget);
+    expect(find.byType(ApoloVerifiedBadge), findsNothing);
+    expect(find.byKey(const Key('profile-business-identity-bar')), findsNothing);
+
     final switchCard = find.byKey(const Key('profile-switch-to-business-card'));
     expect(switchCard, findsOneWidget);
-    expect(find.byKey(const Key('profile-business-identity-bar')), findsNothing);
-    expect(state.isBusinessAccount, isFalse);
+    expect(find.textContaining('99'), findsOneWidget);
 
-    // Complete 3-step Business Switch Wizard
+    // Tapping upgrade card opens ProPlusScreen directly on the 99 MAD monthly plan with Google Pay
     await tester.ensureVisible(switchCard);
     await tester.pumpAndSettle();
     await tester.tap(switchCard);
     await tester.pumpAndSettle();
-    expect(find.byType(BusinessSwitchScreen), findsOneWidget);
+    expect(find.byType(ProPlusScreen), findsOneWidget);
+    expect(find.byKey(const Key('dl-paywall-perks-card')), findsOneWidget);
+    expect(find.textContaining('99'), findsWidgets);
+    expect(find.textContaining('Google Pay'), findsWidgets);
 
-    await tester.ensureVisible(find.byKey(const Key('business-cat-electronics')));
-    await tester.tap(find.byKey(const Key('business-cat-electronics')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('business-wizard-continue')));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-        find.byKey(const Key('business-name-input')), 'Amine Tech Casa');
-    await tester.tap(find.byKey(const Key('business-wizard-continue')));
+    // Dismiss paywall, then simulate Google Pay activation -> unlocks Business + Verified + Store wizard
+    await tester.tap(find.byKey(const Key('dl-paywall-no-thanks-btn')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('business-wizard-continue')));
+    serverUser = {
+      ...serverUser,
+      'account_type': 'pro_plus',
+      'is_pro_plus': true,
+      'is_business': true,
+      'is_verified': true,
+      'store': {
+        'id': 10,
+        'name': 'Amine Tech Casa',
+        'subdomain': 'amine-store',
+        'business_category': 'electronics',
+        'is_pro_plus': true,
+        'is_verified': true,
+        'is_open_now': true,
+      },
+    };
+    await tester.runAsync(() => state.updateCurrentUser(serverUser));
     await tester.pumpAndSettle();
 
-    // Now Business profile is active!
+    expect(state.isProPlusAccount, isTrue);
     expect(state.isBusinessAccount, isTrue);
-    expect(
-        find.byKey(const Key('profile-business-identity-bar')), findsOneWidget);
-    expect(find.text('Business'), findsOneWidget);
+    expect(find.byKey(const Key('apolo-account-badge-business')), findsOneWidget);
+    expect(find.byType(ApoloVerifiedBadge), findsWidgets);
+    expect(find.byKey(const Key('profile-business-identity-bar')), findsOneWidget);
 
-    // Soft-pause back to Personal preserves paused_store
-    await tester.runAsync(() => state.switchToPersonal());
-    await tester.pump();
+    // Canceling Premium immediately reverts back to Personal & unverified while keeping paused_store
+    await tester.runAsync(() => state.cancelProPlusSubscription());
+    await tester.pumpAndSettle();
+    expect(state.isProPlusAccount, isFalse);
     expect(state.isBusinessAccount, isFalse);
     expect(state.pausedStore?['name'], 'Amine Tech Casa');
   });
@@ -370,6 +385,7 @@ void main() {
 
     expect(find.text('SETUP_COMPLETE'), findsOneWidget);
     expect(savedSelection, contains('business'));
-    expect(state.accountType, 'business');
+    expect(state.accountType, 'individual');
+    expect(state.userIntents, contains('pro_store'));
   });
 }

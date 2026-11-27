@@ -109,8 +109,8 @@ class ApoloSuggestedAccount {
       if (id <= 0 || name.isEmpty) continue;
       final subdomain = (raw['subdomain'] ?? '').toString().trim();
       final avatar = (raw['logo_url'] ?? raw['logo'] ?? '').toString().trim();
-      final verified = AppConfig.enablePremiumAndBusinessTiers &&
-          (raw['is_verified'] == true || raw['is_pro_plus'] == true);
+      final verified =
+          AppConfig.enablePremiumAndBusinessTiers && raw['is_pro_plus'] == true;
       tryAdd(
         ApoloSuggestedAccount(
           id: id,
@@ -118,10 +118,7 @@ class ApoloSuggestedAccount {
           handle: _sanitizeHandle(subdomain, name, id),
           avatarUrl: avatar.isNotEmpty ? avatar : null,
           isVerified: verified,
-          storeSubdomain: AppConfig.enablePremiumAndBusinessTiers &&
-                  subdomain.isNotEmpty
-              ? subdomain
-              : null,
+          storeSubdomain: verified && subdomain.isNotEmpty ? subdomain : null,
         ),
       );
     }
@@ -154,8 +151,8 @@ class ApoloSuggestedAccount {
           .toString()
           .trim();
       final verified = AppConfig.enablePremiumAndBusinessTiers &&
-          (raw['seller_verified'] == true ||
-              userMap?['is_verified'] == true ||
+          (raw['is_pro_plus'] == true ||
+              raw['seller_is_pro_plus'] == true ||
               userMap?['is_pro_plus'] == true);
       tryAdd(
         ApoloSuggestedAccount(

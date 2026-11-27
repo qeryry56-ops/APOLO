@@ -20,18 +20,21 @@ class AppConfig {
   // Default to production API; switchable to staging in Profile Settings
   static String currentBaseUrl = prodBaseUrl;
 
-  /// Launch-phase gate: while `false`, every user, seller, and listing in Apolo
-  /// renders strictly as `Personal` (`individual`) with `isVerified = false`
-  /// (no blue Verified badge and no free Business mode) until the Premium plan
-  /// entitlements are finalized and enabled.
-  static bool enablePremiumAndBusinessTiers = false;
+  /// Controls whether Apolo Premium (`99 MAD/mo` via Google Pay) and its
+  /// exclusive Business + Verified entitlements are active.
+  static bool enablePremiumAndBusinessTiers = true;
 
-  /// Strict verification check: never grants Verified automatically from phone
-  /// verification or free store creation; requires Premium/explicit verification
-  /// AND [enablePremiumAndBusinessTiers] to be enabled.
+  /// Maximum free listings a `Personal` (`individual`) user can publish per day.
+  static const int maxDailyFreeAds = 5;
+
+  /// Official monthly Apolo Premium subscription price in Moroccan Dirhams (MAD).
+  static const int monthlyPremiumPriceMad = 99;
+
+  /// Strict verification check: `Business` mode and the blue `Verified` seal
+  /// are exclusive to active `Apolo Premium` (`is_pro_plus == true`) subscribers.
   static bool isVerifiedEntity(Map<dynamic, dynamic>? entity) {
     if (!enablePremiumAndBusinessTiers || entity == null) return false;
-    return entity['is_verified'] == true || entity['is_pro_plus'] == true;
+    return entity['is_pro_plus'] == true;
   }
 
   /// Resolves the active API base URL. On Vercel Web (`*.vercel.app`), routes

@@ -2354,16 +2354,16 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             sellerPhone: phone,
             sellerCity: cityName,
             isVerified: AppConfig.enablePremiumAndBusinessTiers &&
-                (seller?['is_verified'] == true ||
-                    seller?['is_pro_plus'] == true ||
-                    store?['is_verified'] == true ||
-                    store?['is_pro_plus'] == true),
+                (seller?['is_pro_plus'] == true ||
+                    store?['is_pro_plus'] == true ||
+                    ad['is_pro_plus'] == true),
             isOnline: seller?['is_online'] == true,
             isBusiness: AppConfig.enablePremiumAndBusinessTiers &&
-                (store != null ||
-                    seller?['is_business'] == true ||
-                    ApoloAccountTypeBadge.isAdFromBusiness(ad)),
-            store: AppConfig.enablePremiumAndBusinessTiers ? store : null,
+                ApoloAccountTypeBadge.isAdFromBusiness(ad),
+            store: AppConfig.enablePremiumAndBusinessTiers &&
+                    ApoloAccountTypeBadge.isAdFromBusiness(ad)
+                ? store
+                : null,
             initialAd: ad,
           ),
         ),
@@ -2394,7 +2394,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         ? ad['host_subtitle'].toString().trim()
         : (seller?['joined_label']?.toString().trim().isNotEmpty == true
             ? seller!['joined_label'].toString().trim()
-            : (AppConfig.enablePremiumAndBusinessTiers && store != null
+            : (AppConfig.enablePremiumAndBusinessTiers &&
+                    ApoloAccountTypeBadge.isAdFromBusiness(ad)
                 ? s.tr(
                     'متجر على Apolo · $cityName',
                     'Boutique Apolo · $cityName',
@@ -2439,16 +2440,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final int mySelectedStars =
         int.tryParse('${mySellerReview?['rating'] ?? 0}') ?? 0;
 
-    final bool isBusinessSeller = AppConfig.enablePremiumAndBusinessTiers &&
-        (store != null ||
-            seller?['is_business'] == true ||
-            ApoloAccountTypeBadge.isAdFromBusiness(ad));
     final bool isProPlusSeller = AppConfig.enablePremiumAndBusinessTiers &&
-        (store?['is_pro_plus'] == true || seller?['is_pro_plus'] == true);
-    final bool isVerifiedSeller = AppConfig.enablePremiumAndBusinessTiers &&
-        (seller?['is_verified'] == true ||
-            store?['is_verified'] == true ||
-            isProPlusSeller);
+        (store?['is_pro_plus'] == true ||
+            seller?['is_pro_plus'] == true ||
+            ad['is_pro_plus'] == true);
+    final bool isBusinessSeller = isProPlusSeller;
+    final bool isVerifiedSeller = isProPlusSeller;
     final sellerRank = ApoloSellerRank.resolve(
       user: seller,
       isProPlus: isProPlusSeller,

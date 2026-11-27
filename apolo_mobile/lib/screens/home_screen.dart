@@ -287,10 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isAr = s.isAr;
     final trending = _trendingAds;
     final feedAds = _feedAds;
-    final user = _state.currentUser;
-    final isVerifiedUser = AppConfig.enablePremiumAndBusinessTiers &&
-        user != null &&
-        (user['is_verified'] == true || _state.isProPlusAccount);
+    final isVerifiedUser = _state.isProPlusAccount;
 
     return Scaffold(
       key: const Key('dl-home-screen'),

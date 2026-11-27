@@ -356,8 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userMap = _state.currentUser;
     final isProPlus = _state.isProPlusAccount;
     final isBusiness = _state.isBusinessAccount;
-    final isVerified = AppConfig.enablePremiumAndBusinessTiers &&
-        (userMap?['is_verified'] == true || isProPlus);
+    final isVerified = isProPlus;
     final totalViews = _baseViews ?? 0;
     final sellerRank = ApoloSellerRank.resolve(
       user: userMap,
@@ -579,13 +578,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                   if (AppConfig.enablePremiumAndBusinessTiers) ...[
                                     const SizedBox(height: 14),
-
-                                    // Simple 1-Tap Account Mode Switcher: Personal vs Business
-                                    _buildSimpleAccountTypeToggle(s, palette),
-
-                                    const SizedBox(height: 12),
-
-                                    if (!_state.isBusinessAccount)
+                                    if (!_state.isProPlusAccount)
                                       _buildPersonalSwitchBanner(s, palette)
                                     else ...[
                                       _buildBusinessIdentityHeader(s, palette),
@@ -699,167 +692,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _handleQuickModeSelect(bool selectBusiness) async {
-    if (selectBusiness == _state.isBusinessAccount) return;
-    HapticFeedback.selectionClick();
-    if (!selectBusiness) {
-      try {
-        await _state.switchToPersonal();
-      } catch (_) {
-        if (_state.currentUser != null) {
-          final updated = Map<String, dynamic>.from(_state.currentUser!);
-          if (updated['store'] is Map) {
-            updated['paused_store'] = updated['store'];
-          }
-          updated['store'] = null;
-          updated['is_business'] = false;
-          updated['account_type'] = 'individual';
-          await _state.updateCurrentUser(updated);
-        }
-      }
-      if (mounted) setState(() => _activeTab = 0);
-      return;
-    }
-
-    final paused = _state.pausedStore;
-    if (paused != null && (paused['name'] ?? '').toString().trim().isNotEmpty) {
-      try {
-        await _state.switchToBusiness(
-          storeName: paused['name'].toString(),
-          subdomain: paused['subdomain']?.toString(),
-          businessCategory:
-              (paused['business_category'] ?? 'general').toString(),
-          description: paused['description']?.toString(),
-          location: paused['location']?.toString(),
-          workingHours: paused['working_hours']?.toString(),
-          phone: paused['phone']?.toString(),
-        );
-        if (mounted) await _loadProfileData();
-        return;
-      } catch (_) {
-        if (_state.currentUser != null) {
-          final updated = Map<String, dynamic>.from(_state.currentUser!);
-          updated['store'] = paused;
-          updated['is_business'] = true;
-          updated['account_type'] = 'business';
-          await _state.updateCurrentUser(updated);
-          return;
-        }
-      }
-    }
-
-    final switched = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const BusinessSwitchScreen()),
-    );
-    if (switched == true && mounted) {
-      await _loadProfileData();
-    }
-  }
-
-  Widget _buildSimpleAccountTypeToggle(AppStrings s, ApoloDlPalette palette) {
-    final isBiz = _state.isBusinessAccount;
-    return Container(
-      key: const Key('profile-account-mode-switcher'),
-      height: 44,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: _dlPill,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              key: const Key('profile-mode-personal-btn'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _handleQuickModeSelect(false),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                decoration: BoxDecoration(
-                  color: !isBiz ? _dlInk : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      CupertinoIcons.person_fill,
-                      size: 14,
-                      color: !isBiz ? _dlOnInk : _dlMuted,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        s.tr('حساب عادي', 'Personnel', 'Personal'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: !isBiz ? _dlOnInk : _dlMuted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: GestureDetector(
-              key: const Key('profile-mode-business-btn'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _handleQuickModeSelect(true),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                decoration: BoxDecoration(
-                  color: isBiz ? _dlInk : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.storefront_rounded,
-                      size: 15,
-                      color: isBiz ? _dlOnInk : _dlMuted,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        s.tr('حساب متجر Business', 'Boutique Pro', 'Business'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isBiz ? _dlOnInk : _dlMuted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPersonalSwitchBanner(AppStrings s, ApoloDlPalette palette) {
     return PressableScale(
       key: const Key('profile-switch-to-business-card'),
       onTap: () async {
-        final switched = await Navigator.of(context).push<bool>(
-          MaterialPageRoute(builder: (_) => const BusinessSwitchScreen()),
+        final activated = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => const ProPlusScreen(initialPlanId: 'monthly'),
+          ),
         );
-        if (switched == true && mounted) {
+        if (activated == true && mounted) {
           await _loadProfileData();
         }
       },
@@ -881,8 +723,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               alignment: Alignment.center,
               child: Icon(
-                CupertinoIcons.briefcase_fill,
-                size: 16,
+                CupertinoIcons.checkmark_seal_fill,
+                size: 17,
                 color: _dlOnInk,
               ),
             ),
@@ -893,9 +735,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Text(
                     s.tr(
-                      'التحويل إلى حساب احترافي (Business)',
-                      'Passer au compte Business',
-                      'Switch to Business profile',
+                      'ترقية إلى Apolo Premium · ${AppConfig.monthlyPremiumPriceMad} د.م/شهر',
+                      'Passer à Apolo Premium · ${AppConfig.monthlyPremiumPriceMad} DH/mois',
+                      'Upgrade to Apolo Premium · ${AppConfig.monthlyPremiumPriceMad} MAD/mo',
                     ),
                     style: TextStyle(
                       fontSize: 13.5,
@@ -906,9 +748,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 2),
                   Text(
                     s.tr(
-                      'متجر مجاني، ردود سريعة في الشات، وطلب مباشر من الزبناء.',
-                      'Boutique gratuite, réponses rapides et commandes directes.',
-                      'Free store, chat quick replies & direct orders.',
+                      'متجر Business + شارة Verified الزرقاء + نشر غير محدود عبر Google Pay.',
+                      'Boutique Business + badge Verified + annonces illimitées via Google Pay.',
+                      'Business store + Verified badge + unlimited daily ads via Google Pay.',
                     ),
                     style: TextStyle(
                       fontSize: 12,

@@ -422,14 +422,10 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     final userMap = ad['user'] is Map ? ad['user'] as Map : null;
     final sellerMap = ad['seller'] is Map ? ad['seller'] as Map : null;
     final storeMap = ad['store'] is Map ? ad['store'] as Map : null;
-    return ad['seller_verified'] == true ||
-        ad['is_verified'] == true ||
-        ad['is_pro_plus'] == true ||
-        userMap?['is_verified'] == true ||
+    return ad['is_pro_plus'] == true ||
+        ad['seller_is_pro_plus'] == true ||
         userMap?['is_pro_plus'] == true ||
-        sellerMap?['is_verified'] == true ||
         sellerMap?['is_pro_plus'] == true ||
-        storeMap?['is_verified'] == true ||
         storeMap?['is_pro_plus'] == true;
   }
 

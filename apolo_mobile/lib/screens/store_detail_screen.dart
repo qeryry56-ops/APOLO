@@ -709,8 +709,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                       ApoloIdentityBadgesRow(
                                         isVerified: AppConfig
                                                 .enablePremiumAndBusinessTiers &&
-                                            (store['is_verified'] == true ||
-                                                store['is_pro_plus'] == true),
+                                            store['is_pro_plus'] == true,
                                         rank: ApoloSellerRank.resolve(
                                           user: store,
                                           listingsCount: _ads.length,
@@ -718,17 +717,18 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                   .enablePremiumAndBusinessTiers &&
                                               store['is_pro_plus'] == true,
                                           isBusiness: AppConfig
-                                              .enablePremiumAndBusinessTiers,
+                                                  .enablePremiumAndBusinessTiers &&
+                                              store['is_pro_plus'] == true,
                                           isVerified: AppConfig
                                                   .enablePremiumAndBusinessTiers &&
-                                              (store['is_verified'] == true ||
-                                                  store['is_pro_plus'] == true),
+                                              store['is_pro_plus'] == true,
                                         ),
                                         isProPlus: AppConfig
                                                 .enablePremiumAndBusinessTiers &&
                                             store['is_pro_plus'] == true,
                                         isBusiness: AppConfig
-                                            .enablePremiumAndBusinessTiers,
+                                                .enablePremiumAndBusinessTiers &&
+                                            store['is_pro_plus'] == true,
                                         badgeSize: 18,
                                         interactive: true,
                                       ),

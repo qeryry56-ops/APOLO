@@ -165,10 +165,8 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
       }
     }
 
-    final resolvedAccountType = AppConfig.enablePremiumAndBusinessTiers &&
-            chosen.contains('business')
-        ? 'business'
-        : 'individual';
+    // All new accounts start in Personal (`individual`); Business requires Apolo Premium.
+    const resolvedAccountType = 'individual';
     _state.accountType = resolvedAccountType;
     await _state.saveUserIntents(
       mappedIntents.isEmpty ? const <String>{'buying'} : mappedIntents,

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:apolo_mobile/core/config/app_config.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/post_ad_screen.dart';
+import 'package:apolo_mobile/screens/pro_plus_screen.dart';
 import 'package:apolo_mobile/screens/store_detail_screen.dart';
 import 'package:apolo_mobile/screens/stores_screen.dart';
 import 'package:apolo_mobile/theme/app_theme.dart';
@@ -63,12 +64,14 @@ void main() {
       {'id': 2, 'name': 'Rabat', 'name_fr': 'Rabat', 'name_ar': 'الرباط'},
     ];
     state.currentUser = {'id': 5, 'name': 'Amine', 'phone': '0611223344'};
+    state.resetDailyAdsForTesting(0);
     await state.api.setToken('tok-store');
     await state.setLocale(const Locale('en'));
   });
 
   tearDown(() async {
-    AppConfig.enablePremiumAndBusinessTiers = false;
+    AppConfig.enablePremiumAndBusinessTiers = true;
+    state.resetDailyAdsForTesting(0);
     state.currentUser = null;
     await state.api.setToken(null);
     await state.setLocale(originalLocale);
@@ -238,6 +241,68 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('LIVE'), findsOneWidget);
+    expect(state.todayPostedAdsCount, 1);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'PostAdScreen enforces 5/day limit on Personal users with 99 MAD Google Pay upgrade and allows unlimited for Premium',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
+      ..httpClientAdapter = _MockMarketplaceAdapter(
+        (_) => _json({'status': 'error'}, 404),
+      );
+
+    // Personal user who already published 5 ads today
+    state.resetDailyAdsForTesting(5);
+    expect(state.hasReachedDailyAdLimit, isTrue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(const Locale('en'))
+            .copyWith(splashFactory: NoSplash.splashFactory),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: const PostAdScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('post-ad-daily-quota-pill')), findsOneWidget);
+    expect(find.textContaining('5/5'), findsOneWidget);
+
+    // Tapping Continue triggers the 5/day limit paywall sheet
+    await tester.tap(find.byKey(const Key('post-ad-continue-btn')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('post-ad-daily-limit-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('post-ad-upgrade-premium-btn')), findsOneWidget);
+
+    // Tapping Upgrade opens ProPlusScreen on 99 MAD/mo with Google Pay
+    await tester.tap(find.byKey(const Key('post-ad-upgrade-premium-btn')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProPlusScreen), findsOneWidget);
+    expect(find.textContaining('99'), findsWidgets);
+    expect(find.textContaining('Google Pay'), findsWidgets);
+
+    // Upgrading user to Apolo Premium lifts the 5/day limit immediately
+    await tester.tap(find.byKey(const Key('dl-paywall-no-thanks-btn')));
+    await tester.pumpAndSettle();
+    state.currentUser = {
+      ...state.currentUser!,
+      'is_pro_plus': true,
+      'account_type': 'pro_plus',
+    };
+    state.notifyListeners();
+    await tester.pumpAndSettle();
+
+    expect(state.hasReachedDailyAdLimit, isFalse);
+    expect(find.textContaining('Unlimited daily ads'), findsOneWidget);
   });
 }

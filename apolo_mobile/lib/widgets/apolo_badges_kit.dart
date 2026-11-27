@@ -42,13 +42,10 @@ enum ApoloSellerRank {
     final effectiveProPlus = tiersEnabled &&
         (isProPlus ??
             (user?['is_pro_plus'] == true || user?['pro_plus'] == true));
-    final effectiveBusiness = tiersEnabled &&
-        (isBusiness ??
-            (user?['account_type']?.toString().toLowerCase() == 'business' ||
-                user?['is_business'] == true));
-    final effectiveVerified = tiersEnabled &&
-        (isVerified ??
-            (user?['is_verified'] == true || effectiveProPlus));
+    final effectiveBusiness =
+        tiersEnabled && (isBusiness ?? effectiveProPlus);
+    final effectiveVerified =
+        tiersEnabled && (isVerified ?? effectiveProPlus);
 
     if (effectiveProPlus && (listingsCount >= 20 || totalViews >= 5000)) {
       return ApoloSellerRank.champion;
@@ -206,44 +203,34 @@ class ApoloAccountTypeBadge extends StatelessWidget {
   final bool isBusiness;
   final bool compact;
 
-  /// Resolves whether a listing or seller map belongs to a Business/Store account
-  /// vs an Individual (`Personal`) user.
+  /// Resolves whether a listing or seller map belongs to an active Apolo Premium
+  /// Business Store (`is_pro_plus == true`) vs a free `Personal` user.
   static bool isAdFromBusiness(Map<String, dynamic>? ad) {
     if (!AppConfig.enablePremiumAndBusinessTiers || ad == null) return false;
-    if (ad['is_business'] == true ||
-        ad['seller_is_business'] == true ||
-        ad['is_pro_plus'] == true ||
-        ad['seller_is_pro_plus'] == true) {
+    if (ad['is_pro_plus'] == true || ad['seller_is_pro_plus'] == true) {
       return true;
     }
-    if (ad['is_business'] == false) return false;
-    if (ad['store'] is Map && (ad['store'] as Map).isNotEmpty) return true;
-    final storeName =
-        (ad['store_name'] ?? ad['store_subdomain'] ?? '').toString().trim();
-    if (storeName.isNotEmpty) return true;
-
     final accType = (ad['account_type'] ?? ad['seller_account_type'] ?? '')
         .toString()
         .toLowerCase()
         .trim();
-    if (accType == 'business' || accType == 'pro' || accType == 'pro_plus') {
-      return true;
-    }
+    if (accType == 'pro_plus') return true;
+
+    final storeMap = ad['store'] is Map ? ad['store'] as Map : null;
+    if (storeMap != null && storeMap['is_pro_plus'] == true) return true;
 
     final sellerMap = ad['seller'] is Map
         ? ad['seller'] as Map
         : (ad['user'] is Map ? ad['user'] as Map : null);
     if (sellerMap != null) {
-      if (sellerMap['is_business'] == true ||
-          sellerMap['is_pro_plus'] == true ||
-          sellerMap['store'] is Map) {
-        return true;
-      }
+      if (sellerMap['is_pro_plus'] == true) return true;
       final sType = (sellerMap['account_type'] ?? '')
           .toString()
           .toLowerCase()
           .trim();
-      if (sType == 'business' || sType == 'pro' || sType == 'pro_plus') {
+      if (sType == 'pro_plus') return true;
+      if (sellerMap['store'] is Map &&
+          (sellerMap['store'] as Map)['is_pro_plus'] == true) {
         return true;
       }
     }

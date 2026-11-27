@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/dl_settings_kit.dart';
+import 'pro_plus_screen.dart';
 
 /// Shared helper for localized Business Category metadata across Profile, Stores & Wizard.
 class ApoloBusinessCategories {
@@ -217,6 +218,16 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
 
   Future<void> _submit() async {
     if (_saving) return;
+    if (!_state.isProPlusAccount) {
+      final activated = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => const ProPlusScreen(initialPlanId: 'monthly'),
+        ),
+      );
+      if (activated != true || !mounted || !_state.isProPlusAccount) {
+        return;
+      }
+    }
     if (_nameCtrl.text.trim().length < 2) {
       setState(() {
         _error = _state.s.tr(
@@ -261,9 +272,9 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                     'Business profile updated!',
                   )
                 : _state.s.tr(
-                    'مبروك! تم تفعيل حساب الأعمال (Business) ومتجرك مجاناً 🎉',
-                    'Félicitations ! Votre compte Business et boutique sont actifs 🎉',
-                    'Your Business profile & store are now active!',
+                    'مبروك! تم تفعيل حساب الأعمال (Business) ومتجرك الموثّق بنجاح',
+                    'Félicitations ! Votre boutique Business vérifiée est active',
+                    'Your Verified Business store is now active!',
                   ),
           ),
         ),

@@ -202,11 +202,22 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.byType(ExploreListingCard), findsWidgets);
 
-      // By default all Explore sellers are Personal and unverified (no Business pills or Verified badges)
+      // By default all non-Premium Explore sellers are Personal and unverified
       expect(find.byType(ApoloVerifiedBadge), findsNothing);
       expect(find.byKey(const Key('apolo-account-badge-business')), findsNothing);
       expect(find.byKey(const Key('apolo-account-badge-personal')), findsWidgets);
-      expect(find.byKey(const Key('explore-seller-type-business')), findsNothing);
+      expect(find.byKey(const Key('explore-seller-type-business')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('explore-seller-type-business')));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byType(ExploreListingCard), findsNothing);
+
+      await tester.tap(find.byKey(const Key('explore-seller-type-personal')));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byType(ExploreListingCard), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('explore-seller-type-all')));
+      await tester.pump(const Duration(milliseconds: 200));
 
       // Enter Search Suggestions in Dark Mode and submit a query -> saves to Recent searches & shows active chip
       await tester.tap(find.byKey(const Key('explore-search-bar-field')));

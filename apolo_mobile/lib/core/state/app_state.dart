@@ -42,32 +42,62 @@ class AppState extends ChangeNotifier {
   // Smart Personalization & Recommendation State (2026 Feed Engine)
   Map<int, int> categoryInterestWeights = {};
   int? preferredCityId;
-  String accountType = 'individual'; // 'individual' | 'business' | 'pro_plus'
+  String accountType = 'individual'; // 'individual' | 'pro_plus'
+  Map<String, int> _dailyAdsCounts = {};
 
-  String get effectiveAccountType {
-    if (!AppConfig.enablePremiumAndBusinessTiers) {
-      return 'individual';
-    }
-    final raw = (currentUser?['account_type'] ?? accountType)
+  static String todayDateKey([DateTime? now]) {
+    final d = (now ?? DateTime.now()).toLocal();
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '${d.year}-$m-$day';
+  }
+
+  String _dailyBucketKey([DateTime? now]) {
+    final uid = currentUser?['id']?.toString() ?? 'guest';
+    return '${uid}_${todayDateKey(now)}';
+  }
+
+  int get todayPostedAdsCount => _dailyAdsCounts[_dailyBucketKey()] ?? 0;
+
+  int get remainingFreeDailyAds => isProPlusAccount
+      ? 999999
+      : (AppConfig.maxDailyFreeAds - todayPostedAdsCount)
+          .clamp(0, AppConfig.maxDailyFreeAds);
+
+  bool get hasReachedDailyAdLimit =>
+      !isProPlusAccount && todayPostedAdsCount >= AppConfig.maxDailyFreeAds;
+
+  Future<void> recordAdPostedToday([DateTime? now]) async {
+    final key = _dailyBucketKey(now);
+    _dailyAdsCounts[key] = (_dailyAdsCounts[key] ?? 0) + 1;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_dailyAdsPrefsKey, jsonEncode(_dailyAdsCounts));
+    } catch (_) {}
+  }
+
+  void resetDailyAdsForTesting([int initialCount = 0]) {
+    _dailyAdsCounts = initialCount > 0
+        ? <String, int>{_dailyBucketKey(): initialCount}
+        : <String, int>{};
+    notifyListeners();
+  }
+
+  String get effectiveAccountType =>
+      isProPlusAccount ? 'pro_plus' : 'individual';
+
+  /// Business storefront & Verified badge are strictly exclusive to Apolo Premium.
+  bool get isBusinessAccount => isProPlusAccount;
+
+  bool get isProPlusAccount {
+    if (!AppConfig.enablePremiumAndBusinessTiers) return false;
+    final raw = (currentUser?['account_type'] ?? '')
         .toString()
         .toLowerCase()
         .trim();
-    if (raw == 'pro_plus' || currentUser?['is_pro_plus'] == true) {
-      return 'pro_plus';
-    }
-    if (raw == 'business' ||
-        raw == 'pro' ||
-        raw == 'boutique' ||
-        currentUser?['is_business'] == true) {
-      return 'business';
-    }
-    return 'individual';
+    return currentUser?['is_pro_plus'] == true || raw == 'pro_plus';
   }
-
-  bool get isBusinessAccount =>
-      effectiveAccountType == 'business' || effectiveAccountType == 'pro_plus';
-
-  bool get isProPlusAccount => effectiveAccountType == 'pro_plus';
 
   int get vipBoostCredits =>
       int.tryParse('${currentUser?['vip_boost_credits'] ?? 0}') ?? 0;
@@ -196,6 +226,7 @@ class AppState extends ChangeNotifier {
 
   static const String _cachedUserPrefsKey = 'apolo_cached_user_v1';
   static const String _themeModePrefsKey = 'apolo_theme_mode_v1';
+  static const String _dailyAdsPrefsKey = 'apolo_daily_ads_counts_v1';
   static const String _followedSellersPrefsKey = 'apolo_followed_sellers_v1';
   static const String _sellerReviewsPrefsKey = 'apolo_seller_reviews_v1';
   static const String _userIntentsPrefsKey = 'apolo_user_intents_v1';
@@ -513,22 +544,69 @@ class AppState extends ChangeNotifier {
     required String transactionId,
     String? receiptData,
   }) async {
-    final res = await api.dio.post('/pro-plus/subscribe', data: {
-      'plan': plan,
-      'platform': platform,
-      'transaction_id': transactionId,
-      if (receiptData != null) 'receipt_data': receiptData,
-    });
-    if (res.data is Map && res.data['status'] == 'success') {
-      if (res.data['user'] is Map) {
-        await updateCurrentUser(Map<String, dynamic>.from(res.data['user']));
+    Map<String, dynamic>? serverData;
+    try {
+      final res = await api.dio.post('/pro-plus/subscribe', data: {
+        'plan': plan,
+        'platform': platform,
+        'transaction_id': transactionId,
+        if (receiptData != null) 'receipt_data': receiptData,
+      });
+      if (res.data is Map && res.data['status'] == 'success') {
+        serverData = Map<String, dynamic>.from(res.data as Map);
       }
-      return Map<String, dynamic>.from(res.data as Map);
+    } catch (e) {
+      if (platform != 'google_pay_web') rethrow;
     }
-    throw StateError(
-      (res.data is Map ? res.data['message'] : null)?.toString() ??
-          'Failed to activate Pro Plus',
-    );
+
+    if (serverData == null && platform != 'google_pay_web') {
+      throw StateError('Failed to activate Pro Plus');
+    }
+
+    final baseUser = serverData != null && serverData['user'] is Map
+        ? Map<String, dynamic>.from(serverData['user'] as Map)
+        : Map<String, dynamic>.from(currentUser ?? <String, dynamic>{});
+
+    final currentCredits =
+        int.tryParse('${baseUser['vip_boost_credits'] ?? 0}') ?? 0;
+    final addedCredits = plan.contains('year')
+        ? 60
+        : (plan.contains('life') ? 120 : 5);
+    baseUser['is_pro_plus'] = true;
+    baseUser['is_business'] = true;
+    baseUser['is_verified'] = true;
+    baseUser['account_type'] = 'pro_plus';
+    if (currentCredits < addedCredits) {
+      baseUser['vip_boost_credits'] = addedCredits;
+    }
+
+    final existingStore = baseUser['store'] is Map
+        ? Map<String, dynamic>.from(baseUser['store'] as Map)
+        : (baseUser['paused_store'] is Map
+            ? Map<String, dynamic>.from(baseUser['paused_store'] as Map)
+            : null);
+    final fallbackName = (baseUser['name'] ?? 'Apolo Store').toString().trim();
+    final fallbackHandle = (baseUser['username'] ?? fallbackName)
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9-]+'), '-');
+    baseUser['store'] = <String, dynamic>{
+      if (existingStore != null) ...existingStore,
+      'name': (existingStore?['name'] ?? fallbackName).toString(),
+      'subdomain': (existingStore?['subdomain'] ??
+              (fallbackHandle.isNotEmpty ? fallbackHandle : 'apolo-store'))
+          .toString(),
+      'business_category':
+          (existingStore?['business_category'] ?? 'general').toString(),
+      'is_pro_plus': true,
+      'is_verified': true,
+      'is_open_now': existingStore?['is_open_now'] ?? true,
+      'is_active': true,
+    };
+
+    await updateCurrentUser(baseUser);
+    return serverData ?? <String, dynamic>{'status': 'success', 'user': baseUser};
   }
 
   Future<void> cancelProPlusSubscription() async {
@@ -537,23 +615,32 @@ class AppState extends ChangeNotifier {
       if (res.data is Map &&
           res.data['status'] == 'success' &&
           res.data['user'] is Map) {
-        await updateCurrentUser(Map<String, dynamic>.from(res.data['user']));
+        final srvUser = Map<String, dynamic>.from(res.data['user'] as Map);
+        srvUser['is_pro_plus'] = false;
+        srvUser['is_business'] = false;
+        srvUser['is_verified'] = false;
+        srvUser['account_type'] = 'individual';
+        if (srvUser['store'] is Map) {
+          srvUser['paused_store'] = srvUser['store'];
+        }
+        srvUser['store'] = null;
+        await updateCurrentUser(srvUser);
         return;
       }
     } catch (_) {}
     if (currentUser != null) {
       final updated = Map<String, dynamic>.from(currentUser!);
       updated['is_pro_plus'] = false;
-      if ((updated['account_type'] ?? '').toString().toLowerCase() ==
-          'pro_plus') {
-        updated['account_type'] =
-            updated['is_business'] == true ? 'business' : 'individual';
-      }
+      updated['is_business'] = false;
+      updated['is_verified'] = false;
+      updated['account_type'] = 'individual';
       if (updated['store'] is Map) {
         final storeMap = Map<String, dynamic>.from(updated['store'] as Map);
         storeMap['is_pro_plus'] = false;
-        updated['store'] = storeMap;
+        storeMap['is_verified'] = false;
+        updated['paused_store'] = storeMap;
       }
+      updated['store'] = null;
       await updateCurrentUser(updated);
     }
   }
@@ -579,6 +666,21 @@ class AppState extends ChangeNotifier {
       };
       preferredCityId = prefs.getInt('apolo_preferred_city_id');
       accountType = prefs.getString('apolo_account_type') ?? 'individual';
+      final rawDailyAds = prefs.getString(_dailyAdsPrefsKey);
+      if (rawDailyAds != null && rawDailyAds.isNotEmpty) {
+        final decodedDaily = jsonDecode(rawDailyAds);
+        if (decodedDaily is Map) {
+          _dailyAdsCounts = {};
+          final todaySuffix = '_${todayDateKey()}';
+          decodedDaily.forEach((k, v) {
+            final ks = k.toString();
+            final count = int.tryParse(v.toString());
+            if (ks.endsWith(todaySuffix) && count != null && count > 0) {
+              _dailyAdsCounts[ks] = count;
+            }
+          });
+        }
+      }
       userLat = prefs.getDouble('apolo_zone_lat');
       userLng = prefs.getDouble('apolo_zone_lng');
       zoneCityNameAr = prefs.getString('apolo_zone_city_ar');

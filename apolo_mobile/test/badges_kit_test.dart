@@ -41,7 +41,9 @@ void main() {
   });
 
   test('ApoloSellerRank.resolve covers all 6 tiers and explicit backend override', () {
-    // Default launch mode: Personal/unverified ignores Business/ProPlus flags
+    // When tiers are disabled, Business/ProPlus flags are ignored
+    AppConfig.enablePremiumAndBusinessTiers = false;
+    addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = true);
     expect(
       ApoloSellerRank.resolve(
         listingsCount: 0,
@@ -54,7 +56,6 @@ void main() {
     );
 
     AppConfig.enablePremiumAndBusinessTiers = true;
-    addTearDown(() => AppConfig.enablePremiumAndBusinessTiers = false);
     expect(
       ApoloSellerRank.resolve(
         user: {'rank': 'diamond'},

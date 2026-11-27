@@ -813,9 +813,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         (user?['avatar_url'] ?? user?['avatar'] ?? '').toString().trim();
     final initial =
         name.isNotEmpty ? name.characters.first.toUpperCase() : 'A';
-    final isVerified = AppConfig.enablePremiumAndBusinessTiers &&
-        isLoggedIn &&
-        (user['is_verified'] == true || _state.isProPlusAccount);
+    final isVerified = isLoggedIn && _state.isProPlusAccount;
     final rank = isLoggedIn
         ? ApoloSellerRank.resolve(
             user: user,
