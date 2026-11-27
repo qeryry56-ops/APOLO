@@ -185,8 +185,8 @@ class _DlSubscriptionLegalTextState extends State<_DlSubscriptionLegalText> {
   @override
   void initState() {
     super.initState();
-    _termsTap = TapGestureRecognizer()..onTap = _openCompliance;
-    _privacyTap = TapGestureRecognizer()..onTap = _openCompliance;
+    _termsTap = TapGestureRecognizer()..onTap = () => _openCompliance(2);
+    _privacyTap = TapGestureRecognizer()..onTap = () => _openCompliance(0);
   }
 
   @override
@@ -196,11 +196,11 @@ class _DlSubscriptionLegalTextState extends State<_DlSubscriptionLegalText> {
     super.dispose();
   }
 
-  void _openCompliance() {
+  void _openCompliance(int tab) {
     HapticFeedback.selectionClick();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const PrivacyComplianceScreen(initialTab: 0),
+        builder: (_) => PrivacyComplianceScreen(initialTab: tab),
       ),
     );
   }
