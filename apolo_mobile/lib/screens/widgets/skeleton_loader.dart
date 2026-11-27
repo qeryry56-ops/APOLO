@@ -604,7 +604,7 @@ class NotificationsSkeleton extends StatelessWidget {
   }
 }
 
-/// Skeleton for a single Store Card in StoresScreen
+/// Skeleton for a single Store Card in StoresScreen (Dynamic Layer v5.1)
 class StoreCardSkeleton extends StatelessWidget {
   const StoreCardSkeleton({super.key});
 
@@ -613,34 +613,69 @@ class StoreCardSkeleton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF6F6F6),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFEDEFF3)),
       ),
       child: const Row(
         children: [
-          ShimmerBox(width: 62, height: 62, borderRadius: 18),
+          ShimmerBox(
+            width: 62,
+            height: 62,
+            shape: BoxShape.circle,
+            baseColor: Color(0xFFEEEEEE),
+            highlightColor: Color(0xFFFFFFFF),
+          ),
           SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ShimmerBox(width: 148, height: 16, borderRadius: 6),
+                ShimmerBox(
+                  width: 148,
+                  height: 16,
+                  borderRadius: 6,
+                  baseColor: Color(0xFFEEEEEE),
+                  highlightColor: Color(0xFFFFFFFF),
+                ),
                 SizedBox(height: 8),
-                ShimmerBox(width: 105, height: 12, borderRadius: 6),
+                ShimmerBox(
+                  width: 105,
+                  height: 12,
+                  borderRadius: 6,
+                  baseColor: Color(0xFFEEEEEE),
+                  highlightColor: Color(0xFFFFFFFF),
+                ),
                 SizedBox(height: 10),
                 Row(
                   children: [
-                    ShimmerBox(width: 66, height: 22, borderRadius: 99),
+                    ShimmerBox(
+                      width: 66,
+                      height: 22,
+                      borderRadius: 99,
+                      baseColor: Color(0xFFEEEEEE),
+                      highlightColor: Color(0xFFFFFFFF),
+                    ),
                     SizedBox(width: 8),
-                    ShimmerBox(width: 84, height: 22, borderRadius: 99),
+                    ShimmerBox(
+                      width: 84,
+                      height: 22,
+                      borderRadius: 99,
+                      baseColor: Color(0xFFEEEEEE),
+                      highlightColor: Color(0xFFFFFFFF),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           SizedBox(width: 8),
-          ShimmerBox(width: 28, height: 28, shape: BoxShape.circle),
+          ShimmerBox(
+            width: 28,
+            height: 28,
+            shape: BoxShape.circle,
+            baseColor: Color(0xFFEEEEEE),
+            highlightColor: Color(0xFFFFFFFF),
+          ),
         ],
       ),
     );

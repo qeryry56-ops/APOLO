@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/apolo_badges_kit.dart';
@@ -10,6 +12,11 @@ import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
 
+/// Dynamic Layer v5.1 Verified Official Stores Directory:
+/// - Pure `#FFFFFF` canvas + `#EEEEEE` `40×40` circular back button
+/// - `46px` `#EEEEEE` stadium search bar (`1.5px` `#000000` active border)
+/// - `#000000` / `#EEEEEE` capsule filter pills (`All` / `Most products` / `Top rated`)
+/// - Flat `#F6F6F6` rounded `22px` store cards with `ApoloVerifiedBadge` + `ApoloRankBadge`
 class StoresScreen extends StatefulWidget {
   const StoresScreen({super.key});
 
@@ -19,32 +26,47 @@ class StoresScreen extends StatefulWidget {
 
 class _StoresScreenState extends State<StoresScreen> {
   final AppState _state = AppState();
+  final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  final ScrollController _scrollCtrl = ScrollController();
+
   List<dynamic> _stores = [];
   bool _loading = true;
-  final TextEditingController _searchCtrl = TextEditingController();
-
-  final ScrollController _scrollCtrl = ScrollController();
   int _currentPage = 1;
   int _lastPage = 1;
   int _totalStores = 0;
   bool _loadingMore = false;
   int _filterIndex = 0; // 0: All, 1: Most products, 2: Top rated
 
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _border = Color(0xFFE5E7EB);
+  // Strict Dynamic Layer v5.1 Palette Tokens
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlSeparator = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlStarAmber = Color(0xFFFFB800);
 
   @override
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
+    _searchFocus.addListener(_onFocusChange);
+    _searchCtrl.addListener(_onFocusChange);
     _fetchStores();
+  }
+
+  void _onFocusChange() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
+    _searchFocus.removeListener(_onFocusChange);
+    _searchFocus.dispose();
+    _searchCtrl.removeListener(_onFocusChange);
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -130,12 +152,12 @@ class _StoresScreenState extends State<StoresScreen> {
     if (_filterIndex == 1) {
       list.sort((a, b) {
         final ca = int.tryParse(
-                (a['active_products_count'] ?? a['ads_count'] ?? 0)
-                    .toString()) ??
+              (a['active_products_count'] ?? a['ads_count'] ?? 0).toString(),
+            ) ??
             0;
         final cb = int.tryParse(
-                (b['active_products_count'] ?? b['ads_count'] ?? 0)
-                    .toString()) ??
+              (b['active_products_count'] ?? b['ads_count'] ?? 0).toString(),
+            ) ??
             0;
         return cb.compareTo(ca);
       });
@@ -156,597 +178,604 @@ class _StoresScreenState extends State<StoresScreen> {
     final s = _state.s;
     final canPop = Navigator.canPop(context);
     final visible = _visibleStores;
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F7),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Clean Centered-Style Top Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              child: Row(
-                children: [
-                  if (canPop) ...[
-                    PressableScale(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          s.isAr
-                              ? CupertinoIcons.chevron_right
-                              : CupertinoIcons.chevron_left,
-                          size: 20,
-                          color: _ink,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          s.stores,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: _ink,
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, -0.4),
-                            height: AppTypography.lineHeightForContext(
-                              context,
-                              1.15,
-                              arabicMin: 1.32,
-                            ),
-                          ),
-                        ),
-                        if (_totalStores > 0)
-                          Text(
-                            s.tr(
-                              '$_totalStores متجر رسمي موثق في المغرب',
-                              '$_totalStores boutiques officielles vérifiées',
-                              '$_totalStores verified official stores',
-                            ),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: _muted,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _ink,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(CupertinoIcons.checkmark_seal_fill,
-                            size: 13.5, color: Colors.white),
-                        const SizedBox(width: 5),
-                        Text(
-                          'PRO',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 11.5,
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, 0.4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    final searchFocused = _searchFocus.hasFocus;
 
-            // Clean White Pill Search Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                padding: const EdgeInsetsDirectional.only(start: 14, end: 6),
+    return Directionality(
+      textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: _dlBg,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Dynamic Layer v5.1 Top Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                 child: Row(
                   children: [
-                    const Icon(CupertinoIcons.search, color: _muted, size: 19),
-                    const SizedBox(width: 10),
+                    if (canPop) ...[
+                      ApoloDlIconCircleButton(
+                        key: const Key('stores-back-button'),
+                        icon: s.isAr
+                            ? CupertinoIcons.chevron_right
+                            : CupertinoIcons.chevron_left,
+                        backgroundColor: _dlPill,
+                        iconColor: _dlInk,
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     Expanded(
-                      child: TextField(
-                        controller: _searchCtrl,
-                        onSubmitted: (_) => _fetchStores(),
-                        style: const TextStyle(
-                            color: _ink,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.stores,
+                            key: const Key('stores-header-title'),
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: _dlInk,
+                              letterSpacing: AppTypography.trackingForContext(
+                                context,
+                                -0.4,
+                              ),
+                            ),
+                          ),
+                          if (_totalStores > 0)
+                            Text(
+                              s.tr(
+                                '$_totalStores متجر رسمي موثق في المغرب',
+                                '$_totalStores boutiques officielles vérifiées',
+                                '$_totalStores verified official stores',
+                              ),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: _dlMuted,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _dlInk,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ApoloVerifiedBadge(size: 14),
+                          SizedBox(width: 5),
+                          Text(
+                            'PRO',
+                            textDirection: TextDirection.ltr,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Dynamic Layer v5.1 Stadium Search Pill
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: _dlPill,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: searchFocused ? _dlInk : Colors.transparent,
+                      width: 1.5,
+                    ),
+                  ),
+                  padding: const EdgeInsetsDirectional.only(start: 14, end: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.search,
+                        color: searchFocused ? _dlInk : _dlMuted,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          key: const Key('stores-search-field'),
+                          controller: _searchCtrl,
+                          focusNode: _searchFocus,
+                          cursorColor: _dlInk,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _fetchStores(),
+                          style: const TextStyle(
+                            color: _dlInk,
                             fontSize: 14.5,
-                            fontWeight: FontWeight.w600),
-                        decoration: InputDecoration(
-                          hintText: s.tr('ابحث عن متجر احترافي معتمد...',
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: s.tr(
+                              'ابحث عن متجر احترافي معتمد...',
                               'Rechercher une boutique officielle...',
-                              'Search official stores...'),
-                          hintStyle: const TextStyle(
-                              color: _muted,
+                              'Search official stores...',
+                            ),
+                            hintStyle: const TextStyle(
+                              color: _dlMuted,
                               fontSize: 14,
-                              fontWeight: FontWeight.w500),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                    if (_searchCtrl.text.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _searchCtrl.clear();
-                          _fetchStores();
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6),
-                          child: Icon(
-                            CupertinoIcons.clear_circled_solid,
-                            color: _muted,
-                            size: 18,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            fillColor: Colors.transparent,
+                            hoverColor: Colors.transparent,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ),
-                    PressableScale(
-                      onTap: _fetchStores,
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: const BoxDecoration(
-                          color: _ink,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(CupertinoIcons.arrow_left_right,
-                            size: 15, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Filter Pills Strip
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _buildFilterPill(0, s.tr('الكل', 'Toutes', 'All')),
-                    const SizedBox(width: 8),
-                    _buildFilterPill(
-                      1,
-                      s.tr('الأكثر منتجات', 'Plus de produits', 'Most products'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterPill(
-                      2,
-                      s.tr('الأعلى تقييماً ⭐', 'Mieux notées ⭐', 'Top rated ⭐'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Store Cards List
-            Expanded(
-              child: _loading
-                  ? const StoresListSkeleton()
-                  : visible.isEmpty
-                      ? ApoloDlEmptyState(
-                          icon: Icons.storefront_rounded,
-                          headline: s.tr(
-                            'لا توجد متاجر مطابقة حالياً',
-                            'Aucune boutique trouvée',
-                            'No matching stores',
-                          ),
-                          description: s.tr(
-                            'جرب البحث بكلمة أخرى أو إعادة تحميل قائمة المتاجر المعتمدة.',
-                            'Essayez un autre mot-clé ou actualisez la liste des boutiques.',
-                            'Try another keyword or reload the verified stores list.',
-                          ),
-                          actionLabel: s.tr(
-                            'إعادة المحاولة',
-                            'Réessayer',
-                            'Try again',
-                          ),
-                          onAction: () {
+                      if (_searchCtrl.text.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
                             _searchCtrl.clear();
                             _fetchStores();
                           },
-                        )
-                      : RefreshIndicator(
-                          color: _ink,
-                          backgroundColor: Colors.white,
-                          onRefresh: _fetchStores,
-                          child: ListView.separated(
-                            controller: _scrollCtrl,
-                            physics: const AlwaysScrollableScrollPhysics(
-                                parent: BouncingScrollPhysics()),
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                            itemCount: visible.length + (_loadingMore ? 1 : 0),
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, idx) {
-                              if (idx >= visible.length) {
-                                return const StoreCardSkeleton();
-                              }
-                              final store = visible[idx];
-                              final logo = store['logo_url'] ?? store['logo'];
-                              final location =
-                                  (store['location'] ?? '').toString().trim();
-                              final rating =
-                                  (store['average_rating'] ?? 5).toString();
-                              final int count = int.tryParse(
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Icon(
+                              CupertinoIcons.xmark,
+                              color: _dlMuted,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Capsule Filter Pills
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: [
+                      _buildFilterPill(0, s.tr('الكل', 'Toutes', 'All')),
+                      const SizedBox(width: 8),
+                      _buildFilterPill(
+                        1,
+                        s.tr(
+                          'الأكثر منتجات',
+                          'Plus de produits',
+                          'Most products',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterPill(
+                        2,
+                        s.tr('الأعلى تقييماً', 'Mieux notées', 'Top rated'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Store Cards List
+              Expanded(
+                child: _loading
+                    ? const StoresListSkeleton()
+                    : visible.isEmpty
+                        ? ApoloDlEmptyState(
+                            icon: Icons.storefront_rounded,
+                            headline: s.tr(
+                              'لا توجد متاجر مطابقة حالياً',
+                              'Aucune boutique trouvée',
+                              'No matching stores',
+                            ),
+                            description: s.tr(
+                              'جرب البحث بكلمة أخرى أو إعادة تحميل قائمة المتاجر المعتمدة.',
+                              'Essayez un autre mot-clé ou actualisez la liste des boutiques.',
+                              'Try another keyword or reload the verified stores list.',
+                            ),
+                            actionLabel: s.tr(
+                              'إعادة المحاولة',
+                              'Réessayer',
+                              'Try again',
+                            ),
+                            onAction: () {
+                              _searchCtrl.clear();
+                              _fetchStores();
+                            },
+                          )
+                        : RefreshIndicator(
+                            color: _dlInk,
+                            backgroundColor: _dlBg,
+                            onRefresh: _fetchStores,
+                            child: ListView.separated(
+                              controller: _scrollCtrl,
+                              physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics(),
+                              ),
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                              itemCount:
+                                  visible.length + (_loadingMore ? 1 : 0),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, idx) {
+                                if (idx >= visible.length) {
+                                  return const StoreCardSkeleton();
+                                }
+                                final store = visible[idx];
+                                final logo = store['logo_url'] ?? store['logo'];
+                                final location =
+                                    (store['location'] ?? '').toString().trim();
+                                final rating =
+                                    (store['average_rating'] ?? 5).toString();
+                                final int count = int.tryParse(
                                       (store['active_products_count'] ??
                                               store['ads_count'] ??
                                               0)
-                                          .toString()) ??
-                                  0;
-                              final isProPlus = store['is_pro_plus'] == true;
-                              final isVerified =
-                                  store['is_verified'] == true ||
-                                      store['verified'] == true ||
-                                      isProPlus;
-                              final rank = ApoloSellerRank.resolve(
-                                user: store,
-                                listingsCount: count,
-                                isProPlus: isProPlus,
-                                isBusiness: true,
-                                isVerified: isVerified,
-                              );
-                              return PressableScale(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => StoreDetailScreen(
+                                          .toString(),
+                                    ) ??
+                                    0;
+                                final isProPlus = store['is_pro_plus'] == true;
+                                final isVerified =
+                                    store['is_verified'] == true ||
+                                        store['verified'] == true ||
+                                        isProPlus;
+                                final rank = ApoloSellerRank.resolve(
+                                  user: store,
+                                  listingsCount: count,
+                                  isProPlus: isProPlus,
+                                  isBusiness: true,
+                                  isVerified: isVerified,
+                                );
+
+                                return PressableScale(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => StoreDetailScreen(
                                           subdomain:
-                                              store['subdomain'].toString()),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(22),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(2.5),
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color: _border, width: 1.2),
-                                            ),
-                                            child: AppAvatar(
-                                              url: logo?.toString(),
-                                              radius: 30,
-                                              fallbackIcon:
-                                                  Icons.storefront_rounded,
-                                            ),
-                                          ),
-                                          PositionedDirectional(
-                                            bottom: -1,
-                                            end: -1,
-                                            child: isVerified
-                                                ? ApoloVerifiedBadge(
-                                                    size: 20,
-                                                    rank: rank,
-                                                    isProPlus: isProPlus,
-                                                    isBusiness: true,
-                                                  )
-                                                : Container(
-                                                    width: 20,
-                                                    height: 20,
-                                                    decoration: BoxDecoration(
-                                                      color: _ink,
-                                                      shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                          color: Colors.white,
-                                                          width: 2),
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons.check_rounded,
-                                                      size: 11.5,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                          ),
-                                        ],
+                                              store['subdomain'].toString(),
+                                        ),
                                       ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: _dlSurface,
+                                      borderRadius: BorderRadius.circular(22),
+                                      border: Border.all(color: _dlSeparator),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Stack(
+                                          clipBehavior: Clip.none,
                                           children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    (store['name'] ?? '')
-                                                        .toString(),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: 16,
-                                                      color: _ink,
-                                                      letterSpacing: AppTypography
-                                                          .trackingForContext(
-                                                              context, -0.3),
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 6),
-                                                ApoloRankBadge(
-                                                  rank: rank,
-                                                  size: 18,
-                                                  interactive: true,
-                                                  isVerified: isVerified,
-                                                  isProPlus: isProPlus,
-                                                  isBusiness: true,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                if (isProPlus) ...[
-                                                  Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                          0xFFFEF3C7),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              999),
-                                                    ),
-                                                    child: const Text(
-                                                      'PRO+',
-                                                      textDirection:
-                                                          TextDirection.ltr,
+                                            Container(
+                                              padding: const EdgeInsets.all(2),
+                                              decoration: const BoxDecoration(
+                                                color: _dlBg,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: AppAvatar(
+                                                url: logo?.toString(),
+                                                radius: 30,
+                                                fallbackIcon:
+                                                    Icons.storefront_rounded,
+                                              ),
+                                            ),
+                                            PositionedDirectional(
+                                              bottom: -1,
+                                              end: -1,
+                                              child: ApoloVerifiedBadge(
+                                                size: 19,
+                                                rank: rank,
+                                                isProPlus: isProPlus,
+                                                isBusiness: true,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      (store['name'] ?? '')
+                                                          .toString(),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                       style: TextStyle(
-                                                        fontSize: 10,
                                                         fontWeight:
-                                                            FontWeight.w900,
-                                                        color:
-                                                            Color(0xFF92400E),
+                                                            FontWeight.w700,
+                                                        fontSize: 16,
+                                                        color: _dlInk,
+                                                        letterSpacing:
+                                                            AppTypography
+                                                                .trackingForContext(
+                                                          context,
+                                                          -0.3,
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
                                                   const SizedBox(width: 6),
+                                                  ApoloRankBadge(
+                                                    rank: rank,
+                                                    size: 18,
+                                                    interactive: true,
+                                                    isVerified: isVerified,
+                                                    isProPlus: isProPlus,
+                                                    isBusiness: true,
+                                                  ),
+                                                  if (isProPlus) ...[
+                                                    const SizedBox(width: 5),
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 7,
+                                                        vertical: 2,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: _dlInk,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(999),
+                                                      ),
+                                                      child: const Text(
+                                                        'PRO+',
+                                                        textDirection:
+                                                            TextDirection.ltr,
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                  const SizedBox(width: 6),
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        CupertinoIcons
+                                                            .star_fill,
+                                                        size: 12,
+                                                        color: _dlStarAmber,
+                                                      ),
+                                                      const SizedBox(width: 3),
+                                                      Text(
+                                                        rating,
+                                                        textDirection:
+                                                            TextDirection.ltr,
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: _dlInk,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ],
+                                              ),
+                                              if ((store['business_category'] ??
+                                                      '')
+                                                  .toString()
+                                                  .trim()
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  ApoloBusinessCategories
+                                                      .labelFor(
+                                                    store['business_category']
+                                                        ?.toString(),
+                                                    s,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: _dlMuted,
+                                                  ),
+                                                ),
+                                              ],
+                                              if (location.isNotEmpty) ...[
+                                                const SizedBox(height: 3),
                                                 Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
                                                   children: [
                                                     const Icon(
-                                                      CupertinoIcons.star_fill,
-                                                      size: 12,
-                                                      color: Color(0xFFF59E0B),
+                                                      CupertinoIcons
+                                                          .location_solid,
+                                                      size: 11.5,
+                                                      color: _dlMuted,
                                                     ),
                                                     const SizedBox(width: 3),
-                                                    Text(
-                                                      rating,
-                                                      textDirection:
-                                                          TextDirection.ltr,
-                                                      style: const TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.w800,
-                                                        color: _ink,
+                                                    Expanded(
+                                                      child: Text(
+                                                        location,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                          fontSize: 11.5,
+                                                          color: _dlMuted,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
                                                 ),
                                               ],
-                                            ),
-                                            if ((store['business_category'] ??
-                                                    '')
-                                                .toString()
-                                                .trim()
-                                                .isNotEmpty) ...[
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                ApoloBusinessCategories
-                                                    .labelFor(
-                                                  store['business_category']
-                                                      ?.toString(),
-                                                  s,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 11.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: _muted,
-                                                ),
-                                              ),
-                                            ],
-                                            if (location.isNotEmpty) ...[
-                                              const SizedBox(height: 3),
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                    CupertinoIcons
-                                                        .location_solid,
-                                                    size: 11.5,
-                                                    color: _muted,
+                                              if ((store['description'] ?? '')
+                                                  .toString()
+                                                  .trim()
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  (store['description'] ?? '')
+                                                      .toString(),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    color: _dlMuted,
+                                                    fontSize: 12.5,
+                                                    height: 1.35,
                                                   ),
-                                                  const SizedBox(width: 3),
-                                                  Expanded(
-                                                    child: Text(
-                                                      location,
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                        fontSize: 11.5,
-                                                        color: _muted,
-                                                        fontWeight:
-                                                            FontWeight.w500,
+                                                ),
+                                              ],
+                                              const SizedBox(height: 10),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Flexible(
+                                                    child: Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: _dlBg,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(999),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          const Icon(
+                                                            CupertinoIcons
+                                                                .cube_box,
+                                                            size: 12.5,
+                                                            color: _dlInk,
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          Flexible(
+                                                            child: Text(
+                                                              '$count ${s.tr('منتج', 'produits', 'items')}',
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: _dlInk,
+                                                                fontSize: 11.5,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ),
-                                                ],
-                                              ),
-                                            ],
-                                            if ((store['description'] ?? '')
-                                                .toString()
-                                                .trim()
-                                                .isNotEmpty) ...[
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                (store['description'] ?? '')
-                                                    .toString(),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                    color: _muted,
-                                                    fontSize: 12.5,
-                                                    height: 1.35),
-                                              ),
-                                            ],
-                                            const SizedBox(height: 10),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Flexible(
-                                                  child: Container(
+                                                  const SizedBox(width: 8),
+                                                  Container(
                                                     padding: const EdgeInsets
                                                         .symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 4),
+                                                      horizontal: 12,
+                                                      vertical: 5,
+                                                    ),
                                                     decoration: BoxDecoration(
-                                                      color: const Color(
-                                                          0xFFF2F3F7),
+                                                      color: _dlInk,
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                              999),
+                                                        999,
+                                                      ),
                                                     ),
                                                     child: Row(
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       children: [
-                                                        const Icon(
-                                                            CupertinoIcons
-                                                                .cube_box,
-                                                            size: 12.5,
-                                                            color: _ink),
-                                                        const SizedBox(width: 4),
-                                                        Flexible(
-                                                          child: Text(
-                                                            '$count ${s.tr('منتج', 'produits', 'items')}',
-                                                            maxLines: 1,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                            style:
-                                                                const TextStyle(
-                                                                    color: _ink,
-                                                                    fontSize:
-                                                                        11.5,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700),
+                                                        Text(
+                                                          s.tr(
+                                                            'زيارة المتجر',
+                                                            'Visiter',
+                                                            'Visit',
                                                           ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 11.5,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 3,
+                                                        ),
+                                                        Icon(
+                                                          s.isAr
+                                                              ? CupertinoIcons
+                                                                  .chevron_left
+                                                              : CupertinoIcons
+                                                                  .chevron_right,
+                                                          size: 11.5,
+                                                          color: Colors.white,
                                                         ),
                                                       ],
                                                     ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 5),
-                                                  decoration: BoxDecoration(
-                                                    color: _ink,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            999),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Text(
-                                                        s.tr('زيارة المتجر',
-                                                            'Visiter', 'Visit'),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 11.5,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w700),
-                                                      ),
-                                                      const SizedBox(width: 3),
-                                                      Icon(
-                                                        Directionality.of(
-                                                                    context) ==
-                                                                TextDirection
-                                                                    .rtl
-                                                            ? CupertinoIcons
-                                                                .chevron_left
-                                                            : CupertinoIcons
-                                                                .chevron_right,
-                                                        size: 11.5,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
-                        ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -754,21 +783,25 @@ class _StoresScreenState extends State<StoresScreen> {
 
   Widget _buildFilterPill(int index, String label) {
     final active = _filterIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _filterIndex = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? _ink : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: active ? Colors.white : _ink,
+    return Material(
+      color: active ? _dlInk : _dlPill,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _filterIndex = index);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: active ? _dlBg : _dlInk,
+            ),
           ),
         ),
       ),

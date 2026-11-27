@@ -47,10 +47,10 @@ class _MainShellState extends State<MainShell>
   late final Animation<double> _pillScaleX;
   late final Animation<double> _pillScaleY;
 
-  // Monochrome Obsidian Black + Neutral Gray Dock Palette
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _inactive = Color(0xFF6B7280);
-  static const Color _activePill = Color(0xFFE8EAEE);
+  // Dynamic Layer v5.1 Monochrome Dock Palette
+  static const Color _ink = Color(0xFF000000);
+  static const Color _inactive = Color(0xFF757575);
+  static const Color _activePill = Color(0xFFEEEEEE);
 
   @override
   void initState() {
@@ -435,37 +435,29 @@ class _MainShellState extends State<MainShell>
                         child: Row(
                           textDirection: TextDirection.ltr,
                           children: [
-                            // Left Expanded Translucent Glass Capsule Pill (4 main tabs)
+                            // Left Expanded Dynamic Layer Capsule Pill (4 main tabs)
                             Expanded(
                               child: Container(
                                 height: 58,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(999),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _ink.withValues(alpha: 0.09),
-                                      blurRadius: 22,
-                                      offset: const Offset(0, 7),
-                                    ),
-                                  ],
+                                  border: Border.all(
+                                    color: const Color(0xFFEEEEEE),
+                                    width: 1.5,
+                                  ),
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(999),
                                   child: BackdropFilter(
                                     filter: ImageFilter.blur(
-                                        sigmaX: 24, sigmaY: 24),
+                                        sigmaX: 20, sigmaY: 20),
                                     child: Container(
                                       padding: const EdgeInsets.all(4.5),
                                       decoration: BoxDecoration(
                                         color: Colors.white
-                                            .withValues(alpha: 0.78),
+                                            .withValues(alpha: 0.92),
                                         borderRadius:
                                             BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.72),
-                                          width: 1,
-                                        ),
                                       ),
                                       child: LayoutBuilder(
                                         builder: (context, constraints) {
@@ -652,27 +644,26 @@ class _MainShellState extends State<MainShell>
                                     height: 58,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: _ink.withValues(alpha: 0.09),
-                                          blurRadius: 22,
-                                          offset: const Offset(0, 7),
-                                        ),
-                                      ],
+                                      border: Border.all(
+                                        color: isPostAdSelected
+                                            ? _ink
+                                            : const Color(0xFFEEEEEE),
+                                        width: 1.5,
+                                      ),
                                     ),
                                     child: ClipOval(
                                       child: BackdropFilter(
                                         filter: ImageFilter.blur(
-                                            sigmaX: 24, sigmaY: 24),
+                                            sigmaX: 20, sigmaY: 20),
                                         child: AnimatedContainer(
                                           duration:
                                               const Duration(milliseconds: 220),
                                           curve: Curves.easeOutCubic,
                                           decoration: BoxDecoration(
                                             color: isPostAdSelected
-                                                ? _ink.withValues(alpha: 0.90)
+                                                ? _ink
                                                 : Colors.white
-                                                    .withValues(alpha: 0.78),
+                                                    .withValues(alpha: 0.92),
                                             shape: BoxShape.circle,
                                           ),
                                           alignment: Alignment.center,

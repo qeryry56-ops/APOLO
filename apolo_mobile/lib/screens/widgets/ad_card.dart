@@ -1,25 +1,32 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../core/state/app_state.dart';
 import '../../theme/app_typography.dart';
 import '../ad_detail_screen.dart';
+import '../auth_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
 import 'price_text.dart';
-import '../auth_screen.dart';
 
+/// Dynamic Layer v5.1 Compact Product/Listing Card (`AdCard`):
+/// - Flat `#F6F6F6` / `#FFFFFF` card with `1px` `#EEEEEE` border and zero drop shadows
+/// - `#000000` bold `PriceText`, `#EEEEEE` `Negotiable` capsule, `#000000` `VIP` pill,
+///   and `#FFFFFF` circular favorite heart (`#FF3B30` active / `#000000` inactive).
 class AdCard extends StatelessWidget {
   final Map<String, dynamic> ad;
   final bool horizontal;
 
   const AdCard({super.key, required this.ad, this.horizontal = false});
 
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _surface = Color(0xFFF5F6F8);
-  static const Color _emerald = Color(0xFF10B981);
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlSeparator = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlHeartRed = Color(0xFFFF3B30);
 
   @override
   Widget build(BuildContext context) {
@@ -75,21 +82,12 @@ class AdCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          color: _dlSurface,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isFeatured
-                ? _red.withValues(alpha: 0.28)
-                : const Color(0xFFEEF1F6),
-            width: 1.1,
+            color: isFeatured ? _dlInk : _dlSeparator,
+            width: 1.0,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: _ink.withValues(alpha: 0.04),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: horizontal
@@ -142,7 +140,7 @@ class AdCard extends StatelessWidget {
         Container(
           height: height ?? double.infinity,
           width: width ?? double.infinity,
-          color: _surface,
+          color: _dlPill,
           child: url != null && url.isNotEmpty
               ? AppImage(
                   url: url,
@@ -164,28 +162,6 @@ class AdCard extends StatelessWidget {
                   ),
                 ),
         ),
-        // Subtle bottom gradient for city pill legibility
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 46,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.42),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        // City Pill at bottom-start (never overlaps image center)
         if (cityName.isNotEmpty)
           PositionedDirectional(
             bottom: 8,
@@ -193,7 +169,7 @@ class AdCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
+                color: _dlBg,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
@@ -202,7 +178,7 @@ class AdCard extends StatelessWidget {
                   const Icon(
                     CupertinoIcons.location_solid,
                     size: 10,
-                    color: Colors.white,
+                    color: _dlInk,
                   ),
                   const SizedBox(width: 3),
                   ConstrainedBox(
@@ -212,7 +188,7 @@ class AdCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: _dlInk,
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                       ),
@@ -222,7 +198,6 @@ class AdCard extends StatelessWidget {
               ),
             ),
           ),
-        // Featured / VIP badge at top-start
         if (isFeatured)
           PositionedDirectional(
             top: 8,
@@ -230,7 +205,7 @@ class AdCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _red,
+                color: _dlInk,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
@@ -254,7 +229,6 @@ class AdCard extends StatelessWidget {
               ),
             ),
           ),
-        // Favorite Heart at top-end (44x44 pt HIG touch target)
         PositionedDirectional(
           top: 2,
           end: 2,
@@ -265,8 +239,10 @@ class AdCard extends StatelessWidget {
               return PressableScale(
                 onTap: () async {
                   if (!state.isLoggedIn) {
-                    await Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const AuthScreen()));
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AuthScreen()),
+                    );
                     return;
                   }
                   HapticFeedback.selectionClick();
@@ -282,8 +258,8 @@ class AdCard extends StatelessWidget {
                   child: Container(
                     width: 30,
                     height: 30,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.94),
+                    decoration: const BoxDecoration(
+                      color: _dlBg,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -291,7 +267,7 @@ class AdCard extends StatelessWidget {
                           ? CupertinoIcons.heart_fill
                           : CupertinoIcons.heart,
                       size: 15,
-                      color: currentFav ? _red : _ink,
+                      color: currentFav ? _dlHeartRed : _dlInk,
                     ),
                   ),
                 ),
@@ -324,7 +300,7 @@ class AdCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(17),
+              borderRadius: BorderRadius.circular(15),
               child: _buildImage(
                 image,
                 isFeatured,
@@ -342,7 +318,6 @@ class AdCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Price + Negotiable dot (Easy instant scan)
               Row(
                 children: [
                   Expanded(
@@ -351,8 +326,8 @@ class AdCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: _red,
-                        fontWeight: FontWeight.w900,
+                        color: _dlInk,
+                        fontWeight: FontWeight.w800,
                         fontSize: 15.5,
                         letterSpacing:
                             AppTypography.trackingForContext(context, -0.3),
@@ -367,36 +342,34 @@ class AdCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
+                        color: _dlBg,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         state.s.tr('تفاوض', 'Négo', 'Negotiable'),
                         style: const TextStyle(
-                          color: _emerald,
+                          color: _dlInk,
                           fontSize: 9.5,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                 ],
               ),
               const SizedBox(height: 4),
-              // 2. Clean Title
               Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: _ink,
-                  fontWeight: FontWeight.w700,
+                  color: _dlInk,
+                  fontWeight: FontWeight.w600,
                   fontSize: 13.5,
                   letterSpacing:
                       AppTypography.trackingForContext(context, -0.2),
                 ),
               ),
               const SizedBox(height: 6),
-              // 3. Harmonious Mini Category Pill (Icon + Name, never overlaps)
               if (category.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -404,7 +377,7 @@ class AdCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _surface,
+                    color: _dlBg,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
@@ -425,9 +398,9 @@ class AdCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: _muted,
+                            color: _dlMuted,
                             fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -462,7 +435,7 @@ class AdCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(6),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(17),
+              borderRadius: BorderRadius.circular(15),
               child: SizedBox(
                 width: 128,
                 height: 114,
@@ -490,8 +463,8 @@ class AdCard extends StatelessWidget {
                   PriceText(
                     price,
                     style: TextStyle(
-                      color: _red,
-                      fontWeight: FontWeight.w900,
+                      color: _dlInk,
+                      fontWeight: FontWeight.w800,
                       fontSize: 16.5,
                       letterSpacing:
                           AppTypography.trackingForContext(context, -0.3),
@@ -503,9 +476,9 @@ class AdCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: _ink,
+                      color: _dlInk,
                       letterSpacing:
                           AppTypography.trackingForContext(context, -0.2),
                     ),
@@ -514,48 +487,50 @@ class AdCard extends StatelessWidget {
                     children: [
                       if (category.isNotEmpty)
                         Flexible(
-                            child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _surface,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: Image.asset(
-                                  categoryAsset,
-                                  fit: BoxFit.contain,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _dlBg,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: Image.asset(
+                                    categoryAsset,
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 5),
-                              Flexible(
+                                const SizedBox(width: 5),
+                                Flexible(
                                   child: Text(
-                                category,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: _muted,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
+                                    category,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: _dlMuted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
-                              )),
-                            ],
+                              ],
+                            ),
                           ),
-                        )),
+                        ),
                       const Spacer(),
                       Icon(
                         state.s.isAr
                             ? CupertinoIcons.chevron_left
                             : CupertinoIcons.chevron_right,
                         size: 15,
-                        color: _muted,
+                        color: _dlMuted,
                       ),
                     ],
                   ),

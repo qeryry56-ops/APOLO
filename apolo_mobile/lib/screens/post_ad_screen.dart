@@ -1,23 +1,28 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/location/marketplace_location.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'auth_screen.dart';
-import '../account/account_helpers.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/real_marketplace_map.dart';
 
+/// Dynamic Layer v5.1 4-Step Post Ad / Listing Editor Wizard:
+/// - Pure `#FFFFFF` canvas + `#EEEEEE` `40×40` circular back button + `#000000`/`#EEEEEE` 4-step progress pills
+/// - Flat `#F6F6F6` cards, category bento tiles, photo uploader, and borderless inputs (`1.5px` `#000000` focus border)
+/// - Full-capsule (`999` radius) `#000000` / `#EEEEEE` option pills & sticky bottom navigation dock
 class PostAdScreen extends StatefulWidget {
   final VoidCallback? onSuccess;
   final Map<String, dynamic>? initialAd;
@@ -32,8 +37,7 @@ class PostAdScreen extends StatefulWidget {
   State<PostAdScreen> createState() => _PostAdScreenState();
 }
 
-class _PostAdScreenState extends State<PostAdScreen>
-    with TickerProviderStateMixin {
+class _PostAdScreenState extends State<PostAdScreen> {
   final AppState _state = AppState();
   final ImagePicker _picker = ImagePicker();
 
@@ -60,15 +64,14 @@ class _PostAdScreenState extends State<PostAdScreen>
   List<String> _existingImageUrls = [];
   final Map<String, dynamic> _dynamicValues = {};
 
-  late final AnimationController _celebrationCtrl;
-
-  // 2026 Monochrome Black, White & Neutral Gray Tokens
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _red = Color(0xFF0A0A0A);
-  static const Color _redSoft = Color(0xFFE8EAEE);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _surface = Color(0xFFF2F3F7);
-  static const Color _emerald = Color(0xFF10B981);
+  // Strict Dynamic Layer v5.1 Palette Tokens
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlSeparator = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlDanger = Color(0xFFE31B23);
 
   List<dynamic> get _effectiveCategories => _state.categories;
   List<dynamic> get _effectiveCities => _state.cities;
@@ -78,11 +81,6 @@ class _PostAdScreenState extends State<PostAdScreen>
   @override
   void initState() {
     super.initState();
-    _celebrationCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3600),
-    );
-
     _titleCtrl.addListener(_onFieldChanged);
     _descCtrl.addListener(_onFieldChanged);
     _priceCtrl.addListener(_onFieldChanged);
@@ -224,7 +222,6 @@ class _PostAdScreenState extends State<PostAdScreen>
   @override
   void dispose() {
     _draftDebounce?.cancel();
-    _celebrationCtrl.dispose();
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
@@ -329,7 +326,9 @@ class _PostAdScreenState extends State<PostAdScreen>
     if (cat == null) return '';
     return (s.isAr
             ? (cat['name_ar'] ?? cat['name'])
-            : (cat['name_fr'] ?? cat['name']))
+            : (s.isEn
+                ? (cat['name_en'] ?? cat['name'] ?? cat['name_fr'])
+                : (cat['name_fr'] ?? cat['name'])))
         .toString();
   }
 
@@ -343,12 +342,17 @@ class _PostAdScreenState extends State<PostAdScreen>
     if (city == null) return '';
     return (s.isAr
             ? (city['name_ar'] ?? city['name'])
-            : (city['name_fr'] ?? city['name']))
+            : (s.isEn
+                ? (city['name_en'] ?? city['name_fr'] ?? city['name'])
+                : (city['name_fr'] ?? city['name'])))
         .toString();
   }
 
   MoroccanCityCoord _selectedCityCoord() {
-    return MarketplaceLocation.resolveTaxonomyCity(_cityId, _effectiveCities) ??
+    return MarketplaceLocation.resolveTaxonomyCity(
+          _cityId,
+          _effectiveCities,
+        ) ??
         MarketplaceLocation.matchCityByName(_selectedCityName()) ??
         MarketplaceLocation.fallbackCasablanca;
   }
@@ -370,16 +374,11 @@ class _PostAdScreenState extends State<PostAdScreen>
               _cityId;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              s.tr(
-                'تعذر تحديد موقعك تلقائياً — اختر المدينة من القائمة',
-                'Détection GPS impossible — choisissez votre ville',
-                'Could not detect GPS location — pick your city',
-              ),
-            ),
+        _showToast(
+          s.tr(
+            'تعذر تحديد موقعك تلقائياً — اختر المدينة من القائمة',
+            'Détection GPS impossible — choisissez votre ville',
+            'Could not detect GPS location — pick your city',
           ),
         );
       }
@@ -444,7 +443,7 @@ class _PostAdScreenState extends State<PostAdScreen>
 
   double? get _parsedPrice {
     final raw = AccountValidation.normalizeDigits(_priceCtrl.text)
-        .replaceAll(RegExp(r'[\s ]'), '')
+        .replaceAll(RegExp(r'[\s\u00A0]'), '')
         .replaceAll('٫', '.')
         .replaceAll(',', '.');
     final value = double.tryParse(raw);
@@ -455,11 +454,13 @@ class _PostAdScreenState extends State<PostAdScreen>
     switch (step) {
       case 0:
         return _effectiveCategories.any(
-                (c) => c is Map && int.tryParse('${c['id']}') == _categoryId) &&
-            _effectiveCities
-                .any((c) => c is Map && int.tryParse('${c['id']}') == _cityId);
+              (c) => c is Map && int.tryParse('${c['id']}') == _categoryId,
+            ) &&
+            _effectiveCities.any(
+              (c) => c is Map && int.tryParse('${c['id']}') == _cityId,
+            );
       case 1:
-        return true; // Allow continuing even if user skips photo during quick flow
+        return true;
       case 2:
         return _titleCtrl.text.trim().length >= 3;
       case 3:
@@ -470,6 +471,28 @@ class _PostAdScreenState extends State<PostAdScreen>
       default:
         return false;
     }
+  }
+
+  void _showToast(String message, {bool danger = false}) {
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: danger ? _dlDanger : _dlInk,
+          shape: const StadiumBorder(),
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
   }
 
   void _showStepError(int step) {
@@ -505,14 +528,7 @@ class _PostAdScreenState extends State<PostAdScreen>
         );
     }
     HapticFeedback.heavyImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: _ink,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        content: Text(msg),
-      ),
-    );
+    _showToast(msg);
   }
 
   void _nextStep() {
@@ -557,13 +573,11 @@ class _PostAdScreenState extends State<PostAdScreen>
   void _triggerCelebration() {
     HapticFeedback.heavyImpact();
     setState(() => _showCelebration = true);
-    _celebrationCtrl.repeat();
   }
 
   void _resetWizard() {
     HapticFeedback.selectionClick();
     unawaited(_clearDraft());
-    _celebrationCtrl.stop();
     _titleCtrl.clear();
     _descCtrl.clear();
     _priceCtrl.clear();
@@ -593,21 +607,19 @@ class _PostAdScreenState extends State<PostAdScreen>
       }
     }
     if (!_state.isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_state.s.tr(
-            'يجب تسجيل الدخول أولاً لتتمكن من نشر إعلانك على المنصة',
-            'Veuillez vous connecter pour publier votre annonce',
-            'Please sign in to publish your listing',
-          )),
-          backgroundColor: const Color(0xFFE31B23),
-          behavior: SnackBarBehavior.floating,
+      _showToast(
+        s.tr(
+          'يجب تسجيل الدخول أولاً لتتمكن من نشر إعلانك على المنصة',
+          'Veuillez vous connecter pour publier votre annonce',
+          'Please sign in to publish your listing',
         ),
+        danger: true,
       );
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (_) => const AuthScreen(initialIsLogin: true)),
+          builder: (_) => const AuthScreen(initialIsLogin: true),
+        ),
       );
       return;
     }
@@ -672,13 +684,7 @@ class _PostAdScreenState extends State<PostAdScreen>
           final errMsg = res.data is Map
               ? (res.data['message'] ?? 'فشل نشر الإعلان')
               : 'فشل نشر الإعلان';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errMsg.toString()),
-              backgroundColor: const Color(0xFFE31B23),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          _showToast(errMsg.toString(), danger: true);
         }
       }
     } catch (e) {
@@ -695,31 +701,29 @@ class _PostAdScreenState extends State<PostAdScreen>
             errMsg = (dynErr.response.data['message'] ?? errMsg).toString();
           }
         } catch (_) {}
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errMsg),
-            backgroundColor: const Color(0xFFE31B23),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showToast(errMsg, danger: true);
       }
     }
   }
 
-  /// Borderless soft Apple input decoration (#F5F6F8)
-  InputDecoration _softDecoration(String hint,
-      {IconData? icon, Widget? suffix}) {
+  /// Borderless Dynamic Layer v5.1 `#F6F6F6` input decoration (`1.5px` `#000000` focus border).
+  InputDecoration _dlInputDecoration(
+    String hint, {
+    IconData? icon,
+    Widget? suffix,
+  }) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(
-        color: _muted.withValues(alpha: 0.7),
+      hintStyle: const TextStyle(
+        color: _dlMuted,
         fontSize: 14.5,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w400,
       ),
-      prefixIcon: icon != null ? Icon(icon, color: _muted, size: 19) : null,
+      prefixIcon: icon != null ? Icon(icon, color: _dlMuted, size: 18) : null,
       suffixIcon: suffix,
       filled: true,
-      fillColor: _surface,
+      fillColor: _dlSurface,
+      hoverColor: Colors.transparent,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -731,7 +735,7 @@ class _PostAdScreenState extends State<PostAdScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: _ink, width: 1.4),
+        borderSide: const BorderSide(color: _dlInk, width: 1.5),
       ),
     );
   }
@@ -746,139 +750,175 @@ class _PostAdScreenState extends State<PostAdScreen>
 
     final canPop = Navigator.of(context).canPop();
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            if (_state.categories.isEmpty || _state.cities.isEmpty)
-              TextButton.icon(
-                onPressed: () async {
-                  await _state.fetchTaxonomy();
-                  if (mounted) setState(() {});
-                },
-                icon: const Icon(Icons.refresh),
-                label: Text(s.tr(
-                  'تعذر تحميل الأقسام والمدن. أعد المحاولة',
-                  'Catégories et villes indisponibles. Réessayer',
-                  'Categories and cities unavailable. Retry',
-                )),
-              ),
-            // 1. Minimalist Apple Top Bar (Back + 4-Segment Progress Pills + Step Fraction)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (_currentStep > 0 || canPop)
-                    PressableScale(
-                      onTap: _prevStep,
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: const BoxDecoration(
-                          color: _surface,
-                          shape: BoxShape.circle,
+    return Directionality(
+      textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: _dlBg,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              if (_state.categories.isEmpty || _state.cities.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Material(
+                    color: _dlPill,
+                    shape: const StadiumBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: () async {
+                        await _state.fetchTaxonomy();
+                        if (mounted) setState(() {});
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
                         ),
-                        child: Icon(
-                          s.isAr
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.refresh,
+                              size: 14,
+                              color: _dlInk,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                s.tr(
+                                  'تعذر تحميل الأقسام والمدن. أعد المحاولة',
+                                  'Catégories et villes indisponibles. Réessayer',
+                                  'Categories and cities unavailable. Retry',
+                                ),
+                                style: const TextStyle(
+                                  color: _dlInk,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // 1. Dynamic Layer v5.1 Top Nav (`40×40` `#EEEEEE` back + 4-Step `#000000`/`#EEEEEE` pills + fraction)
+              SizedBox(
+                height: 56,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (_currentStep > 0 || canPop)
+                        ApoloDlIconCircleButton(
+                          key: const Key('post-ad-back-button'),
+                          icon: s.isAr
                               ? CupertinoIcons.chevron_right
                               : CupertinoIcons.chevron_left,
-                          color: _ink,
-                          size: 18,
-                        ),
+                          backgroundColor: _dlPill,
+                          iconColor: _dlInk,
+                          onPressed: _prevStep,
+                        )
+                      else
+                        const SizedBox(width: 40, height: 40),
+                      Row(
+                        children: List.generate(4, (i) {
+                          final active = i <= _currentStep;
+                          return GestureDetector(
+                            onTap: () => _jumpToStep(i),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              width: i == _currentStep ? 28 : 10,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: active ? _dlInk : _dlPill,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
-                    )
-                  else
-                    const SizedBox(width: 44),
-
-                  // 4-Segment Interactive Apple Progress Pills
-                  Row(
-                    children: List.generate(4, (i) {
-                      final active = i <= _currentStep;
-                      return GestureDetector(
-                        onTap: () => _jumpToStep(i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 280),
-                          curve: Curves.easeOutCubic,
-                          margin: const EdgeInsets.symmetric(horizontal: 3.5),
-                          width: i == _currentStep ? 28 : 10,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: active ? _red : _surface,
-                            borderRadius: BorderRadius.circular(999),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${_currentStep + 1}/4',
+                          textAlign: TextAlign.end,
+                          textDirection: TextDirection.ltr,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: _dlMuted,
+                            fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
-                      );
-                    }),
-                  ),
-
-                  SizedBox(
-                    width: 44,
-                    child: Text(
-                      '${_currentStep + 1}/4',
-                      textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: _muted,
-                        fontFeatures: [FontFeature.tabularFigures()],
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
 
-            // 2. Generous Whitespace Step Stage
-            Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(26, 8, 26, canPop ? 28 : 132),
-                children: [
-                  // Floating 3D Sculpture + Clean Apple Typography Header
-                  _buildMinimalistStepHeader(s),
-                  const SizedBox(height: 24),
-
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 320),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder: (child, anim) {
-                      final offsetTween = Tween<Offset>(
-                        begin: Offset(_goingForward ? 0.06 : -0.06, 0),
-                        end: Offset.zero,
-                      );
-                      return FadeTransition(
-                        opacity: anim,
-                        child: SlideTransition(
-                          position: offsetTween.animate(anim),
-                          child: child,
+              // 2. Step Stage
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 540),
+                    child: ListView(
+                      key: const Key('post-ad-scroll-view'),
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        8,
+                        20,
+                        canPop ? 24 : 128,
+                      ),
+                      children: [
+                        _buildStepHeader(s),
+                        const SizedBox(height: 22),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 260),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, anim) {
+                            final offsetTween = Tween<Offset>(
+                              begin: Offset(_goingForward ? 0.05 : -0.05, 0),
+                              end: Offset.zero,
+                            );
+                            return FadeTransition(
+                              opacity: anim,
+                              child: SlideTransition(
+                                position: offsetTween.animate(anim),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: KeyedSubtree(
+                            key: ValueKey<int>(_currentStep),
+                            child: _buildCurrentStepBody(s),
+                          ),
                         ),
-                      );
-                    },
-                    child: KeyedSubtree(
-                      key: ValueKey<int>(_currentStep),
-                      child: _buildCurrentStepBody(s),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
 
-            // 3. Clean Sticky Bottom Action Bar
-            _buildBottomWizardBar(s, canPop),
-          ],
+              // 3. Sticky Capsule Bottom Bar
+              _buildBottomWizardBar(s, canPop),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Minimalist Apple Whitespace Step Header (Floating 3D Asset + Centered Title)
-  // ---------------------------------------------------------------------------
-  Widget _buildMinimalistStepHeader(AppStrings s) {
+  Widget _buildStepHeader(AppStrings s) {
     String title;
     String subtitle;
 
@@ -935,37 +975,48 @@ class _PostAdScreenState extends State<PostAdScreen>
 
     return Column(
       children: [
-        Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 350),
-            child: Floating3DIllustration(
-              key: ValueKey<String>('${_currentStep}_${_step3DAsset()}'),
-              assetPath: _step3DAsset(),
-              size: 112,
-              fallbackIcon: CupertinoIcons.cube_box_fill,
+        Container(
+          width: 88,
+          height: 88,
+          padding: const EdgeInsets.all(14),
+          decoration: const BoxDecoration(
+            color: _dlSurface,
+            shape: BoxShape.circle,
+          ),
+          child: Image.asset(
+            _step3DAsset(),
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            errorBuilder: (_, __, ___) => const Icon(
+              CupertinoIcons.cube_box_fill,
+              size: 32,
+              color: _dlInk,
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         Text(
           title,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: _ink,
-            letterSpacing: AppTypography.trackingForContext(context, -0.5),
+            fontSize: 23,
+            fontWeight: FontWeight.w700,
+            color: _dlInk,
+            letterSpacing: AppTypography.trackingForContext(context, -0.4),
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 13.5,
-            height: 1.45,
-            color: _muted,
-            fontWeight: FontWeight.w500,
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13.5,
+              height: 1.45,
+              color: _dlMuted,
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
       ],
@@ -985,25 +1036,21 @@ class _PostAdScreenState extends State<PostAdScreen>
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 1: Soft City Pills + Borderless 3D Category Bento Grid
-  // ---------------------------------------------------------------------------
   Widget _buildStep1CategoryAndCity(AppStrings s) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Horizontal City Pills
         Text(
           s.tr('المدينة', 'Ville', 'City'),
           style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: _ink,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: _dlInk,
           ),
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 42,
+          height: 40,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -1015,54 +1062,53 @@ class _PostAdScreenState extends State<PostAdScreen>
               final selected = id == _cityId;
               final name = (s.isAr
                       ? (city['name_ar'] ?? city['name'])
-                      : (city['name_fr'] ?? city['name']))
+                      : (s.isEn
+                          ? (city['name_en'] ?? city['name_fr'] ?? city['name'])
+                          : (city['name_fr'] ?? city['name'])))
                   .toString();
 
-              return PressableScale(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    _cityId = id;
-                    _adLat = null;
-                    _adLng = null;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: selected ? _ink : _surface,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        CupertinoIcons.location_solid,
-                        size: 13,
-                        color: selected ? Colors.white : _muted,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        name,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: selected ? Colors.white : _ink,
+              return Material(
+                color: selected ? _dlInk : _dlPill,
+                shape: const StadiumBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _cityId = id;
+                      _adLat = null;
+                      _adLng = null;
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          CupertinoIcons.location_solid,
+                          size: 13,
+                          color: selected ? _dlBg : _dlMuted,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: selected ? _dlBg : _dlInk,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           ),
         ),
-
         const SizedBox(height: 14),
-
-        // Interactive GPS + Map Location Preview Card
         Builder(
           builder: (context) {
             final cityCoord = _selectedCityCoord();
@@ -1074,7 +1120,7 @@ class _PostAdScreenState extends State<PostAdScreen>
             return Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _surface,
+                color: _dlSurface,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -1095,58 +1141,55 @@ class _PostAdScreenState extends State<PostAdScreen>
                     },
                   ),
                   const SizedBox(height: 8),
-                  PressableScale(
-                    key: const Key('post-ad-gps-btn'),
-                    onTap: _detectingGps ? () {} : () => _detectAdGps(s),
-                    child: Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: const Color(0xFFE5E7EB),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (_detectingGps)
-                            const SizedBox(
-                              width: 15,
-                              height: 15,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: _ink,
+                  Material(
+                    color: _dlBg,
+                    shape: const StadiumBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      key: const Key('post-ad-gps-btn'),
+                      customBorder: const StadiumBorder(),
+                      onTap: _detectingGps ? null : () => _detectAdGps(s),
+                      child: SizedBox(
+                        height: 40,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (_detectingGps)
+                              const SizedBox(
+                                width: 15,
+                                height: 15,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: _dlInk,
+                                ),
+                              )
+                            else
+                              const Icon(
+                                CupertinoIcons.location_fill,
+                                size: 15,
+                                color: _dlInk,
                               ),
-                            )
-                          else
-                            const Icon(
-                              CupertinoIcons.location_fill,
-                              size: 15,
-                              color: _ink,
+                            const SizedBox(width: 7),
+                            Text(
+                              _adLat != null
+                                  ? s.tr(
+                                      'تم تحديد موقع الإعلان (GPS)',
+                                      'Position GPS enregistrée',
+                                      'GPS location set',
+                                    )
+                                  : s.tr(
+                                      'تحديد موقع الإعلان بـ GPS',
+                                      'Détecter la position (GPS)',
+                                      'Detect ad location (GPS)',
+                                    ),
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: _dlInk,
+                              ),
                             ),
-                          const SizedBox(width: 7),
-                          Text(
-                            _adLat != null
-                                ? s.tr(
-                                    'تم تحديد موقع الإعلان (GPS)',
-                                    'Position GPS enregistrée',
-                                    'GPS location set',
-                                  )
-                                : s.tr(
-                                    'تحديد موقع الإعلان بـ GPS',
-                                    'Détecter la position (GPS)',
-                                    'Detect ad location (GPS)',
-                                  ),
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: _ink,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1155,16 +1198,13 @@ class _PostAdScreenState extends State<PostAdScreen>
             );
           },
         ),
-
-        const SizedBox(height: 24),
-
-        // 2. 2-Column Soft 3D Category Bento Grid
+        const SizedBox(height: 22),
         Text(
           s.tr('اختر القسم', 'Catégorie', 'Category'),
           style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: _ink,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: _dlInk,
           ),
         ),
         const SizedBox(height: 10),
@@ -1184,7 +1224,9 @@ class _PostAdScreenState extends State<PostAdScreen>
             final bool active = _categoryId == id;
             final String label = (s.isAr
                     ? (c['name_ar'] ?? c['name'])
-                    : (c['name_fr'] ?? c['name']))
+                    : (s.isEn
+                        ? (c['name_en'] ?? c['name'] ?? c['name_fr'])
+                        : (c['name_fr'] ?? c['name'])))
                 .toString();
             final String asset = _assetForCategory(label, c is Map ? c : null);
 
@@ -1197,22 +1239,27 @@ class _PostAdScreenState extends State<PostAdScreen>
                 });
               },
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
+                duration: const Duration(milliseconds: 180),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: active ? _redSoft : _surface,
+                  color: _dlSurface,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: active ? _red : Colors.transparent,
-                    width: 1.6,
+                    color: active ? _dlInk : Colors.transparent,
+                    width: 1.5,
                   ),
                 ),
                 child: Row(
                   children: [
-                    SizedBox(
-                      width: 44,
-                      height: 44,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      padding: const EdgeInsets.all(5),
+                      decoration: const BoxDecoration(
+                        color: _dlBg,
+                        shape: BoxShape.circle,
+                      ),
                       child: Image.asset(
                         asset,
                         fit: BoxFit.contain,
@@ -1228,8 +1275,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight:
-                              active ? FontWeight.w800 : FontWeight.w700,
-                          color: active ? _red : _ink,
+                              active ? FontWeight.w700 : FontWeight.w600,
+                          color: _dlInk,
                           height: 1.2,
                         ),
                       ),
@@ -1244,9 +1291,6 @@ class _PostAdScreenState extends State<PostAdScreen>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 2: Minimalist Apple Studio Photo Uploader & Cover Grid
-  // ---------------------------------------------------------------------------
   Widget _buildStep2Photos(AppStrings s) {
     final int totalPhotos = _pickedImages.length + _existingImageUrls.length;
     return Column(
@@ -1258,7 +1302,7 @@ class _PostAdScreenState extends State<PostAdScreen>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             decoration: BoxDecoration(
-              color: _surface,
+              color: _dlSurface,
               borderRadius: BorderRadius.circular(24),
             ),
             child: Column(
@@ -1267,15 +1311,16 @@ class _PostAdScreenState extends State<PostAdScreen>
                   width: 60,
                   height: 60,
                   decoration: const BoxDecoration(
-                    color: Colors.white,
+                    color: _dlBg,
                     shape: BoxShape.circle,
                   ),
+                  alignment: Alignment.center,
                   child: Icon(
                     totalPhotos > 0
                         ? CupertinoIcons.photo_on_rectangle
                         : CupertinoIcons.camera_fill,
-                    size: 26,
-                    color: totalPhotos > 0 ? _emerald : _red,
+                    size: 25,
+                    color: _dlInk,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -1293,8 +1338,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                         ),
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
+                    fontWeight: FontWeight.w700,
+                    color: _dlInk,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1305,7 +1350,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                     'The first photo will be used as the main cover',
                   ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12.5, color: _muted),
+                  style: const TextStyle(fontSize: 12.5, color: _dlMuted),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -1335,19 +1380,24 @@ class _PostAdScreenState extends State<PostAdScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                s.tr('الصور المختارة', 'Photos sélectionnées', 'Selected photos'),
+                s.tr(
+                  'الصور المختارة',
+                  'Photos sélectionnées',
+                  'Selected photos',
+                ),
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: _ink,
+                  fontWeight: FontWeight.w700,
+                  color: _dlInk,
                 ),
               ),
               Text(
                 '$totalPhotos / 8',
+                textDirection: TextDirection.ltr,
                 style: const TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: _red,
+                  fontWeight: FontWeight.w700,
+                  color: _dlInk,
                 ),
               ),
             ],
@@ -1373,10 +1423,11 @@ class _PostAdScreenState extends State<PostAdScreen>
                   Container(
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      color: _surface,
+                      color: _dlSurface,
                       borderRadius: BorderRadius.circular(18),
-                      border:
-                          isCover ? Border.all(color: _red, width: 2) : null,
+                      border: isCover
+                          ? Border.all(color: _dlInk, width: 2)
+                          : Border.all(color: _dlSeparator),
                     ),
                     child: _pickedImages.isNotEmpty
                         ? (kIsWeb
@@ -1387,12 +1438,14 @@ class _PostAdScreenState extends State<PostAdScreen>
                             : FutureBuilder(
                                 future: _pickedImages[idx].readAsBytes(),
                                 builder: (_, snap) => snap.hasData
-                                    ? Image.memory(snap.data!,
-                                        fit: BoxFit.cover)
+                                    ? Image.memory(
+                                        snap.data!,
+                                        fit: BoxFit.cover,
+                                      )
                                     : const Center(
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: _red,
+                                          color: _dlInk,
                                         ),
                                       ),
                               ))
@@ -1411,14 +1464,14 @@ class _PostAdScreenState extends State<PostAdScreen>
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: _red,
+                          color: _dlInk,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           s.tr('الغلاف', 'Principale', 'Cover'),
                           style: const TextStyle(
                             fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
@@ -1426,27 +1479,23 @@ class _PostAdScreenState extends State<PostAdScreen>
                     ),
                   if (_pickedImages.isNotEmpty)
                     PositionedDirectional(
-                      top: 0,
-                      end: 0,
-                      child: PressableScale(
+                      top: 4,
+                      end: 4,
+                      child: GestureDetector(
                         onTap: () =>
                             setState(() => _pickedImages.removeAt(idx)),
                         child: Container(
-                          width: 44,
-                          height: 44,
+                          width: 28,
+                          height: 28,
+                          decoration: const BoxDecoration(
+                            color: _dlBg,
+                            shape: BoxShape.circle,
+                          ),
                           alignment: Alignment.center,
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              CupertinoIcons.xmark,
-                              size: 12,
-                              color: Colors.white,
-                            ),
+                          child: const Icon(
+                            CupertinoIcons.xmark,
+                            size: 13,
+                            color: _dlInk,
                           ),
                         ),
                       ),
@@ -1465,36 +1514,35 @@ class _PostAdScreenState extends State<PostAdScreen>
     required String label,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: _ink),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _ink,
+    return Material(
+      color: _dlBg,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: _dlInk),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _dlInk,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 3: Soft Borderless Title, Description & Dynamic Category Fields
-  // ---------------------------------------------------------------------------
   Widget _buildStep3DetailsAndSpecs(AppStrings s) {
     final dynamicFields = _fieldsForCategory(_categoryId);
     final int titleLen = _titleCtrl.text.trim().length;
@@ -1508,9 +1556,9 @@ class _PostAdScreenState extends State<PostAdScreen>
             Text(
               s.tr('عنوان الإعلان', 'Titre de l\'annonce', 'Listing title'),
               style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w800,
-                color: _ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _dlInk,
               ),
             ),
             Text(
@@ -1520,20 +1568,22 @@ class _PostAdScreenState extends State<PostAdScreen>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: titleLen >= 3 ? _emerald : _muted,
+                color: titleLen >= 3 ? _dlInk : _dlMuted,
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         TextField(
+          key: const Key('post-ad-title-field'),
           controller: _titleCtrl,
+          cursorColor: _dlInk,
           style: const TextStyle(
             fontSize: 15.5,
-            fontWeight: FontWeight.w700,
-            color: _ink,
+            fontWeight: FontWeight.w600,
+            color: _dlInk,
           ),
-          decoration: _softDecoration(
+          decoration: _dlInputDecoration(
             s.tr(
               'مثال: iPhone 15 Pro Max 256GB بحالة الجديد',
               'Ex: iPhone 15 Pro Max 256Go comme neuf',
@@ -1544,23 +1594,29 @@ class _PostAdScreenState extends State<PostAdScreen>
         ),
         const SizedBox(height: 20),
         Text(
-          s.tr('الوصف التفصيلي', 'Description détaillée', 'Detailed description'),
+          s.tr(
+            'الوصف التفصيلي',
+            'Description détaillée',
+            'Detailed description',
+          ),
           style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: _ink,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: _dlInk,
           ),
         ),
         const SizedBox(height: 8),
         TextField(
+          key: const Key('post-ad-desc-field'),
           controller: _descCtrl,
           maxLines: 4,
+          cursorColor: _dlInk,
           style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: _ink,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w500,
+            color: _dlInk,
           ),
-          decoration: _softDecoration(
+          decoration: _dlInputDecoration(
             s.tr(
               'اذكر الحالة، الملحقات، وسبب البيع لزيادة ثقة المشترين...',
               'Précisez l\'état, les accessoires et les détails importants...',
@@ -1577,9 +1633,9 @@ class _PostAdScreenState extends State<PostAdScreen>
               'Specifications',
             ),
             style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: _ink,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: _dlInk,
             ),
           ),
           const SizedBox(height: 10),
@@ -1596,7 +1652,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DropdownButtonFormField<String>(
                   initialValue: _dynamicValues[key]?.toString(),
-                  decoration: _softDecoration(label),
+                  decoration: _dlInputDecoration(label),
+                  dropdownColor: _dlBg,
                   items: options.map((o) {
                     final val = (o is Map ? o['value'] : o).toString();
                     final lbl = (o is Map ? o['label'] : o).toString();
@@ -1613,10 +1670,11 @@ class _PostAdScreenState extends State<PostAdScreen>
               padding: const EdgeInsets.only(bottom: 12),
               child: TextFormField(
                 initialValue: _dynamicValues[key]?.toString(),
+                cursorColor: _dlInk,
                 keyboardType: type == 'number'
                     ? TextInputType.number
                     : TextInputType.text,
-                decoration: _softDecoration(label),
+                decoration: _dlInputDecoration(label),
                 onChanged: (v) => _dynamicValues[key] = v,
               ),
             );
@@ -1626,9 +1684,6 @@ class _PostAdScreenState extends State<PostAdScreen>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 4: Soft Price Input, Option Pills & Minimalist Live Preview Card
-  // ---------------------------------------------------------------------------
   Widget _buildStep4PriceContactAndPreview(AppStrings s) {
     final String previewPrice = _free
         ? s.tr('مجاني', 'Gratuit', 'Free')
@@ -1643,22 +1698,24 @@ class _PostAdScreenState extends State<PostAdScreen>
           Text(
             s.tr('الثمن (بالدرهم)', 'Prix (en MAD)', 'Price (MAD)'),
             style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: _ink,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: _dlInk,
             ),
           ),
           const SizedBox(height: 8),
           TextField(
+            key: const Key('post-ad-price-field'),
             controller: _priceCtrl,
+            cursorColor: _dlInk,
             textDirection: TextDirection.ltr,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              color: _red,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: _dlInk,
             ),
-            decoration: _softDecoration(
+            decoration: _dlInputDecoration(
               s.tr('أدخل الثمن بالدرهم', 'Ex: 2500', 'e.g. 2500'),
               icon: CupertinoIcons.tag_solid,
               suffix: Padding(
@@ -1672,15 +1729,15 @@ class _PostAdScreenState extends State<PostAdScreen>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _redSoft,
-                        borderRadius: BorderRadius.circular(8),
+                        color: _dlBg,
+                        borderRadius: BorderRadius.circular(999),
                       ),
                       child: const Text(
                         'MAD',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: _red,
+                          fontWeight: FontWeight.w700,
+                          color: _dlInk,
                         ),
                       ),
                     ),
@@ -1695,21 +1752,24 @@ class _PostAdScreenState extends State<PostAdScreen>
           spacing: 8,
           runSpacing: 8,
           children: [
-            _OptionPill(
+            _DlOptionPill(
               label: s.tr('قابل للتفاوض', 'Prix négociable', 'Negotiable'),
               icon: CupertinoIcons.hand_thumbsup_fill,
               active: _negotiable,
               onTap: () => setState(() => _negotiable = !_negotiable),
             ),
-            _OptionPill(
+            _DlOptionPill(
               label: s.tr('مجاني', 'Gratuit', 'Free'),
               icon: CupertinoIcons.gift_fill,
               active: _free,
               onTap: () => setState(() => _free = !_free),
             ),
-            _OptionPill(
+            _DlOptionPill(
               label: s.tr(
-                  'إخفاء الرقم (شات فقط)', 'Masquer le numéro', 'Hide number'),
+                'إخفاء الرقم (شات فقط)',
+                'Masquer le numéro',
+                'Hide number',
+              ),
               icon: CupertinoIcons.lock_shield_fill,
               active: _hidePhone,
               onTap: () => setState(() => _hidePhone = !_hidePhone),
@@ -1719,25 +1779,29 @@ class _PostAdScreenState extends State<PostAdScreen>
         if (!_hidePhone) ...[
           const SizedBox(height: 20),
           Text(
-            s.tr('رقم الهاتف والواتساب', 'Téléphone & WhatsApp',
-                'Phone & WhatsApp'),
+            s.tr(
+              'رقم الهاتف والواتساب',
+              'Téléphone & WhatsApp',
+              'Phone & WhatsApp',
+            ),
             style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: _ink,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: _dlInk,
             ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
+            cursorColor: _dlInk,
             textDirection: TextDirection.ltr,
             keyboardType: TextInputType.phone,
             style: const TextStyle(
               fontSize: 15.5,
-              fontWeight: FontWeight.w700,
-              color: _ink,
+              fontWeight: FontWeight.w600,
+              color: _dlInk,
             ),
-            decoration: _softDecoration(
+            decoration: _dlInputDecoration(
               '06XXXXXXXX',
               icon: CupertinoIcons.phone_fill,
             ),
@@ -1745,29 +1809,32 @@ class _PostAdScreenState extends State<PostAdScreen>
         ],
         const SizedBox(height: 24),
         Text(
-          s.tr('معاينة الإعلان قبل النشر', 'Aperçu de votre annonce',
-              'Listing preview'),
+          s.tr(
+            'معاينة الإعلان قبل النشر',
+            'Aperçu de votre annonce',
+            'Listing preview',
+          ),
           style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: _ink,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: _dlInk,
           ),
         ),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _surface,
+            color: _dlSurface,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             children: [
               Container(
-                width: 78,
-                height: 78,
+                width: 76,
+                height: 76,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _dlBg,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: _pickedImages.isNotEmpty
@@ -1780,8 +1847,10 @@ class _PostAdScreenState extends State<PostAdScreen>
                             future: _pickedImages.first.readAsBytes(),
                             builder: (_, snap) => snap.hasData
                                 ? Image.memory(snap.data!, fit: BoxFit.cover)
-                                : const Icon(CupertinoIcons.photo,
-                                    color: _muted),
+                                : const Icon(
+                                    CupertinoIcons.photo,
+                                    color: _dlMuted,
+                                  ),
                           ))
                     : (_existingImageUrls.isNotEmpty
                         ? AppImage(
@@ -1803,15 +1872,18 @@ class _PostAdScreenState extends State<PostAdScreen>
                   children: [
                     Text(
                       _titleCtrl.text.trim().isEmpty
-                          ? s.tr('عنوان الإعلان', 'Titre de l\'annonce',
-                              'Listing title')
+                          ? s.tr(
+                              'عنوان الإعلان',
+                              'Titre de l\'annonce',
+                              'Listing title',
+                            )
                           : _titleCtrl.text.trim(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 15.5,
-                        fontWeight: FontWeight.w800,
-                        color: _ink,
+                        fontWeight: FontWeight.w700,
+                        color: _dlInk,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -1821,7 +1893,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: _red,
+                        color: _dlInk,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -1830,7 +1902,7 @@ class _PostAdScreenState extends State<PostAdScreen>
                         const Icon(
                           CupertinoIcons.location_solid,
                           size: 13,
-                          color: _muted,
+                          color: _dlMuted,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -1840,8 +1912,8 @@ class _PostAdScreenState extends State<PostAdScreen>
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: _muted,
+                              fontWeight: FontWeight.w500,
+                              color: _dlMuted,
                             ),
                           ),
                         ),
@@ -1857,380 +1929,282 @@ class _PostAdScreenState extends State<PostAdScreen>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Clean Sticky Bottom Bar
-  // ---------------------------------------------------------------------------
   Widget _buildBottomWizardBar(AppStrings s, bool canPop) {
     final bool isLast = _currentStep == 3;
-    final bool stepReady = _isStepValid(_currentStep);
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        26,
+        20,
         12,
-        26,
+        20,
         MediaQuery.of(context).padding.bottom + (canPop ? 16 : 92),
       ),
-      color: Colors.white,
-      child: Row(
-        children: [
-          if (_currentStep > 0) ...[
-            PressableScale(
-              onTap: _prevStep,
-              child: Container(
-                height: 54,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: _surface,
-                  borderRadius: BorderRadius.circular(16),
+      color: _dlBg,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 540),
+          child: Row(
+            children: [
+              if (_currentStep > 0) ...[
+                ApoloDlButton(
+                  label: s.tr('السابق', 'Retour', 'Back'),
+                  variant: ApoloDlButtonVariant.secondary,
+                  borderRadius: 999,
+                  height: 54,
+                  onPressed: _prevStep,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  s.tr('السابق', 'Retour', 'Back'),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                  ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: ApoloDlButton(
+                  key: const Key('post-ad-continue-btn'),
+                  label: isLast
+                      ? (_isEditing
+                          ? s.tr('حفظ التعديلات', 'Enregistrer', 'Save changes')
+                          : s.tr(
+                              'نشر الإعلان الآن',
+                              'Publier mon annonce',
+                              'Publish now',
+                            ))
+                      : s.tr('المتابعة', 'Continuer', 'Continue'),
+                  leadingIcon: isLast
+                      ? CupertinoIcons.checkmark_circle_fill
+                      : null,
+                  variant: ApoloDlButtonVariant.primary,
+                  borderRadius: 999,
+                  height: 54,
+                  fullWidth: true,
+                  isLoading: _submitting,
+                  onPressed: _submitting ? null : _nextStep,
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          Expanded(
-            child: PressableScale(
-              onTap: _submitting ? null : _nextStep,
-              child: Container(
-                height: 54,
-                decoration: BoxDecoration(
-                  color: stepReady ? _red : _ink,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.3,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isLast
-                                ? CupertinoIcons.checkmark_circle_fill
-                                : (s.isAr
-                                    ? CupertinoIcons.arrow_left
-                                    : CupertinoIcons.arrow_right),
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            isLast
-                                ? (_isEditing
-                                    ? s.tr('حفظ التعديلات', 'Enregistrer',
-                                        'Save changes')
-                                    : s.tr('نشر الإعلان الآن',
-                                        'Publier mon annonce', 'Publish now'))
-                                : s.tr('المتابعة', 'Continuer', 'Continue'),
-                            style: const TextStyle(
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // FULL-SCREEN CELEBRATION ANIMATION VIEW 🎉
-  // ---------------------------------------------------------------------------
   Widget _buildCelebrationScreen(AppStrings s) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          IgnorePointer(
-            child: AnimatedBuilder(
-              animation: _celebrationCtrl,
-              builder: (context, _) {
-                return CustomPaint(
-                  painter: _ConfettiCelebrationPainter(
-                    progress: _celebrationCtrl.value,
-                  ),
-                  size: Size.infinite,
-                );
-              },
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 24, 28, 96),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 190,
-                    height: 190,
-                    child: AnimatedBuilder(
-                      animation: _celebrationCtrl,
-                      builder: (context, _) {
-                        final pulse =
-                            math.sin(_celebrationCtrl.value * math.pi * 2);
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Transform.scale(
-                              scale: 1.0 + (pulse.abs() * 0.14),
-                              child: Container(
-                                width: 164,
-                                height: 164,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: RadialGradient(
-                                    colors: [
-                                      _emerald.withValues(alpha: 0.18),
-                                      _red.withValues(alpha: 0.08),
-                                      Colors.white.withValues(alpha: 0.0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Floating3DIllustration(
-                              assetPath: _assetForCategory(
-                                _selectedCategoryName(),
-                              ),
-                              size: 136,
-                            ),
-                            PositionedDirectional(
-                              bottom: 12,
-                              end: 22,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _emerald,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      CupertinoIcons.checkmark_seal_fill,
-                                      size: 14,
-                                      color: Colors.white,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'LIVE',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    _isEditing
-                        ? s.tr('تم تحديث إعلانك بنجاح! 🎉',
-                            'Annonce mise à jour ! 🎉', 'Listing updated! 🎉')
-                        : s.tr('مبروك! تم نشر إعلانك بنجاح 🎉',
-                            'Félicitations ! Annonce publiée 🎉',
-                            'Congrats! Your listing is live 🎉'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                      color: _ink,
-                      letterSpacing:
-                          AppTypography.trackingForContext(context, -0.5),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    s.tr(
-                      'إعلانك دابا واجد وغادي يبان لآلاف المشترين فـ Apolo.ma.',
-                      'Votre annonce est maintenant visible par des milliers d\'acheteurs sur Apolo.ma.',
-                      'Your listing is now live for thousands of buyers on Apolo.',
-                    ),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.45,
-                      color: _muted,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: _surface,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
+    return Directionality(
+      textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: _dlBg,
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 96),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
                       children: [
                         Container(
-                          width: 52,
-                          height: 52,
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
+                          width: 124,
+                          height: 124,
+                          padding: const EdgeInsets.all(22),
+                          decoration: const BoxDecoration(
+                            color: _dlSurface,
+                            shape: BoxShape.circle,
                           ),
                           child: Image.asset(
                             _assetForCategory(_selectedCategoryName()),
                             fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              CupertinoIcons.checkmark_seal_fill,
+                              size: 44,
+                              color: _dlInk,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _titleCtrl.text.trim().isEmpty
-                                    ? s.tr('إعلانك الجديد',
-                                        'Votre nouvelle annonce',
-                                        'Your new listing')
-                                    : _titleCtrl.text.trim(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: _ink,
+                        PositionedDirectional(
+                          bottom: -4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _dlInk,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.checkmark_alt,
+                                  size: 13,
+                                  color: Colors.white,
                                 ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${_selectedCategoryName()} • ${_selectedCityName()}',
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: _muted,
+                                SizedBox(width: 4),
+                                Text(
+                                  'LIVE',
+                                  textDirection: TextDirection.ltr,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 26),
-                  PressableScale(
-                    onTap: () {
-                      if (_isEditing && Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop(true);
-                        return;
-                      }
-                      _resetWizard();
-                      widget.onSuccess?.call();
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop(true);
-                      }
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: _red,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        s.tr('العودة للرئيسية ومشاهدة الإعلانات',
-                            'Retour à l\'accueil', 'Back to home'),
-                        style: const TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: _resetWizard,
-                    child: Text(
-                      s.tr(
-                        'إضافة إعلان آخر +',
-                        'Publier une autre annonce +',
-                        'Post another listing +',
-                      ),
-                      style: const TextStyle(
-                        fontSize: 14.5,
+                    const SizedBox(height: 24),
+                    Text(
+                      _isEditing
+                          ? s.tr(
+                              'تم تحديث إعلانك بنجاح',
+                              'Annonce mise à jour',
+                              'Listing updated',
+                            )
+                          : s.tr(
+                              'مبروك! تم نشر إعلانك بنجاح',
+                              'Félicitations ! Annonce publiée',
+                              'Your listing is live',
+                            ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: _ink,
+                        color: _dlInk,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.4),
                       ),
                     ),
-                  ),
-                  if (!_state.isLoggedIn) ...[
-                    const SizedBox(height: 6),
-                    TextButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AuthScreen()),
-                      ).then((_) => setState(() {})),
-                      icon: const Icon(
-                        CupertinoIcons.person_crop_circle,
-                        size: 17,
-                        color: _red,
+                    const SizedBox(height: 8),
+                    Text(
+                      s.tr(
+                        'إعلانك دابا واجد وغادي يبان لآلاف المشترين فـ Apolo.ma.',
+                        'Votre annonce est maintenant visible par les acheteurs sur Apolo.ma.',
+                        'Your listing is now visible to buyers across Apolo.ma.',
                       ),
-                      label: Text(
-                        s.tr(
-                          'ربط الإعلان بحسابي',
-                          'Lier à mon compte',
-                          'Link to my account',
-                        ),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: _red,
-                        ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.45,
+                        color: _dlMuted,
                       ),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: _dlSurface,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _dlBg,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Image.asset(
+                              _assetForCategory(_selectedCategoryName()),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _titleCtrl.text.trim().isEmpty
+                                      ? s.tr(
+                                          'إعلانك الجديد',
+                                          'Votre nouvelle annonce',
+                                          'Your new listing',
+                                        )
+                                      : _titleCtrl.text.trim(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 15.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _dlInk,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '${_selectedCategoryName()} • ${_selectedCityName()}',
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: _dlMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ApoloDlButton(
+                      label: s.tr(
+                        'العودة للرئيسية',
+                        'Retour à l\'accueil',
+                        'Back to home',
+                      ),
+                      variant: ApoloDlButtonVariant.primary,
+                      borderRadius: 999,
+                      height: 54,
+                      fullWidth: true,
+                      onPressed: () {
+                        if (_isEditing && Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop(true);
+                          return;
+                        }
+                        _resetWizard();
+                        widget.onSuccess?.call();
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop(true);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    ApoloDlButton(
+                      label: s.tr(
+                        'إضافة إعلان آخر',
+                        'Publier une autre annonce',
+                        'Post another listing',
+                      ),
+                      leadingIcon: CupertinoIcons.add,
+                      variant: ApoloDlButtonVariant.secondary,
+                      borderRadius: 999,
+                      height: 50,
+                      fullWidth: true,
+                      onPressed: _resetWizard,
                     ),
                   ],
-                ],
+                ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _OptionPill extends StatelessWidget {
+class _DlOptionPill extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
 
-  const _OptionPill({
+  const _DlOptionPill({
     required this.label,
     required this.icon,
     required this.active,
@@ -2239,101 +2213,39 @@ class _OptionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color red = Color(0xFFE31B23);
-    const Color surface = Color(0xFFF5F6F8);
-    const Color ink = Color(0xFF0F172A);
-
-    return PressableScale(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
-        decoration: BoxDecoration(
-          color: active ? red : surface,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: active ? Colors.white : const Color(0xFF64748B),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: active ? Colors.white : ink,
+    return Material(
+      color: active ? const Color(0xFF000000) : const Color(0xFFEEEEEE),
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14.5,
+                color: active ? Colors.white : const Color(0xFF757575),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : const Color(0xFF000000),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-class _ConfettiCelebrationPainter extends CustomPainter {
-  final double progress;
-
-  _ConfettiCelebrationPainter({required this.progress});
-
-  static const List<Color> _palette = [
-    Color(0xFFE31B23),
-    Color(0xFFF59E0B),
-    Color(0xFF10B981),
-    Color(0xFF3B82F6),
-    Color(0xFF8B5CF6),
-    Color(0xFFEC4899),
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    const int count = 64;
-
-    for (int i = 0; i < count; i++) {
-      final double seed = (i * 73.19) % 1.0;
-      final double xBase = ((i * 37.0) % 100) / 100.0;
-      final double speed = 0.65 + (seed * 0.75);
-      final double t = ((progress * speed) + (seed * 0.45)) % 1.0;
-
-      final double sway = math.sin((t * 6.0) + i) * 26.0;
-      final double x = (xBase * size.width) + sway;
-      final double y = (t * (size.height + 80)) - 40;
-
-      final Color color = _palette[i % _palette.length];
-      final double alpha = (1.0 - (t * 0.55)).clamp(0.0, 1.0);
-      paint.color = color.withValues(alpha: alpha);
-
-      canvas.save();
-      canvas.translate(x, y);
-      canvas.rotate(t * math.pi * 4 * (i.isEven ? 1 : -1));
-
-      if (i % 3 == 0) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            const Rect.fromLTWH(-6, -3, 12, 6),
-            const Radius.circular(2),
-          ),
-          paint,
-        );
-      } else if (i % 3 == 1) {
-        canvas.drawCircle(Offset.zero, 4.5, paint);
-      } else {
-        canvas.drawRect(const Rect.fromLTWH(-4, -4, 8, 8), paint);
-      }
-      canvas.restore();
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ConfettiCelebrationPainter oldDelegate) =>
-      oldDelegate.progress != progress;
 }
