@@ -155,7 +155,7 @@ void main() {
     expect(find.text('Cascais, 14 km · 3 bedrooms · Pool'), findsOneWidget);
     expect(find.text('Sarah'), findsOneWidget);
     expect(find.byType(ApoloVerifiedBadge), findsOneWidget);
-    expect(find.byType(ApoloRankBadge), findsOneWidget);
+    expect(find.byType(ApoloAccountTypeBadge), findsOneWidget);
     expect(find.text('\$233 / night · taxes incl.'), findsOneWidget);
 
     // Verify PageView swipe updates active slide cleanly

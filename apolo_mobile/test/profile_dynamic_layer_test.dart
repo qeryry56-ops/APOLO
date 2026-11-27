@@ -277,5 +277,60 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+        'clearly differentiates Personal vs Business on SellerProfileScreen and ProfileScreen',
+        (tester) async {
+      // 1. Individual / Personal Seller
+      await pumpScreen(
+        tester,
+        const SellerProfileScreen(
+          sellerId: 701,
+          sellerName: 'Youssef Casa',
+          sellerCity: 'Casablanca',
+          isVerified: false,
+          isBusiness: false,
+        ),
+      );
+      expect(
+        find.byKey(const Key('apolo-account-badge-personal')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('seller-business-store-card')),
+        findsNothing,
+      );
+
+      // 2. Business Store Seller
+      await pumpScreen(
+        tester,
+        const SellerProfileScreen(
+          sellerId: 702,
+          sellerName: 'Apolo Motors',
+          sellerCity: 'Casablanca',
+          isVerified: true,
+          isBusiness: true,
+          store: {
+            'name': 'Apolo Motors',
+            'subdomain': 'apolo-motors',
+            'business_category': 'vehicles',
+            'working_hours': '09:00 - 20:00',
+          },
+        ),
+      );
+      expect(
+        find.byKey(const Key('apolo-account-badge-business')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('seller-business-store-card')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('seller-visit-store-btn')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }

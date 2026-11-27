@@ -202,6 +202,26 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
       expect(find.byType(ExploreListingCard), findsWidgets);
 
+      // 1-tap Personal vs Business filter pills in Explore
+      await tester.tap(find.byKey(const Key('explore-seller-type-personal')));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Casa Oliva Villa'), findsNothing);
+      expect(
+        find.text('MacBook Pro 14" M3 Pro · 18GB / 512GB SSD'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('explore-seller-type-business')));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Casa Oliva Villa'), findsOneWidget);
+      expect(
+        find.text('MacBook Pro 14" M3 Pro · 18GB / 512GB SSD'),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('explore-seller-type-all')));
+      await tester.pump(const Duration(milliseconds: 200));
+
       // Enter Search Suggestions in Dark Mode and submit a query -> saves to Recent searches & shows active chip
       await tester.tap(find.byKey(const Key('explore-search-bar-field')));
       await tester.pump(const Duration(milliseconds: 250));

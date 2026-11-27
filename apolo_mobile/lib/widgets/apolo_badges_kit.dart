@@ -194,6 +194,117 @@ enum ApoloSellerRank {
   }
 }
 
+/// Unmistakable 1-glance Personal (`شخصي / فردي`) vs Business (`متجر / Business`)
+/// identity pill used across Profile, Seller Profile, Ad Detail, and Listing Cards.
+class ApoloAccountTypeBadge extends StatelessWidget {
+  const ApoloAccountTypeBadge({
+    required this.isBusiness,
+    super.key,
+    this.compact = false,
+  });
+
+  final bool isBusiness;
+  final bool compact;
+
+  /// Resolves whether a listing or seller map belongs to a Business/Store account
+  /// vs an Individual (`Personal`) user.
+  static bool isAdFromBusiness(Map<String, dynamic>? ad) {
+    if (ad == null) return false;
+    if (ad['is_business'] == true ||
+        ad['seller_is_business'] == true ||
+        ad['is_pro_plus'] == true ||
+        ad['seller_is_pro_plus'] == true) {
+      return true;
+    }
+    if (ad['is_business'] == false) return false;
+    if (ad['store'] is Map && (ad['store'] as Map).isNotEmpty) return true;
+    final storeName =
+        (ad['store_name'] ?? ad['store_subdomain'] ?? '').toString().trim();
+    if (storeName.isNotEmpty) return true;
+
+    final accType = (ad['account_type'] ?? ad['seller_account_type'] ?? '')
+        .toString()
+        .toLowerCase()
+        .trim();
+    if (accType == 'business' || accType == 'pro' || accType == 'pro_plus') {
+      return true;
+    }
+
+    final sellerMap = ad['seller'] is Map
+        ? ad['seller'] as Map
+        : (ad['user'] is Map ? ad['user'] as Map : null);
+    if (sellerMap != null) {
+      if (sellerMap['is_business'] == true ||
+          sellerMap['is_pro_plus'] == true ||
+          sellerMap['store'] is Map) {
+        return true;
+      }
+      final sType = (sellerMap['account_type'] ?? '')
+          .toString()
+          .toLowerCase()
+          .trim();
+      if (sType == 'business' || sType == 'pro' || sType == 'pro_plus') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
+    final s = AppState().s;
+
+    final Color bg = isBusiness ? palette.ink : palette.pill;
+    final Color fg = isBusiness ? palette.onInk : palette.muted;
+    final IconData icon =
+        isBusiness ? Icons.storefront_rounded : CupertinoIcons.person_fill;
+    final String label = isBusiness
+        ? s.tr('متجر', 'Boutique', 'Business')
+        : s.tr('فردي', 'Particulier', 'Personal');
+
+    return Container(
+      key: Key(
+        isBusiness
+            ? 'apolo-account-badge-business'
+            : 'apolo-account-badge-personal',
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 7.0 : 9.5,
+        vertical: compact ? 2.5 : 4.0,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: compact ? 10.0 : 12.0,
+            color: fg,
+          ),
+          SizedBox(width: compact ? 3.0 : 4.5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: compact ? 10.0 : 11.5,
+                fontWeight: FontWeight.w700,
+                height: 1.1,
+                color: fg,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Official blue verified seal rendered from Figma asset (`verified_blue.png`).
 class ApoloVerifiedBadge extends StatelessWidget {
   const ApoloVerifiedBadge({

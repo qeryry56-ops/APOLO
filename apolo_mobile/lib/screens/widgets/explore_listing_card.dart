@@ -428,29 +428,6 @@ class _ExploreListingCardState extends State<ExploreListingCard>
         storeMap != null;
   }
 
-  ApoloSellerRank _resolveSellerRank(bool isVerified) {
-    final ad = widget.ad;
-    final sellerMap = ad['seller'] is Map
-        ? Map<String, dynamic>.from(ad['seller'] as Map)
-        : (ad['user'] is Map
-            ? Map<String, dynamic>.from(ad['user'] as Map)
-            : null);
-    final storeMap = ad['store'] is Map
-        ? Map<String, dynamic>.from(ad['store'] as Map)
-        : null;
-    final views =
-        int.tryParse((ad['views_count'] ?? ad['views'] ?? 0).toString()) ?? 0;
-    return ApoloSellerRank.resolve(
-      user: sellerMap,
-      totalViews: views,
-      isProPlus: ad['is_vip'] == true ||
-          storeMap?['is_pro_plus'] == true ||
-          sellerMap?['is_pro_plus'] == true,
-      isBusiness: storeMap != null,
-      isVerified: isVerified,
-    );
-  }
-
   Widget _buildSellerAvatar(String avatarUrl, String sellerName) {
     final initial = sellerName.trim().isNotEmpty
         ? sellerName.trim().substring(0, 1).toUpperCase()
@@ -664,7 +641,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     final sellerName = _resolveSellerName();
     final sellerAvatar = _resolveSellerAvatar();
     final isSellerVerified = _isSellerVerified();
-    final sellerRank = _resolveSellerRank(isSellerVerified);
+    final isBusinessSeller = ApoloAccountTypeBadge.isAdFromBusiness(widget.ad);
     final pricing = _resolvePricing();
     final isFav = _isFavorited;
     final int dotCount = images.length > 1 ? images.length.clamp(2, 6) : 5;
@@ -943,28 +920,41 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                               children: [
                                 _buildSellerAvatar(sellerAvatar, sellerName),
                                 const SizedBox(width: 9),
-                                Flexible(
-                                  child: Text(
-                                    sellerName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: _dlInk,
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: -0.1,
-                                    ),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              sellerName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: _dlInk,
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w600,
+                                                letterSpacing: -0.1,
+                                                height: 1.15,
+                                              ),
+                                            ),
+                                          ),
+                                          if (isSellerVerified) ...[
+                                            const SizedBox(width: 4),
+                                            const ApoloVerifiedBadge(size: 14),
+                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      ApoloAccountTypeBadge(
+                                        isBusiness: isBusinessSeller,
+                                        compact: true,
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                if (isSellerVerified) ...[
-                                  const SizedBox(width: 4),
-                                  const ApoloVerifiedBadge(size: 15),
-                                ],
-                                const SizedBox(width: 4),
-                                ApoloRankBadge(
-                                  rank: sellerRank,
-                                  size: 16,
-                                  isVerified: isSellerVerified,
                                 ),
                               ],
                             ),

@@ -469,13 +469,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     onAvatarTap: () =>
                                         _openEditProfileSheet(isAr),
                                     displayName: name,
-                                    nameTrailing: ApoloIdentityBadgesRow(
-                                      rank: sellerRank,
-                                      isVerified: isVerified,
-                                      isProPlus: isProPlus,
-                                      isBusiness: isBusiness,
-                                      badgeSize: 18,
-                                      interactive: true,
+                                    nameTrailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isVerified) ...[
+                                          ApoloVerifiedBadge(
+                                            size: 17,
+                                            rank: sellerRank,
+                                            isProPlus: isProPlus,
+                                            isBusiness: isBusiness,
+                                          ),
+                                          const SizedBox(width: 5),
+                                        ],
+                                        ApoloAccountTypeBadge(
+                                          isBusiness: isBusiness,
+                                        ),
+                                      ],
                                     ),
                                     onNameTap: () =>
                                         _openEditProfileSheet(isAr),
@@ -573,14 +582,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                                   const SizedBox(height: 14),
 
-                                  ApoloRankProgressCard(
-                                    rank: sellerRank,
-                                    listingsCount: _myAds.length,
-                                    totalViews: totalViews,
-                                    isVerified: isVerified,
-                                    isProPlus: isProPlus,
-                                    isBusiness: isBusiness,
-                                  ),
+                                  // Simple 1-Tap Account Mode Switcher: Personal vs Business
+                                  _buildSimpleAccountTypeToggle(s, palette),
 
                                   const SizedBox(height: 12),
 
@@ -694,6 +697,159 @@ class _ProfileScreenState extends State<ProfileScreen> {
       CupertinoIcons.person_fill,
       size: 32,
       color: palette.iconMuted,
+    );
+  }
+
+  Future<void> _handleQuickModeSelect(bool selectBusiness) async {
+    if (selectBusiness == _state.isBusinessAccount) return;
+    HapticFeedback.selectionClick();
+    if (!selectBusiness) {
+      try {
+        await _state.switchToPersonal();
+      } catch (_) {
+        if (_state.currentUser != null) {
+          final updated = Map<String, dynamic>.from(_state.currentUser!);
+          if (updated['store'] is Map) {
+            updated['paused_store'] = updated['store'];
+          }
+          updated['store'] = null;
+          updated['is_business'] = false;
+          updated['account_type'] = 'individual';
+          await _state.updateCurrentUser(updated);
+        }
+      }
+      if (mounted) setState(() => _activeTab = 0);
+      return;
+    }
+
+    final paused = _state.pausedStore;
+    if (paused != null && (paused['name'] ?? '').toString().trim().isNotEmpty) {
+      try {
+        await _state.switchToBusiness(
+          storeName: paused['name'].toString(),
+          subdomain: paused['subdomain']?.toString(),
+          businessCategory:
+              (paused['business_category'] ?? 'general').toString(),
+          description: paused['description']?.toString(),
+          location: paused['location']?.toString(),
+          workingHours: paused['working_hours']?.toString(),
+          phone: paused['phone']?.toString(),
+        );
+        if (mounted) await _loadProfileData();
+        return;
+      } catch (_) {
+        if (_state.currentUser != null) {
+          final updated = Map<String, dynamic>.from(_state.currentUser!);
+          updated['store'] = paused;
+          updated['is_business'] = true;
+          updated['account_type'] = 'business';
+          await _state.updateCurrentUser(updated);
+          return;
+        }
+      }
+    }
+
+    final switched = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const BusinessSwitchScreen()),
+    );
+    if (switched == true && mounted) {
+      await _loadProfileData();
+    }
+  }
+
+  Widget _buildSimpleAccountTypeToggle(AppStrings s, ApoloDlPalette palette) {
+    final isBiz = _state.isBusinessAccount;
+    return Container(
+      key: const Key('profile-account-mode-switcher'),
+      height: 44,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _dlPill,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              key: const Key('profile-mode-personal-btn'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _handleQuickModeSelect(false),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                decoration: BoxDecoration(
+                  color: !isBiz ? _dlInk : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.person_fill,
+                      size: 14,
+                      color: !isBiz ? _dlOnInk : _dlMuted,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        s.tr('حساب عادي', 'Personnel', 'Personal'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: !isBiz ? _dlOnInk : _dlMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: GestureDetector(
+              key: const Key('profile-mode-business-btn'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _handleQuickModeSelect(true),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                decoration: BoxDecoration(
+                  color: isBiz ? _dlInk : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.storefront_rounded,
+                      size: 15,
+                      color: isBiz ? _dlOnInk : _dlMuted,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        s.tr('حساب متجر Business', 'Boutique Pro', 'Business'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isBiz ? _dlOnInk : _dlMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

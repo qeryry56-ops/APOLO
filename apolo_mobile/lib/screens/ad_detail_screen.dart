@@ -2353,8 +2353,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             sellerAvatar: avatarUrl,
             sellerPhone: phone,
             sellerCity: cityName,
-            isVerified: seller?['is_verified'] == true,
+            isVerified: seller?['is_verified'] == true || store != null,
             isOnline: seller?['is_online'] == true,
+            isBusiness: store != null ||
+                seller?['is_business'] == true ||
+                ApoloAccountTypeBadge.isAdFromBusiness(ad),
+            store: store,
             initialAd: ad,
           ),
         ),
@@ -2430,14 +2434,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final int mySelectedStars =
         int.tryParse('${mySellerReview?['rating'] ?? 0}') ?? 0;
 
+    final bool isBusinessSeller = store != null ||
+        seller?['is_business'] == true ||
+        ApoloAccountTypeBadge.isAdFromBusiness(ad);
     final bool isVerifiedSeller =
-        seller?['is_verified'] == true || store != null;
+        seller?['is_verified'] == true || isBusinessSeller;
     final bool isProPlusSeller =
         store?['is_pro_plus'] == true || seller?['is_pro_plus'] == true;
     final sellerRank = ApoloSellerRank.resolve(
       user: seller,
       isProPlus: isProPlusSeller,
-      isBusiness: store != null,
+      isBusiness: isBusinessSeller,
       isVerified: isVerifiedSeller,
     );
     final bool isFollowing = _isFollowingSeller(sellerId);
@@ -2466,7 +2473,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      s.tr('البائع', 'Vendeur', 'Seller'),
+                      isBusinessSeller
+                          ? s.tr('المتجر المعلن', 'Boutique', 'Business Store')
+                          : s.tr('البائع', 'Vendeur', 'Seller'),
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
@@ -2612,16 +2621,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                       isBusiness: store != null,
                                     ),
                                   ],
-                                  const SizedBox(width: 5),
-                                  ApoloRankBadge(
-                                    rank: sellerRank,
-                                    size: 17,
-                                    isVerified: isVerifiedSeller,
-                                    isProPlus: isProPlusSeller,
-                                    isBusiness: store != null,
-                                    interactive: true,
-                                  ),
                                 ],
+                              ),
+                              const SizedBox(height: 4),
+                              ApoloAccountTypeBadge(
+                                isBusiness: isBusinessSeller,
+                                compact: true,
                               ),
                               if (ratingVal != null && ratingVal > 0) ...[
                                 const SizedBox(height: 3),

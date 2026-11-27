@@ -12,7 +12,9 @@ import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
 import '../widgets/dl_write_review_sheet.dart';
 import 'ad_detail_screen.dart';
+import 'business_switch_screen.dart';
 import 'share_profile_screen.dart';
+import 'store_detail_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
@@ -32,6 +34,8 @@ class SellerProfileScreen extends StatefulWidget {
   final String? sellerCity;
   final bool isVerified;
   final bool isOnline;
+  final bool? isBusiness;
+  final Map<String, dynamic>? store;
   final Map<String, dynamic>? initialAd;
 
   const SellerProfileScreen({
@@ -44,6 +48,8 @@ class SellerProfileScreen extends StatefulWidget {
     this.sellerCity,
     this.isVerified = true,
     this.isOnline = true,
+    this.isBusiness,
+    this.store,
     this.initialAd,
   });
 
@@ -407,6 +413,28 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         final palette = ApoloDlPalette.of(context);
         final city = _resolvedCity;
         final isFollowing = _state.isFollowingSeller(widget.sellerId);
+        final effectiveStore = widget.store ??
+            (widget.initialAd?['store'] is Map
+                ? Map<String, dynamic>.from(widget.initialAd!['store'] as Map)
+                : null);
+        final bool effectiveIsBusiness = widget.isBusiness ??
+            (effectiveStore != null ||
+                ApoloAccountTypeBadge.isAdFromBusiness(widget.initialAd) ||
+                _sellerAds.any(ApoloAccountTypeBadge.isAdFromBusiness));
+        final String storeSubdomain =
+            (effectiveStore?['subdomain'] ??
+                    widget.initialAd?['store_subdomain'] ??
+                    '')
+                .toString()
+                .trim();
+        final String storeCategoryLabel = ApoloBusinessCategories.labelFor(
+          effectiveStore?['business_category']?.toString(),
+          s,
+        );
+        final String storeHours =
+            (effectiveStore?['working_hours'] ?? '09:00 - 20:00')
+                .toString()
+                .trim();
         final ratingStats = _state.computeSellerRatingStats(
           sellerId: widget.sellerId,
           baseRating: 4.9,
@@ -486,13 +514,18 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                           ),
                                         ),
                                   displayName: widget.sellerName,
-                                  nameTrailing: ApoloIdentityBadgesRow(
-                                    isVerified: widget.isVerified,
-                                    rank: ApoloSellerRank.resolve(
-                                      listingsCount: _sellerAds.length,
-                                      isVerified: widget.isVerified,
-                                    ),
-                                    interactive: true,
+                                  nameTrailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (widget.isVerified ||
+                                          effectiveIsBusiness) ...[
+                                        const ApoloVerifiedBadge(size: 17),
+                                        const SizedBox(width: 5),
+                                      ],
+                                      ApoloAccountTypeBadge(
+                                        isBusiness: effectiveIsBusiness,
+                                      ),
+                                    ],
                                   ),
                                   handle: '@${_sellerHandle()}',
                                   stats: [
@@ -557,11 +590,155 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                     fullWidth: true,
                                     onPressed: _openChatWithSeller,
                                   ),
-                                  bio: s.tr(
-                                    'تاجر موثوق في Apolo.ma · $city · استجابة سريعة عبر الرسائل.',
-                                    'Vendeur vérifié sur Apolo.ma · $city · Réponse rapide par message.',
-                                    'Verified seller on Apolo.ma · $city · Fast reply on messages.',
-                                  ),
+                                  bio: effectiveIsBusiness
+                                      ? s.tr(
+                                          '$storeCategoryLabel · $city · $storeHours',
+                                          '$storeCategoryLabel · $city · $storeHours',
+                                          '$storeCategoryLabel · $city · $storeHours',
+                                        )
+                                      : s.tr(
+                                          'بائع فردي في $city · تواصل مباشر عبر الشات.',
+                                          'Vendeur particulier à $city · Contact direct par chat.',
+                                          'Individual seller in $city · Direct chat reply.',
+                                        ),
+                                  extraActions: effectiveIsBusiness
+                                      ? Container(
+                                          key: const Key(
+                                            'seller-business-store-card',
+                                          ),
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 11,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _dlSurface,
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 34,
+                                                height: 34,
+                                                decoration: BoxDecoration(
+                                                  color: _dlInk,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: Icon(
+                                                  Icons.storefront_rounded,
+                                                  size: 16,
+                                                  color: _dlOnInk,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      storeCategoryLabel,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: _dlInk,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Row(
+                                                      children: [
+                                                        Container(
+                                                          width: 6,
+                                                          height: 6,
+                                                          decoration:
+                                                              const BoxDecoration(
+                                                            color: Color(
+                                                              0xFF15803D,
+                                                            ),
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 5,
+                                                        ),
+                                                        Flexible(
+                                                          child: Text(
+                                                            '$city · $storeHours',
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style: TextStyle(
+                                                              fontSize: 11.5,
+                                                              color: _dlMuted,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (storeSubdomain.isNotEmpty) ...[
+                                                const SizedBox(width: 8),
+                                                GestureDetector(
+                                                  key: const Key(
+                                                    'seller-visit-store-btn',
+                                                  ),
+                                                  onTap: () {
+                                                    HapticFeedback
+                                                        .selectionClick();
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            StoreDetailScreen(
+                                                          subdomain:
+                                                              storeSubdomain,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 7,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      color: _dlInk,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                        999,
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      s.tr(
+                                                        'زيارة المتجر',
+                                                        'Voir boutique',
+                                                        'Visit store',
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: _dlOnInk,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        )
+                                      : null,
                                 ),
                               ),
                             ),

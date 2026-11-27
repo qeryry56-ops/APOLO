@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../widgets/apolo_badges_kit.dart';
 import '../widgets/apolo_search_suggestions_view.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
@@ -49,6 +50,7 @@ class _SearchScreenState extends State<SearchScreen>
   double? _minPrice;
   double? _maxPrice;
   bool _onlyNegotiable = false;
+  String _sellerType = 'all'; // 'all' | 'personal' | 'business'
   String _sortBy = 'smart';
 
   static const String _recentSearchesPrefsKey = 'apolo_recent_searches_v1';
@@ -338,6 +340,7 @@ class _SearchScreenState extends State<SearchScreen>
     if (_cityId != null) count++;
     if (_minPrice != null || _maxPrice != null) count++;
     if (_onlyNegotiable) count++;
+    if (_sellerType != 'all') count++;
     if (_sortBy != 'smart') count++;
     return count;
   }
@@ -367,6 +370,11 @@ class _SearchScreenState extends State<SearchScreen>
       if (_onlyNegotiable) {
         final neg = ad['negotiable'] == true || ad['is_negotiable'] == true;
         if (!neg) return false;
+      }
+      if (_sellerType != 'all') {
+        final isBiz = ApoloAccountTypeBadge.isAdFromBusiness(ad);
+        if (_sellerType == 'business' && !isBiz) return false;
+        if (_sellerType == 'personal' && isBiz) return false;
       }
       if (query.isNotEmpty) {
         final title = (ad['title'] ?? '').toString().toLowerCase();
@@ -439,6 +447,7 @@ class _SearchScreenState extends State<SearchScreen>
       'views_count': 340,
       'seller_name': 'Casa Immobilier',
       'seller_verified': true,
+      'is_business': true,
       'description': 'Villa contemporaine 4 chambres avec piscine chauffée à Marrakech Palmeraie.',
       'price': 2450000,
       'price_formatted': '2 450 000 DH',
@@ -464,6 +473,7 @@ class _SearchScreenState extends State<SearchScreen>
       'views_count': 512,
       'seller_name': 'Apolo Motors',
       'seller_verified': true,
+      'is_business': true,
       'description': 'Modèle 2023 · Boîte auto · Toit panoramique · 1ère main Maroc.',
       'price': 385000,
       'price_formatted': '385 000 DH',
@@ -488,6 +498,7 @@ class _SearchScreenState extends State<SearchScreen>
       'views_count': 289,
       'seller_name': 'Tech Store Rabat',
       'seller_verified': true,
+      'is_business': true,
       'description': 'Neuf scellé avec garantie officielle 12 mois · Batterie 100%.',
       'price': 13900,
       'price_formatted': '13 900 DH',
@@ -510,6 +521,7 @@ class _SearchScreenState extends State<SearchScreen>
       'views_count': 198,
       'seller_name': 'Yassine Pro',
       'seller_verified': true,
+      'is_business': false,
       'description': 'État neuf · 14 cycles batterie · Chargeur MagSafe 70W original.',
       'price': 21500,
       'price_formatted': '21 500 DH',
@@ -532,6 +544,7 @@ class _SearchScreenState extends State<SearchScreen>
       'views_count': 142,
       'seller_name': 'Dar Déco',
       'seller_verified': false,
+      'is_business': false,
       'description': 'Salon complet sur mesure avec table centrale et coussins anti-taches.',
       'price': 9800,
       'price_formatted': '9 800 DH',
@@ -554,6 +567,7 @@ class _SearchScreenState extends State<SearchScreen>
       'views_count': 176,
       'seller_name': 'Karim Horlogerie',
       'seller_verified': true,
+      'is_business': false,
       'description': 'Authentique avec coffret et carte de garantie internationale.',
       'price': 6400,
       'price_formatted': '6 400 DH',
@@ -1823,6 +1837,57 @@ class _SearchScreenState extends State<SearchScreen>
     return null;
   }
 
+  Widget _buildSellerTypePill({
+    required Key pillKey,
+    required String value,
+    required String label,
+    IconData? icon,
+  }) {
+    final active = _sellerType == value;
+    return GestureDetector(
+      key: pillKey,
+      onTap: () {
+        if (_sellerType == value) return;
+        HapticFeedback.selectionClick();
+        setState(() {
+          _sellerType = value;
+          _ads = _filterAndSortAds(_rawAds);
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 11),
+        decoration: BoxDecoration(
+          color: active ? _dlInk : _dlPill,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 12,
+                color: active ? _dlOnInk : _dlInk,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: active ? _dlOnInk : _dlInk,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActiveFilterChip({
     required Key chipKey,
     required String label,
@@ -2099,6 +2164,48 @@ class _SearchScreenState extends State<SearchScreen>
                                       ],
                                     ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const BouncingScrollPhysics(),
+                                    child: Row(
+                                      children: [
+                                        _buildSellerTypePill(
+                                          pillKey: const Key(
+                                            'explore-seller-type-all',
+                                          ),
+                                          value: 'all',
+                                          label: s.tr('الكل', 'Tous', 'All'),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        _buildSellerTypePill(
+                                          pillKey: const Key(
+                                            'explore-seller-type-personal',
+                                          ),
+                                          value: 'personal',
+                                          icon: CupertinoIcons.person_fill,
+                                          label: s.tr(
+                                            'أفراد',
+                                            'Particuliers',
+                                            'Personal',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        _buildSellerTypePill(
+                                          pillKey: const Key(
+                                            'explore-seller-type-business',
+                                          ),
+                                          value: 'business',
+                                          icon: Icons.storefront_rounded,
+                                          label: s.tr(
+                                            'متاجر Business',
+                                            'Boutiques',
+                                            'Business',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                   if (activeChips.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     SizedBox(
@@ -2165,6 +2272,7 @@ class _SearchScreenState extends State<SearchScreen>
                                     _minPrice = null;
                                     _maxPrice = null;
                                     _onlyNegotiable = false;
+                                    _sellerType = 'all';
                                     _sortBy = 'smart';
                                     _queryCtrl.clear();
                                   });
