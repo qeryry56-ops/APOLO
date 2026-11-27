@@ -1,15 +1,21 @@
 import 'dart:async';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import '../../core/config/app_config.dart';
+
 import '../../core/state/app_state.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/dl_settings_kit.dart';
 import '../pro_plus_screen.dart';
 import 'kinetic_widgets.dart';
 import 'skeleton_loader.dart';
 
+/// Dynamic Layer v5.1 Listing Boost Modal Sheet (`#FFFFFF` canvas, `#F6F6F6` plan cards,
+/// `#EEEEEE` pills/circles, `#000000` primary ink & capsule CTAs).
 class BoostSheet extends StatefulWidget {
   final int adId;
   final String adTitle;
@@ -28,11 +34,12 @@ class _BoostSheetState extends State<BoostSheet> {
   bool _purchasing = false;
   StreamSubscription<List<PurchaseDetails>>? _iapSub;
 
-  static const Color _ink = Color(0xFF0F1B2D);
-  static const Color _muted = Color(0xFF8A94A6);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _badgeBg = Color(0xFFFEECEE);
-  static const Color _border = Color(0xFFE7EAF0);
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlAmber = Color(0xFFFFB800);
 
   @override
   void initState() {
@@ -43,8 +50,11 @@ class _BoostSheetState extends State<BoostSheet> {
             defaultTargetPlatform == TargetPlatform.iOS)) {
       final Stream<List<PurchaseDetails>> purchaseUpdated =
           InAppPurchase.instance.purchaseStream;
-      _iapSub = purchaseUpdated.listen(_onPurchaseUpdate,
-          onDone: () => _iapSub?.cancel(), onError: (_) {});
+      _iapSub = purchaseUpdated.listen(
+        _onPurchaseUpdate,
+        onDone: () => _iapSub?.cancel(),
+        onError: (_) {},
+      );
     }
   }
 
@@ -82,8 +92,9 @@ class _BoostSheetState extends State<BoostSheet> {
     for (final details in detailsList) {
       if (details.status == PurchaseStatus.purchased ||
           details.status == PurchaseStatus.restored) {
-        final matching = _plans.where((p) =>
-            (p['iap_product_id'] ?? p['product_id']) == details.productID);
+        final matching = _plans.where(
+          (p) => (p['iap_product_id'] ?? p['product_id']) == details.productID,
+        );
         if (matching.isEmpty ||
             details.purchaseID == null ||
             details.verificationData.serverVerificationData.isEmpty) {
@@ -106,8 +117,11 @@ class _BoostSheetState extends State<BoostSheet> {
 
   Future<void> _startPurchase() async {
     if (_purchasing || _plans.isEmpty || !_state.isLoggedIn) return;
-    final plan = _plans.firstWhere((p) => p['id'] == _selectedPlanId,
-        orElse: () => _plans.first);
+    HapticFeedback.mediumImpact();
+    final plan = _plans.firstWhere(
+      (p) => p['id'] == _selectedPlanId,
+      orElse: () => _plans.first,
+    );
     final String productId =
         (plan['iap_product_id'] ?? plan['product_id']).toString();
     setState(() => _purchasing = true);
@@ -140,13 +154,21 @@ class _BoostSheetState extends State<BoostSheet> {
         }
       }
       throw StateError('Purchases unavailable on this platform');
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() => _purchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(_state.s
-                  .tr('تعذر إتمام عملية الدفع', 'Erreur lors du paiement'))),
+            backgroundColor: _dlInk,
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              _state.s.tr(
+                'تعذر إتمام عملية الدفع',
+                'Erreur lors du paiement',
+                'Could not complete payment',
+              ),
+            ),
+          ),
         );
       }
     }
@@ -180,10 +202,16 @@ class _BoostSheetState extends State<BoostSheet> {
           Navigator.pop(context, true);
           messenger.showSnackBar(
             SnackBar(
-              backgroundColor: AppConfig.success,
-              content: Text(res.data['message']?.toString() ??
-                  _state.s.tr('تم تمييز إعلانك بنجاح!',
-                      'Annonce boostée avec succès !', 'Listing boosted!')),
+              backgroundColor: _dlInk,
+              behavior: SnackBarBehavior.floating,
+              content: Text(
+                res.data['message']?.toString() ??
+                    _state.s.tr(
+                      'تم تمييز إعلانك بنجاح!',
+                      'Annonce boostée avec succès !',
+                      'Listing boosted!',
+                    ),
+              ),
             ),
           );
           return true;
@@ -193,22 +221,34 @@ class _BoostSheetState extends State<BoostSheet> {
       if (mounted) setState(() => _purchasing = false);
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_state.s.tr(
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: _dlInk,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            _state.s.tr(
               'لم يتم تأكيد الدفع. تواصل مع الدعم قبل إعادة الشراء.',
               'Paiement non confirmé. Contactez l’assistance avant de racheter.',
-              'Payment not confirmed. Contact support before retrying.'))));
+              'Payment not confirmed. Contact support before retrying.',
+            ),
+          ),
+        ),
+      );
     }
     return false;
   }
 
   Future<void> _redeemProPlusCredit() async {
-    if (_purchasing || !_state.isProPlusAccount || _state.vipBoostCredits <= 0) {
+    if (_purchasing ||
+        !_state.isProPlusAccount ||
+        _state.vipBoostCredits <= 0) {
       return;
     }
+    HapticFeedback.mediumImpact();
     setState(() => _purchasing = true);
     try {
-      final res = await _state.api.dio.post('/ads/${widget.adId}/boost/use-credit');
+      final res =
+          await _state.api.dio.post('/ads/${widget.adId}/boost/use-credit');
       if (!mounted) return;
       setState(() => _purchasing = false);
       if (res.data is Map && res.data['status'] == 'success') {
@@ -222,7 +262,8 @@ class _BoostSheetState extends State<BoostSheet> {
         Navigator.pop(context, true);
         messenger.showSnackBar(
           SnackBar(
-            backgroundColor: AppConfig.success,
+            backgroundColor: _dlInk,
+            behavior: SnackBarBehavior.floating,
             content: Text(
               res.data['message']?.toString() ??
                   _state.s.tr(
@@ -243,306 +284,409 @@ class _BoostSheetState extends State<BoostSheet> {
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: _loading
-          ? const BoostPlansSkeleton()
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                        color: _border,
-                        borderRadius: BorderRadius.circular(99)),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: const BoxDecoration(
-                          color: _badgeBg, shape: BoxShape.circle),
-                      child:
-                          const Icon(Icons.bolt_rounded, color: _red, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+    final canPurchase = !_purchasing && _plans.isNotEmpty && _state.isLoggedIn;
+
+    return Directionality(
+      textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        decoration: const BoxDecoration(
+          color: _dlBg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: _loading
+              ? const BoostPlansSkeleton()
+              : SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _dlPill,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
                         children: [
-                          Text(
-                            s.tr('ميّز إعلانك وضاعف مبيعاتك',
-                                'Boostez votre annonce', 'Boost your listing'),
-                            style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w800,
-                                color: _ink,
-                                letterSpacing: AppTypography.trackingForContext(
-                                    context, -0.4)),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.adTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: _muted,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                if (_state.isProPlusAccount && _state.vipBoostCredits > 0) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      key: const Key('boost-use-pro-plus-credit-btn'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0A0A0A),
-                        foregroundColor: Colors.white,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: _purchasing ? null : _redeemProPlusCredit,
-                      icon: const Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 19,
-                        color: Color(0xFFFBBF24),
-                      ),
-                      label: Text(
-                        s.tr(
-                          'تفعيل VIP مجاناً من رصيد Pro Plus (${_state.vipBoostCredits})',
-                          'Activer VIP gratuit via Pro Plus (${_state.vipBoostCredits})',
-                          'Activate free VIP with Pro+ (${_state.vipBoostCredits})',
-                        ),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ] else if (_state.isLoggedIn && !_state.isProPlusAccount) ...[
-                  InkWell(
-                    key: const Key('boost-open-pro-plus'),
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () async {
-                      final activated = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute<bool>(
-                          builder: (_) => const SubscriptionScreen(),
-                        ),
-                      );
-                      if (activated == true && mounted) {
-                        setState(() {});
-                      }
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEEEEEE),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.workspace_premium_rounded,
-                            size: 18,
-                            color: Color(0xFF000000),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              s.tr(
-                                'احصل على 3 تمويلات VIP مجانية شهرياً مع Apolo Pro+',
-                                '3 Boosts VIP offerts/mois avec Apolo Pro+',
-                                'Get 3 free VIP boosts/month with Apolo Pro+',
-                              ),
-                              style: const TextStyle(
-                                fontSize: 12.8,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF000000),
-                              ),
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: const BoxDecoration(
+                              color: _dlPill,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              CupertinoIcons.bolt_fill,
+                              color: _dlInk,
+                              size: 20,
                             ),
                           ),
-                          Icon(
-                            s.isAr
-                                ? Icons.chevron_left_rounded
-                                : Icons.chevron_right_rounded,
-                            size: 18,
-                            color: const Color(0xFF757575),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s.tr(
+                                    'ميّز إعلانك وضاعف مبيعاتك',
+                                    'Boostez votre annonce',
+                                    'Boost your listing',
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 18.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: _dlInk,
+                                    letterSpacing:
+                                        AppTypography.trackingForContext(
+                                            context, -0.4),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  widget.adTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: _dlMuted,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ApoloDlIconCircleButton(
+                            icon: CupertinoIcons.xmark,
+                            iconSize: 16,
+                            onPressed: () => Navigator.maybePop(context),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (_plans.isEmpty)
-                  Text(s.tr('العروض غير متوفرة حالياً. أعد المحاولة لاحقاً.',
-                      'Les offres sont indisponibles. Réessayez plus tard.',
-                      'Plans are currently unavailable. Please try again later.')),
-                if (kIsWeb)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      s.tr('الدفع الفوري عبر الويب متاح لحسابك.',
-                          'Le paiement instantané sur le Web est activé pour votre compte.',
-                          'Instant web checkout is enabled for your account.'),
-                      style: const TextStyle(
-                          fontSize: 12.5,
-                          color: _muted,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ..._plans.map((plan) {
-                  final String id = plan['id'].toString();
-                  final bool selected = _selectedPlanId == id;
-                  final String name = (s.isAr
-                          ? plan['name_ar']
-                          : (s.isEn
-                              ? (plan['name_en'] ?? plan['name_fr'])
-                              : plan['name_fr']))
-                      .toString();
-                  final List features = (s.isAr
-                          ? plan['features_ar']
-                          : (s.isEn
-                              ? (plan['features_en'] ?? plan['features_fr'])
-                              : plan['features_fr'])) ??
-                      [];
-                  return PressableScale(
-                    onTap: _purchasing
-                        ? null
-                        : () => setState(() => _selectedPlanId = id),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? _badgeBg.withValues(alpha: 0.55)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: selected ? _red : _border,
-                          width: selected ? 1.8 : 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  name,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 15.5,
-                                      color: _ink,
-                                      letterSpacing:
-                                          AppTypography.trackingForContext(
-                                              context, -0.2)),
+                      const SizedBox(height: 18),
+
+                      // Pro+ Credit Banner or Upgrade Promo
+                      if (_state.isProPlusAccount &&
+                          _state.vipBoostCredits > 0) ...[
+                        PressableScale(
+                          key: const Key('boost-use-pro-plus-credit-btn'),
+                          onTap: _purchasing ? null : _redeemProPlusCredit,
+                          child: Container(
+                            width: double.infinity,
+                            height: 50,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: _dlInk,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.workspace_premium_rounded,
+                                  size: 19,
+                                  color: _dlAmber,
                                 ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color:
-                                      selected ? _red : const Color(0xFFF1F3F7),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  '${plan['price_mad']} MAD',
-                                  textDirection: TextDirection.ltr,
-                                  style: TextStyle(
-                                    color: selected ? Colors.white : _ink,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    s.tr(
+                                      'تفعيل VIP مجاناً من رصيد Pro Plus (${_state.vipBoostCredits})',
+                                      'Activer VIP gratuit via Pro Plus (${_state.vipBoostCredits})',
+                                      'Activate free VIP with Pro+ (${_state.vipBoostCredits})',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13.5,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 10),
-                          ...features.map((f) => Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Row(
+                        ),
+                        const SizedBox(height: 12),
+                      ] else if (_state.isLoggedIn &&
+                          !_state.isProPlusAccount) ...[
+                        PressableScale(
+                          key: const Key('boost-open-pro-plus'),
+                          onTap: () async {
+                            final activated =
+                                await Navigator.of(context).push<bool>(
+                              MaterialPageRoute<bool>(
+                                builder: (_) => const SubscriptionScreen(),
+                              ),
+                            );
+                            if (activated == true && mounted) {
+                              setState(() {});
+                            }
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _dlSurface,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: const BoxDecoration(
+                                    color: _dlBg,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.workspace_premium_rounded,
+                                    size: 18,
+                                    color: _dlInk,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    s.tr(
+                                      'احصل على 3 تمويلات VIP مجانية شهرياً مع Apolo Pro+',
+                                      '3 Boosts VIP offerts/mois avec Apolo Pro+',
+                                      'Get 3 free VIP boosts/month with Apolo Pro+',
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12.8,
+                                      fontWeight: FontWeight.w700,
+                                      color: _dlInk,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  s.isAr
+                                      ? CupertinoIcons.chevron_left
+                                      : CupertinoIcons.chevron_right,
+                                  size: 15,
+                                  color: _dlMuted,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      if (_plans.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: _dlSurface,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            s.tr(
+                              'العروض غير متوفرة حالياً. أعد المحاولة لاحقاً.',
+                              'Les offres sont indisponibles. Réessayez plus tard.',
+                              'Plans are currently unavailable. Please try again later.',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              color: _dlMuted,
+                            ),
+                          ),
+                        ),
+
+                      if (kIsWeb && _plans.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            s.tr(
+                              'الدفع الفوري عبر الويب متاح لحسابك.',
+                              'Le paiement instantané sur le Web est activé pour votre compte.',
+                              'Instant web checkout is enabled for your account.',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: _dlMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+
+                      ..._plans.map((plan) {
+                        final String id = plan['id'].toString();
+                        final bool selected = _selectedPlanId == id;
+                        final String name = (s.isAr
+                                ? plan['name_ar']
+                                : (s.isEn
+                                    ? (plan['name_en'] ?? plan['name_fr'])
+                                    : plan['name_fr']))
+                            .toString();
+                        final List features = (s.isAr
+                                ? plan['features_ar']
+                                : (s.isEn
+                                    ? (plan['features_en'] ??
+                                        plan['features_fr'])
+                                    : plan['features_fr'])) ??
+                            [];
+                        return PressableScale(
+                          onTap: _purchasing
+                              ? null
+                              : () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _selectedPlanId = id);
+                                },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 160),
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _dlSurface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: selected ? _dlInk : Colors.transparent,
+                                width: 1.8,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Icon(Icons.check_circle_rounded,
-                                        size: 16,
-                                        color: selected
-                                            ? _red
-                                            : AppConfig.success),
-                                    const SizedBox(width: 8),
+                                    ApoloDlRadio(selected: selected),
+                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        f.toString(),
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            color: _ink,
-                                            fontWeight: FontWeight.w500),
+                                        name,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 15.5,
+                                          color: _dlInk,
+                                          letterSpacing:
+                                              AppTypography.trackingForContext(
+                                                  context, -0.2),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: selected ? _dlInk : _dlBg,
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        '${plan['price_mad']} MAD',
+                                        textDirection: TextDirection.ltr,
+                                        style: TextStyle(
+                                          color:
+                                              selected ? Colors.white : _dlInk,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              )),
-                        ],
+                                if (features.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  ...features.map(
+                                    (f) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            CupertinoIcons
+                                                .checkmark_circle_fill,
+                                            size: 15,
+                                            color: _dlInk,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              f.toString(),
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: _dlInk,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+
+                      const SizedBox(height: 10),
+                      PressableScale(
+                        onTap: canPurchase ? _startPurchase : null,
+                        child: Container(
+                          width: double.infinity,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: canPurchase ? _dlInk : _dlPill,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_purchasing)
+                                const CupertinoActivityIndicator(
+                                  radius: 9,
+                                  color: Colors.white,
+                                )
+                              else
+                                Icon(
+                                  CupertinoIcons.bolt_fill,
+                                  size: 17,
+                                  color: canPurchase ? Colors.white : _dlMuted,
+                                ),
+                              const SizedBox(width: 8),
+                              Text(
+                                s.tr(
+                                  'تفعيل التمييز الآن',
+                                  'Activer le Boost maintenant',
+                                  'Activate Boost now',
+                                ),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: canPurchase ? Colors.white : _dlMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _red,
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                    ),
-                    onPressed: _purchasing ||
-                            _plans.isEmpty ||
-                            !_state.isLoggedIn
-                        ? null
-                        : _startPurchase,
-                    icon: _purchasing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.bolt_rounded, size: 20),
-                    label: Text(
-                      s.tr('تفعيل التمييز الآن', 'Activer le Boost maintenant',
-                          'Activate Boost now'),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15.5),
-                    ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+        ),
+      ),
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:apolo_mobile/screens/ad_reels_screen.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/widgets/ad_card.dart';
 import 'package:apolo_mobile/screens/widgets/price_text.dart';
@@ -136,37 +135,4 @@ void main() {
       });
     }
   }
-  testWidgets('reels empty success is not a network error', (tester) async {
-    final dio = AppState().api.dio;
-    final original = dio.httpClientAdapter;
-    dio.httpClientAdapter = _ReelsAdapter('{"status":"success","data":[]}');
-    addTearDown(() => dio.httpClientAdapter = original);
-    tester.view.physicalSize = const Size(320, 568);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(_app(const AdReelsScreen(), TextDirection.rtl));
-    await tester.pumpAndSettle();
-    expect(find.text('لا توجد إعلانات في هذا التبويب'), findsOneWidget);
-    expect(find.text('تعذر تحميل الإعلانات'), findsNothing);
-    expect(find.byIcon(Icons.volume_up), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('reels malformed response shows retry, not empty',
-      (tester) async {
-    final dio = AppState().api.dio;
-    final original = dio.httpClientAdapter;
-    dio.httpClientAdapter = _ReelsAdapter('{"status":"error"}');
-    addTearDown(() => dio.httpClientAdapter = original);
-    await tester.pumpWidget(_app(const AdReelsScreen(), TextDirection.rtl));
-    await tester.pumpAndSettle();
-    expect(find.text('تعذر تحميل الإعلانات'), findsOneWidget);
-    expect(find.text('إعادة المحاولة'), findsOneWidget);
-    dio.httpClientAdapter = _ReelsAdapter('{"status":"success","data":[]}');
-    await tester.tap(find.text('إعادة المحاولة'));
-    await tester.pumpAndSettle();
-    expect(find.text('لا توجد إعلانات في هذا التبويب'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
 }

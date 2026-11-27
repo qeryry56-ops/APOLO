@@ -303,96 +303,6 @@ class AdDetailSkeleton extends StatelessWidget {
   }
 }
 
-/// Dark-mode full-screen skeleton for Ad Reels Screen
-class AdReelsSkeleton extends StatelessWidget {
-  const AdReelsSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: ShimmerBox(
-              width: double.infinity,
-              height: double.infinity,
-              borderRadius: 24,
-              dark: true,
-              baseColor: Color(0xFF111827),
-              highlightColor: Color(0xFF1F2937),
-            ),
-          ),
-          // Trailing vertical action rail
-          PositionedDirectional(
-            end: 14,
-            bottom: 36,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                ShimmerBox(
-                    width: 44, height: 44, shape: BoxShape.circle, dark: true),
-                SizedBox(height: 16),
-                ShimmerBox(
-                    width: 40, height: 40, shape: BoxShape.circle, dark: true),
-                SizedBox(height: 16),
-                ShimmerBox(
-                    width: 40, height: 40, shape: BoxShape.circle, dark: true),
-                SizedBox(height: 16),
-                ShimmerBox(
-                    width: 40, height: 40, shape: BoxShape.circle, dark: true),
-              ],
-            ),
-          ),
-          // Bottom-start listing metadata
-          const PositionedDirectional(
-            start: 16,
-            end: 78,
-            bottom: 24,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ShimmerBox(width: 110, height: 26, borderRadius: 99, dark: true),
-                SizedBox(height: 12),
-                ShimmerBox(
-                    width: double.infinity,
-                    height: 20,
-                    borderRadius: 8,
-                    dark: true),
-                SizedBox(height: 8),
-                ShimmerBox(width: 170, height: 15, borderRadius: 6, dark: true),
-                SizedBox(height: 14),
-                Row(
-                  children: [
-                    Flexible(
-                      child: ShimmerBox(
-                        width: 90,
-                        height: 32,
-                        borderRadius: 99,
-                        dark: true,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Flexible(
-                      child: ShimmerBox(
-                        width: 110,
-                        height: 32,
-                        borderRadius: 99,
-                        dark: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Skeleton for Chat List Screen conversations (Dynamic Layer v5.1)
 class ChatListSkeleton extends StatelessWidget {
   final int itemCount;
@@ -770,7 +680,7 @@ class StoreDetailSkeleton extends StatelessWidget {
   }
 }
 
-/// Skeleton for Saved/Favorites bottom sheet rows
+/// Skeleton for Saved/Favorites bottom sheet rows (Dynamic Layer v5.1)
 class SavedFavoritesSkeleton extends StatelessWidget {
   final int itemCount;
   const SavedFavoritesSkeleton({super.key, this.itemCount = 3});
@@ -786,24 +696,46 @@ class SavedFavoritesSkeleton extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFF6F6F6),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFEDEFF3)),
             ),
             child: const Row(
               children: [
-                ShimmerBox(width: 64, height: 64, borderRadius: 14),
+                ShimmerBox(
+                  width: 64,
+                  height: 64,
+                  borderRadius: 14,
+                  baseColor: Color(0xFFEEEEEE),
+                  highlightColor: Color(0xFFFFFFFF),
+                ),
                 SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ShimmerBox(
-                          width: double.infinity, height: 14, borderRadius: 6),
+                        width: double.infinity,
+                        height: 14,
+                        borderRadius: 6,
+                        baseColor: Color(0xFFEEEEEE),
+                        highlightColor: Color(0xFFFFFFFF),
+                      ),
                       SizedBox(height: 8),
-                      ShimmerBox(width: 96, height: 13, borderRadius: 6),
+                      ShimmerBox(
+                        width: 96,
+                        height: 13,
+                        borderRadius: 6,
+                        baseColor: Color(0xFFEEEEEE),
+                        highlightColor: Color(0xFFFFFFFF),
+                      ),
                       SizedBox(height: 6),
-                      ShimmerBox(width: 72, height: 11, borderRadius: 5),
+                      ShimmerBox(
+                        width: 72,
+                        height: 11,
+                        borderRadius: 5,
+                        baseColor: Color(0xFFEEEEEE),
+                        highlightColor: Color(0xFFFFFFFF),
+                      ),
                     ],
                   ),
                 ),
@@ -816,7 +748,7 @@ class SavedFavoritesSkeleton extends StatelessWidget {
   }
 }
 
-/// Skeleton for Boost Sheet plans loading state
+/// Skeleton for Boost Sheet plans loading state (Dynamic Layer v5.1)
 class BoostPlansSkeleton extends StatelessWidget {
   const BoostPlansSkeleton({super.key});
 
@@ -827,20 +759,44 @@ class BoostPlansSkeleton extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Center(
-          child: ShimmerBox(width: 40, height: 4, borderRadius: 99),
+          child: ShimmerBox(
+            width: 36,
+            height: 4,
+            borderRadius: 99,
+            baseColor: Color(0xFFEEEEEE),
+            highlightColor: Color(0xFFF6F6F6),
+          ),
         ),
         const SizedBox(height: 18),
         const Row(
           children: [
-            ShimmerBox(width: 44, height: 44, shape: BoxShape.circle),
+            ShimmerBox(
+              width: 44,
+              height: 44,
+              shape: BoxShape.circle,
+              baseColor: Color(0xFFEEEEEE),
+              highlightColor: Color(0xFFF6F6F6),
+            ),
             SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ShimmerBox(width: 150, height: 16, borderRadius: 6),
+                  ShimmerBox(
+                    width: 150,
+                    height: 16,
+                    borderRadius: 6,
+                    baseColor: Color(0xFFEEEEEE),
+                    highlightColor: Color(0xFFF6F6F6),
+                  ),
                   SizedBox(height: 6),
-                  ShimmerBox(width: 210, height: 12, borderRadius: 6),
+                  ShimmerBox(
+                    width: 210,
+                    height: 12,
+                    borderRadius: 6,
+                    baseColor: Color(0xFFEEEEEE),
+                    highlightColor: Color(0xFFF6F6F6),
+                  ),
                 ],
               ),
             ),
@@ -854,15 +810,19 @@ class BoostPlansSkeleton extends StatelessWidget {
             child: const ShimmerBox(
               width: double.infinity,
               height: 68,
-              borderRadius: 16,
+              borderRadius: 20,
+              baseColor: Color(0xFFF6F6F6),
+              highlightColor: Color(0xFFEEEEEE),
             ),
           ),
         ),
         const SizedBox(height: 16),
         const ShimmerBox(
           width: double.infinity,
-          height: 50,
-          borderRadius: 16,
+          height: 52,
+          borderRadius: 999,
+          baseColor: Color(0xFFEEEEEE),
+          highlightColor: Color(0xFFF6F6F6),
         ),
       ],
     );

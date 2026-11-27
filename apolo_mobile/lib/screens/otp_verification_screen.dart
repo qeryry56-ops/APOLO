@@ -10,9 +10,6 @@ import 'package:smart_auth/smart_auth.dart';
 
 /// Android 5.0+ SMS Auto-Read implementation using Google Play Services
 /// SMS User Consent API via `smart_auth` + `pinput`'s [SmsRetriever] interface.
-///
-/// Works on Android 5.0+ without requiring `READ_SMS` permissions and safely
-/// no-ops on iOS/Web/Desktop.
 class SmartAuthSmsRetriever implements SmsRetriever {
   SmartAuthSmsRetriever({
     SmartAuth? smartAuth,
@@ -20,9 +17,6 @@ class SmartAuthSmsRetriever implements SmsRetriever {
   }) : _smartAuth = smartAuth ?? SmartAuth.instance;
 
   final SmartAuth _smartAuth;
-
-  /// Set `true` if your backend appends the 11-char Android App Hash to SMS
-  /// (SMS Retriever API); leave `false` to use SMS User Consent API.
   final bool useRetrieverApi;
 
   @override
@@ -62,23 +56,8 @@ class SmartAuthSmsRetriever implements SmsRetriever {
   }
 }
 
-/// Premium minimalist 6-digit OTP Verification Screen built with `pinput`:
-///
-/// - **Pinput Setup**: 6 digits, auto-focus next, auto-paste 6-digit clipboard code,
-///   auto-submit via `onCompleted`, backspace moves to previous box, numeric keyboard only.
-/// - **Theming (4 visual states)**:
-///   - Default: gray border (`#D1D5DB`), white background.
-///   - Focused: blue border (`#2563EB`) with subtle elevation shadow.
-///   - Submitted / Verified: green border (`#16A34A`) + checkmark icon.
-///   - Error: red border (`#DC2626`) + horizontal shake animation.
-/// - **Error Handling**:
-///   - Shakes all 6 boxes on invalid code.
-///   - Holds red border for 2 seconds with `"Code incorrect, try again"`.
-///   - Clears fields automatically after the shake animation.
-/// - **Android SMS Auto-Read**:
-///   - Uses [SmartAuthSmsRetriever] (`SmsRetriever` + `SmartAuth`) on Android 5.0+.
-/// - **Resend Countdown**:
-///   - 30-second countdown timer before enabling `"Resend code"`.
+/// Dynamic Layer v5.1 6-digit OTP Verification Screen (`#FFFFFF` canvas, `#F6F6F6` flat digit tiles,
+/// `40×40` `#EEEEEE` circular back button, `#000000` active focus ring, `#EEEEEE` resend capsule).
 class OtpVerificationScreen extends StatefulWidget {
   final String destination;
   final Future<bool> Function(String code) onVerify;
@@ -118,13 +97,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   bool _isError = false;
   String? _errorMessage;
 
-  static const Color _bgWhite = Color(0xFFFFFFFF);
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _defaultBorder = Color(0xFFD1D5DB);
-  static const Color _focusedBlue = Color(0xFF2563EB);
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
   static const Color _successGreen = Color(0xFF16A34A);
-  static const Color _errorRed = Color(0xFFDC2626);
+  static const Color _errorRed = Color(0xFFE31B23);
 
   @override
   void initState() {
@@ -132,7 +111,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     _secondsRemaining = widget.initialResendSeconds;
     _smsRetriever = widget.smsRetriever ?? SmartAuthSmsRetriever();
 
-    // Horizontal damped shake controller for invalid OTP feedback
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 420),
@@ -223,8 +201,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       return;
     }
 
-    // Invalid OTP: shake all boxes, show red border for 2 seconds, show error message,
-    // and clear fields right after the shake completes.
     HapticFeedback.vibrate();
     setState(() {
       _isVerifying = false;
@@ -236,11 +212,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     await _shakeController.forward(from: 0.0);
     if (!mounted) return;
 
-    // Clear fields immediately after shake completes
     _pinController.clear();
     _focusNode.requestFocus();
 
-    // Keep red border active for 2 seconds
     _errorResetTimer?.cancel();
     _errorResetTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
@@ -256,14 +230,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       height: 56,
       textStyle: const TextStyle(
         fontSize: 22,
-        fontWeight: FontWeight.w700,
-        color: _ink,
+        fontWeight: FontWeight.w800,
+        color: _dlInk,
         fontFeatures: [FontFeature.tabularFigures()],
       ),
       decoration: BoxDecoration(
-        color: _bgWhite,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _defaultBorder, width: 1.4),
+        color: _dlSurface,
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }
@@ -271,15 +244,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   PinTheme _buildFocusedPinTheme(PinTheme base) {
     return base.copyWith(
       decoration: base.decoration!.copyWith(
-        color: _bgWhite,
-        border: Border.all(color: _focusedBlue, width: 1.8),
-        boxShadow: [
-          BoxShadow(
-            color: _focusedBlue.withValues(alpha: 0.18),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: _dlBg,
+        border: Border.all(color: _dlInk, width: 2),
       ),
     );
   }
@@ -287,7 +253,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   PinTheme _buildSubmittedPinTheme(PinTheme base) {
     return base.copyWith(
       decoration: base.decoration!.copyWith(
-        color: _successGreen.withValues(alpha: 0.06),
+        color: _successGreen.withValues(alpha: 0.08),
         border: Border.all(color: _successGreen, width: 1.6),
       ),
     );
@@ -296,7 +262,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   PinTheme _buildErrorPinTheme(PinTheme base) {
     return base.copyWith(
       decoration: base.decoration!.copyWith(
-        color: _errorRed.withValues(alpha: 0.05),
+        color: _errorRed.withValues(alpha: 0.06),
         border: Border.all(color: _errorRed, width: 1.8),
       ),
     );
@@ -308,216 +274,250 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     final focusedTheme = _buildFocusedPinTheme(defaultTheme);
     final submittedTheme = _buildSubmittedPinTheme(defaultTheme);
     final errorTheme = _buildErrorPinTheme(defaultTheme);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final canResend = _secondsRemaining == 0 && !_isVerifying;
 
     return Scaffold(
-      backgroundColor: _bgWhite,
-      appBar: AppBar(
-        backgroundColor: _bgWhite,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: Icon(
-            Directionality.of(context) == TextDirection.rtl
-                ? CupertinoIcons.chevron_right
-                : CupertinoIcons.chevron_left,
-            color: _ink,
-            size: 22,
-          ),
-        ),
-      ),
+      backgroundColor: _dlBg,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Minimalist Header Icon / Verified Checkmark
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 240),
-                    child: _isVerified
-                        ? Container(
-                            key: const Key('otp-verified-icon'),
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: _successGreen.withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              CupertinoIcons.checkmark_circle_fill,
-                              color: _successGreen,
-                              size: 34,
-                            ),
-                          )
-                        : Container(
-                            key: const Key('otp-lock-icon'),
-                            width: 60,
-                            height: 60,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              CupertinoIcons.lock_shield_fill,
-                              color: _ink,
-                              size: 28,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    'Verify your code',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: _ink,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Enter the 6-digit code sent to \u2066${widget.destination}\u2069',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: _muted,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Centered 6-digit Pinput wrapped in damped horizontal shake animation
-                  AnimatedBuilder(
-                    animation: _shakeController,
-                    builder: (context, child) {
-                      final t = _shakeController.value;
-                      // Smooth damped sinusoidal shake (+/- 10px)
-                      final dx = math.sin(t * math.pi * 6) * 10.0 * (1.0 - t);
-                      return Transform.translate(
-                        offset: Offset(dx, 0),
-                        child: child,
-                      );
-                    },
-                    child: Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Pinput(
-                        key: const Key('otp-pinput'),
-                        length: 6,
-                        controller: _pinController,
-                        focusNode: _focusNode,
-                        autofocus: true,
-                        smsRetriever: _smsRetriever,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        hapticFeedbackType: HapticFeedbackType.lightImpact,
-                        defaultPinTheme: defaultTheme,
-                        focusedPinTheme: focusedTheme,
-                        submittedPinTheme: submittedTheme,
-                        errorPinTheme: errorTheme,
-                        forceErrorState: _isError,
-                        pinputAutovalidateMode:
-                            PinputAutovalidateMode.onSubmit,
-                        showCursor: true,
-                        cursor: Container(
-                          width: 2,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: _focusedBlue,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        onClipboardFound: _handleClipboardFound,
-                        onChanged: (val) {
-                          if (_isError && val.isNotEmpty) {
-                            setState(() {
-                              _isError = false;
-                              _errorMessage = null;
-                            });
-                          }
-                        },
-                        onCompleted: _handleCompleted,
+        child: Column(
+          children: [
+            // Dynamic Layer v5.1 56px Top Nav with 40x40 #EEEEEE back circle
+            SizedBox(
+              height: 56,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: _dlPill,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        isRtl
+                            ? CupertinoIcons.chevron_right
+                            : CupertinoIcons.chevron_left,
+                        color: _dlInk,
+                        size: 20,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Status row: Loading / Verified Checkmark / Error Message
-                  SizedBox(
-                    height: 26,
-                    child: Center(
-                      child: _isVerifying
-                          ? const CupertinoActivityIndicator(radius: 10)
-                          : _isVerified
-                              ? const Row(
-                                  key: Key('otp-verified-badge'),
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      CupertinoIcons.checkmark_circle_fill,
-                                      size: 16,
-                                      color: _successGreen,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Code verified',
-                                      style: TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: _successGreen,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : (_errorMessage != null
-                                  ? Text(
-                                      _errorMessage!,
-                                      key: const Key('otp-error-text'),
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: _errorRed,
-                                      ),
-                                    )
-                                  : const SizedBox.shrink()),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Resend code button with 30-second countdown timer
-                  TextButton(
-                    key: const Key('otp-resend-button'),
-                    onPressed: _secondsRemaining == 0 && !_isVerifying
-                        ? _handleResend
-                        : null,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                      foregroundColor: _focusedBlue,
-                      disabledForegroundColor: _muted,
-                    ),
-                    child: Text(
-                      _secondsRemaining > 0
-                          ? 'Resend code in ${_secondsRemaining}s'
-                          : 'Resend code',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          child: _isVerified
+                              ? Container(
+                                  key: const Key('otp-verified-icon'),
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        _successGreen.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    CupertinoIcons.checkmark_circle_fill,
+                                    color: _successGreen,
+                                    size: 34,
+                                  ),
+                                )
+                              : Container(
+                                  key: const Key('otp-lock-icon'),
+                                  width: 60,
+                                  height: 60,
+                                  decoration: const BoxDecoration(
+                                    color: _dlSurface,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    CupertinoIcons.lock_shield_fill,
+                                    color: _dlInk,
+                                    size: 26,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Verify your code',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: _dlInk,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Enter the 6-digit code sent to \u2066${widget.destination}\u2069',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: _dlMuted,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // 6-digit Pinput wrapped in damped horizontal shake animation
+                        AnimatedBuilder(
+                          animation: _shakeController,
+                          builder: (context, child) {
+                            final t = _shakeController.value;
+                            final dx =
+                                math.sin(t * math.pi * 6) * 10.0 * (1.0 - t);
+                            return Transform.translate(
+                              offset: Offset(dx, 0),
+                              child: child,
+                            );
+                          },
+                          child: Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Pinput(
+                              key: const Key('otp-pinput'),
+                              length: 6,
+                              controller: _pinController,
+                              focusNode: _focusNode,
+                              autofocus: true,
+                              smsRetriever: _smsRetriever,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              hapticFeedbackType:
+                                  HapticFeedbackType.lightImpact,
+                              defaultPinTheme: defaultTheme,
+                              focusedPinTheme: focusedTheme,
+                              submittedPinTheme: submittedTheme,
+                              errorPinTheme: errorTheme,
+                              forceErrorState: _isError,
+                              pinputAutovalidateMode:
+                                  PinputAutovalidateMode.onSubmit,
+                              showCursor: true,
+                              cursor: Container(
+                                width: 2,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: _dlInk,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              onClipboardFound: _handleClipboardFound,
+                              onChanged: (val) {
+                                if (_isError && val.isNotEmpty) {
+                                  setState(() {
+                                    _isError = false;
+                                    _errorMessage = null;
+                                  });
+                                }
+                              },
+                              onCompleted: _handleCompleted,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Status row: Loading / Verified Checkmark / Error Message
+                        SizedBox(
+                          height: 26,
+                          child: Center(
+                            child: _isVerifying
+                                ? const CupertinoActivityIndicator(radius: 10)
+                                : _isVerified
+                                    ? const Row(
+                                        key: Key('otp-verified-badge'),
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            CupertinoIcons
+                                                .checkmark_circle_fill,
+                                            size: 16,
+                                            color: _successGreen,
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'Code verified',
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: _successGreen,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : (_errorMessage != null
+                                        ? Text(
+                                            _errorMessage!,
+                                            key: const Key('otp-error-text'),
+                                            style: const TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: _errorRed,
+                                            ),
+                                          )
+                                        : const SizedBox.shrink()),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Dynamic Layer #EEEEEE / #000000 Resend Code Capsule Pill
+                        GestureDetector(
+                          key: const Key('otp-resend-button'),
+                          onTap: canResend ? _handleResend : null,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 160),
+                            height: 44,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: canResend ? _dlInk : _dlPill,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            alignment: Alignment.center,
+                            width: 210,
+                            child: Text(
+                              _secondsRemaining > 0
+                                  ? 'Resend code in ${_secondsRemaining}s'
+                                  : 'Resend code',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: canResend ? Colors.white : _dlMuted,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

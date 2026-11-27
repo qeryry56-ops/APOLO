@@ -1,7 +1,8 @@
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/chat_room_screen.dart';
 import 'package:apolo_mobile/screens/otp_verification_screen.dart';
-import 'package:apolo_mobile/screens/widgets/skeleton_loader.dart';
+import 'package:apolo_mobile/screens/widgets/boost_sheet.dart';
+import 'package:apolo_mobile/screens/widgets/marketplace_zone_sheet.dart';
 import 'package:apolo_mobile/widgets/chat_message.dart';
 import 'package:apolo_mobile/widgets/ios26_imessage_drawer.dart';
 import 'package:apolo_mobile/widgets/voice_recorder.dart';
@@ -386,28 +387,42 @@ void main() {
       });
     }
 
-    testWidgets('AdReelsSkeleton mirrors trailing rail in RTL vs LTR',
-        (tester) async {
-      Future<double> measureRailX(TextDirection dir) async {
+    for (final lang in ['ar', 'en']) {
+      testWidgets(
+          'BoostSheet and MarketplaceZoneContent render Dynamic Layer v5.1 cleanly in $lang',
+          (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.runAsync(() => state.setLocale(Locale(lang)));
+
         await tester.pumpWidget(
           MaterialApp(
-            home: Directionality(
-              textDirection: dir,
-              child: const Scaffold(body: AdReelsSkeleton()),
+            home: Scaffold(
+              body: MarketplaceZoneContent(
+                state: state,
+                embeddedInScreen: true,
+              ),
             ),
           ),
         );
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
         expect(tester.takeException(), isNull);
-        final circles = find.byWidgetPredicate(
-          (w) => w is ShimmerBox && w.shape == BoxShape.circle,
-        );
-        return tester.getCenter(circles.first).dx;
-      }
+        expect(find.byKey(const Key('zone-place-search')), findsOneWidget);
+        expect(find.byKey(const Key('zone-apply-btn')), findsOneWidget);
 
-      final ltrX = await measureRailX(TextDirection.ltr);
-      final rtlX = await measureRailX(TextDirection.rtl);
-      expect(ltrX, greaterThan(rtlX));
-    });
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: BoostSheet(adId: 42, adTitle: 'iPhone 16 Pro Max'),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }
