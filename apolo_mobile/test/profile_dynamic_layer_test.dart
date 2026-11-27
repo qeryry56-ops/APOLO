@@ -79,6 +79,7 @@ void main() {
       });
 
     state.followedSellerIds.clear();
+    state.sellerUserReviews.clear();
     state.favoriteAdIds.clear();
     state.currentUser = null;
     await state.api.setToken(null);
@@ -87,6 +88,7 @@ void main() {
 
   tearDown(() async {
     state.followedSellerIds.clear();
+    state.sellerUserReviews.clear();
     state.favoriteAdIds.clear();
     state.currentUser = null;
     await state.api.setToken(null);
@@ -186,7 +188,9 @@ void main() {
       );
       expect(initialFollowBtn.variant, ApoloDlButtonVariant.primary);
       expect(initialFollowBtn.label, 'Follow');
-      expect(find.byKey(const Key('seller-share-btn')), findsOneWidget);
+      expect(find.byKey(const Key('seller-chat-btn')), findsOneWidget);
+      expect(find.byKey(const Key('seller-share-btn')), findsNothing);
+      expect(find.byKey(const Key('seller-call-btn')), findsNothing);
 
       await tester.tap(find.byKey(const Key('seller-follow-btn')));
       await tester.pumpAndSettle();
@@ -229,10 +233,49 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(ApoloDlAccountHeader), findsOneWidget);
         expect(find.byKey(const Key('seller-follow-btn')), findsOneWidget);
-        expect(find.byKey(const Key('seller-share-btn')), findsOneWidget);
         expect(find.byKey(const Key('seller-chat-btn')), findsOneWidget);
-        expect(find.byKey(const Key('seller-call-btn')), findsOneWidget);
+        expect(find.byKey(const Key('seller-share-btn')), findsNothing);
+        expect(find.byKey(const Key('seller-call-btn')), findsNothing);
       });
     }
+
+    testWidgets(
+        'allows user to submit a star rating and review on SellerProfileScreen',
+        (tester) async {
+      state.currentUser = testUser;
+      await tester.runAsync(() => state.api.setToken('valid-test-token'));
+      await pumpScreen(
+        tester,
+        const SellerProfileScreen(
+          sellerId: 501,
+          sellerName: 'Atlas Boutique',
+          sellerCity: 'Rabat',
+        ),
+      );
+
+      expect(find.text('Reviews (48)'), findsOneWidget);
+      await tester.tap(find.text('Reviews (48)'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('seller-write-review-btn')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('seller-write-review-btn')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('review-star-5')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('review-comment-input')),
+        'Top seller in Rabat, super fast delivery!',
+      );
+      await tester.tap(find.byKey(const Key('review-submit-btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reviews (49)'), findsOneWidget);
+      expect(
+        find.text('Top seller in Rabat, super fast delivery!'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }

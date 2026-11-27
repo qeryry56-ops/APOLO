@@ -350,6 +350,8 @@ void main() {
       );
       expect(tester.takeException(), isNull);
 
+      await tester.tap(find.byKey(const Key('seller-more-btn')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('seller-share-btn')));
       await tester.pumpAndSettle();
 

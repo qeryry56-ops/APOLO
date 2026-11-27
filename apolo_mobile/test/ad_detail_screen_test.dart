@@ -53,10 +53,11 @@ void main() {
     await AppState().initialize(loadRemote: false);
     AppState().currentUser = null;
     AppState().favoriteAdIds.clear();
+    AppState().sellerUserReviews.clear();
   });
 
   testWidgets(
-      'AdDetailScreen reproduces Casa Oliva Villa reference specs, hero height, 4 spec cards, host card, and sticky bottom bar',
+      'AdDetailScreen reproduces Casa Oliva Villa reference specs, hero height, 4 spec cards, host card, and removes sticky bottom bar',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -119,13 +120,13 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Dynamic Layer v5.1 Top Nav, Hero tags & video tour pill
+    // Dynamic Layer v5.1 Top Nav, Hero tags & video tour pill (no sticky bottom bar)
     expect(find.byKey(const Key('dl-detail-top-nav')), findsOneWidget);
     expect(find.byKey(const Key('dl-detail-back-btn')), findsOneWidget);
     expect(find.byKey(const Key('dl-detail-fav-btn')), findsOneWidget);
     expect(find.byKey(const Key('dl-detail-more-btn')), findsOneWidget);
-    expect(find.byKey(const Key('dl-detail-bottom-bar')), findsOneWidget);
-    expect(find.byKey(const Key('dl-detail-primary-cta')), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-bottom-bar')), findsNothing);
+    expect(find.byKey(const Key('dl-detail-primary-cta')), findsNothing);
     expect(find.text('Details'), findsOneWidget);
     expect(find.text('Video tour'), findsOneWidget);
     expect(find.text('0:45'), findsOneWidget);
@@ -134,14 +135,12 @@ void main() {
     expect(find.text('Guest favourite'), findsOneWidget);
     expect(find.text('1/24'), findsOneWidget);
 
-    // Title, pricing row, Message quick action, and sticky bottom bar
+    // Title, pricing row, and Message quick action
     expect(find.text('Casa Oliva Villa'), findsOneWidget);
     expect(find.text('Quinta da Marinha, Cascais, Portugal'), findsOneWidget);
     expect(find.text('\$212'), findsOneWidget);
     expect(find.text('per night'), findsOneWidget);
     expect(find.text('Message'), findsOneWidget);
-    expect(find.text('May 20–24 · taxes incl.'), findsOneWidget);
-    expect(find.text('Book now'), findsOneWidget);
     expect(find.byIcon(CupertinoIcons.heart), findsOneWidget);
 
     // Scroll below Message Seller & 4 Actions to inspect 4 spec cards & Seller section
@@ -215,10 +214,14 @@ void main() {
 
     expect(find.text('حامل الهاتف المغناطيسي للسيارة'), findsOneWidget);
     expect(find.text('تفاصيل الإعلان'), findsOneWidget);
-    expect(find.byKey(const Key('dl-detail-call-btn')), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-bottom-bar')), findsNothing);
+    expect(
+      find.byKey(const Key('dl-detail-call-btn'), skipOffstage: false),
+      findsOneWidget,
+    );
     expect(find.text('99 MAD'), findsWidgets);
     expect(find.text('رسالة'), findsOneWidget);
-    expect(find.text('167'), findsOneWidget);
+    expect(find.text('167', skipOffstage: false), findsOneWidget);
     // Fake Video Tour should not appear when listing has no video
     expect(find.text('Video tour'), findsNothing);
     expect(find.text('فيديو الإعلان'), findsNothing);
@@ -286,12 +289,13 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Marketplace Header + Inline Message Seller Card + 4 Action Circles
+    // Marketplace Header + Inline Message Seller Card + 4 Action Circles (no sticky Contact seller bar)
     expect(find.text('iPhone 14 Pro piece'), findsOneWidget);
     expect(find.text('450 MAD'), findsWidgets);
     expect(find.text('Just listed · 19 hours ago'), findsOneWidget);
     expect(find.text('Message seller'), findsOneWidget);
-    expect(find.text('Contact seller'), findsOneWidget);
+    expect(find.text('Contact seller'), findsNothing);
+    expect(find.byKey(const Key('dl-detail-bottom-bar')), findsNothing);
     expect(find.byKey(const Key('detail-quick-msg')), findsOneWidget);
     expect(find.byKey(const Key('detail-quick-send')), findsOneWidget);
     expect(find.text('Send'), findsOneWidget);
@@ -314,6 +318,8 @@ void main() {
     expect(find.text('Simo El Kadmiri'), findsOneWidget);
     expect(find.text('Joined Apolo in 2024'), findsOneWidget);
     expect(find.byKey(const Key('detail-follow-seller')), findsOneWidget);
+    expect(find.byKey(const Key('detail-rate-seller-card')), findsOneWidget);
+    expect(find.byKey(const Key('detail-write-review-btn')), findsOneWidget);
     expect(find.text('Follow'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('detail-follow-seller')));
@@ -342,6 +348,22 @@ void main() {
     expect(find.text('Sort'), findsOneWidget);
     expect(find.text('Adam'), findsOneWidget);
     expect(find.text('Amina'), findsOneWidget);
+    expect(find.byKey(const Key('all-reviews-write-btn')), findsOneWidget);
+
+    // Submit a new 5-star review directly from All Reviews
+    await tester.tap(find.byKey(const Key('all-reviews-write-btn')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('review-star-5')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('review-comment-input')),
+      'Super honest seller, clean iPhone parts!',
+    );
+    await tester.tap(find.byKey(const Key('review-submit-btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Super honest seller, clean iPhone parts!'), findsOneWidget);
+    expect(find.text('Seller reviews (3)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

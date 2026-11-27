@@ -12,6 +12,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/apolo_badges_kit.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../widgets/dl_write_review_sheet.dart';
 import 'widgets/price_text.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
@@ -66,7 +67,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   static const Color _dlSurface = Color(0xFFF6F6F6);
   static const Color _dlPill = Color(0xFFEEEEEE);
   static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlBorder = Color(0xFFE4E4E7);
   static const Color _dlInk = Color(0xFF000000);
   static const Color _dlMuted = Color(0xFF757575);
   static const Color _dlSubtle = Color(0xFF9E9E9E);
@@ -757,77 +757,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
   }
 
-  void _showContactOptionsSheet(
-    AppStrings s,
-    String sellerDisplayName,
-    String? phone,
-  ) {
-    HapticFeedback.selectionClick();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: _dlBg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: _dlPill,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _SheetActionRow(
-                  icon: CupertinoIcons.chat_bubble_2_fill,
-                  iconColor: _dlInk,
-                  title: s.tr(
-                    'محادثة فورية عبر Apolo',
-                    'Message sur Apolo',
-                    'Message on Apolo',
-                  ),
-                  subtitle: s.tr(
-                    'تواصل مباشرة مع $sellerDisplayName داخل التطبيق',
-                    'Discuter directement avec $sellerDisplayName',
-                    'Chat directly with $sellerDisplayName',
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _openInAppChat();
-                  },
-                ),
-                if (phone != null && phone.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  _SheetActionRow(
-                    icon: CupertinoIcons.phone_fill,
-                    iconColor: _dlInk,
-                    title: s.tr(
-                      'اتصال هاتفي مباشر',
-                      'Appeler $sellerDisplayName',
-                      'Call $sellerDisplayName',
-                    ),
-                    subtitle: phone,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showCallSheetOrDial(phone, sellerDisplayName);
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   List<String> _extractImages(Map<String, dynamic> ad) {
     final urls = <String>[];
     void addUrl(dynamic candidate) {
@@ -1058,7 +987,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               child: ListView(
                 scrollCacheExtent: const ScrollCacheExtent.pixels(700),
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 120),
+                padding: const EdgeInsets.only(bottom: 36),
                 children: [
                   // Hero Media Gallery Card (`24px` radius, crisp flat frame)
                   _buildHeroImageCard(
@@ -1219,17 +1148,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: _buildStickyBottomBar(
-        s: s,
-        ad: ad,
-        isOwner: isOwner,
-        isStayListing: isStayListing,
-        isNegotiable: isNegotiable,
-        cityName: cityName,
-        fallbackPrice: priceFormatted,
-        sellerDisplayName: sellerDisplayName,
-        phone: phone,
       ),
     );
   }
@@ -2308,6 +2226,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           if (!isOwner && phone != null && phone.isNotEmpty) ...[
             const SizedBox(height: 10),
             PressableScale(
+              key: const Key('dl-detail-call-btn'),
               onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
               child: Container(
                 width: double.infinity,
@@ -2466,13 +2385,31 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final String? avatarUrl =
         (store?['logo_url'] ?? seller?['avatar_url'])?.toString().trim();
 
-    final double? ratingVal = double.tryParse(
+    final int effectiveSellerId =
+        sellerId > 0 ? sellerId : (1000000 + widget.adId);
+    final List<dynamic>? rawReviewsList =
+        (seller?['reviews'] ?? ad['reviews']) as List<dynamic>?;
+    final double? rawRatingVal = double.tryParse(
       (seller?['rating'] ?? seller?['avg_rating'] ?? ad['seller_rating'] ?? '')
           .toString(),
     );
-    final int? reviewsCountVal = int.tryParse(
+    final int? rawReviewsCountVal = int.tryParse(
       (seller?['reviews_count'] ?? ad['seller_reviews_count'] ?? '').toString(),
     );
+    final liveStats = _state.computeSellerRatingStats(
+      sellerId: effectiveSellerId,
+      baseRating: rawRatingVal,
+      baseCount: rawReviewsCountVal,
+      rawReviews: rawReviewsList,
+    );
+    final double? ratingVal =
+        liveStats.average > 0 ? liveStats.average : rawRatingVal;
+    final int? reviewsCountVal =
+        liveStats.count > 0 ? liveStats.count : rawReviewsCountVal;
+    final Map<String, dynamic>? mySellerReview =
+        _state.getMyReviewForSeller(effectiveSellerId);
+    final int mySelectedStars =
+        int.tryParse('${mySellerReview?['rating'] ?? 0}') ?? 0;
 
     final bool isVerifiedSeller =
         seller?['is_verified'] == true || store != null;
@@ -2537,11 +2474,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     MaterialPageRoute(
                       builder: (_) => _SellerReviewsScreen(
                         s: s,
+                        sellerId: effectiveSellerId,
                         sellerName: sellerDisplayName,
-                        rating: ratingVal,
-                        reviewsCount: reviewsCountVal ?? 0,
-                        rawReviews: (seller?['reviews'] ?? ad['reviews'])
-                            as List<dynamic>?,
+                        adId: widget.adId,
+                        adTitle: (ad['title'] ?? '').toString(),
+                        isOwner: isOwner,
+                        rating: rawRatingVal,
+                        reviewsCount: rawReviewsCountVal ?? 0,
+                        rawReviews: rawReviewsList,
                       ),
                     ),
                   );
@@ -2752,6 +2692,149 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               ],
             ),
           ),
+
+          // Interactive Dynamic Layer v5.1 Rate & Review Bar
+          if (!isOwner) ...[
+            const SizedBox(height: 10),
+            Container(
+              key: const Key('detail-rate-seller-card'),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: _dlSurface,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          mySellerReview != null
+                              ? s.tr(
+                                  'تقييمك لهذا البائع',
+                                  'Votre avis publié',
+                                  'Your rating',
+                                )
+                              : s.tr(
+                                  'قيّم تجربتك مع البائع',
+                                  'Évaluer ce vendeur',
+                                  'Rate this seller',
+                                ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: _dlInk,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(5, (index) {
+                              final star = index + 1;
+                              final active = star <= mySelectedStars;
+                              return GestureDetector(
+                                key: Key('detail-quick-star-$star'),
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  showApoloWriteReviewSheet(
+                                    context,
+                                    sellerId: effectiveSellerId,
+                                    sellerName: sellerDisplayName,
+                                    adId: widget.adId,
+                                    adTitle: (ad['title'] ?? '').toString(),
+                                    initialRating: star,
+                                  );
+                                },
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.only(end: 4),
+                                  child: Icon(
+                                    active
+                                        ? Icons.star_rounded
+                                        : Icons.star_outline_rounded,
+                                    size: 21,
+                                    color: active
+                                        ? _dlStarAmber
+                                        : const Color(0xFFCFCFCF),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  PressableScale(
+                    key: const Key('detail-write-review-btn'),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      showApoloWriteReviewSheet(
+                        context,
+                        sellerId: effectiveSellerId,
+                        sellerName: sellerDisplayName,
+                        adId: widget.adId,
+                        adTitle: (ad['title'] ?? '').toString(),
+                      );
+                    },
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 165),
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 13),
+                        decoration: BoxDecoration(
+                          color: _dlInk,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.star_fill,
+                              size: 13,
+                              color: _dlStarAmber,
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                mySellerReview != null
+                                    ? s.tr(
+                                        'تعديل تقييمك',
+                                        'Modifier',
+                                        'Edit review',
+                                      )
+                                    : s.tr(
+                                        'أضف تقييمك',
+                                        'Donner un avis',
+                                        'Write review',
+                                      ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -3279,184 +3362,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       ],
     );
   }
-
-  Widget _buildStickyBottomBar({
-    required AppStrings s,
-    required Map<String, dynamic> ad,
-    required bool isOwner,
-    required bool isStayListing,
-    required bool isNegotiable,
-    required String cityName,
-    required String fallbackPrice,
-    required String sellerDisplayName,
-    required String? phone,
-  }) {
-    final String totalMain =
-        (ad['total_price_display'] ?? '').toString().trim().isNotEmpty
-            ? ad['total_price_display'].toString().trim()
-            : fallbackPrice;
-    final String totalUnit = (ad['total_unit_label'] ??
-            (ad.containsKey('total_price_display') ? 'total' : ''))
-        .toString()
-        .trim();
-    final String totalSubtitle = (ad['total_subtitle'] ??
-                ad['stay_dates_label'] ??
-                '')
-            .toString()
-            .trim()
-            .isNotEmpty
-        ? (ad['total_subtitle'] ?? ad['stay_dates_label']).toString().trim()
-        : (isStayListing
-            ? 'taxes incl.'
-            : '${isNegotiable ? s.tr('ثمن قابل للنقاش', 'Prix négociable', 'Negotiable') : s.tr('معاينة مباشرة', 'Remise directe', 'Meetup / Delivery')} · $cityName');
-    final String ctaLabel =
-        (ad['cta_label'] ?? '').toString().trim().isNotEmpty
-            ? ad['cta_label'].toString().trim()
-            : (isOwner
-                ? s.tr('ترقية الإعلان ⚡', 'Booster ⚡', 'Boost ⚡')
-                : (isStayListing
-                    ? s.tr('احجز الآن', 'Réserver', 'Book now')
-                    : s.tr('تواصل للشراء', 'Contacter', 'Contact seller')));
-
-    return Container(
-      key: const Key('dl-detail-bottom-bar'),
-      decoration: const BoxDecoration(
-        color: _dlBg,
-        border: Border(
-          top: BorderSide(color: _dlSeparator, width: 1),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: RichText(
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: totalMain,
-                              style: const TextStyle(
-                                fontSize: 18.5,
-                                fontWeight: FontWeight.w800,
-                                color: _dlInk,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                            if (totalUnit.isNotEmpty)
-                              TextSpan(
-                                text: ' $totalUnit',
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: _dlMuted,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      totalSubtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w400,
-                        color: _dlMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isOwner && phone != null && phone.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                PressableScale(
-                  key: const Key('dl-detail-call-btn'),
-                  onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: const BoxDecoration(
-                      color: _dlPill,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      CupertinoIcons.phone_fill,
-                      size: 19,
-                      color: _dlInk,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(width: 10),
-              PressableScale(
-                key: const Key('dl-detail-primary-cta'),
-                onTap: () {
-                  if (isOwner) {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => BoostSheet(
-                        adId: widget.adId,
-                        adTitle: (ad['title'] ?? '').toString(),
-                      ),
-                    ).then((boosted) {
-                      if (boosted == true) _fetchDetails();
-                    });
-                    return;
-                  }
-                  if (phone != null && phone.isNotEmpty) {
-                    _showContactOptionsSheet(s, sellerDisplayName, phone);
-                  } else {
-                    _openInAppChat();
-                  }
-                },
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 140,
-                    minHeight: 48,
-                  ),
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    decoration: BoxDecoration(
-                      color: _dlInk,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      ctaLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _VideoTourPill extends StatelessWidget {
@@ -3828,14 +3733,22 @@ class _DlActionCircle extends StatelessWidget {
 
 class _SellerReviewsScreen extends StatefulWidget {
   final AppStrings s;
+  final int sellerId;
   final String sellerName;
+  final int? adId;
+  final String? adTitle;
+  final bool isOwner;
   final double? rating;
   final int reviewsCount;
   final List<dynamic>? rawReviews;
 
   const _SellerReviewsScreen({
     required this.s,
+    required this.sellerId,
     required this.sellerName,
+    this.adId,
+    this.adTitle,
+    this.isOwner = false,
     this.rating,
     this.reviewsCount = 0,
     this.rawReviews,
@@ -3846,6 +3759,7 @@ class _SellerReviewsScreen extends StatefulWidget {
 }
 
 class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
+  final AppState _state = AppState();
   int _minStarsFilter = 0;
   bool _highestFirst = false;
   final Set<int> _helpfulIndices = {};
@@ -3857,11 +3771,17 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
   static const Color _dlMuted = Color(0xFF757575);
   static const Color _dlStarAmber = Color(0xFFFFB800);
 
-  List<Map<String, dynamic>> get _reviews {
-    final raw = (widget.rawReviews ?? [])
+  List<Map<String, dynamic>> get _combinedRawReviews {
+    final userReviews = _state.getUserReviewsForSeller(widget.sellerId);
+    final serverReviews = (widget.rawReviews ?? [])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
-        .where((r) {
+        .toList();
+    return <Map<String, dynamic>>[...userReviews, ...serverReviews];
+  }
+
+  List<Map<String, dynamic>> get _reviews {
+    final raw = _combinedRawReviews.where((r) {
       if (_minStarsFilter == 0) return true;
       final stars = int.tryParse((r['rating'] ?? 0).toString()) ?? 0;
       return _minStarsFilter == 5 ? stars == 5 : stars >= _minStarsFilter;
@@ -3878,126 +3798,140 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.s;
-    final items = _reviews;
-    final double ratingValue = widget.rating ?? 0.0;
-    final int totalCount =
-        widget.reviewsCount > 0 ? widget.reviewsCount : items.length;
+    return AnimatedBuilder(
+      animation: _state,
+      builder: (context, _) {
+        final s = widget.s;
+        final allItems = _combinedRawReviews;
+        final items = _reviews;
+        final stats = _state.computeSellerRatingStats(
+          sellerId: widget.sellerId,
+          baseRating: widget.rating,
+          baseCount: widget.reviewsCount,
+          rawReviews: widget.rawReviews,
+        );
+        final double ratingValue = stats.average;
+        final int totalCount =
+            stats.count > 0 ? stats.count : allItems.length;
+        final myReview = _state.getMyReviewForSeller(widget.sellerId);
 
-    final Map<int, int> counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
-    for (final r in (widget.rawReviews ?? []).whereType<Map>()) {
-      final st = int.tryParse((r['rating'] ?? 0).toString()) ?? 0;
-      if (counts.containsKey(st)) counts[st] = counts[st]! + 1;
-    }
-    final int maxCount = counts.values.fold<int>(1, (m, c) => c > m ? c : m);
+        final Map<int, int> counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+        for (final r in allItems) {
+          final st = int.tryParse((r['rating'] ?? 0).toString()) ?? 0;
+          if (counts.containsKey(st)) counts[st] = counts[st]! + 1;
+        }
+        final int maxCount =
+            counts.values.fold<int>(1, (m, c) => c > m ? c : m);
 
-    return Scaffold(
-      backgroundColor: _dlBg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            ApoloDlTopNav(
-              title: s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
-            ),
-            Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                children: [
-                  // Dynamic Layer v5.1 Rating Summary Card
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: _dlSurface,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                s.tr(
-                                  'تقييم البائع',
-                                  'Note du vendeur',
-                                  'Seller rating',
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: _dlInk,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                widget.sellerName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.end,
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: _dlMuted,
-                                ),
-                              ),
-                            ),
-                          ],
+        return Scaffold(
+          backgroundColor: _dlBg,
+          body: SafeArea(
+            child: Column(
+              children: [
+                ApoloDlTopNav(
+                  title:
+                      s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
+                ),
+                Expanded(
+                  child: ListView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                    children: [
+                      // Dynamic Layer v5.1 Rating Summary Card
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: _dlSurface,
+                          borderRadius: BorderRadius.circular(22),
                         ),
-                        const SizedBox(height: 14),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                            Row(
                               children: [
-                                Text(
-                                  ratingValue > 0
-                                      ? ratingValue.toStringAsFixed(1)
-                                      : '—',
-                                  style: const TextStyle(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.w800,
-                                    color: _dlInk,
-                                    height: 1.0,
-                                    fontFeatures: [
-                                      FontFeature.tabularFigures(),
-                                    ],
+                                Expanded(
+                                  child: Text(
+                                    s.tr(
+                                      'تقييم البائع',
+                                      'Note du vendeur',
+                                      'Seller rating',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: _dlInk,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: List.generate(5, (i) {
-                                    final filled = i + 1 <= ratingValue.floor();
-                                    final half =
-                                        !filled && (ratingValue - i) >= 0.4;
-                                    return Icon(
-                                      half
-                                          ? Icons.star_half_rounded
-                                          : (filled
-                                              ? Icons.star_rounded
-                                              : Icons.star_outline_rounded),
-                                      size: 15,
-                                      color: _dlStarAmber,
-                                    );
-                                  }),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '($totalCount)',
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: _dlMuted,
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    widget.sellerName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.end,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: _dlMuted,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 14),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      ratingValue > 0
+                                          ? ratingValue.toStringAsFixed(1)
+                                          : '—',
+                                      style: const TextStyle(
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.w800,
+                                        color: _dlInk,
+                                        height: 1.0,
+                                        fontFeatures: [
+                                          FontFeature.tabularFigures(),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: List.generate(5, (i) {
+                                        final filled =
+                                            i + 1 <= ratingValue.floor();
+                                        final half =
+                                            !filled && (ratingValue - i) >= 0.4;
+                                        return Icon(
+                                          half
+                                              ? Icons.star_half_rounded
+                                              : (filled
+                                                  ? Icons.star_rounded
+                                                  : Icons.star_outline_rounded),
+                                          size: 15,
+                                          color: _dlStarAmber,
+                                        );
+                                      }),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '($totalCount)',
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: _dlMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                             const SizedBox(width: 16),
                             Container(
                               width: 1,
@@ -4088,6 +4022,38 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                             ),
                           ],
                         ),
+                        if (!widget.isOwner) ...[
+                          const SizedBox(height: 14),
+                          ApoloDlButton(
+                            key: const Key('all-reviews-write-btn'),
+                            label: myReview != null
+                                ? s.tr(
+                                    'تعديل تقييمك',
+                                    'Modifier votre avis',
+                                    'Edit your review',
+                                  )
+                                : s.tr(
+                                    'أضف تقييمك',
+                                    'Donner un avis',
+                                    'Write a review',
+                                  ),
+                            leadingIcon: CupertinoIcons.star_fill,
+                            variant: ApoloDlButtonVariant.primary,
+                            size: ApoloDlButtonSize.sm,
+                            height: 42,
+                            borderRadius: 999,
+                            fullWidth: true,
+                            onPressed: () {
+                              showApoloWriteReviewSheet(
+                                context,
+                                sellerId: widget.sellerId,
+                                sellerName: widget.sellerName,
+                                adId: widget.adId,
+                                adTitle: widget.adTitle,
+                              );
+                            },
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -4426,6 +4392,8 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
           ],
         ),
       ),
+    );
+      },
     );
   }
 }

@@ -157,9 +157,12 @@ class AppState extends ChangeNotifier {
 
   static const String _cachedUserPrefsKey = 'apolo_cached_user_v1';
   static const String _followedSellersPrefsKey = 'apolo_followed_sellers_v1';
+  static const String _sellerReviewsPrefsKey = 'apolo_seller_reviews_v1';
   static const String _userIntentsPrefsKey = 'apolo_user_intents_v1';
   static const String _intentOnboardingDoneKey =
       'apolo_intent_onboarding_done_v1';
+
+  Map<int, List<Map<String, dynamic>>> sellerUserReviews = {};
 
   Set<String> userIntents = <String>{};
   bool hasCompletedIntentOnboarding = false;
@@ -218,6 +221,139 @@ class AppState extends ChangeNotifier {
         followedSellerIds.map((e) => e.toString()).toList(),
       );
     } catch (_) {}
+  }
+
+  List<Map<String, dynamic>> getUserReviewsForSeller(int sellerId) {
+    if (sellerId <= 0) return const [];
+    final list = sellerUserReviews[sellerId];
+    if (list == null || list.isEmpty) return const [];
+    return list.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Map<String, dynamic>? getMyReviewForSeller(int sellerId) {
+    if (sellerId <= 0) return null;
+    final list = sellerUserReviews[sellerId];
+    if (list == null || list.isEmpty) return null;
+    final myId = currentUser?['id']?.toString();
+    for (final r in list) {
+      if (r['is_mine'] == true) return Map<String, dynamic>.from(r);
+      if (myId != null && r['user_id']?.toString() == myId) {
+        return Map<String, dynamic>.from(r);
+      }
+    }
+    return null;
+  }
+
+  ({double average, int count}) computeSellerRatingStats({
+    required int sellerId,
+    double? baseRating,
+    int? baseCount,
+    List<dynamic>? rawReviews,
+  }) {
+    final parsedRaw =
+        (rawReviews ?? const []).whereType<Map>().toList(growable: false);
+    final int initialCount = (baseCount != null && baseCount > 0)
+        ? baseCount
+        : parsedRaw.length;
+    double initialAvg = (baseRating != null && baseRating > 0) ? baseRating : 0;
+    if (initialAvg <= 0 && parsedRaw.isNotEmpty) {
+      final sum = parsedRaw.fold<double>(
+        0,
+        (acc, r) => acc + (double.tryParse('${r['rating'] ?? 0}') ?? 0),
+      );
+      initialAvg = sum / parsedRaw.length;
+    }
+
+    final userList = getUserReviewsForSeller(sellerId);
+    if (userList.isEmpty) {
+      return (average: initialAvg, count: initialCount);
+    }
+
+    final double userSum = userList.fold<double>(
+      0,
+      (acc, r) => acc + (double.tryParse('${r['rating'] ?? 5}') ?? 5),
+    );
+    final int totalCount = initialCount + userList.length;
+    final double totalAvg = totalCount > 0
+        ? ((initialAvg * initialCount) + userSum) / totalCount
+        : 0;
+    return (average: totalAvg, count: totalCount);
+  }
+
+  Future<Map<String, dynamic>> submitSellerReview({
+    required int sellerId,
+    required int rating,
+    required String comment,
+    int? adId,
+    String? adTitle,
+    List<String> tags = const [],
+  }) async {
+    final int effSellerId = sellerId > 0
+        ? sellerId
+        : (adId != null && adId > 0 ? 1000000 + adId : 1);
+    final int clampedRating = rating.clamp(1, 5);
+    final String rawName =
+        (currentUser?['name'] ?? currentUser?['full_name'] ?? '')
+            .toString()
+            .trim();
+    final String authorName = rawName.isNotEmpty
+        ? rawName
+        : s.tr('عضو Apolo', 'Membre Apolo', 'Apolo Member');
+
+    final entry = <String, dynamic>{
+      'id': 'rev_${DateTime.now().millisecondsSinceEpoch}',
+      'seller_id': effSellerId,
+      if (adId != null) 'ad_id': adId,
+      'author': authorName,
+      'name': authorName,
+      'user_id': currentUser?['id'],
+      'rating': clampedRating,
+      'comment': comment.trim(),
+      'tags': tags,
+      'item': (adTitle ?? '').trim(),
+      'date': s.tr('الآن', 'À l’instant', 'Just now'),
+      'verified': isLoggedIn,
+      'is_mine': true,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    final existing = List<Map<String, dynamic>>.from(
+      sellerUserReviews[effSellerId] ?? const [],
+    );
+    final myId = currentUser?['id']?.toString();
+    existing.removeWhere(
+      (r) =>
+          r['is_mine'] == true ||
+          (myId != null && r['user_id']?.toString() == myId),
+    );
+    existing.insert(0, entry);
+    sellerUserReviews[effSellerId] = existing;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(
+        sellerUserReviews.map((k, v) => MapEntry(k.toString(), v)),
+      );
+      await prefs.setString(_sellerReviewsPrefsKey, encoded);
+    } catch (_) {}
+
+    if (api.isAuthenticated && sellerId > 0) {
+      unawaited(
+        api.dio
+            .post(
+              '/sellers/$sellerId/reviews',
+              data: {
+                'rating': clampedRating,
+                'comment': comment.trim(),
+                if (adId != null) 'ad_id': adId,
+                if (tags.isNotEmpty) 'tags': tags,
+              },
+            )
+            .then<void>((_) {}, onError: (_) {}),
+      );
+    }
+    return entry;
   }
 
   Future<void> initialize({bool loadRemote = true}) async {
@@ -425,6 +561,22 @@ class AppState extends ChangeNotifier {
             .whereType<int>()
             .where((id) => id > 0)
             .toSet();
+      }
+      sellerUserReviews = {};
+      final rawReviews = prefs.getString(_sellerReviewsPrefsKey);
+      if (rawReviews != null && rawReviews.isNotEmpty) {
+        final decodedReviews = jsonDecode(rawReviews);
+        if (decodedReviews is Map) {
+          decodedReviews.forEach((k, v) {
+            final sId = int.tryParse(k.toString());
+            if (sId != null && sId > 0 && v is List) {
+              sellerUserReviews[sId] = v
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList();
+            }
+          });
+        }
       }
       final rawIntents = prefs.getStringList(_userIntentsPrefsKey);
       if (rawIntents != null) {

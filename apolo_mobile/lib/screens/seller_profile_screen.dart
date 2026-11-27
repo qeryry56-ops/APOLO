@@ -10,6 +10,7 @@ import '../theme/app_typography.dart';
 import '../widgets/apolo_badges_kit.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../widgets/dl_write_review_sheet.dart';
 import 'ad_detail_screen.dart';
 import 'share_profile_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
@@ -200,6 +201,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   ),
                 ),
                 _buildActionSheetRow(
+                  rowKey: const Key('seller-share-btn'),
                   icon: CupertinoIcons.share,
                   iconColor: _dlInk,
                   title: _state.s.tr(
@@ -212,6 +214,23 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                     _shareSellerProfile(_state.s);
                   },
                 ),
+                if ((widget.sellerPhone ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildActionSheetRow(
+                    rowKey: const Key('seller-more-call-btn'),
+                    icon: CupertinoIcons.phone_fill,
+                    iconColor: _dlInk,
+                    title: _state.s.tr(
+                      'اتصال بالبائع',
+                      'Appeler le vendeur',
+                      'Call seller',
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _callSeller();
+                    },
+                  ),
+                ],
                 const SizedBox(height: 8),
                 _buildActionSheetRow(
                   icon: CupertinoIcons.flag,
@@ -250,6 +269,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   Widget _buildActionSheetRow({
+    Key? rowKey,
     required IconData icon,
     required Color iconColor,
     required String title,
@@ -257,6 +277,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     Color titleColor = _dlInk,
   }) {
     return PressableScale(
+      key: rowKey,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
@@ -385,6 +406,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         final palette = ApoloDlPalette.of(context);
         final city = _resolvedCity;
         final isFollowing = _state.isFollowingSeller(widget.sellerId);
+        final ratingStats = _state.computeSellerRatingStats(
+          sellerId: widget.sellerId,
+          baseRating: 4.9,
+          baseCount: 48,
+        );
 
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -489,7 +515,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                       ),
                                     ),
                                     ApoloDlAccountStat(
-                                      value: '4.9',
+                                      value: ratingStats.average
+                                          .toStringAsFixed(1),
                                       label: s.tr(
                                         'التقييم',
                                         'Note',
@@ -514,66 +541,25 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                     onPressed: _toggleFollow,
                                   ),
                                   secondaryAction: ApoloDlButton(
-                                    key: const Key('seller-share-btn'),
+                                    key: const Key('seller-chat-btn'),
                                     label: s.tr(
-                                      'مشاركة الملف',
-                                      'Partager le profil',
-                                      'Share profile',
+                                      'مراسلة',
+                                      'Message',
+                                      'Message',
                                     ),
+                                    leadingIcon:
+                                        CupertinoIcons.chat_bubble_2_fill,
                                     variant: ApoloDlButtonVariant.secondary,
                                     size: ApoloDlButtonSize.sm,
                                     height: 42,
                                     borderRadius: 999,
                                     fullWidth: true,
-                                    onPressed: () => _shareSellerProfile(s),
+                                    onPressed: _openChatWithSeller,
                                   ),
                                   bio: s.tr(
-                                    'تاجر موثوق في Apolo.ma · $city · استجابة سريعة على الشات والمكالمات.',
-                                    'Vendeur vérifié sur Apolo.ma · $city · Réponse rapide par chat et appel.',
-                                    'Verified seller on Apolo.ma · $city · Fast reply on chat and calls.',
-                                  ),
-                                  extraActions: Row(
-                                    children: [
-                                      Expanded(
-                                        child: ApoloDlButton(
-                                          key: const Key('seller-chat-btn'),
-                                          label: s.tr(
-                                            'محادثة فورية',
-                                            'Message direct',
-                                            'Message',
-                                          ),
-                                          leadingIcon:
-                                              CupertinoIcons.chat_bubble_2_fill,
-                                          variant:
-                                              ApoloDlButtonVariant.secondary,
-                                          size: ApoloDlButtonSize.sm,
-                                          height: 40,
-                                          borderRadius: 999,
-                                          fullWidth: true,
-                                          onPressed: _openChatWithSeller,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: ApoloDlButton(
-                                          key: const Key('seller-call-btn'),
-                                          label: s.tr(
-                                            'اتصال',
-                                            'Appeler',
-                                            'Call',
-                                          ),
-                                          leadingIcon:
-                                              CupertinoIcons.phone_fill,
-                                          variant:
-                                              ApoloDlButtonVariant.secondary,
-                                          size: ApoloDlButtonSize.sm,
-                                          height: 40,
-                                          borderRadius: 999,
-                                          fullWidth: true,
-                                          onPressed: _callSeller,
-                                        ),
-                                      ),
-                                    ],
+                                    'تاجر موثوق في Apolo.ma · $city · استجابة سريعة عبر الرسائل.',
+                                    'Vendeur vérifié sur Apolo.ma · $city · Réponse rapide par message.',
+                                    'Verified seller on Apolo.ma · $city · Fast reply on messages.',
                                   ),
                                 ),
                               ),
@@ -616,9 +602,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                         _buildTabBtn(
                                           1,
                                           _state.s.tr(
-                                            'التقييمات (48)',
-                                            'Avis (48)',
-                                            'Reviews (48)',
+                                            'التقييمات (${ratingStats.count})',
+                                            'Avis (${ratingStats.count})',
+                                            'Reviews (${ratingStats.count})',
                                           ),
                                         ),
                                         const SizedBox(width: 4),
@@ -892,7 +878,17 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   Widget _buildReviewsTab(bool isAr) {
-    final reviews = [
+    final userReviews = _state.getUserReviewsForSeller(widget.sellerId);
+    final myReview = _state.getMyReviewForSeller(widget.sellerId);
+    final ratingStats = _state.computeSellerRatingStats(
+      sellerId: widget.sellerId,
+      baseRating: 4.9,
+      baseCount: 48,
+    );
+    final bool isMyOwnProfile = _state.currentUser != null &&
+        _state.currentUser!['id']?.toString() == widget.sellerId.toString();
+
+    final baseReviews = <Map<String, dynamic>>[
       {
         'name': 'حمزة التازي',
         'rating': 5,
@@ -942,6 +938,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         'verified': true,
       },
     ];
+    final reviews = <Map<String, dynamic>>[...userReviews, ...baseReviews];
 
     return SliverToBoxAdapter(
       child: Center(
@@ -957,57 +954,98 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                     color: _dlSurface,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Column(
+                      Row(
                         children: [
-                          Text(
-                            '4.9',
-                            style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.w800,
-                              color: _dlInk,
-                              letterSpacing:
-                                  AppTypography.trackingForContext(context, -1),
-                            ),
-                          ),
-                          Row(
-                            children: List.generate(
-                              5,
-                              (_) => const Icon(
-                                Icons.star_rounded,
-                                size: 15,
-                                color: _dlStarAmber,
+                          Column(
+                            children: [
+                              Text(
+                                ratingStats.average.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w800,
+                                  color: _dlInk,
+                                  letterSpacing:
+                                      AppTypography.trackingForContext(
+                                          context, -1),
+                                ),
                               ),
-                            ),
+                              Row(
+                                children: List.generate(
+                                  5,
+                                  (_) => const Icon(
+                                    Icons.star_rounded,
+                                    size: 15,
+                                    color: _dlStarAmber,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _state.s.tr(
+                                  '${ratingStats.count} تقييم حقيقي',
+                                  '${ratingStats.count} avis réels',
+                                  '${ratingStats.count} verified reviews',
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _dlMuted,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _state.s.tr(
-                              '48 تقييم حقيقي',
-                              '48 avis réels',
-                              '48 verified reviews',
-                            ),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: _dlMuted,
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _buildRatingBar('5', 0.88),
+                                _buildRatingBar('4', 0.10),
+                                _buildRatingBar('3', 0.02),
+                                _buildRatingBar('2', 0.00),
+                                _buildRatingBar('1', 0.00),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _buildRatingBar('5', 0.88),
-                            _buildRatingBar('4', 0.10),
-                            _buildRatingBar('3', 0.02),
-                            _buildRatingBar('2', 0.00),
-                            _buildRatingBar('1', 0.00),
-                          ],
+                      if (!isMyOwnProfile) ...[
+                        const SizedBox(height: 14),
+                        ApoloDlButton(
+                          key: const Key('seller-write-review-btn'),
+                          label: myReview != null
+                              ? _state.s.tr(
+                                  'تعديل تقييمك',
+                                  'Modifier mon avis',
+                                  'Edit your review',
+                                )
+                              : _state.s.tr(
+                                  'أضف تقييمك',
+                                  'Donner un avis',
+                                  'Write a review',
+                                ),
+                          leadingIcon: CupertinoIcons.star_fill,
+                          variant: ApoloDlButtonVariant.primary,
+                          size: ApoloDlButtonSize.sm,
+                          height: 42,
+                          borderRadius: 999,
+                          fullWidth: true,
+                          onPressed: () {
+                            final refAd = widget.initialAd ??
+                                (_sellerAds.isNotEmpty
+                                    ? _sellerAds.first
+                                    : null);
+                            showApoloWriteReviewSheet(
+                              context,
+                              sellerId: widget.sellerId,
+                              sellerName: widget.sellerName,
+                              adId: int.tryParse('${refAd?['id'] ?? ''}'),
+                              adTitle: refAd?['title']?.toString(),
+                            );
+                          },
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -1052,7 +1090,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   Widget _buildReviewCard(Map<String, dynamic> r, bool isAr) {
-    final author = r['name'].toString();
+    final author = (r['name'] ?? r['author'] ?? 'Apolo').toString();
+    final starCount = (int.tryParse('${r['rating'] ?? 5}') ?? 5).clamp(1, 5);
+    final itemLabel = (r['item'] ?? '').toString().trim();
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
@@ -1074,7 +1114,9 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  author.characters.first,
+                  author.trim().isNotEmpty
+                      ? author.trim().characters.first
+                      : 'A',
                   style: const TextStyle(
                     color: _dlInk,
                     fontSize: 15,
@@ -1108,7 +1150,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                       ],
                     ),
                     Text(
-                      r['date'].toString(),
+                      (r['date'] ?? '').toString(),
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: _dlMuted,
@@ -1120,7 +1162,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               ),
               Row(
                 children: List.generate(
-                  r['rating'] as int,
+                  starCount,
                   (_) => const Icon(
                     Icons.star_rounded,
                     size: 14,
@@ -1132,7 +1174,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            r['comment'].toString(),
+            (r['comment'] ?? '').toString(),
             style: const TextStyle(
               fontSize: 13.5,
               color: _dlInk,
@@ -1140,22 +1182,25 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               fontWeight: FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-            decoration: BoxDecoration(
-              color: _dlBg,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              r['item'].toString(),
-              style: const TextStyle(
-                fontSize: 11.5,
-                color: _dlMuted,
-                fontWeight: FontWeight.w600,
+          if (itemLabel.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+              decoration: BoxDecoration(
+                color: _dlBg,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                itemLabel,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: _dlMuted,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
