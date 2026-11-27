@@ -21,9 +21,9 @@ class MarketplaceZonePill extends StatelessWidget {
     this.compact = false,
   });
 
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _activeFill = Color(0xFF0A0A0A);
-  static const Color _inactiveFill = Color(0xFFF2F3F7);
+  static const Color _ink = Color(0xFF000000);
+  static const Color _activeFill = Color(0xFF000000);
+  static const Color _inactiveFill = Color(0xFFEEEEEE);
 
   @override
   Widget build(BuildContext context) {
@@ -40,15 +40,11 @@ class MarketplaceZonePill extends StatelessWidget {
         onTap();
       },
       child: Container(
-        height: compact ? 30 : 34,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 11 : 13),
+        height: compact ? 32 : 36,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
         decoration: BoxDecoration(
           color: active ? _activeFill : _inactiveFill,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: active ? _ink : const Color(0xFFE5E7EB),
-            width: 1,
-          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

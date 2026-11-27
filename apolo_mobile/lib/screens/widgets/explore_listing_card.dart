@@ -2,24 +2,26 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../core/state/app_state.dart';
+import '../../widgets/apolo_badges_kit.dart';
 import '../../widgets/perceived_performance.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
 
-/// Explore Screen full-width listing card matching the exact reference layout:
-/// - Full width inside 16-20px screen margins (~342-350px on mobile), ~364-374px height
-/// - Solid #FFFFFF surface, 24px border radius, soft dual drop shadow, 12px outer padding
-/// - 214px rounded (18px) swipeable photo carousel with bottom-center dots indicator
-/// - Top-left frosted glass category badge ("Villa") & highlight badge ("Guest favorite")
-/// - Top-right 32x32 circular translucent favorite button (inside 44x44 touch target)
-/// - Details panel:
-///   - Row 1: Bold title ("Casa Oliva Villa") + gold star #F59E0B rating ("4.8 (126)")
-///   - Row 2: Compact specs line ("Cascais, 14 km · 3 bedrooms · Pool")
-///   - Subtle 1px divider
-///   - Bottom row: Seller circular avatar + name (+ verified badge) on left +
-///     Bold total price ("$933 total") & nightly subtitle ("$233 / night · taxes incl.") on right
+/// Dynamic Layer v5.1 Explore Screen full-width listing card:
+/// - Full width inside 20px screen margins (~350px on 390px mobile), ~370px height
+/// - Crisp #FFFFFF surface with 1px #EEEEEE border (zero muddy drop shadow), 24px radius
+/// - 218px rounded (18px) swipeable photo carousel with #F6F6F6 placeholder & pill dots
+/// - Top-start frosted category badge & #FFFFFF highlight pill
+/// - Top-end 34x34 circular favorite button (#FF3B30 heart bounce) inside 44x44 target
+/// - Clean details panel:
+///   - Row 1: Bold #000000 title + #FFB800 star rating + #757575 count
+///   - Row 2: #757575 specs line
+///   - 1px #EEEEEE hairline divider
+///   - Bottom row: 34x34 #EEEEEE seller avatar + #000000 name + ApoloVerifiedBadge + ApoloRankBadge
+///     on start, bold #000000 tabular price + #757575 subtitle on end
 class ExploreListingCard extends StatefulWidget {
   final Map<String, dynamic> ad;
   final VoidCallback? onTap;
@@ -46,15 +48,19 @@ class _ExploreListingCardState extends State<ExploreListingCard>
   late final AnimationController _heartBounceCtrl;
   late final Animation<double> _heartBounceScale;
 
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _verifiedBlue = Color(0xFF1D9BF0);
-  static const Color _starAmber = Color(0xFFF59E0B);
+  // Dynamic Layer v5.1 Palette
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlSeparator = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlHeartRed = Color(0xFFFF3B30);
+  static const Color _dlStarAmber = Color(0xFFFFB800);
 
   @override
   void initState() {
     super.initState();
-    // Rule 3: 260ms ease-out heart bounce (cubic-bezier(0.22, 1, 0.36, 1))
     _heartBounceCtrl = AnimationController(
       vsync: this,
       duration: ApoloMotion.bounceDuration,
@@ -97,8 +103,6 @@ class _ExploreListingCardState extends State<ExploreListingCard>
   }
 
   Future<void> _handleFavoriteTap() async {
-    // Rule 2 (Show Result First) & Rule 3 (Move with Ease):
-    // Optimistically fill heart & trigger ease-out bounce immediately before background sync.
     final nextState = !_isFavorited;
     setState(() {
       _localFavoriteOverride = nextState;
@@ -129,7 +133,6 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     if (catId != null) {
       _state.recordCategoryInterest(catId, weight: 2);
     }
-    // Rule 3: Use 450ms spring/ease-out transition instead of linear slide
     Navigator.push(
       context,
       SpringPageRoute(
@@ -261,7 +264,8 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       return '($cleaned)';
     }
     final views = int.tryParse(
-            (widget.ad['views_count'] ?? widget.ad['views'] ?? '').toString()) ??
+          (widget.ad['views_count'] ?? widget.ad['views'] ?? '').toString(),
+        ) ??
         0;
     if (views > 0) return '($views)';
     return '(126)';
@@ -413,11 +417,36 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     final ad = widget.ad;
     final userMap = ad['user'] is Map ? ad['user'] as Map : null;
     final sellerMap = ad['seller'] is Map ? ad['seller'] as Map : null;
+    final storeMap = ad['store'] is Map ? ad['store'] as Map : null;
     return ad['seller_verified'] == true ||
         ad['is_verified'] == true ||
         ad['verified'] == true ||
         userMap?['is_verified'] == true ||
-        sellerMap?['is_verified'] == true;
+        sellerMap?['is_verified'] == true ||
+        storeMap != null;
+  }
+
+  ApoloSellerRank _resolveSellerRank(bool isVerified) {
+    final ad = widget.ad;
+    final sellerMap = ad['seller'] is Map
+        ? Map<String, dynamic>.from(ad['seller'] as Map)
+        : (ad['user'] is Map
+            ? Map<String, dynamic>.from(ad['user'] as Map)
+            : null);
+    final storeMap = ad['store'] is Map
+        ? Map<String, dynamic>.from(ad['store'] as Map)
+        : null;
+    final views =
+        int.tryParse((ad['views_count'] ?? ad['views'] ?? 0).toString()) ?? 0;
+    return ApoloSellerRank.resolve(
+      user: sellerMap,
+      totalViews: views,
+      isProPlus: ad['is_vip'] == true ||
+          storeMap?['is_pro_plus'] == true ||
+          sellerMap?['is_pro_plus'] == true,
+      isBusiness: storeMap != null,
+      isVerified: isVerified,
+    );
   }
 
   Widget _buildSellerAvatar(String avatarUrl, String sellerName) {
@@ -430,14 +459,14 @@ class _ExploreListingCardState extends State<ExploreListingCard>
         width: 34,
         height: 34,
         decoration: const BoxDecoration(
-          color: Color(0xFF0A0A0A),
+          color: _dlPill,
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
         child: Text(
           initial,
           style: const TextStyle(
-            color: Colors.white,
+            color: _dlInk,
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
           ),
@@ -452,13 +481,9 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     return Container(
       width: 34,
       height: 34,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFFF1F5F9),
-        border: Border.all(
-          color: Colors.black.withValues(alpha: 0.06),
-          width: 0.8,
-        ),
+        color: _dlPill,
       ),
       clipBehavior: Clip.antiAlias,
       child: avatarUrl.startsWith('assets/')
@@ -491,21 +516,23 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       return (
         mainAmount: explicitTotal,
         unitSuffix: unit,
-        subLine: explicitNightly.isNotEmpty
-            ? explicitNightly
-            : 'taxes incl.',
+        subLine: explicitNightly.isNotEmpty ? explicitNightly : 'taxes incl.',
       );
     }
 
     final priceFormatted = (ad['price_formatted'] ?? '').toString().trim();
+    final isNeg = ad['negotiable'] == true || ad['is_negotiable'] == true;
+    final defaultSub = explicitNightly.isNotEmpty
+        ? explicitNightly
+        : (isNeg
+            ? _state.s.tr('قابل للتفاوض', 'Négociable', 'Negotiable')
+            : _state.s.tr('السعر المعلن', 'Prix affiché', 'Fixed price'));
+
     if (priceFormatted.isNotEmpty) {
       return (
         mainAmount: priceFormatted,
         unitSuffix: '',
-        subLine: explicitNightly.isNotEmpty
-            ? explicitNightly
-            : _state.s.tr('شامل الضرائب', 'Taxes & frais inclus',
-                'Taxes incl.'),
+        subLine: defaultSub,
       );
     }
 
@@ -518,18 +545,18 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       return (
         mainAmount: formatted,
         unitSuffix: '',
-        subLine: explicitNightly.isNotEmpty
-            ? explicitNightly
-            : _state.s.tr('شامل الضرائب', 'Taxes & frais inclus',
-                'Taxes incl.'),
+        subLine: defaultSub,
       );
     }
 
     return (
       mainAmount: _state.s.tr('عند الطلب', 'Sur demande', 'On request'),
       unitSuffix: '',
-      subLine: _state.s.tr('تواصل مع المعلن', 'Contacter le vendeur',
-          'Contact host'),
+      subLine: _state.s.tr(
+        'تواصل مع المعلن',
+        'Contacter le vendeur',
+        'Contact seller',
+      ),
     );
   }
 
@@ -559,16 +586,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
   Widget _buildFallbackBackdrop({String? assetOverride}) {
     final assetPath = assetOverride ?? _resolveCategoryAsset();
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF1F5F9),
-            Color(0xFFE2E8F0),
-          ],
-        ),
-      ),
+      color: _dlSurface,
       alignment: Alignment.center,
       child: Image.asset(
         assetPath,
@@ -577,7 +595,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
         height: 132,
         errorBuilder: (_, __, ___) => const Icon(
           CupertinoIcons.photo,
-          color: Color(0xFF94A3B8),
+          color: _dlMuted,
           size: 42,
         ),
       ),
@@ -592,12 +610,8 @@ class _ExploreListingCardState extends State<ExploreListingCard>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5.5),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.28),
+            color: Colors.black.withValues(alpha: 0.42),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.28),
-              width: 0.8,
-            ),
           ),
           child: Text(
             label,
@@ -616,31 +630,21 @@ class _ExploreListingCardState extends State<ExploreListingCard>
   }
 
   Widget _buildHighlightPill(String label) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5.5),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.90),
-              width: 0.6,
-            ),
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: _ink,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              height: 1.15,
-            ),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5.5),
+      decoration: BoxDecoration(
+        color: _dlBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: _dlInk,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          height: 1.15,
         ),
       ),
     );
@@ -658,6 +662,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     final sellerName = _resolveSellerName();
     final sellerAvatar = _resolveSellerAvatar();
     final isSellerVerified = _isSellerVerified();
+    final sellerRank = _resolveSellerRank(isSellerVerified);
     final pricing = _resolvePricing();
     final isFav = _isFavorited;
     final int dotCount = images.length > 1 ? images.length.clamp(2, 6) : 5;
@@ -666,29 +671,18 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     return PressableScale(
       onTap: _handleCardTap,
       child: Container(
+        key: Key('dl-explore-card-$_adId'),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _dlBg,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 24,
-              spreadRadius: -4,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: _dlSeparator, width: 1),
         ),
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 15),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Top Media Section (218px height, 18px rounded corners)
+            // 1. Top Media Carousel (218px height, 18px rounded corners)
             SizedBox(
               height: 218,
               width: double.infinity,
@@ -697,7 +691,6 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Swipeable Image Carousel
                     if (images.length > 1)
                       PageView.builder(
                         controller: _pageController,
@@ -712,7 +705,6 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                     else
                       _buildFallbackBackdrop(),
 
-                    // Subtle bottom gradient for crisp dot contrast over water/bright photos
                     if (images.isNotEmpty)
                       Positioned(
                         left: 0,
@@ -745,7 +737,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                         children: [
                           Flexible(child: _buildTypePill(typeBadge)),
                           if (highlightBadge != null) ...[
-                            const SizedBox(width: 7),
+                            const SizedBox(width: 6),
                             Flexible(
                               child: _buildHighlightPill(highlightBadge),
                             ),
@@ -754,9 +746,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                       ),
                     ),
 
-                    // Top-end 32x32 Favorite Button inside 44x44 HIG touch target
-                    // Rule 1 (React at Once): 95% scale + 0.82 opacity + haptic on touch down (<16ms)
-                    // Rule 2 & 3: Instant heart fill + 260ms ease-out bounce animation
+                    // Top-end 34x34 Favorite Button inside 44x44 touch target
                     PositionedDirectional(
                       top: 6,
                       end: 6,
@@ -794,38 +784,26 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                       : 1.0,
                                   duration: ApoloMotion.microDuration,
                                   curve: ApoloMotion.easeOutCurve,
-                                  child: ClipOval(
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(
-                                        sigmaX: 8,
-                                        sigmaY: 8,
-                                      ),
-                                      child: Container(
-                                        width: 32,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.25),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.25),
-                                            width: 0.7,
-                                          ),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: ScaleTransition(
-                                          scale: _heartBounceScale,
-                                          child: Icon(
-                                            isFav
-                                                ? CupertinoIcons.heart_fill
-                                                : CupertinoIcons.heart,
-                                            size: 16.5,
-                                            color: isFav
-                                                ? const Color(0xFFFF3B5C)
-                                                : Colors.white,
-                                          ),
-                                        ),
+                                  child: Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: isFav
+                                          ? _dlBg
+                                          : Colors.black.withValues(alpha: 0.36),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: ScaleTransition(
+                                      scale: _heartBounceScale,
+                                      child: Icon(
+                                        isFav
+                                            ? CupertinoIcons.heart_fill
+                                            : CupertinoIcons.heart,
+                                        size: 17,
+                                        color: isFav
+                                            ? _dlHeartRed
+                                            : Colors.white,
                                       ),
                                     ),
                                   ),
@@ -856,7 +834,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                 height: 6,
                                 decoration: BoxDecoration(
                                   color: active
-                                      ? Colors.white.withValues(alpha: 0.90)
+                                      ? Colors.white
                                       : Colors.white.withValues(alpha: 0.55),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
@@ -872,12 +850,12 @@ class _ExploreListingCardState extends State<ExploreListingCard>
 
             // 2. Content & Details Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 16, 6, 0),
+              padding: const EdgeInsets.fromLTRB(6, 15, 6, 0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Row 1: Property Title + Rating (★ 4.8 (126))
+                  // Row 1: Title + Star Rating
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -887,7 +865,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: _ink,
+                            color: _dlInk,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.25,
@@ -902,22 +880,22 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                           const Icon(
                             Icons.star_rounded,
                             size: 16,
-                            color: _starAmber,
+                            color: _dlStarAmber,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             rating,
                             style: const TextStyle(
-                              color: _ink,
+                              color: _dlInk,
                               fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(width: 3),
                           Text(
                             reviewsCount,
                             style: const TextStyle(
-                              color: _muted,
+                              color: _dlMuted,
                               fontSize: 13,
                               fontWeight: FontWeight.w400,
                             ),
@@ -934,23 +912,23 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: _muted,
+                      color: _dlMuted,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w400,
                       height: 1.3,
                     ),
                   ),
 
-                  // Subtle Separator
+                  // 1px Dynamic Layer Hairline Separator
                   const SizedBox(height: 12),
                   const Divider(
                     height: 1,
                     thickness: 1,
-                    color: Color(0xFFF1F5F9),
+                    color: _dlSeparator,
                   ),
                   const SizedBox(height: 12),
 
-                  // Bottom Row: Seller Profile (Avatar + Name + Verified) on Start + Pricing on End
+                  // Bottom Row: Seller Profile (Avatar + Name + ApoloVerifiedBadge + ApoloRankBadge) + Pricing
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final maxRightWidth =
@@ -969,7 +947,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: _ink,
+                                      color: _dlInk,
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: -0.1,
@@ -978,12 +956,14 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                 ),
                                 if (isSellerVerified) ...[
                                   const SizedBox(width: 4),
-                                  const Icon(
-                                    Icons.verified_rounded,
-                                    size: 16,
-                                    color: _verifiedBlue,
-                                  ),
+                                  const ApoloVerifiedBadge(size: 15),
                                 ],
+                                const SizedBox(width: 4),
+                                ApoloRankBadge(
+                                  rank: sellerRank,
+                                  size: 16,
+                                  isVerified: isSellerVerified,
+                                ),
                               ],
                             ),
                           ),
@@ -1005,9 +985,9 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                         TextSpan(
                                           text: pricing.mainAmount,
                                           style: const TextStyle(
-                                            color: _ink,
+                                            color: _dlInk,
                                             fontSize: 16,
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w800,
                                             letterSpacing: -0.2,
                                             fontFeatures: [
                                               FontFeature.tabularFigures(),
@@ -1018,9 +998,9 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                           TextSpan(
                                             text: ' ${pricing.unitSuffix}',
                                             style: const TextStyle(
-                                              color: _ink,
+                                              color: _dlMuted,
                                               fontSize: 12.5,
-                                              fontWeight: FontWeight.w400,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                       ],
@@ -1033,7 +1013,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    color: _muted,
+                                    color: _dlMuted,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w400,
                                     fontFeatures: [

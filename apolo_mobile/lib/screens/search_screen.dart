@@ -2,10 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
-import '../theme/app_typography.dart';
 import '../widgets/apolo_search_suggestions_view.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/explore_listing_card.dart';
@@ -46,7 +47,7 @@ class _SearchScreenState extends State<SearchScreen>
   double? _minPrice;
   double? _maxPrice;
   bool _onlyNegotiable = false;
-  final String _sortBy = 'smart';
+  String _sortBy = 'smart';
 
   List<dynamic> _rawAds = [];
   List<Map<String, dynamic>> _ads = [];
@@ -61,12 +62,13 @@ class _SearchScreenState extends State<SearchScreen>
   int _lastPage = 1;
   bool _loadingMore = false;
 
-  // 2026 Monochrome Black, White & Neutral Gray Tokens
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _red = Color(0xFF0A0A0A);
-  static const Color _redSoft = Color(0xFFE8EAEE);
-  static const Color _surface = Color(0xFFF2F3F7);
-  static const Color _emerald = Color(0xFF10B981);
+  // Dynamic Layer v5.1 Palette Tokens
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlSubtle = Color(0xFF9E9E9E);
 
   @override
   void initState() {
@@ -280,6 +282,7 @@ class _SearchScreenState extends State<SearchScreen>
     if (_cityId != null) count++;
     if (_minPrice != null || _maxPrice != null) count++;
     if (_onlyNegotiable) count++;
+    if (_sortBy != 'smart') count++;
     return count;
   }
 
@@ -540,312 +543,418 @@ class _SearchScreenState extends State<SearchScreen>
     int? tempCatId = _categoryId;
     int? tempCityId = _cityId;
     bool tempNeg = _onlyNegotiable;
+    String tempSort = _sortBy;
 
-    showModalBottomSheet(
+    final sortOptions = <({String key, String label})>[
+      (
+        key: 'smart',
+        label: s.tr('مقترح لك', 'Recommandé', 'Recommended'),
+      ),
+      (
+        key: 'newest',
+        label: s.tr('الأحدث', 'Plus récents', 'Newest'),
+      ),
+      (
+        key: 'price_asc',
+        label: s.tr('الأقل ثمناً', 'Prix croissant', 'Lowest price'),
+      ),
+      (
+        key: 'popular',
+        label: s.tr('الأكثر مشاهدة', 'Populaires', 'Most viewed'),
+      ),
+    ];
+
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _dlBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            return SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  24,
-                  14,
-                  24,
-                  MediaQuery.of(ctx).viewInsets.bottom + 24,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 38,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          s.tr('تصفية وترتيب الإعلانات', 'Filtrer les annonces',
-                              'Filter & Sort Ads'),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: _ink,
-                            letterSpacing:
-                                AppTypography.trackingForContext(context, -0.4),
+            return Directionality(
+              textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    MediaQuery.of(ctx).viewInsets.bottom + 24,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _dlPill,
+                            borderRadius: BorderRadius.circular(999),
                           ),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            setModalState(() {
-                              tempCatId = null;
-                              tempCityId = null;
-                              tempNeg = false;
-                              minCtrl.clear();
-                              maxCtrl.clear();
-                            });
-                          },
-                          child: Text(
-                            s.tr('إعادة ضبط', 'Réinitialiser', 'Reset'),
-                            style: const TextStyle(
-                              color: _red,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // 1. City Chips
-                    Text(
-                      s.tr('المدينة', 'Ville', 'City'),
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: _ink,
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _ModalFilterChip(
-                          label: s.tr('كل المغرب 🌍', 'Tout le Maroc 🌍',
-                              'All of Morocco 🌍'),
-                          active: tempCityId == null,
-                          onTap: () => setModalState(() => tempCityId = null),
-                        ),
-                        ..._effectiveCities.map((c) {
-                          final id = int.tryParse(c['id'].toString());
-                          final lbl = (s.isAr
-                                  ? (c['name_ar'] ?? c['name'])
-                                  : (s.isEn
-                                      ? (c['name_en'] ?? c['name_fr'] ?? c['name'])
-                                      : (c['name_fr'] ?? c['name'])))
-                              .toString();
-                          return _ModalFilterChip(
-                            label: lbl,
-                            active: tempCityId == id,
-                            onTap: () => setModalState(() => tempCityId = id),
-                          );
-                        }),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // 2. Category Chips
-                    Text(
-                      s.tr('القسم', 'Catégorie', 'Category'),
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: _ink,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _ModalFilterChip(
-                          label: s.tr('جميع الأقسام', 'Toutes', 'All'),
-                          active: tempCatId == null,
-                          onTap: () => setModalState(() => tempCatId = null),
-                        ),
-                        ..._effectiveCategories.map((c) {
-                          final id = int.tryParse(c['id'].toString());
-                          final lbl = _state.formatCategoryLabel(c);
-                          return _ModalFilterChip(
-                            label: lbl,
-                            active: tempCatId == id,
-                            onTap: () => setModalState(() => tempCatId = id),
-                          );
-                        }),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // 3. Price Range Soft Inputs
-                    Text(
-                      s.tr('نطاق الثمن (بالدرهم)', 'Fourchette de prix (DH)',
-                          'Price range (MAD)'),
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: _ink,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: minCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            textDirection: TextDirection.ltr,
-                            textAlign: s.isAr ? TextAlign.end : TextAlign.start,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: _ink,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: s.tr('أقل ثمن', 'Prix min', 'Min price'),
-                              hintTextDirection: s.isAr
-                                  ? TextDirection.rtl
-                                  : TextDirection.ltr,
-                              filled: true,
-                              fillColor: _surface,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              s.tr(
+                                'تصفية وترتيب الإعلانات',
+                                'Filtrer et trier',
+                                'Filter & Sort',
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide.none,
+                              style: const TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                color: _dlInk,
+                                letterSpacing: -0.3,
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: maxCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            textDirection: TextDirection.ltr,
-                            textAlign: s.isAr ? TextAlign.end : TextAlign.start,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: _ink,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: s.tr('أقصى ثمن', 'Prix max', 'Max price'),
-                              hintTextDirection: s.isAr
-                                  ? TextDirection.rtl
-                                  : TextDirection.ltr,
-                              filled: true,
-                              fillColor: _surface,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setModalState(() {
+                                tempCatId = null;
+                                tempCityId = null;
+                                tempNeg = false;
+                                tempSort = 'smart';
+                                minCtrl.clear();
+                                maxCtrl.clear();
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide.none,
+                              decoration: BoxDecoration(
+                                color: _dlPill,
+                                borderRadius: BorderRadius.circular(999),
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // 4. Negotiable Toggle Row
-                    GestureDetector(
-                      onTap: () => setModalState(() => tempNeg = !tempNeg),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _surface,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  CupertinoIcons.checkmark_seal_fill,
-                                  color: _emerald,
-                                  size: 18,
+                              child: Text(
+                                s.tr('إعادة ضبط', 'Réinitialiser', 'Reset'),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: _dlInk,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                                const SizedBox(width: 10),
-                                Text(
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ApoloDlIconCircleButton(
+                            icon: CupertinoIcons.xmark,
+                            iconSize: 16,
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 1. Sort By Pills
+                      Text(
+                        s.tr('الترتيب حسب', 'Trier par', 'Sort by'),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: _dlMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: sortOptions.map((opt) {
+                          return _ModalFilterChip(
+                            label: opt.label,
+                            active: tempSort == opt.key,
+                            onTap: () =>
+                                setModalState(() => tempSort = opt.key),
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 2. City Pills
+                      Text(
+                        s.tr('المدينة', 'Ville', 'City'),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: _dlMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _ModalFilterChip(
+                            label: s.tr(
+                              'كل المغرب',
+                              'Tout le Maroc',
+                              'All Morocco',
+                            ),
+                            active: tempCityId == null,
+                            onTap: () => setModalState(() => tempCityId = null),
+                          ),
+                          ..._effectiveCities.map((c) {
+                            final id = int.tryParse(c['id'].toString());
+                            final lbl = (s.isAr
+                                    ? (c['name_ar'] ?? c['name'])
+                                    : (s.isEn
+                                        ? (c['name_en'] ??
+                                            c['name_fr'] ??
+                                            c['name'])
+                                        : (c['name_fr'] ?? c['name'])))
+                                .toString();
+                            return _ModalFilterChip(
+                              label: lbl,
+                              active: tempCityId == id,
+                              onTap: () => setModalState(() => tempCityId = id),
+                            );
+                          }),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 3. Category Pills
+                      Text(
+                        s.tr('القسم', 'Catégorie', 'Category'),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: _dlMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _ModalFilterChip(
+                            label: s.tr('جميع الأقسام', 'Toutes', 'All'),
+                            active: tempCatId == null,
+                            onTap: () => setModalState(() => tempCatId = null),
+                          ),
+                          ..._effectiveCategories.map((c) {
+                            final id = int.tryParse(c['id'].toString());
+                            final lbl = _state.formatCategoryLabel(c);
+                            return _ModalFilterChip(
+                              label: lbl,
+                              active: tempCatId == id,
+                              onTap: () => setModalState(() => tempCatId = id),
+                            );
+                          }),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 4. Price Range Inputs (`#F6F6F6` flat rounded `16px`)
+                      Text(
+                        s.tr(
+                          'نطاق الثمن (بالدرهم)',
+                          'Fourchette de prix (DH)',
+                          'Price range (MAD)',
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: _dlMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: _dlSurface,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 2,
+                              ),
+                              child: TextField(
+                                controller: minCtrl,
+                                cursorColor: _dlInk,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                textDirection: TextDirection.ltr,
+                                textAlign:
+                                    s.isAr ? TextAlign.end : TextAlign.start,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: _dlInk,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText:
+                                      s.tr('أقل ثمن', 'Prix min', 'Min price'),
+                                  hintStyle: const TextStyle(
+                                    color: _dlSubtle,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  hintTextDirection: s.isAr
+                                      ? TextDirection.rtl
+                                      : TextDirection.ltr,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: _dlSurface,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 2,
+                              ),
+                              child: TextField(
+                                controller: maxCtrl,
+                                cursorColor: _dlInk,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                textDirection: TextDirection.ltr,
+                                textAlign:
+                                    s.isAr ? TextAlign.end : TextAlign.start,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: _dlInk,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText:
+                                      s.tr('أقصى ثمن', 'Prix max', 'Max price'),
+                                  hintStyle: const TextStyle(
+                                    color: _dlSubtle,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  hintTextDirection: s.isAr
+                                      ? TextDirection.rtl
+                                      : TextDirection.ltr,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 5. Negotiable Toggle Row with ApoloDlSwitch
+                      GestureDetector(
+                        onTap: () => setModalState(() => tempNeg = !tempNeg),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _dlSurface,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(
+                                  color: _dlBg,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  CupertinoIcons.tag_fill,
+                                  color: _dlInk,
+                                  size: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
                                   s.tr(
                                     'إظهار الإعلانات القابلة للتفاوض فقط',
                                     'Annonces négociables uniquement',
                                     'Negotiable listings only',
                                   ),
                                   style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: _ink,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: _dlInk,
                                   ),
                                 ),
-                              ],
-                            ),
-                            CupertinoSwitch(
-                              value: tempNeg,
-                              activeTrackColor: _red,
-                              onChanged: (v) =>
-                                  setModalState(() => tempNeg = v),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    // Apply Button
-                    PressableScale(
-                      onTap: () {
-                        setState(() {
-                          _categoryId = tempCatId;
-                          _cityId = tempCityId;
-                          _onlyNegotiable = tempNeg;
-                          _minPrice = double.tryParse(minCtrl.text.trim());
-                          _maxPrice = double.tryParse(maxCtrl.text.trim());
-                        });
-                        if (_categoryId != null) {
-                          _state.recordCategoryInterest(_categoryId, weight: 3);
-                        }
-                        Navigator.pop(ctx);
-                        _searchAds();
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: _red,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          s.tr('تطبيق الفلتر', 'Appliquer les filtres',
-                              'Apply filters'),
-                          style: const TextStyle(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                              ),
+                              const SizedBox(width: 10),
+                              ApoloDlSwitch(
+                                value: tempNeg,
+                                activeColor: _dlInk,
+                                onChanged: (v) =>
+                                    setModalState(() => tempNeg = v),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 20),
+
+                      // 6. Primary Capsule Apply Button
+                      ApoloDlButton(
+                        label: s.tr(
+                          'تطبيق الفلتر',
+                          'Appliquer les filtres',
+                          'Apply filters',
+                        ),
+                        variant: ApoloDlButtonVariant.primary,
+                        borderRadius: 999,
+                        height: 52,
+                        fullWidth: true,
+                        onPressed: () {
+                          setState(() {
+                            _categoryId = tempCatId;
+                            _cityId = tempCityId;
+                            _onlyNegotiable = tempNeg;
+                            _sortBy = tempSort;
+                            _minPrice = double.tryParse(minCtrl.text.trim());
+                            _maxPrice = double.tryParse(maxCtrl.text.trim());
+                          });
+                          if (_categoryId != null) {
+                            _state.recordCategoryInterest(
+                              _categoryId,
+                              weight: 3,
+                            );
+                          }
+                          Navigator.pop(ctx);
+                          _searchAds();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -859,6 +968,7 @@ class _SearchScreenState extends State<SearchScreen>
     if (!_state.api.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          backgroundColor: _dlInk,
           content: Text(
             s.tr(
               'سجّل الدخول لحفظ البحث والإعلانات',
@@ -873,17 +983,21 @@ class _SearchScreenState extends State<SearchScreen>
     }
 
     try {
-      final res = await _state.api.dio.post('/saved-searches', data: {
-        'query': _queryCtrl.text.trim(),
-        if (_categoryId != null) 'category_id': _categoryId,
-        if (_cityId != null) 'city_id': _cityId,
-        if (_minPrice != null) 'price_min': _minPrice,
-        if (_maxPrice != null) 'price_max': _maxPrice,
-      });
+      final res = await _state.api.dio.post(
+        '/saved-searches',
+        data: {
+          'query': _queryCtrl.text.trim(),
+          if (_categoryId != null) 'category_id': _categoryId,
+          if (_cityId != null) 'city_id': _cityId,
+          if (_minPrice != null) 'price_min': _minPrice,
+          if (_maxPrice != null) 'price_max': _maxPrice,
+        },
+      );
       if (!mounted) return;
       final ok = res.data is Map && res.data['status'] == 'success';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          backgroundColor: _dlInk,
           content: Text(
             ok
                 ? s.tr(
@@ -904,6 +1018,7 @@ class _SearchScreenState extends State<SearchScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          backgroundColor: _dlInk,
           content: Text(
             s.tr(
               'تعذر حفظ البحث حالياً',
@@ -930,7 +1045,7 @@ class _SearchScreenState extends State<SearchScreen>
     List<Map<String, dynamic>> remoteFavs = cachedFavs;
     bool loadingRemote = _state.api.isAuthenticated;
 
-    await showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -967,253 +1082,294 @@ class _SearchScreenState extends State<SearchScreen>
                 _minPrice != null ||
                 _maxPrice != null;
 
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: EdgeInsets.fromLTRB(
-                20,
-                12,
-                20,
-                MediaQuery.of(ctx).padding.bottom + 18,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 38,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE5E7EB),
-                        borderRadius: BorderRadius.circular(2),
+            return Directionality(
+              textDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+                ),
+                decoration: const BoxDecoration(
+                  color: _dlBg,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  12,
+                  20,
+                  MediaQuery.of(ctx).padding.bottom + 18,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: _dlPill,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      const Icon(
-                        CupertinoIcons.bookmark_fill,
-                        size: 19,
-                        color: _ink,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          s.tr('الإعلانات المحفوظة', 'Enregistrés', 'Saved'),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: _ink,
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: _dlPill,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            CupertinoIcons.bookmark_fill,
+                            size: 16,
+                            color: _dlInk,
                           ),
                         ),
-                      ),
-                      if (hasActiveQuery)
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _saveCurrentSearch(s);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Text(
-                              s.tr(
-                                'حفظ البحث',
-                                'Sauver recherche',
-                                'Save search',
-                              ),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: _ink,
-                              ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            s.tr('الإعلانات المحفوظة', 'Enregistrés', 'Saved'),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: _dlInk,
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  if (loadingRemote)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: SavedFavoritesSkeleton(),
-                    )
-                  else if (remoteFavs.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 28),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              CupertinoIcons.bookmark,
-                              size: 34,
-                              color: Color(0xFF9CA3AF),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              s.tr(
-                                'لا توجد إعلانات محفوظة بعد',
-                                'Aucune annonce enregistrée',
-                                'No saved listings yet',
+                        if (hasActiveQuery) ...[
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _saveCurrentSearch(s);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
                               ),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: _ink,
+                              decoration: BoxDecoration(
+                                color: _dlPill,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                s.tr(
+                                  'حفظ البحث',
+                                  'Sauver recherche',
+                                  'Save search',
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: _dlInk,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              s.tr(
-                                'اضغط على القلب في أي إعلان لحفظه هنا',
-                                'Appuyez sur le cœur d’une annonce pour la sauvegarder',
-                                'Tap the heart on any listing to save it here',
-                              ),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                          ],
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        ApoloDlIconCircleButton(
+                          icon: CupertinoIcons.xmark,
+                          iconSize: 16,
+                          onPressed: () => Navigator.pop(ctx),
                         ),
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: remoteFavs.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1, color: Color(0xFFF3F4F6)),
-                        itemBuilder: (_, i) {
-                          final ad = remoteFavs[i];
-                          final id =
-                              int.tryParse(ad['id']?.toString() ?? '') ?? 0;
-                          final title = (ad['title'] ?? '').toString();
-                          final city = (ad['city'] ?? '').toString();
-                          final priceRaw = double.tryParse(
-                              ad['price']?.toString() ?? '');
-                          final formatted =
-                              (ad['price_formatted'] ?? '').toString().trim();
-                          final priceLabel = formatted.isNotEmpty
-                              ? formatted
-                              : (priceRaw != null
-                                  ? '${priceRaw.toInt()} ${s.tr('د.م', 'MAD', 'MAD')}'
-                                  : '');
-                          String imgUrl = '';
-                          if (ad['images'] is List &&
-                              (ad['images'] as List).isNotEmpty) {
-                            final first = (ad['images'] as List).first;
-                            imgUrl = first is Map
-                                ? (first['url'] ?? first['image_path'] ?? '')
-                                    .toString()
-                                : first.toString();
-                          } else {
-                            imgUrl = (ad['primary_image'] ??
-                                    ad['image'] ??
-                                    ad['thumbnail'] ??
-                                    '')
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (loadingRemote)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: SavedFavoritesSkeleton(),
+                      )
+                    else if (remoteFavs.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 28),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: const BoxDecoration(
+                                  color: _dlSurface,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  CupertinoIcons.bookmark,
+                                  size: 26,
+                                  color: _dlMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                s.tr(
+                                  'لا توجد إعلانات محفوظة بعد',
+                                  'Aucune annonce enregistrée',
+                                  'No saved listings yet',
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: _dlInk,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                s.tr(
+                                  'اضغط على القلب في أي إعلان لحفظه هنا',
+                                  'Appuyez sur le cœur d’une annonce pour la sauvegarder',
+                                  'Tap the heart on any listing to save it here',
+                                ),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: _dlMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: remoteFavs.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (_, i) {
+                            final ad = remoteFavs[i];
+                            final id =
+                                int.tryParse(ad['id']?.toString() ?? '') ?? 0;
+                            final title = (ad['title'] ?? '').toString();
+                            final city = (ad['city'] is Map
+                                    ? (ad['city']['name'] ??
+                                        ad['city']['name_fr'] ??
+                                        ad['city']['name_ar'])
+                                    : ad['city'] ?? '')
                                 .toString();
-                          }
-                          return InkWell(
-                            onTap: id > 0
-                                ? () {
-                                    Navigator.pop(ctx);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => AdDetailScreen(
-                                          adId: id,
-                                          initialAd: ad,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                : null,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Row(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: SizedBox(
-                                      width: 54,
-                                      height: 54,
-                                      child: imgUrl.isNotEmpty
-                                          ? AppImage(
-                                              url: imgUrl,
-                                              fit: BoxFit.cover,
-                                            )
-                                          : Container(
-                                              color: const Color(0xFFF3F4F6),
-                                              child: const Icon(
-                                                CupertinoIcons.photo,
-                                                color: Color(0xFF9CA3AF),
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: _ink,
+                            final priceRaw = double.tryParse(
+                              ad['price']?.toString() ?? '',
+                            );
+                            final formatted =
+                                (ad['price_formatted'] ?? '').toString().trim();
+                            final priceLabel = formatted.isNotEmpty
+                                ? formatted
+                                : (priceRaw != null
+                                    ? '${priceRaw.toInt()} ${s.tr('د.م', 'MAD', 'MAD')}'
+                                    : '');
+                            String imgUrl = '';
+                            if (ad['images'] is List &&
+                                (ad['images'] as List).isNotEmpty) {
+                              final first = (ad['images'] as List).first;
+                              imgUrl = first is Map
+                                  ? (first['url'] ?? first['image_path'] ?? '')
+                                      .toString()
+                                  : first.toString();
+                            } else {
+                              imgUrl = (ad['primary_image'] ??
+                                      ad['main_image'] ??
+                                      ad['image'] ??
+                                      ad['thumbnail'] ??
+                                      '')
+                                  .toString();
+                            }
+                            return PressableScale(
+                              onTap: id > 0
+                                  ? () {
+                                      Navigator.pop(ctx);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AdDetailScreen(
+                                            adId: id,
+                                            initialAd: ad,
                                           ),
                                         ),
-                                        if (city.isNotEmpty)
+                                      );
+                                    }
+                                  : null,
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: _dlSurface,
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Row(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: SizedBox(
+                                        width: 54,
+                                        height: 54,
+                                        child: imgUrl.isNotEmpty
+                                            ? AppImage(
+                                                url: imgUrl,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Container(
+                                                color: _dlPill,
+                                                child: const Icon(
+                                                  CupertinoIcons.photo,
+                                                  color: _dlMuted,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
                                           Text(
-                                            city,
+                                            title,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF6B7280),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: _dlInk,
                                             ),
                                           ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (priceLabel.isNotEmpty) ...[
-                                    const SizedBox(width: 8),
-                                    PriceText(
-                                      priceLabel,
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: _ink,
+                                          if (city.isNotEmpty)
+                                            Text(
+                                              city,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: _dlMuted,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
+                                    if (priceLabel.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      PriceText(
+                                        priceLabel,
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: _dlInk,
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -1229,139 +1385,120 @@ class _SearchScreenState extends State<SearchScreen>
     required int filterCount,
   }) {
     return Container(
-      color: Colors.white,
+      key: const Key('dl-explore-header'),
+      color: _dlBg,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Apple iOS Pill Search Bar + bare Saved Bookmark on the same row
+          // 1. Dynamic Layer v5.1 `#EEEEEE` Pill Search Bar + bare Saved Bookmark on same row
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 16, 8),
             child: Row(
               children: [
-                if (canPop)
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    behavior: HitTestBehavior.opaque,
-                    child: SizedBox(
-                      width: 34,
-                      height: 44,
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Icon(
-                          s.isAr
-                              ? CupertinoIcons.chevron_right
-                              : CupertinoIcons.chevron_left,
-                          size: 20,
-                          color: _ink,
-                        ),
-                      ),
-                    ),
+                if (canPop) ...[
+                  ApoloDlIconCircleButton(
+                    icon: s.isAr
+                        ? CupertinoIcons.chevron_forward
+                        : CupertinoIcons.chevron_back,
+                    iconSize: 19,
+                    onPressed: () => Navigator.pop(context),
                   ),
+                  const SizedBox(width: 10),
+                ],
                 Expanded(
                   child: Container(
                     height: 46,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F7),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: const Color(0xFFE5E5EA),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  const Icon(
-                    CupertinoIcons.search,
-                    size: 20,
-                    color: Color(0xFF8E8E93),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      key: const Key('explore-search-bar-field'),
-                      controller: _queryCtrl,
-                      focusNode: _searchFocus,
-                      cursorColor: _ink,
-                      onTap: _enterSearchMode,
-                      onChanged: (_) {
-                        setState(() {
-                          _ads = _filterAndSortAds(_rawAds);
-                        });
-                      },
-                      onSubmitted: (_) {
-                        _exitSearchMode();
-                        _searchAds();
-                      },
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: _ink,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: s.tr('بحث...', 'Rechercher...', 'Search'),
-                        hintStyle: const TextStyle(
-                          color: Color(0xFF8E8E93),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                    decoration: BoxDecoration(
+                      color: _dlPill,
+                      borderRadius: BorderRadius.circular(999),
                     ),
-                  ),
-                  if (_queryCtrl.text.isNotEmpty) ...[
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        _queryCtrl.clear();
-                        _searchAds();
-                      },
-                      child: const SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: Center(
-                          child: Icon(
-                            CupertinoIcons.clear_circled_solid,
-                            size: 18,
-                            color: Color(0xFF8E8E93),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.search,
+                          size: 20,
+                          color: _dlMuted,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            key: const Key('explore-search-bar-field'),
+                            controller: _queryCtrl,
+                            focusNode: _searchFocus,
+                            cursorColor: _dlInk,
+                            onTap: _enterSearchMode,
+                            onChanged: (_) {
+                              setState(() {
+                                _ads = _filterAndSortAds(_rawAds);
+                              });
+                            },
+                            onSubmitted: (_) {
+                              _exitSearchMode();
+                              _searchAds();
+                            },
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: _dlInk,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: s.tr('بحث...', 'Rechercher...', 'Search'),
+                              hintStyle: const TextStyle(
+                                color: _dlSubtle,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      _searchFocus.requestFocus();
-                    },
-                    child: const SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: Center(
-                        child: Icon(
-                          CupertinoIcons.mic_fill,
-                          size: 19,
-                          color: Color(0xFF8E8E93),
+                        if (_queryCtrl.text.isNotEmpty) ...[
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              _queryCtrl.clear();
+                              _searchAds();
+                            },
+                            child: const SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: Center(
+                                child: Icon(
+                                  CupertinoIcons.clear_circled_solid,
+                                  size: 18,
+                                  color: _dlSubtle,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            _searchFocus.requestFocus();
+                          },
+                          child: const SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: Center(
+                              child: Icon(
+                                CupertinoIcons.mic_fill,
+                                size: 19,
+                                color: _dlMuted,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
+                      ],
                     ),
                   ),
                 ),
@@ -1379,7 +1516,7 @@ class _SearchScreenState extends State<SearchScreen>
                         child: Icon(
                           CupertinoIcons.bookmark,
                           size: 21,
-                          color: _ink,
+                          color: _dlInk,
                         ),
                       ),
                     ),
@@ -1389,7 +1526,7 @@ class _SearchScreenState extends State<SearchScreen>
             ),
           ),
 
-          // 3. Icon-Only Category Strip (no text pills, no sort/count strip)
+          // 2. Dynamic Layer v5.1 Icon-Only Category Strip (`#000000` active / `#EEEEEE` idle)
           SizedBox(
             height: 54,
             child: ListView.separated(
@@ -1404,6 +1541,7 @@ class _SearchScreenState extends State<SearchScreen>
                     button: true,
                     label: s.tr('تصفية', 'Filtrer', 'Filter'),
                     child: PressableScale(
+                      key: const Key('dl-explore-filter-btn'),
                       onTap: _openFilterModal,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
@@ -1413,7 +1551,7 @@ class _SearchScreenState extends State<SearchScreen>
                           horizontal: filterCount > 0 ? 14 : 0,
                         ),
                         decoration: BoxDecoration(
-                          color: filterCount > 0 ? _red : _surface,
+                          color: filterCount > 0 ? _dlInk : _dlPill,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         alignment: Alignment.center,
@@ -1423,7 +1561,7 @@ class _SearchScreenState extends State<SearchScreen>
                             Icon(
                               CupertinoIcons.slider_horizontal_3,
                               size: 19,
-                              color: filterCount > 0 ? Colors.white : _ink,
+                              color: filterCount > 0 ? Colors.white : _dlInk,
                             ),
                             if (filterCount > 0) ...[
                               const SizedBox(width: 6),
@@ -1432,7 +1570,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -1462,14 +1600,14 @@ class _SearchScreenState extends State<SearchScreen>
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: active ? _ink : _surface,
+                            color: active ? _dlInk : _dlPill,
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
                           child: Icon(
                             CupertinoIcons.square_grid_2x2_fill,
                             size: 20,
-                            color: active ? Colors.white : _ink,
+                            color: active ? Colors.white : _dlInk,
                           ),
                         ),
                       ),
@@ -1504,11 +1642,11 @@ class _SearchScreenState extends State<SearchScreen>
                         height: 46,
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: active ? _redSoft : _surface,
+                          color: active ? _dlPill : _dlSurface,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: active ? _red : Colors.transparent,
-                            width: 1.5,
+                            color: active ? _dlInk : Colors.transparent,
+                            width: 1.75,
                           ),
                         ),
                         child: Image.asset(asset, fit: BoxFit.contain),
@@ -1532,7 +1670,8 @@ class _SearchScreenState extends State<SearchScreen>
     const double headerExtent = 64.0 + 54.0;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      key: const Key('dl-explore-screen'),
+      backgroundColor: _dlBg,
       body: SafeArea(
         bottom: false,
         child: _isSearchModeActive
@@ -1553,184 +1692,199 @@ class _SearchScreenState extends State<SearchScreen>
                 },
               )
             : NotificationListener<ScrollNotification>(
-          onNotification: _handleVerticalScrollNotification,
-          child: RefreshIndicator(
-            color: _red,
-            backgroundColor: Colors.white,
-            onRefresh: _searchAds,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 680;
-                return CustomScrollView(
-                  controller: _scrollCtrl,
-                  scrollCacheExtent: const ScrollCacheExtent.pixels(700),
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  slivers: [
-                    SliverPersistentHeader(
-                      floating: true,
-                      pinned: false,
-                      delegate: _ExploreFloatingHeaderDelegate(
-                        extent: headerExtent,
-                        vsyncProvider: this,
-                        rebuildKey: Object.hash(
-                          s.lang,
-                          canPop,
-                          _categoryId,
-                          filterCount,
-                          _queryCtrl.text,
-                          _effectiveCategories.length,
+                onNotification: _handleVerticalScrollNotification,
+                child: RefreshIndicator(
+                  color: _dlInk,
+                  backgroundColor: _dlBg,
+                  onRefresh: _searchAds,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth >= 680;
+                      return CustomScrollView(
+                        controller: _scrollCtrl,
+                        scrollCacheExtent: const ScrollCacheExtent.pixels(700),
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
                         ),
-                        child: _buildHeaderContent(
-                          context,
-                          s: s,
-                          canPop: canPop,
-                          filterCount: filterCount,
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
-                        child: Row(
-                          children: [
-                            MarketplaceZonePill(
-                              state: _state,
-                              compact: true,
-                              onTap: () => showMarketplaceZoneSheet(context),
+                        slivers: [
+                          SliverPersistentHeader(
+                            floating: true,
+                            pinned: false,
+                            delegate: _ExploreFloatingHeaderDelegate(
+                              extent: headerExtent,
+                              vsyncProvider: this,
+                              rebuildKey: Object.hash(
+                                s.lang,
+                                canPop,
+                                _categoryId,
+                                filterCount,
+                                _queryCtrl.text,
+                                _effectiveCategories.length,
+                              ),
+                              child: _buildHeaderContent(
+                                context,
+                                s: s,
+                                canPop: canPop,
+                                filterCount: filterCount,
+                              ),
                             ),
-                            const Spacer(),
-                            if (_state.hasActiveZone)
-                              GestureDetector(
-                                onTap: () => _state.clearZoneFilter(),
-                                child: Text(
-                                  s.tr('كل المغرب', 'Tout voir', 'All areas'),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF0A0A0A),
-                                  ),
-                                ),
-                              )
-                            else
-                              GestureDetector(
-                                onTap: () => showMarketplaceZoneSheet(context),
-                                child: Text(
-                                  s.tr('حدد منطقتك', 'Choisir zone', 'Set area'),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (_loading)
-                      const SliverFillRemaining(
-                        hasScrollBody: true,
-                        child: SearchGridSkeleton(isGrid: false),
-                      )
-                    else if (_ads.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: IllustratedStateView(
-                          assetPath: 'assets/images/state_empty_ads.png',
-                          imageSize: 156,
-                          title: s.noAdsFound,
-                          subtitle: _state.hasActiveZone
-                              ? s.tr(
-                                  'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)}. يمكنك توسيع النطاق أو عرض كل المغرب.',
-                                  'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km.',
-                                  'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)}.',
-                                )
-                              : s.tr(
-                                  'جرب تبدل القسم أو توسع نطاق البحث والمدينة.',
-                                  'Essayez une autre catégorie ou élargissez vos filtres.',
-                                  'Try another category or broaden your filters.',
-                                ),
-                          actionLabel: _state.hasActiveZone
-                              ? s.tr(
-                                  'عرض كل المغرب 🌍',
-                                  'Voir tout le Maroc',
-                                  'Show all Morocco',
-                                )
-                              : s.tr(
-                                  'إعادة ضبط الفلاتر',
-                                  'Réinitialiser les filtres',
-                                  'Reset filters',
-                                ),
-                          onAction: () async {
-                            _setChromeVisible(true);
-                            if (_state.hasActiveZone) {
-                              await _state.clearZoneFilter();
-                            }
-                            setState(() {
-                              _categoryId = null;
-                              _cityId = null;
-                              _minPrice = null;
-                              _maxPrice = null;
-                              _onlyNegotiable = false;
-                              _queryCtrl.clear();
-                            });
-                            _searchAds();
-                          },
-                        ),
-                      )
-                    else if (isWide)
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 132),
-                        sliver: SliverGrid.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 400,
-                            mainAxisExtent: 374,
-                            mainAxisSpacing: 18,
-                            crossAxisSpacing: 18,
                           ),
-                          itemCount: _ads.length + (_loadingMore ? 2 : 0),
-                          itemBuilder: (context, idx) {
-                            if (idx >= _ads.length) {
-                              return const AdGridCardSkeleton();
-                            }
-                            final ad = _ads[idx];
-                            return RepaintBoundary(
-                              key: ValueKey('search_wide_${ad['id']}_$_sortBy'),
-                              child: ExploreListingCard(ad: ad),
-                            );
-                          },
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 132),
-                        sliver: SliverList.separated(
-                          itemCount: _ads.length + (_loadingMore ? 1 : 0),
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, idx) {
-                            if (idx >= _ads.length) {
-                              return const SearchListCardSkeleton();
-                            }
-                            final ad = _ads[idx];
-                            return RepaintBoundary(
-                              key: ValueKey(
-                                'search_explore_${ad['id']}_$_sortBy',
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                              child: Row(
+                                children: [
+                                  MarketplaceZonePill(
+                                    state: _state,
+                                    compact: true,
+                                    onTap: () =>
+                                        showMarketplaceZoneSheet(context),
+                                  ),
+                                  const Spacer(),
+                                  if (_state.hasActiveZone)
+                                    GestureDetector(
+                                      onTap: () => _state.clearZoneFilter(),
+                                      child: Text(
+                                        s.tr(
+                                          'كل المغرب',
+                                          'Tout voir',
+                                          'All areas',
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: _dlInk,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    GestureDetector(
+                                      onTap: () =>
+                                          showMarketplaceZoneSheet(context),
+                                      child: Text(
+                                        s.tr(
+                                          'حدد منطقتك',
+                                          'Choisir zone',
+                                          'Set area',
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: _dlMuted,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              child: ExploreListingCard(ad: ad),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
+                            ),
+                          ),
+                          if (_loading)
+                            const SliverFillRemaining(
+                              hasScrollBody: true,
+                              child: SearchGridSkeleton(isGrid: false),
+                            )
+                          else if (_ads.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: IllustratedStateView(
+                                assetPath: 'assets/images/state_empty_ads.png',
+                                imageSize: 156,
+                                title: s.noAdsFound,
+                                subtitle: _state.hasActiveZone
+                                    ? s.tr(
+                                        'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)}. يمكنك توسيع النطاق أو عرض كل المغرب.',
+                                        'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km.',
+                                        'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)}.',
+                                      )
+                                    : s.tr(
+                                        'جرب تبدل القسم أو توسع نطاق البحث والمدينة.',
+                                        'Essayez une autre catégorie ou élargissez vos filtres.',
+                                        'Try another category or broaden your filters.',
+                                      ),
+                                actionLabel: _state.hasActiveZone
+                                    ? s.tr(
+                                        'عرض كل المغرب',
+                                        'Voir tout le Maroc',
+                                        'Show all Morocco',
+                                      )
+                                    : s.tr(
+                                        'إعادة ضبط الفلاتر',
+                                        'Réinitialiser les filtres',
+                                        'Reset filters',
+                                      ),
+                                onAction: () async {
+                                  _setChromeVisible(true);
+                                  if (_state.hasActiveZone) {
+                                    await _state.clearZoneFilter();
+                                  }
+                                  setState(() {
+                                    _categoryId = null;
+                                    _cityId = null;
+                                    _minPrice = null;
+                                    _maxPrice = null;
+                                    _onlyNegotiable = false;
+                                    _sortBy = 'smart';
+                                    _queryCtrl.clear();
+                                  });
+                                  _searchAds();
+                                },
+                              ),
+                            )
+                          else if (isWide)
+                            SliverPadding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(20, 8, 20, 132),
+                              sliver: SliverGrid.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 400,
+                                  mainAxisExtent: 374,
+                                  mainAxisSpacing: 18,
+                                  crossAxisSpacing: 18,
+                                ),
+                                itemCount: _ads.length + (_loadingMore ? 2 : 0),
+                                itemBuilder: (context, idx) {
+                                  if (idx >= _ads.length) {
+                                    return const AdGridCardSkeleton();
+                                  }
+                                  final ad = _ads[idx];
+                                  return RepaintBoundary(
+                                    key: ValueKey(
+                                      'search_wide_${ad['id']}_$_sortBy',
+                                    ),
+                                    child: ExploreListingCard(ad: ad),
+                                  );
+                                },
+                              ),
+                            )
+                          else
+                            SliverPadding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(20, 8, 20, 132),
+                              sliver: SliverList.separated(
+                                itemCount: _ads.length + (_loadingMore ? 1 : 0),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, idx) {
+                                  if (idx >= _ads.length) {
+                                    return const SearchListCardSkeleton();
+                                  }
+                                  final ad = _ads[idx];
+                                  return RepaintBoundary(
+                                    key: ValueKey(
+                                      'search_explore_${ad['id']}_$_sortBy',
+                                    ),
+                                    child: ExploreListingCard(ad: ad),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -1815,7 +1969,7 @@ class _ModalFilterChip extends StatelessWidget {
         onTap();
       },
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        constraints: const BoxConstraints(minHeight: 40, minWidth: 44),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
@@ -1823,15 +1977,15 @@ class _ModalFilterChip extends StatelessWidget {
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: active ? const Color(0xFF0A0A0A) : const Color(0xFFF2F3F7),
+              color: active ? Colors.black : const Color(0xFFEEEEEE),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               label,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: active ? Colors.white : const Color(0xFF0A0A0A),
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : Colors.black,
               ),
             ),
           ),

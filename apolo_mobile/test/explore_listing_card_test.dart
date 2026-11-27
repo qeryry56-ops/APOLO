@@ -12,6 +12,7 @@ import 'package:apolo_mobile/screens/main_shell.dart';
 import 'package:apolo_mobile/screens/search_screen.dart';
 import 'package:apolo_mobile/screens/widgets/app_image.dart';
 import 'package:apolo_mobile/screens/widgets/explore_listing_card.dart';
+import 'package:apolo_mobile/widgets/apolo_badges_kit.dart';
 
 class _StubExploreHttpAdapter implements HttpClientAdapter {
   @override
@@ -153,7 +154,8 @@ void main() {
     expect(find.byIcon(Icons.star_rounded), findsOneWidget);
     expect(find.text('Cascais, 14 km · 3 bedrooms · Pool'), findsOneWidget);
     expect(find.text('Sarah'), findsOneWidget);
-    expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
+    expect(find.byType(ApoloVerifiedBadge), findsOneWidget);
+    expect(find.byType(ApoloRankBadge), findsOneWidget);
     expect(find.text('\$233 / night · taxes incl.'), findsOneWidget);
 
     // Verify PageView swipe updates active slide cleanly
@@ -172,6 +174,15 @@ void main() {
 
   testWidgets('ExploreListingCard handles real classified ad maps safely',
       (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await AppState().initialize(loadRemote: false);
+    final state = AppState();
+    final prevLocale = state.locale;
+    await tester.runAsync(() => state.setLocale(const Locale('ar')));
+    addTearDown(() async {
+      await tester.runAsync(() => state.setLocale(prevLocale));
+    });
+
     final apiAd = <String, dynamic>{
       'id': 42,
       'title': 'Appartement Moderne Maarif 110m²',
@@ -313,9 +324,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await AppState().initialize(loadRemote: false);
     final state = AppState();
+    final prevLocale = state.locale;
+    await tester.runAsync(() => state.setLocale(const Locale('ar')));
     final prevAdapter = state.api.dio.httpClientAdapter;
     state.api.dio.httpClientAdapter = _StubExploreHttpAdapter();
-    addTearDown(() => state.api.dio.httpClientAdapter = prevAdapter);
+    addTearDown(() async {
+      state.api.dio.httpClientAdapter = prevAdapter;
+      await tester.runAsync(() => state.setLocale(prevLocale));
+    });
 
     bool chromeVisible = true;
     await tester.pumpWidget(
@@ -388,9 +404,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await AppState().initialize(loadRemote: false);
     final state = AppState();
+    final prevLocale = state.locale;
+    await tester.runAsync(() => state.setLocale(const Locale('ar')));
     final prevAdapter = state.api.dio.httpClientAdapter;
     state.api.dio.httpClientAdapter = _StubExploreHttpAdapter();
-    addTearDown(() => state.api.dio.httpClientAdapter = prevAdapter);
+    addTearDown(() async {
+      state.api.dio.httpClientAdapter = prevAdapter;
+      await tester.runAsync(() => state.setLocale(prevLocale));
+    });
 
     await tester.pumpWidget(
       const MaterialApp(
