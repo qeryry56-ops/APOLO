@@ -38,6 +38,7 @@ class FirebaseChatService {
 
   final Set<String> _blockedKeys = {};
   final Map<String, Map<String, dynamic>> _blockedMeta = {};
+  final Set<String> _markingReadDocs = {};
 
   bool isBlocked(dynamic targetId) => _blockedKeys.contains('$targetId');
   List<Map<String, dynamic>> get blockedList => _blockedMeta.values.toList();
@@ -115,7 +116,7 @@ class FirebaseChatService {
         final directSnap = await _conversations
             .doc(defaultDocId)
             .get()
-            .timeout(const Duration(seconds: 4));
+            .timeout(const Duration(seconds: 3));
         if (directSnap.exists) {
           return defaultDocId;
         }
@@ -125,7 +126,7 @@ class FirebaseChatService {
       final snap = await _conversations
           .where('participants', arrayContains: myKey)
           .get()
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 3));
       String? bestSameAdDocId;
       int bestSameAdMs = -1;
       String? bestAnyDocId;
@@ -299,7 +300,7 @@ class FirebaseChatService {
     final myKey = '$myUserId';
     return _conversations
         .where('participants', arrayContains: myKey)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
       final list = <Map<String, dynamic>>[];
 
@@ -401,7 +402,7 @@ class FirebaseChatService {
         .doc(docId)
         .collection('messages')
         .orderBy('created_at_ms', descending: false)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
       final result = <Map<String, dynamic>>[];
 
@@ -439,6 +440,8 @@ class FirebaseChatService {
         result.add({
           'id': doc.id,
           'doc_id': doc.id,
+          if ((data['client_message_id'] ?? '').toString().trim().isNotEmpty)
+            'client_message_id': data['client_message_id'].toString().trim(),
           'sender_id': senderKey,
           'sender_name': (data['sender_name'] ?? '').toString(),
           'type': (data['type'] ?? 'text').toString(),
@@ -478,6 +481,7 @@ class FirebaseChatService {
     required String peerName,
     String peerAvatar = '',
     required String body,
+    String? clientMessageId,
     Map<String, dynamic>? replyTo,
     int adId = 0,
     String adTitle = '',
@@ -492,45 +496,52 @@ class FirebaseChatService {
     final sortedParts = _sortedParticipants(myUserId, peerUserId);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final convRef = _conversations.doc(docId);
+    final msgRef = convRef.collection('messages').doc();
 
-    // Ensure conversation doc exists & update summary atomically
-    await convRef.set({
-      'participants': sortedParts,
-      'participants_meta': {
-        myKey: {
-          'id': myUserId,
-          'name': myName.trim().isNotEmpty ? myName.trim() : 'Apolo User',
-          'avatar': myAvatar,
+    // Single atomic WriteBatch cuts network latency in half (1 RTT instead of 2)
+    final batch = _db.batch();
+    batch.set(
+      convRef,
+      {
+        'participants': sortedParts,
+        'participants_meta': {
+          myKey: {
+            'id': myUserId,
+            'name': myName.trim().isNotEmpty ? myName.trim() : 'Apolo User',
+            'avatar': myAvatar,
+          },
+          peerKey: {
+            'id': peerUserId,
+            'name': peerName.trim().isNotEmpty ? peerName.trim() : 'Apolo Seller',
+            'avatar': peerAvatar,
+          },
         },
-        peerKey: {
-          'id': peerUserId,
-          'name': peerName.trim().isNotEmpty ? peerName.trim() : 'Apolo Seller',
-          'avatar': peerAvatar,
+        if (adId > 0) 'ad_id': adId,
+        if (adTitle.isNotEmpty) 'ad_title': adTitle,
+        if (adPrice.isNotEmpty) 'ad_price': adPrice,
+        if (adImage.isNotEmpty) 'ad_image': adImage,
+        'last_message': trimmed,
+        'last_message_type': 'text',
+        'last_sender_id': myKey,
+        'updated_at_ms': nowMs,
+        'unread_counts': {
+          myKey: 0,
+          peerKey: FieldValue.increment(1),
         },
+        'typing': {
+          myKey: false,
+        },
+        'deleted_by': FieldValue.arrayRemove([myKey, peerKey]),
       },
-      if (adId > 0) 'ad_id': adId,
-      if (adTitle.isNotEmpty) 'ad_title': adTitle,
-      if (adPrice.isNotEmpty) 'ad_price': adPrice,
-      if (adImage.isNotEmpty) 'ad_image': adImage,
-      'last_message': trimmed,
-      'last_message_type': 'text',
-      'last_sender_id': myKey,
-      'updated_at_ms': nowMs,
-      'unread_counts': {
-        myKey: 0,
-        peerKey: FieldValue.increment(1),
-      },
-      'typing': {
-        myKey: false,
-      },
-      'deleted_by': FieldValue.arrayRemove([myKey, peerKey]),
-    }, SetOptions(merge: true));
-
-    await convRef.collection('messages').add({
+      SetOptions(merge: true),
+    );
+    batch.set(msgRef, {
       'sender_id': myKey,
       'sender_name': myName,
       'type': 'text',
       'body': trimmed,
+      if (clientMessageId != null && clientMessageId.trim().isNotEmpty)
+        'client_message_id': clientMessageId.trim(),
       if (replyTo != null && replyTo.isNotEmpty) 'reply_to': replyTo,
       'created_at_ms': nowMs,
       'read_by': [myKey],
@@ -538,6 +549,7 @@ class FirebaseChatService {
       'deleted_for_everyone': false,
       'deleted_for': <String>[],
     });
+    await batch.commit().timeout(const Duration(seconds: 3));
 
     if (peerUserId != myUserId) {
       unawaited(
@@ -700,6 +712,8 @@ class FirebaseChatService {
     required String docId,
     required int myUserId,
   }) async {
+    if (_markingReadDocs.contains(docId)) return;
+    _markingReadDocs.add(docId);
     final myKey = '$myUserId';
     try {
       final convRef = _conversations.doc(docId);
@@ -731,7 +745,10 @@ class FirebaseChatService {
       if (hasUpdates) {
         await batch.commit();
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _markingReadDocs.remove(docId);
+    }
   }
 
   Future<void> setTyping({

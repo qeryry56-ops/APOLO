@@ -26,6 +26,7 @@ class NotificationBadge extends StatefulWidget {
   final NotificationBadgeVariant variant;
   final Widget? child;
   final double? top;
+  final double? bottom;
   final double? right;
   final double dotSize;
   final bool showBorder;
@@ -39,6 +40,7 @@ class NotificationBadge extends StatefulWidget {
     this.variant = NotificationBadgeVariant.red,
     this.child,
     this.top,
+    this.bottom,
     this.right,
     this.dotSize = 10.0,
     this.showBorder = true,
@@ -315,7 +317,10 @@ class _NotificationBadgeState extends State<NotificationBadge>
     }
 
     final isDot = widget.type == NotificationBadgeType.dot;
-    final double effectiveTop = widget.top ?? (isDot ? -2.0 : -6.0);
+    final bool pinBottom = widget.bottom != null;
+    final double? effectiveTop =
+        pinBottom ? null : (widget.top ?? (isDot ? -2.0 : -6.0));
+    final double? effectiveBottom = widget.bottom;
     final double effectiveRight = widget.right ?? (isDot ? -2.0 : -8.0);
 
     return Stack(
@@ -326,6 +331,7 @@ class _NotificationBadgeState extends State<NotificationBadge>
         if (shouldShow)
           Positioned(
             top: effectiveTop,
+            bottom: effectiveBottom,
             right: effectiveRight,
             child: IgnorePointer(
               child: _buildAnimatedBadge(reduceMotion),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ import 'call_screen.dart';
 import 'chat_room_screen.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
+import 'widgets/chat_utils.dart';
 import 'widgets/skeleton_loader.dart';
 
 /// Dynamic Layer v5.1 `Inbox` / `Chats` Screen (`21768:49231`):
@@ -64,6 +66,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
   StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
   StreamSubscription<Map<String, dynamic>>? _wsMsgSub;
   Timer? _inboxSyncTimer;
+  static const Duration _inboxPollingInterval = Duration(milliseconds: 2500);
+  static const Duration _backendTimeout = Duration(seconds: 3);
+  static final Options _backendTimeoutOptions = Options(
+    sendTimeout: _backendTimeout,
+    receiveTimeout: _backendTimeout,
+  );
+
+  bool _fetchingInboxInFlight = false;
   String? _lastHandledCallId;
   int? _subscribedUserId;
   String? _loadedAuthKey;
@@ -77,20 +87,73 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _loadedAuthKey = _currentAuthKey;
     _state.addListener(_onStateChanged);
     _searchFocusNode.addListener(_onSearchFocusChanged);
-    _wsMsgSub = ChatRealtimeClient.instance.incomingMessages.listen((_) {
-      if (mounted && _state.isLoggedIn) {
-        unawaited(_fetchBackendConversationsInBackground());
-      }
+    _wsMsgSub = ChatRealtimeClient.instance.incomingMessages.listen((msg) {
+      if (!mounted || !_state.isLoggedIn) return;
+      _applyRealtimeMessageToInbox(msg);
     });
-    _inboxSyncTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted ||
-          !_state.isLoggedIn ||
-          ChatRealtimeClient.instance.isConnected) {
+    _inboxSyncTimer = Timer.periodic(_inboxPollingInterval, (_) {
+      if (!mounted || !_state.isLoggedIn || _fetchingInboxInFlight) {
         return;
       }
       unawaited(_fetchBackendConversationsInBackground());
     });
     _loadConversations();
+  }
+
+  /// Immediately updates the inbox UI in 0ms when a WebSocket message arrives,
+  /// without waiting for the 2.5s periodic sync timer.
+  void _applyRealtimeMessageToInbox(Map<String, dynamic> msg) {
+    final myUserId = int.tryParse('${_state.currentUser?['id'] ?? 0}') ?? 0;
+    final senderId = int.tryParse('${msg['sender_id'] ?? 0}') ?? 0;
+    final channelId = (msg['channel_id'] ?? '').toString().trim();
+    final bodyRaw = (msg['body'] ?? '').toString().trim();
+    final msgType = (msg['type'] ?? 'text').toString();
+    final preview = bodyRaw.isNotEmpty
+        ? bodyRaw
+        : (msgType == 'image'
+            ? '📷 Photo'
+            : (msgType == 'audio' ? '🎤 Voice message' : ''));
+    if (preview.isEmpty) return;
+
+    final createdDt =
+        DateTime.tryParse((msg['created_at'] ?? '').toString())?.toLocal() ??
+            DateTime.now();
+    final nowMs = createdDt.millisecondsSinceEpoch;
+    final timeStr = formatChatClock(createdDt);
+
+    final matchIdx = _conversations.indexWhere((c) {
+      final docId = (c['firestore_doc_id'] ?? '').toString().trim();
+      if (channelId.isNotEmpty && docId.isNotEmpty && docId == channelId) {
+        return true;
+      }
+      final convId = int.tryParse('${c['backend_id'] ?? c['id'] ?? 0}') ?? 0;
+      if (convId > 0 && channelId == 'conv_$convId') return true;
+      final peerId = int.tryParse('${c['peer_id'] ?? 0}') ?? 0;
+      if (senderId > 0 && senderId != myUserId && peerId == senderId) {
+        return true;
+      }
+      return false;
+    });
+
+    if (matchIdx >= 0) {
+      setState(() {
+        final updated = Map<String, dynamic>.from(_conversations[matchIdx]);
+        updated['last_message'] = preview;
+        updated['last_message_time'] = timeStr;
+        updated['updated_at_ms'] = nowMs;
+        final isActiveOpenRoom = FirebaseChatService.activeChatDocId != null &&
+            FirebaseChatService.activeChatDocId == updated['firestore_doc_id'];
+        if (senderId > 0 && senderId != myUserId && !isActiveOpenRoom) {
+          final prevUnread = _effectiveUnread(updated);
+          updated['unread_count'] = prevUnread + 1;
+        }
+        _conversations
+          ..removeAt(matchIdx)
+          ..insert(0, updated);
+      });
+    } else {
+      unawaited(_fetchBackendConversationsInBackground());
+    }
   }
 
   void _onSearchFocusChanged() {
@@ -215,9 +278,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Future<void> _fetchBackendConversationsInBackground() async {
-    if (!_state.isLoggedIn) return;
+    if (!_state.isLoggedIn || _fetchingInboxInFlight) return;
+    _fetchingInboxInFlight = true;
     try {
-      final res = await _state.api.dio.get('/chat/conversations');
+      final res = await _state.api.dio
+          .get('/chat/conversations', options: _backendTimeoutOptions)
+          .timeout(_backendTimeout);
       if (!mounted) return;
       if (res.data is Map && res.data['status'] == 'success') {
         final rawList = (res.data['conversations'] ?? res.data['data'] ?? [])
@@ -240,7 +306,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _fetchingInboxInFlight = false;
+    }
   }
 
   Future<void> _loadConversations() async {
@@ -321,9 +390,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return;
     }
 
+    if (_fetchingInboxInFlight) return;
+    _fetchingInboxInFlight = true;
     setState(() => _isLoading = true);
     try {
-      final res = await _state.api.dio.get('/chat/conversations');
+      final res = await _state.api.dio
+          .get('/chat/conversations', options: _backendTimeoutOptions)
+          .timeout(_backendTimeout);
       if (res.data is Map && res.data['status'] == 'success') {
         final rawList = (res.data['conversations'] ?? res.data['data'] ?? [])
             as List<dynamic>;
@@ -335,6 +408,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
         if (mounted) {
           setState(() {
+            _backendConversations = parsed;
             _conversations = parsed;
             _activeWebConversation ??=
                 _conversations.isNotEmpty ? _conversations.first : null;
@@ -343,7 +417,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
           return;
         }
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _fetchingInboxInFlight = false;
+    }
 
     if (mounted) {
       setState(() {
@@ -405,10 +482,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
           (raw['peer_avatar'] ?? peer['avatar_url'] ?? peer['avatar'] ?? '')
               .toString(),
       'peer_online': raw['peer_online'] == true || peer['is_online'] == true,
-      'peer_verified': raw['peer_verified'] == true ||
-          raw['is_verified'] == true ||
-          peer['is_verified'] == true ||
-          peer['verified'] == true,
+      'peer_verified': AppConfig.enablePremiumAndBusinessTiers &&
+          (raw['is_pro_plus'] == true || peer['is_pro_plus'] == true),
       'last_message': lastBody.isNotEmpty ? lastBody : 'Hello! How are you?',
       'last_message_time':
           (raw['last_message_time'] ?? raw['updated_at_human'] ?? '9:41')
@@ -464,7 +539,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
       _state.decrementUnreadChatCountOptimistically(totalCleared);
     }
     try {
-      _state.api.dio.post('/chat/read-all');
+      unawaited(
+        _state.api.dio
+            .post('/chat/read-all', options: _backendTimeoutOptions)
+            .timeout(_backendTimeout)
+            .catchError((_) => Response(requestOptions: RequestOptions())),
+      );
     } catch (_) {}
   }
 
@@ -1073,9 +1153,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Dynamic Layer v5.1 Large `Chats` Title + optional `Mark all read` capsule
+        // 1. Dynamic Layer v5.1 Compact `Chats` Title + optional `Mark all read` capsule
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
           child: Row(
             children: [
               Expanded(
@@ -1084,9 +1164,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   key: const Key('inbox-title'),
                   style: TextStyle(
                     color: ink,
-                    fontSize: 28,
+                    fontSize: 26,
                     fontWeight: FontWeight.w700,
-                    height: 36.0 / 28.0,
+                    height: 32.0 / 26.0,
                     letterSpacing:
                         AppTypography.trackingForContext(context, -0.5),
                   ),
@@ -1138,7 +1218,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           child: AnimatedContainer(
             key: const Key('inbox-search-container'),
             duration: const Duration(milliseconds: 140),
-            height: 46,
+            height: 42,
             decoration: BoxDecoration(
               color: pillBg,
               borderRadius: BorderRadius.circular(999),
@@ -1222,9 +1302,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
 
-        // 3. Filter Pills (`All` | `Unread` | `Pinned` — `36px` stadium pills)
+        // 3. Filter Pills (`All` | `Unread` | `Pinned` — `34px` stadium pills)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: SingleChildScrollView(
@@ -1265,7 +1345,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
 
         // 4. Conversations List / States
         Expanded(
@@ -1364,19 +1444,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   _buildChatRow(
                                     conv,
                                     isSelected: isSelected,
+                                    isDark: isDark,
                                     ink: ink,
                                     mutedText: mutedText,
                                     pillBg: pillBg,
                                     surfaceSubtle: surfaceSubtle,
                                   ),
                                   if (!isLast)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      child: Container(
-                                        height: 1,
-                                        color: dividerColor,
+                                    Center(
+                                      child: FractionallySizedBox(
+                                        widthFactor: 0.62,
+                                        child: Container(
+                                          key: Key('inbox-divider-$index'),
+                                          height: 0.75,
+                                          decoration: BoxDecoration(
+                                            color: dividerColor,
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -1415,16 +1501,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
           setState(() => _selectedFilterIndex = index);
         },
         child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 15),
           alignment: Alignment.center,
           child: Text(
             label,
             style: TextStyle(
               color: fg,
-              fontSize: 14,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              height: 20.0 / 14.0,
+              height: 18.0 / 13.5,
             ),
           ),
         ),
@@ -1472,6 +1558,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget _buildChatRow(
     Map<String, dynamic> conv, {
     required bool isSelected,
+    required bool isDark,
     required Color ink,
     required Color mutedText,
     required Color pillBg,
@@ -1530,21 +1617,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
       onLongPress: () => _showChatActionsSheet(conv),
       child: Container(
         color: isSelected ? surfaceSubtle : Colors.transparent,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 48x48 Monochrome Dynamic Layer Avatar + Accessible Green Presence Dot
+            // 44x44 Monochrome Dynamic Layer Avatar + Bottom Green Presence Dot
             NotificationBadge(
+              key: Key('inbox-online-dot-$convId'),
               count: isPeerOnline ? 1 : 0,
               type: NotificationBadgeType.dot,
               variant: NotificationBadgeVariant.green,
-              top: 0,
+              bottom: 0,
               right: 0,
-              dotSize: 11,
+              dotSize: 10.5,
+              borderColor: isDark ? const Color(0xFF121212) : Colors.white,
               child: Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: pillBg,
@@ -1553,8 +1642,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 child: avatarUrl != null && avatarUrl.isNotEmpty
                     ? AppImage(
                         url: avatarUrl,
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         fit: BoxFit.cover,
                         fallback: _buildAvatarFallback(
                           peerName,
@@ -1569,7 +1658,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 11),
 
             // Middle + Right Column: Top (Name + Verified + Pin/Mute + Time), Optional Ad Tag, Bottom (Preview + Unread Badge)
             Expanded(
@@ -1595,9 +1684,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 ),
                                 style: TextStyle(
                                   color: ink,
-                                  fontSize: 15,
+                                  fontSize: 14.5,
                                   fontWeight: FontWeight.w700,
-                                  height: 20.0 / 15.0,
+                                  height: 19.0 / 14.5,
                                   letterSpacing:
                                       AppTypography.trackingForContext(
                                           context, -0.2),
@@ -1606,14 +1695,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             ),
                             if (isPeerVerified) ...[
                               const SizedBox(width: 4),
-                              const ApoloVerifiedBadge(size: 14),
+                              const ApoloVerifiedBadge(size: 13.5),
                             ],
                             if (isPinned) ...[
                               const SizedBox(width: 5),
                               Icon(
                                 CupertinoIcons.pin_fill,
                                 color: ink,
-                                size: 12,
+                                size: 11.5,
                               ),
                             ],
                             if (isMuted) ...[
@@ -1621,7 +1710,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               Icon(
                                 CupertinoIcons.bell_slash_fill,
                                 color: mutedText,
-                                size: 12,
+                                size: 11.5,
                               ),
                             ],
                           ],
@@ -1637,22 +1726,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             : null,
                         style: TextStyle(
                           color: mutedText,
-                          fontSize: 13.0,
+                          fontSize: 12.2,
                           fontWeight: FontWeight.w400,
-                          height: 18.0 / 13.0,
+                          height: 16.0 / 12.2,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
                   ),
                   if (adTitle.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           CupertinoIcons.tag_fill,
-                          size: 10.5,
+                          size: 10,
                           color: mutedText,
                         ),
                         const SizedBox(width: 4),
@@ -1663,23 +1752,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: mutedText,
-                              fontSize: 12.0,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w500,
-                              height: 16.0 / 12.0,
+                              height: 15.0 / 11.5,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ],
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2.5),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: Text(
                           lastMsg,
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textDirection: ChatMessage.detectTextDirection(
                             lastMsg,
@@ -1687,25 +1776,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                           style: TextStyle(
                             color: unread > 0 ? ink : mutedText,
-                            fontSize: 14.0,
+                            fontSize: 13.5,
                             fontWeight: unread > 0
                                 ? FontWeight.w600
                                 : FontWeight.w400,
-                            height: 19.5 / 14.0,
+                            height: 18.0 / 13.5,
                           ),
                         ),
                       ),
                       if (unread > 0) ...[
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Container(
                           key: Key('inbox-unread-badge-$convId'),
                           constraints: const BoxConstraints(
-                            minWidth: 20,
-                            minHeight: 20,
+                            minWidth: 19,
+                            minHeight: 19,
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: 5.5,
+                            vertical: 1.5,
                           ),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
@@ -1717,7 +1806,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             textDirection: TextDirection.ltr,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 11.5,
+                              fontSize: 11.0,
                               fontWeight: FontWeight.w700,
                               height: 1.1,
                               fontFeatures: [FontFeature.tabularFigures()],
@@ -1725,17 +1814,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                       ] else if (adImage.isNotEmpty) ...[
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           child: Container(
-                            width: 38,
-                            height: 38,
+                            width: 34,
+                            height: 34,
                             color: surfaceSubtle,
                             child: AppImage(
                               url: adImage,
-                              width: 38,
-                              height: 38,
+                              width: 34,
+                              height: 34,
                               fit: BoxFit.cover,
                             ),
                           ),

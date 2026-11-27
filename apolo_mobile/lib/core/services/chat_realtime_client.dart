@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../network/api_client.dart';
@@ -74,14 +75,21 @@ class ChatRealtimeClient {
   final Set<String> _activeSyncChannels = <String>{};
   final Map<int, PeerPresenceState> _presenceCache = <int, PeerPresenceState>{};
 
-  final _messageCtrl = StreamController<Map<String, dynamic>>.broadcast();
-  final _ackCtrl = StreamController<Map<String, dynamic>>.broadcast();
-  final _deliveryReceiptCtrl = StreamController<Map<String, dynamic>>.broadcast();
-  final _readReceiptCtrl = StreamController<Map<String, dynamic>>.broadcast();
-  final _syncCtrl = StreamController<Map<String, dynamic>>.broadcast();
-  final _presenceCtrl = StreamController<PeerPresenceState>.broadcast();
-  final _typingCtrl = StreamController<Map<String, dynamic>>.broadcast();
-  final _connectionCtrl = StreamController<bool>.broadcast();
+  final _messageCtrl =
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
+  final _ackCtrl =
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
+  final _deliveryReceiptCtrl =
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
+  final _readReceiptCtrl =
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
+  final _syncCtrl =
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
+  final _presenceCtrl =
+      StreamController<PeerPresenceState>.broadcast(sync: true);
+  final _typingCtrl =
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
+  final _connectionCtrl = StreamController<bool>.broadcast(sync: true);
 
   Stream<Map<String, dynamic>> get incomingMessages => _messageCtrl.stream;
   Stream<Map<String, dynamic>> get messageAcks => _ackCtrl.stream;
@@ -97,6 +105,13 @@ class ChatRealtimeClient {
   String get deviceId => _deviceId ?? 'dev-pending';
 
   PeerPresenceState? cachedPresence(int userId) => _presenceCache[userId];
+
+  /// Injects a real-time message directly onto [incomingMessages] so live streams
+  /// and deterministic widget tests update UI immediately in 0ms without polling.
+  void injectIncomingMessage(Map<String, dynamic> payload) {
+    _disposed = false;
+    _messageCtrl.add(payload);
+  }
 
   /// Computes deterministic-bounded exponential backoff with jitter (`1s..30s`)
   /// to prevent thundering-herd reconnect storms when a cellular tower recovers.
@@ -200,10 +215,17 @@ class ChatRealtimeClient {
 
   Future<String?> _discoverChatServerUrl(int userId) async {
     try {
-      final res = await ApiClient().dio.get(
+      final res = await ApiClient()
+          .dio
+          .get(
             '/chat/service-discovery',
             queryParameters: {'user_id': userId},
-          );
+            options: Options(
+              sendTimeout: const Duration(seconds: 3),
+              receiveTimeout: const Duration(seconds: 3),
+            ),
+          )
+          .timeout(const Duration(seconds: 3));
       final data = res.data is Map ? res.data['data'] : null;
       if (data is Map) {
         final hb = int.tryParse('${data['heartbeat_interval_ms'] ?? ''}');
@@ -556,7 +578,8 @@ class ChatRealtimeClient {
 
   /// Guarantees zero duplicate messages across WebSocket, multi-device sync,
   /// optimistic pending queue, and Firestore/REST fallback by deduplicating
-  /// on `client_message_id` and canonical `message_id`/`id`.
+  /// on `client_message_id`/`local_id`, canonical `message_id`/`doc_id`/`id`,
+  /// and short-window semantic sender+body fingerprint.
   static List<Map<String, dynamic>> deduplicateMessages(
     List<Map<String, dynamic>> messages,
   ) {
@@ -566,14 +589,83 @@ class ChatRealtimeClient {
 
     for (final m in messages) {
       final clientId =
-          (m['client_message_id'] ?? m['_local_id'] ?? '').toString().trim();
-      final serverId = (m['message_id'] ?? m['id'] ?? '').toString().trim();
+          (m['client_message_id'] ?? m['local_id'] ?? m['_local_id'] ?? '')
+              .toString()
+              .trim();
+      final serverId =
+          (m['message_id'] ?? m['doc_id'] ?? m['id'] ?? '').toString().trim();
 
       if (clientId.isNotEmpty && seenClientIds.contains(clientId)) continue;
       if (serverId.isNotEmpty &&
           serverId != '0' &&
           seenServerIds.contains(serverId)) {
         continue;
+      }
+
+      final body = (m['body'] ?? '').toString().trim();
+      final msgType = (m['type'] ?? 'text').toString();
+      final isMine = m['is_mine'] == true;
+      final senderId = (m['sender_id'] ?? '').toString().trim();
+      final createdMs = int.tryParse('${m['created_at_ms'] ?? 0}') ?? 0;
+
+      if (body.isNotEmpty && msgType == 'text') {
+        final duplicateIdx = result.indexWhere((prev) {
+          if ((prev['type'] ?? 'text').toString() != 'text') return false;
+          if ((prev['is_mine'] == true) != isMine) return false;
+          final prevSender = (prev['sender_id'] ?? '').toString().trim();
+          if (senderId.isNotEmpty &&
+              prevSender.isNotEmpty &&
+              senderId != prevSender) {
+            return false;
+          }
+          if ((prev['body'] ?? '').toString().trim() != body) return false;
+          final prevId =
+              (prev['message_id'] ?? prev['doc_id'] ?? prev['id'] ?? '')
+                  .toString()
+                  .trim();
+          final prevIsPending = prev['_pending'] == true ||
+              prevId.startsWith('opt_') ||
+              prevId.startsWith('srv_');
+          final curIsPending = m['_pending'] == true ||
+              serverId.startsWith('opt_') ||
+              serverId.startsWith('srv_');
+          // Only collapse across distinct transports (e.g. optimistic/Firestore vs Backend)
+          // within a tight window so legitimate repeated user texts aren't dropped if both have distinct real IDs from same source.
+          if (!prevIsPending &&
+              !curIsPending &&
+              prev['doc_id'] != null &&
+              m['doc_id'] != null &&
+              prev['doc_id'] != m['doc_id']) {
+            return false;
+          }
+          if (!prevIsPending &&
+              !curIsPending &&
+              prev['doc_id'] == null &&
+              m['doc_id'] == null &&
+              prevId.isNotEmpty &&
+              serverId.isNotEmpty &&
+              prevId != serverId) {
+            return false;
+          }
+          final prevMs = int.tryParse('${prev['created_at_ms'] ?? 0}') ?? 0;
+          if (createdMs > 0 && prevMs > 0) {
+            return (createdMs - prevMs).abs() <= 90000;
+          }
+          return prevIsPending || curIsPending;
+        });
+
+        if (duplicateIdx >= 0) {
+          // Prefer confirmed server/Firestore copy over pending optimistic copy
+          if (result[duplicateIdx]['_pending'] == true &&
+              m['_pending'] != true) {
+            result[duplicateIdx] = m;
+          }
+          if (clientId.isNotEmpty) seenClientIds.add(clientId);
+          if (serverId.isNotEmpty && serverId != '0') {
+            seenServerIds.add(serverId);
+          }
+          continue;
+        }
       }
 
       if (clientId.isNotEmpty) seenClientIds.add(clientId);

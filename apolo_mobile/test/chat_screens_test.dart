@@ -8,9 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:apolo_mobile/core/services/chat_realtime_client.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/chat_list_screen.dart';
 import 'package:apolo_mobile/screens/chat_room_screen.dart';
+import 'package:apolo_mobile/widgets/notification_badge.dart';
 
 class _ChatStubAdapter implements HttpClientAdapter {
   final FutureOr<ResponseBody> Function(RequestOptions) handler;
@@ -61,6 +63,7 @@ void main() {
               'id': 1,
               'peer_name': 'Jenny Wilson',
               'peer_avatar': '',
+              'peer_online': true,
               'last_message': "Can't wait to try it out!",
               'last_message_time': '10:41 AM',
               'unread_count': 2,
@@ -220,6 +223,19 @@ void main() {
     expect(find.text('Jenny Wilson'), findsOneWidget);
     expect(find.text('Aileen Fullbright'), findsOneWidget);
     expect(find.text('Ronald Richards'), findsOneWidget);
+
+    // Compact centered divider (`wast osa4ir`) & bottom-pinned online dot (`ltaht machi fo9`)
+    final dividerFinder = find.byKey(const Key('inbox-divider-0'));
+    expect(dividerFinder, findsOneWidget);
+    final dividerSize = tester.getSize(dividerFinder);
+    expect(dividerSize.height, lessThanOrEqualTo(1.0));
+    expect(dividerSize.width, closeTo(390 * 0.62, 2.0));
+
+    final onlineBadge = tester.widget<NotificationBadge>(
+      find.byKey(const Key('inbox-online-dot-1')),
+    );
+    expect(onlineBadge.bottom, 0);
+    expect(onlineBadge.top, isNull);
 
     final badgeContainer = tester.widget<Container>(
       find.byKey(const Key('inbox-unread-badge-1')),
@@ -427,22 +443,123 @@ void main() {
         },
       ];
 
-      await tester.pump(const Duration(seconds: 4));
+      await tester.pump(const Duration(milliseconds: 1600));
       await tester.pumpAndSettle();
 
       expect(find.text('أنا جاي دابا فـ الطريق!'), findsOneWidget);
+      // Header online dot is also pinned to bottom (`bottom: 0`, `top: null`)
+      final roomOnlineBadge = tester.widget<NotificationBadge>(
+        find.byKey(const Key('chat-header-online-dot')),
+      );
+      expect(roomOnlineBadge.bottom, 0);
+      expect(roomOnlineBadge.top, isNull);
       expect(tester.takeException(), isNull);
 
-      // Verify ChatListScreen also updates live without manual refresh
+      // Instant 0ms WebSocket stream arrival updates ChatRoomScreen without waiting for polling!
+      ChatRealtimeClient.instance.injectIncomingMessage({
+        'channel_id': 'ad_50_u_9_24',
+        'message_id': 'ws_9001',
+        'client_message_id': 'c_ws_9001',
+        'sender_id': 24,
+        'sender_name': 'Yassine',
+        'type': 'text',
+        'body': 'رسالة فورية فـ 0 ثانية!',
+        'created_at': '2026-11-27T18:11:05Z',
+      });
+      await tester.pump();
+      expect(find.text('رسالة فورية فـ 0 ثانية!'), findsOneWidget);
+
+      // Sending the exact same message again (duplicate echo) never duplicates it
+      ChatRealtimeClient.instance.injectIncomingMessage({
+        'channel_id': 'ad_50_u_9_24',
+        'message_id': 'ws_9001',
+        'client_message_id': 'c_ws_9001',
+        'sender_id': 24,
+        'sender_name': 'Yassine',
+        'type': 'text',
+        'body': 'رسالة فورية فـ 0 ثانية!',
+        'created_at': '2026-11-27T18:11:05Z',
+      });
+      await tester.pump();
+      expect(find.text('رسالة فورية فـ 0 ثانية!'), findsOneWidget);
+
+      // Verify ChatListScreen updates within 2.5s AND updates instantly on WebSocket message
       await pumpPhone(tester, const ChatListScreen());
       expect(find.text('واش نقدر نشوف السلعة اليوم؟'), findsOneWidget);
 
-      inboxPreview = 'وصلت حدا الباب!';
-      await tester.pump(const Duration(seconds: 5));
+      ChatRealtimeClient.instance.injectIncomingMessage({
+        'channel_id': 'conv_88',
+        'message_id': 'ws_9002',
+        'sender_id': 24,
+        'sender_name': 'Yassine',
+        'type': 'text',
+        'body': 'وصلت حدا الباب فـ الحين!',
+        'created_at': '2026-11-27T18:11:10Z',
+      });
+      await tester.pump();
+      expect(find.text('وصلت حدا الباب فـ الحين!'), findsOneWidget);
+
+      inboxPreview = 'تحديث عبر 2.5 ثانية!';
+      await tester.pump(const Duration(milliseconds: 2600));
       await tester.pumpAndSettle();
 
-      expect(find.text('وصلت حدا الباب!'), findsOneWidget);
+      expect(find.text('تحديث عبر 2.5 ثانية!'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'Prevents overlapping concurrent backend requests and enforces 3s timeout',
+        (WidgetTester tester) async {
+      int inFlight = 0;
+      int maxConcurrent = 0;
+      int getCount = 0;
+
+      final slowAdapter = _ChatStubAdapter((request) async {
+        if (request.path == '/chat/conversations/88/messages' &&
+            request.method == 'GET') {
+          getCount++;
+          inFlight++;
+          if (inFlight > maxConcurrent) maxConcurrent = inFlight;
+          await Future<void>.delayed(const Duration(milliseconds: 2200));
+          inFlight--;
+          return _jsonBody({
+            'status': 'success',
+            'messages': [
+              {
+                'id': 301,
+                'sender_id': 24,
+                'is_mine': false,
+                'body': 'مرحباً بدون تداخل',
+                'created_at_time': '7:00 PM',
+                'type': 'text',
+              },
+            ],
+          });
+        }
+        return _jsonBody({'status': 'success', 'data': []});
+      });
+
+      state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
+        ..httpClientAdapter = slowAdapter;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const ChatRoomScreen(
+            conversationId: 88,
+            peerId: 24,
+            peerName: 'Yassine',
+          ),
+        ),
+      );
+      // Advance past the 1.5s fallback tick while initial 2.2s request is still in-flight
+      await tester.pump(const Duration(milliseconds: 1600));
+      expect(maxConcurrent, 1);
+      expect(getCount, 1);
+
+      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pumpAndSettle();
+      expect(find.text('مرحباً بدون تداخل'), findsOneWidget);
+      expect(maxConcurrent, 1);
     });
   });
 }

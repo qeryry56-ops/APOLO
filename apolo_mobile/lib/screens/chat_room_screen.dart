@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -77,7 +78,7 @@ class ChatRoomScreen extends StatefulWidget {
     this.initialAttachments = const <ChatAttachment>[],
     this.initialMessages,
     this.showInlineAvatars,
-    this.isPeerVerified = true,
+    this.isPeerVerified = false,
   });
 
   @override
@@ -113,7 +114,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   final bool _uploadingMedia = false;
   final bool _isRecordingVoice = false;
   final int _recordSeconds = 0;
+  static const Duration _roomFallbackSyncInterval =
+      Duration(milliseconds: 1500);
+  static const Duration _backendTimeout = Duration(seconds: 3);
+  static final Options _backendTimeoutOptions = Options(
+    sendTimeout: _backendTimeout,
+    receiveTimeout: _backendTimeout,
+  );
+
   bool _loadingRequest = false;
+  bool _syncingRoomInFlight = false;
+  bool _firestoreStreamHealthy = false;
+  final Set<String> _inFlightSendIds = <String>{};
   List<String> _typingUsers = [];
   String? _loadError;
 
@@ -200,6 +212,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _myUserId > 0 &&
       _activeFirestoreDocId != null;
 
+  bool get _isRealtimeStreamStable =>
+      ChatRealtimeClient.instance.isConnected ||
+      (_useFirestore && _firestoreStreamHealthy);
   static const Color _chatBlue = Ios26IMessageTokens.bubbleMine;
   static const Color _chatBlueSoft = Color(0xFFE8F3FF);
   static const Color _textBlack = ApoloChatDlTokens.inkPrimary;
@@ -275,8 +290,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
 
     if (widget.initialMessages == null) {
-      _restFallbackTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-        if (!mounted || ChatRealtimeClient.instance.isConnected) {
+      _restFallbackTimer = Timer.periodic(_roomFallbackSyncInterval, (_) {
+        if (!mounted ||
+            !_state.isLoggedIn ||
+            _isRealtimeStreamStable ||
+            _loadingRequest ||
+            _syncingRoomInFlight ||
+            _resolvingBackendConv) {
           return;
         }
         unawaited(_syncBackendMessagesForRoom());
@@ -292,6 +312,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         }
       });
     }
+  }
+
+  bool _matchesCurrentRoomChannel(String rawChannelId, {int senderId = 0}) {
+    final ch = rawChannelId.trim();
+    if (ch.isNotEmpty) {
+      if (ch == _realtimeChannelId) return true;
+      final fsDoc = _activeFirestoreDocId;
+      if (fsDoc != null && fsDoc.isNotEmpty && ch == fsDoc) return true;
+      if (_effectiveBackendConversationId > 0 &&
+          ch == 'conv_$_effectiveBackendConversationId') {
+        return true;
+      }
+      if (widget.conversationId > 0 && ch == 'conv_${widget.conversationId}') {
+        return true;
+      }
+      return false;
+    }
+    return senderId > 0 && _effectivePeerId > 0 && senderId == _effectivePeerId;
   }
 
   String get _realtimeChannelId {
@@ -324,9 +362,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _wsMessageSub?.cancel();
     _wsMessageSub = ws.incomingMessages.listen((msg) {
       if (!mounted) return;
-      if ((msg['channel_id'] ?? '').toString() != _realtimeChannelId) return;
-      _mergeRealtimeMessage(msg);
       final senderId = int.tryParse('${msg['sender_id'] ?? 0}') ?? 0;
+      if (!_matchesCurrentRoomChannel(
+        (msg['channel_id'] ?? '').toString(),
+        senderId: senderId,
+      )) {
+        return;
+      }
+      _mergeRealtimeMessage(msg);
       final mid = (msg['message_id'] ?? '').toString();
       if (senderId > 0 && senderId != _myUserId && mid.isNotEmpty) {
         // Stage 3 ACK (`read` ✓✓): user is actively viewing this conversation
@@ -592,34 +635,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       return List<Map<String, dynamic>>.from(firestoreMsgs);
     }
 
-    final merged = List<Map<String, dynamic>>.from(firestoreMsgs);
-    for (final b in backendMsgs) {
-      final bClientId = (b['client_message_id'] ?? '').toString().trim();
-      final bId = (b['id'] ?? '').toString().trim();
-      final bBody = (b['body'] ?? '').toString().trim();
-      final bMine = b['is_mine'] == true;
-      final bMs = int.tryParse('${b['created_at_ms'] ?? 0}') ?? 0;
-
-      final isDuplicate = merged.any((f) {
-        final fClientId = (f['client_message_id'] ?? '').toString().trim();
-        if (bClientId.isNotEmpty && fClientId == bClientId) return true;
-        final fId = (f['id'] ?? '').toString().trim();
-        if (bId.isNotEmpty && fId == bId) return true;
-        final fBody = (f['body'] ?? '').toString().trim();
-        final fMine = f['is_mine'] == true;
-        if (bBody.isNotEmpty && fBody == bBody && fMine == bMine) {
-          final fMs = int.tryParse('${f['created_at_ms'] ?? 0}') ?? 0;
-          if (bMs <= 0 || fMs <= 0 || (fMs - bMs).abs() <= 120000) {
-            return true;
-          }
-        }
-        return false;
-      });
-
-      if (!isDuplicate) {
-        merged.add(b);
-      }
-    }
+    final merged = ChatRealtimeClient.deduplicateMessages([
+      ...firestoreMsgs,
+      ...backendMsgs,
+    ]);
 
     final allHaveTimestamps = merged.every(
       (m) => (int.tryParse('${m['created_at_ms'] ?? 0}') ?? 0) > 0,
@@ -653,10 +672,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _resolvingBackendConv = true;
     try {
       if (_effectiveAdId > 0) {
-        final startRes = await _state.api.dio.post(
-          '/chat/start',
-          data: {'ad_id': _effectiveAdId},
-        );
+        final startRes = await _state.api.dio
+            .post(
+              '/chat/start',
+              data: {'ad_id': _effectiveAdId},
+              options: _backendTimeoutOptions,
+            )
+            .timeout(_backendTimeout);
         if (startRes.data is Map && startRes.data['status'] == 'success') {
           final conv = startRes.data['conversation'];
           if (conv is Map) {
@@ -669,7 +691,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         }
       }
       if (_effectivePeerId > 0) {
-        final listRes = await _state.api.dio.get('/chat/conversations');
+        final listRes = await _state.api.dio
+            .get('/chat/conversations', options: _backendTimeoutOptions)
+            .timeout(_backendTimeout);
         if (listRes.data is Map && listRes.data['status'] == 'success') {
           final rawList =
               (listRes.data['conversations'] ?? listRes.data['data'] ?? [])
@@ -710,17 +734,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   Future<void> _syncBackendMessagesForRoom({bool scrollToBottom = false}) async {
-    if (!mounted || !_state.isLoggedIn) return;
-    if (_effectiveBackendConversationId <= 0 && _useFirestore) {
-      await _resolveBackendConversationIdIfNeeded();
-    }
-    if (!mounted) return;
-    if (_effectiveBackendConversationId > 0) {
-      await _loadMessages(silent: !scrollToBottom, scrollToBottom: scrollToBottom);
+    if (!mounted || !_state.isLoggedIn || _syncingRoomInFlight) return;
+    _syncingRoomInFlight = true;
+    try {
+      if (_effectiveBackendConversationId <= 0 && _useFirestore) {
+        await _resolveBackendConversationIdIfNeeded();
+      }
+      if (!mounted) return;
+      if (_effectiveBackendConversationId > 0) {
+        await _loadMessages(
+          silent: !scrollToBottom,
+          scrollToBottom: scrollToBottom,
+        );
+      }
+    } finally {
+      _syncingRoomInFlight = false;
     }
   }
 
-  Future<Map<String, dynamic>?> _mirrorTextMessageToBackend(String text) async {
+  Future<Map<String, dynamic>?> _mirrorTextMessageToBackend(
+    String text, {
+    String? clientMessageId,
+  }) async {
     if (!_state.isLoggedIn || text.trim().isEmpty) return null;
     try {
       int convId = _effectiveBackendConversationId;
@@ -729,17 +764,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         convId = _effectiveBackendConversationId;
       }
       if (convId > 0) {
-        final res = await _state.api.dio.post(
-          '/chat/conversations/$convId/messages',
-          data: {'body': text, 'message': text},
-        );
+        final res = await _state.api.dio
+            .post(
+              '/chat/conversations/$convId/messages',
+              data: {
+                'body': text,
+                'message': text,
+                if (clientMessageId != null && clientMessageId.isNotEmpty)
+                  'client_message_id': clientMessageId,
+              },
+              options: _backendTimeoutOptions,
+            )
+            .timeout(_backendTimeout);
         if (res.data is Map && res.data['status'] == 'success') {
           final created = res.data['message'];
           if (created is Map) {
-            return _normalizeBackendMessage(Map<String, dynamic>.from(created));
+            final m =
+                _normalizeBackendMessage(Map<String, dynamic>.from(created));
+            if (clientMessageId != null && clientMessageId.isNotEmpty) {
+              m['client_message_id'] = clientMessageId;
+            }
+            return m;
           }
           return <String, dynamic>{
             'id': 'srv_${DateTime.now().microsecondsSinceEpoch}',
+            if (clientMessageId != null && clientMessageId.isNotEmpty)
+              'client_message_id': clientMessageId,
             'body': text,
             'is_mine': true,
             'sender_id': '$_myUserId',
@@ -757,6 +807,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   void _bindFirestoreStreams() {
     _messagesSub?.cancel();
     _convMetaSub?.cancel();
+    _firestoreStreamHealthy = false;
 
     final docId = _activeFirestoreDocId;
     if (docId == null || _myUserId <= 0) return;
@@ -771,6 +822,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         .watchMessages(docId, _myUserId)
         .listen((incoming) {
       if (!mounted) return;
+      _firestoreStreamHealthy = true;
       _firestoreMessages = incoming;
       final merged = _mergeFirestoreAndBackendMessages(
         _firestoreMessages,
@@ -817,6 +869,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       }
     }, onError: (_) {
       if (!mounted) return;
+      _firestoreStreamHealthy = false;
       unawaited(_syncBackendMessagesForRoom());
       if (_messages.isEmpty && _effectiveBackendConversationId <= 0) {
         setState(() {
@@ -1021,7 +1074,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         throw StateError('Sign in required');
       }
       final res = await _state.api.dio
-          .get('/chat/conversations/$convId/messages');
+          .get(
+            '/chat/conversations/$convId/messages',
+            options: _backendTimeoutOptions,
+          )
+          .timeout(_backendTimeout);
       if (res.data is! Map || res.data['status'] != 'success') {
         throw StateError('Messages unavailable');
       }
@@ -1189,10 +1246,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final msgId = int.tryParse('${target['id'] ?? ''}');
     if (msgId != null && msgId > 0 && widget.conversationId > 0) {
       try {
-        await _state.api.dio.put(
-          '/chat/conversations/${widget.conversationId}/messages/$msgId',
-          data: {'body': trimmed, 'message': trimmed},
-        );
+        await _state.api.dio
+            .put(
+              '/chat/conversations/${widget.conversationId}/messages/$msgId',
+              data: {'body': trimmed, 'message': trimmed},
+              options: _backendTimeoutOptions,
+            )
+            .timeout(_backendTimeout);
       } catch (_) {}
     }
     _notice(
@@ -1228,10 +1288,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final msgId = int.tryParse('${m['id'] ?? ''}');
     if (msgId != null && msgId > 0 && widget.conversationId > 0) {
       try {
-        await _state.api.dio.delete(
-          '/chat/conversations/${widget.conversationId}/messages/$msgId',
-          data: {'scope': 'everyone'},
-        );
+        await _state.api.dio
+            .delete(
+              '/chat/conversations/${widget.conversationId}/messages/$msgId',
+              data: {'scope': 'everyone'},
+              options: _backendTimeoutOptions,
+            )
+            .timeout(_backendTimeout);
       } catch (_) {}
     }
     _notice(_state.s.tr(
@@ -2010,79 +2073,58 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final userId = _state.currentUser?['id'];
     final clientMsgId =
         (tempMsg['client_message_id'] ?? tempMsg['local_id'] ?? '').toString();
-
-    // Primary bidirectional WebSocket path when Stateful Chat Server is connected
-    if (ChatRealtimeClient.instance.isConnected && _effectivePeerId > 0) {
-      ChatRealtimeClient.instance.sendMessage(
-        channelId: _realtimeChannelId,
-        recipientIds: [_effectivePeerId],
-        clientMessageId: clientMsgId,
-        type: (tempMsg['type'] ?? 'text').toString(),
-        body: text,
-        metadata: {
-          if (tempMsg['type'] == 'audio') ...{
-            'audio_base64': (tempMsg['audio_base64'] ?? '').toString(),
-            'audio_mime': (tempMsg['audio_mime'] ?? 'audio/webm').toString(),
-            'audio_duration': (tempMsg['audio_duration'] ?? '').toString(),
-            if (tempMsg['audio_waveform'] != null)
-              'audio_waveform': tempMsg['audio_waveform'],
-          },
-          if (tempMsg['image_base64'] != null)
-            'image_base64': tempMsg['image_base64'],
-          if (tempMsg['reply_to'] is Map) 'reply_to': tempMsg['reply_to'],
-        },
-        adContext: widget.adTitle.trim().isNotEmpty
-            ? {
-                'ad_id': _effectiveAdId,
-                'ad_title': widget.adTitle.trim(),
-                'ad_price': (widget.adPrice ?? '').trim(),
-                'ad_image': (widget.adImage ?? '').trim(),
-              }
-            : null,
-      );
+    if (clientMsgId.isNotEmpty && _inFlightSendIds.contains(clientMsgId)) {
+      return;
+    }
+    if (clientMsgId.isNotEmpty) {
+      _inFlightSendIds.add(clientMsgId);
     }
 
-    if (_useFirestore) {
-      final docId = _activeFirestoreDocId!;
-      final peerId = _effectivePeerId;
-      bool firestoreSucceeded = false;
-      Map<String, dynamic>? backendCreated;
+    try {
+      // Primary bidirectional WebSocket path when Stateful Chat Server is connected
+      if (ChatRealtimeClient.instance.isConnected && _effectivePeerId > 0) {
+        ChatRealtimeClient.instance.sendMessage(
+          channelId: _realtimeChannelId,
+          recipientIds: [_effectivePeerId],
+          clientMessageId: clientMsgId,
+          type: (tempMsg['type'] ?? 'text').toString(),
+          body: text,
+          metadata: {
+            if (tempMsg['type'] == 'audio') ...{
+              'audio_base64': (tempMsg['audio_base64'] ?? '').toString(),
+              'audio_mime': (tempMsg['audio_mime'] ?? 'audio/webm').toString(),
+              'audio_duration': (tempMsg['audio_duration'] ?? '').toString(),
+              if (tempMsg['audio_waveform'] != null)
+                'audio_waveform': tempMsg['audio_waveform'],
+            },
+            if (tempMsg['image_base64'] != null)
+              'image_base64': tempMsg['image_base64'],
+            if (tempMsg['reply_to'] is Map) 'reply_to': tempMsg['reply_to'],
+          },
+          adContext: widget.adTitle.trim().isNotEmpty
+              ? {
+                  'ad_id': _effectiveAdId,
+                  'ad_title': widget.adTitle.trim(),
+                  'ad_price': (widget.adPrice ?? '').trim(),
+                  'ad_image': (widget.adImage ?? '').trim(),
+                }
+              : null,
+        );
+      }
 
-      if (tempMsg['type'] == 'audio') {
-        final rawWave = tempMsg['audio_waveform'];
-        final waveform = rawWave is List
-            ? rawWave.map((e) => double.tryParse('$e') ?? 0.35).toList()
-            : const <double>[];
-        final fsFuture = FirebaseChatService.instance
-            .sendAudioMessage(
-              docId: docId,
-              myUserId: _myUserId,
-              myName: _myDisplayName,
-              myAvatar: _myAvatarUrl ?? '',
-              peerUserId: peerId,
-              peerName: widget.peerName,
-              peerAvatar: widget.peerAvatar ?? '',
-              audioBase64: (tempMsg['audio_base64'] ?? '').toString(),
-              audioMime: (tempMsg['audio_mime'] ?? 'audio/webm').toString(),
-              audioDuration: (tempMsg['audio_duration'] ?? '0:01').toString(),
-              audioWaveform: waveform,
-              adId: _effectiveAdId,
-              adTitle: widget.adTitle,
-              adPrice: widget.adPrice ?? '',
-              adImage: widget.adImage ?? '',
-            )
-            .timeout(const Duration(seconds: 6))
-            .then((_) => firestoreSucceeded = true)
-            .catchError((_) => false);
-        final apiFuture = _mirrorTextMessageToBackend(
-          '🎤 ${(tempMsg['audio_duration'] ?? '0:01')}',
-        ).then((m) => backendCreated = m);
-        await Future.wait([fsFuture, apiFuture]);
-      } else if (tempMsg['type'] == 'image' &&
-          (tempMsg['image_base64'] ?? '').toString().isNotEmpty) {
-        try {
-          await FirebaseChatService.instance
-              .sendImageMessage(
+      if (_useFirestore) {
+        final docId = _activeFirestoreDocId!;
+        final peerId = _effectivePeerId;
+        bool firestoreSucceeded = false;
+        Map<String, dynamic>? backendCreated;
+
+        if (tempMsg['type'] == 'audio') {
+          final rawWave = tempMsg['audio_waveform'];
+          final waveform = rawWave is List
+              ? rawWave.map((e) => double.tryParse('$e') ?? 0.35).toList()
+              : const <double>[];
+          final fsFuture = FirebaseChatService.instance
+              .sendAudioMessage(
                 docId: docId,
                 myUserId: _myUserId,
                 myName: _myDisplayName,
@@ -2090,134 +2132,204 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 peerUserId: peerId,
                 peerName: widget.peerName,
                 peerAvatar: widget.peerAvatar ?? '',
-                imageBase64: tempMsg['image_base64'].toString(),
-                caption: text,
+                audioBase64: (tempMsg['audio_base64'] ?? '').toString(),
+                audioMime: (tempMsg['audio_mime'] ?? 'audio/webm').toString(),
+                audioDuration:
+                    (tempMsg['audio_duration'] ?? '0:01').toString(),
+                audioWaveform: waveform,
                 adId: _effectiveAdId,
                 adTitle: widget.adTitle,
                 adPrice: widget.adPrice ?? '',
                 adImage: widget.adImage ?? '',
               )
-              .timeout(const Duration(seconds: 8));
-          firestoreSucceeded = true;
-        } catch (_) {}
-        if (text.isNotEmpty) {
-          backendCreated = await _mirrorTextMessageToBackend(text);
+              .timeout(_backendTimeout)
+              .then((_) => firestoreSucceeded = true)
+              .catchError((_) => false);
+          final apiFuture = _mirrorTextMessageToBackend(
+            '🎤 ${(tempMsg['audio_duration'] ?? '0:01')}',
+            clientMessageId: clientMsgId,
+          ).then((m) => backendCreated = m);
+          await Future.wait([fsFuture, apiFuture]);
+        } else if (tempMsg['type'] == 'image' &&
+            (tempMsg['image_base64'] ?? '').toString().isNotEmpty) {
+          try {
+            await FirebaseChatService.instance
+                .sendImageMessage(
+                  docId: docId,
+                  myUserId: _myUserId,
+                  myName: _myDisplayName,
+                  myAvatar: _myAvatarUrl ?? '',
+                  peerUserId: peerId,
+                  peerName: widget.peerName,
+                  peerAvatar: widget.peerAvatar ?? '',
+                  imageBase64: tempMsg['image_base64'].toString(),
+                  caption: text,
+                  adId: _effectiveAdId,
+                  adTitle: widget.adTitle,
+                  adPrice: widget.adPrice ?? '',
+                  adImage: widget.adImage ?? '',
+                )
+                .timeout(const Duration(seconds: 6));
+            firestoreSucceeded = true;
+          } catch (_) {}
+          if (text.isNotEmpty) {
+            backendCreated = await _mirrorTextMessageToBackend(
+              text,
+              clientMessageId: clientMsgId,
+            );
+          }
+        } else {
+          final fsFuture = FirebaseChatService.instance
+              .sendTextMessage(
+                docId: docId,
+                myUserId: _myUserId,
+                myName: _myDisplayName,
+                myAvatar: _myAvatarUrl ?? '',
+                peerUserId: peerId,
+                peerName: widget.peerName,
+                peerAvatar: widget.peerAvatar ?? '',
+                body: text,
+                clientMessageId: clientMsgId,
+                replyTo: tempMsg['reply_to'] is Map
+                    ? Map<String, dynamic>.from(tempMsg['reply_to'] as Map)
+                    : null,
+                adId: _effectiveAdId,
+                adTitle: widget.adTitle,
+                adPrice: widget.adPrice ?? '',
+                adImage: widget.adImage ?? '',
+              )
+              .timeout(_backendTimeout)
+              .then((_) {
+                firestoreSucceeded = true;
+                if (mounted) {
+                  setState(() => _pending.remove(tempMsg));
+                }
+                return true;
+              })
+              .catchError((_) => false);
+          final apiFuture = _mirrorTextMessageToBackend(
+            text,
+            clientMessageId: clientMsgId,
+          ).then((m) {
+            backendCreated = m;
+            if (m != null && mounted) {
+              setState(() {
+                _pending.remove(tempMsg);
+                _backendMessages = ChatRealtimeClient.deduplicateMessages([
+                  ..._backendMessages,
+                  m,
+                ]);
+                _messages = _mergeFirestoreAndBackendMessages(
+                  _firestoreMessages,
+                  _backendMessages,
+                  fallbackExisting: _messages,
+                );
+              });
+            }
+          });
+          await Future.wait([fsFuture, apiFuture]);
         }
-      } else {
-        final fsFuture = FirebaseChatService.instance
-            .sendTextMessage(
-              docId: docId,
-              myUserId: _myUserId,
-              myName: _myDisplayName,
-              myAvatar: _myAvatarUrl ?? '',
-              peerUserId: peerId,
-              peerName: widget.peerName,
-              peerAvatar: widget.peerAvatar ?? '',
-              body: text,
-              replyTo: tempMsg['reply_to'] is Map
-                  ? Map<String, dynamic>.from(tempMsg['reply_to'] as Map)
-                  : null,
-              adId: _effectiveAdId,
-              adTitle: widget.adTitle,
-              adPrice: widget.adPrice ?? '',
-              adImage: widget.adImage ?? '',
-            )
-            .timeout(const Duration(seconds: 6))
-            .then((_) => firestoreSucceeded = true)
-            .catchError((_) => false);
-        final apiFuture =
-            _mirrorTextMessageToBackend(text).then((m) => backendCreated = m);
-        await Future.wait([fsFuture, apiFuture]);
+
+        if (firestoreSucceeded || backendCreated != null) {
+          if (mounted) {
+            setState(() {
+              _pending.remove(tempMsg);
+              if (backendCreated != null) {
+                backendCreated!['client_message_id'] = clientMsgId;
+                _backendMessages = ChatRealtimeClient.deduplicateMessages([
+                  ..._backendMessages,
+                  backendCreated!,
+                ]);
+                _messages = _mergeFirestoreAndBackendMessages(
+                  _firestoreMessages,
+                  _backendMessages,
+                  fallbackExisting: _messages,
+                );
+              }
+            });
+          }
+        } else if (mounted) {
+          // Rule 3: Mark bubble as failed with inline retry button; NEVER show a toast.
+          setState(() {
+            tempMsg['_pending'] = false;
+            tempMsg['_failed'] = true;
+          });
+        }
+        return;
       }
 
-      if (firestoreSucceeded || backendCreated != null) {
-        if (mounted) {
+      try {
+        final sendConvId = _effectiveBackendConversationId > 0
+            ? _effectiveBackendConversationId
+            : conversationId;
+        final res = await _state.api.dio
+            .post(
+              '/chat/conversations/$sendConvId/messages',
+              data: {
+                'body': text,
+                'message': text,
+                if (clientMsgId.isNotEmpty) 'client_message_id': clientMsgId,
+                if (tempMsg['reply_to'] is Map) 'reply_to': tempMsg['reply_to'],
+              },
+              options: _backendTimeoutOptions,
+            )
+            .timeout(_backendTimeout);
+        if (res.data is! Map || res.data['status'] != 'success') {
+          throw StateError('Send not confirmed');
+        }
+        if (!mounted ||
+            conversationId != widget.conversationId ||
+            userId != _state.currentUser?['id']) {
+          return;
+        }
+        final created = res.data['message'];
+        setState(() {
+          _pending.remove(tempMsg);
+          if (created is Map) {
+            final createdMap =
+                _normalizeBackendMessage(Map<String, dynamic>.from(created));
+            createdMap['client_message_id'] = clientMsgId;
+            _backendMessages = ChatRealtimeClient.deduplicateMessages([
+              ..._backendMessages,
+              createdMap,
+            ]);
+          } else {
+            final confirmed = Map<String, dynamic>.from(tempMsg)
+              ..['_pending'] = false
+              ..['_failed'] = false;
+            _backendMessages = ChatRealtimeClient.deduplicateMessages([
+              ..._backendMessages,
+              confirmed,
+            ]);
+          }
+          _messages = _mergeFirestoreAndBackendMessages(
+            _firestoreMessages,
+            _backendMessages,
+            fallbackExisting: _messages,
+          );
+        });
+        if (created is! Map) {
+          await _loadMessages(silent: true);
+        }
+      } catch (_) {
+        // Rule 3: Keep failed bubble in flow with inline retry button, no toast/SnackBar.
+        if (mounted &&
+            conversationId == widget.conversationId &&
+            userId == _state.currentUser?['id']) {
           setState(() {
-            _pending.remove(tempMsg);
-            if (backendCreated != null) {
-              backendCreated!['client_message_id'] = clientMsgId;
-              _backendMessages = [
-                ..._backendMessages,
-                backendCreated!,
-              ];
-              _messages = _mergeFirestoreAndBackendMessages(
-                _firestoreMessages,
-                _backendMessages,
-                fallbackExisting: _messages,
-              );
+            tempMsg['_pending'] = false;
+            tempMsg['_failed'] = true;
+            if (tempMsg['_from_initial_draft'] == true &&
+                _msgCtrl.text.isEmpty) {
+              _msgCtrl.text = text;
+              tempMsg['_use_rich_text'] = true;
             }
           });
         }
-      } else if (mounted) {
-        // Rule 3: Mark bubble as failed with inline retry button; NEVER show a toast.
-        setState(() {
-          tempMsg['_pending'] = false;
-          tempMsg['_failed'] = true;
-        });
       }
-      return;
-    }
-
-    try {
-      final sendConvId = _effectiveBackendConversationId > 0
-          ? _effectiveBackendConversationId
-          : conversationId;
-      final res = await _state.api.dio.post(
-        '/chat/conversations/$sendConvId/messages',
-        data: {
-          'body': text,
-          'message': text,
-          if (tempMsg['reply_to'] is Map) 'reply_to': tempMsg['reply_to'],
-        },
-      );
-      if (res.data is! Map || res.data['status'] != 'success') {
-        throw StateError('Send not confirmed');
-      }
-      if (!mounted ||
-          conversationId != widget.conversationId ||
-          userId != _state.currentUser?['id']) {
-        return;
-      }
-      final created = res.data['message'];
-      setState(() {
-        _pending.remove(tempMsg);
-        if (created is Map) {
-          final createdMap =
-              _normalizeBackendMessage(Map<String, dynamic>.from(created));
-          createdMap['client_message_id'] = clientMsgId;
-          if (!_backendMessages.any(
-              (m) => m['id'] != null && m['id'] == createdMap['id'])) {
-            _backendMessages.add(createdMap);
-          }
-        } else {
-          final confirmed = Map<String, dynamic>.from(tempMsg)
-            ..['_pending'] = false
-            ..['_failed'] = false;
-          _backendMessages.add(confirmed);
-        }
-        _messages = _mergeFirestoreAndBackendMessages(
-          _firestoreMessages,
-          _backendMessages,
-          fallbackExisting: _messages,
-        );
-      });
-      if (created is! Map) {
-        await _loadMessages(silent: true);
-      }
-    } catch (_) {
-      // Rule 3: Keep failed bubble in flow with inline retry button, no toast/SnackBar.
-      if (mounted &&
-          conversationId == widget.conversationId &&
-          userId == _state.currentUser?['id']) {
-        setState(() {
-          tempMsg['_pending'] = false;
-          tempMsg['_failed'] = true;
-          if (tempMsg['_from_initial_draft'] == true &&
-              _msgCtrl.text.isEmpty) {
-            _msgCtrl.text = text;
-            tempMsg['_use_rich_text'] = true;
-          }
-        });
+    } finally {
+      if (clientMsgId.isNotEmpty) {
+        _inFlightSendIds.remove(clientMsgId);
       }
     }
   }
@@ -2546,8 +2658,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     // Floating header & 45px composer clearance:
     // - Closed keyboard: `41px` bottom offset + `45px` bar
     // - Open keyboard (`1:2660` / `1:989`): `14px` gap above keyboard + `45px` bar (`Y = 411px` on `375×812`)
-    final double headerTopClearance = topInset + 64.0;
-    final double headerGradientHeight = topInset + 72.0;
+    final double headerTopClearance = topInset + 58.0;
+    final double headerGradientHeight = topInset + 64.0;
     final double restingComposerBottom = _isDrawerOpen
         ? 12.0
         : (isKeyboardOpen
@@ -3146,7 +3258,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -3154,7 +3266,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             color: Colors.transparent,
             child: InkWell(
               key: const Key('chat-ad-context-banner'),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               onTap: canOpenAd
                   ? () {
                       Navigator.push(
@@ -3166,12 +3278,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                     }
                   : null,
               child: Ink(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF1C1C1E)
                       : const Color(0xFFF6F6F6),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isDark
                         ? const Color(0xFF2C2C2E)
@@ -3182,24 +3294,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 child: Row(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        width: 56,
-                        height: 56,
+                        width: 46,
+                        height: 46,
                         color: isDark
                             ? const Color(0xFF2C2C2E)
                             : Colors.white,
                         child: img.isNotEmpty
                             ? AppImage(
                                 url: img,
-                                width: 56,
-                                height: 56,
+                                width: 46,
+                                height: 46,
                                 fit: BoxFit.cover,
                               )
                             : Center(
                                 child: Icon(
                                   CupertinoIcons.tag_fill,
-                                  size: 20,
+                                  size: 18,
                                   color: isDark
                                       ? Colors.white
                                       : const Color(0xFF000000),
@@ -3207,7 +3319,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3215,14 +3327,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         children: [
                           Text(
                             title,
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textDirection: ChatMessage.detectTextDirection(
                               title,
                               fallback: contextDir,
                             ),
                             style: TextStyle(
-                              fontSize: 14.5,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                               height: 1.25,
                               color: isDark
@@ -3232,7 +3344,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             ),
                           ),
                           if (price.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Directionality(
                               textDirection: TextDirection.ltr,
                               child: Text(
@@ -3241,7 +3353,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: isDark
                                       ? Colors.white
@@ -3314,7 +3426,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       padding: EdgeInsets.only(top: topInset),
       child: SizedBox(
         key: const Key('chat-dl-top-nav'),
-        height: 56.0,
+        height: 54.0,
         width: double.infinity,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -3413,12 +3525,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         NotificationBadge(
+                          key: const Key('chat-header-online-dot'),
                           count: isPeerOnline ? 1 : 0,
                           type: NotificationBadgeType.dot,
                           variant: NotificationBadgeVariant.green,
-                          top: 0,
+                          bottom: 0,
                           right: 0,
-                          dotSize: 9,
+                          dotSize: 9.5,
+                          borderColor:
+                              isDark ? const Color(0xFF0A0A0A) : Colors.white,
                           child: Container(
                             key: const Key('chat-ios26-avatar-glass'),
                             width: 34.0,
@@ -3430,16 +3545,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             child: ClipOval(
                               child: widget.peerAvatar != null &&
                                       widget.peerAvatar!.isNotEmpty
-                                    ? AppImage(
-                                        url: widget.peerAvatar!,
-                                        width: 34.0,
-                                        height: 34.0,
-                                        fit: BoxFit.cover,
-                                        fallback: _buildAvatarFallback(
-                                          widget.peerName,
-                                        ),
-                                      )
-                                    : _buildAvatarFallback(widget.peerName),
+                                  ? AppImage(
+                                      url: widget.peerAvatar!,
+                                      width: 34.0,
+                                      height: 34.0,
+                                      fit: BoxFit.cover,
+                                      fallback: _buildAvatarFallback(
+                                        widget.peerName,
+                                      ),
+                                    )
+                                  : _buildAvatarFallback(widget.peerName),
                             ),
                           ),
                         ),
@@ -3455,10 +3570,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                               fallback: contextDir,
                             ),
                             style: TextStyle(
-                              fontSize: 16.0,
+                              fontSize: 15.5,
                               fontWeight: FontWeight.w700,
                               color: ink,
-                              height: 20.0 / 16.0,
+                              height: 19.0 / 15.5,
                               letterSpacing: AppTypography.trackingForContext(
                                 context,
                                 -0.3,
@@ -3467,10 +3582,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           ),
                         ),
                         if (widget.isPeerVerified) ...[
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 5),
                           const ApoloVerifiedBadge(
                             key: Key('chat-header-verified-badge'),
-                            size: 16,
+                            size: 15,
                           ),
                         ],
                       ],
