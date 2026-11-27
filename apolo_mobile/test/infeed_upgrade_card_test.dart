@@ -98,6 +98,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.byKey(const Key('apolo-infeed-upgrade-card')), findsOneWidget);
+    // Cardless open section: root is a transparent SizedBox (not a boxed card Container)
+    expect(
+      tester.widget(find.byKey(const Key('apolo-infeed-upgrade-card'))),
+      isA<SizedBox>(),
+    );
+    // Uses Dynamic Layer monochrome stadium CTA (`#FFFFFF` in Dark Mode)
+    final ctaDec = tester
+        .widget<Container>(find.byKey(const Key('infeed-upgrade-cta-btn')))
+        .decoration as BoxDecoration;
+    expect(ctaDec.color, const Color(0xFFFFFFFF));
+    expect(ctaDec.borderRadius, BorderRadius.circular(999));
     expect(find.byType(ApoloInFeedUpgradePromoCard), findsOneWidget);
     expect(find.text('Apolo Premium'), findsOneWidget);
     expect(find.text('elas_amine'), findsOneWidget);
