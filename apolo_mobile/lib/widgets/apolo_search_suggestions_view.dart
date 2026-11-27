@@ -10,6 +10,7 @@ import '../screens/store_detail_screen.dart';
 import '../screens/widgets/app_image.dart';
 import '../screens/widgets/price_text.dart';
 import 'apolo_badges_kit.dart';
+import 'dl_settings_kit.dart';
 
 /// Model for a suggested account or verified store card in Dynamic Layer Search (`33215:34358`).
 class ApoloSuggestedAccount {
@@ -100,9 +101,10 @@ class ApoloSuggestedAccount {
 
     for (final raw in stores) {
       if (raw is! Map) continue;
-      final id =
-          int.tryParse('${raw['user_id'] ?? raw['owner_id'] ?? raw['id'] ?? 0}') ??
-              0;
+      final id = int.tryParse(
+            '${raw['user_id'] ?? raw['owner_id'] ?? raw['id'] ?? 0}',
+          ) ??
+          0;
       final name = (raw['name'] ?? '').toString().trim();
       if (id <= 0 || name.isEmpty) continue;
       final subdomain = (raw['subdomain'] ?? '').toString().trim();
@@ -125,8 +127,9 @@ class ApoloSuggestedAccount {
 
     for (final raw in ads) {
       if (raw is! Map) continue;
-      final userMap =
-          raw['user'] is Map ? Map<String, dynamic>.from(raw['user'] as Map) : null;
+      final userMap = raw['user'] is Map
+          ? Map<String, dynamic>.from(raw['user'] as Map)
+          : null;
       final id = int.tryParse(
             '${raw['user_id'] ?? raw['seller_id'] ?? userMap?['id'] ?? 0}',
           ) ??
@@ -172,18 +175,22 @@ class ApoloSuggestedAccount {
   }
 }
 
-/// Dynamic Layer v5.1 Search Suggestions View (`33215:34358`):
-/// - `56px` top bar (`40×40` `#EEEEEE` `<` back button + centered `Search` title)
-/// - `48px` `#EEEEEE` pill search input (`Search for usernames`)
+/// Dynamic Layer v5.1 Search Suggestions View (`33215:34358`) with full Light & Dark Mode
+/// and Recent Searches history:
+/// - `56px` top bar (`40×40` `#EEEEEE` / `#222226` `<` back button + centered `Search` title)
+/// - `48px` `#EEEEEE` / `#222226` pill search input (`Search for usernames`)
 /// - `Suggestions` horizontal carousel of `148×196` rounded `20px` account cards
 ///   with `64×64` avatar/monogram, Name + `ApoloVerifiedBadge`, `@handle`, and
-///   live `Follow` (`#2997FF`) / `Followed` (`#EEEEEE`) button
-/// - Quick keyword & live listing suggestions below.
+///   live `Follow` (`#2997FF`) / `Followed` (`#EEEEEE` / `#222226`) button
+/// - Recent Searches (with 1-tap remove & Clear all) + Popular searches + Live Listing matches.
 class ApoloSearchSuggestionsView extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final List<ApoloSuggestedAccount> accounts;
   final List<Map<String, dynamic>> matchingAds;
+  final List<String> recentSearches;
+  final ValueChanged<String>? onRemoveRecentSearch;
+  final VoidCallback? onClearRecentSearches;
   final VoidCallback onBack;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitQuery;
@@ -194,15 +201,14 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
     required this.focusNode,
     required this.accounts,
     required this.matchingAds,
+    this.recentSearches = const <String>[],
+    this.onRemoveRecentSearch,
+    this.onClearRecentSearches,
     required this.onBack,
     required this.onChanged,
     required this.onSubmitQuery,
   });
 
-  static const Color _ink = Color(0xFF000000);
-  static const Color _pillGrey = Color(0xFFEEEEEE);
-  static const Color _muted = Color(0xFF757575);
-  static const Color _handleGrey = Color(0xFF9E9E9E);
   static const Color _followBlue = Color(0xFF2997FF);
 
   static List<String> _popularQueries(AppStrings s) {
@@ -237,6 +243,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppState();
     final s = state.s;
+    final palette = ApoloDlPalette.of(context);
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final rawQuery = controller.text.trim();
     final normQuery = rawQuery.toLowerCase().replaceFirst(RegExp(r'^@+'), '');
@@ -247,12 +254,13 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
             return acc.name.toLowerCase().contains(normQuery) ||
                 acc.handle.toLowerCase().contains(normQuery);
           }).toList();
-    final effectiveAccounts =
-        visibleAccounts.isNotEmpty ? visibleAccounts : accounts.take(4).toList();
+    final effectiveAccounts = visibleAccounts.isNotEmpty
+        ? visibleAccounts
+        : accounts.take(4).toList();
 
     return ColoredBox(
       key: const Key('dl-search-suggestions-screen'),
-      color: Colors.white,
+      color: palette.bg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -268,7 +276,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                     label: s.tr('رجوع', 'Retour', 'Back'),
                     child: Material(
                       key: const Key('dl-search-back-button'),
-                      color: _pillGrey,
+                      color: palette.pill,
                       shape: const CircleBorder(),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
@@ -286,7 +294,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                                   ? CupertinoIcons.chevron_forward
                                   : CupertinoIcons.chevron_back,
                               size: 19,
-                              color: _ink,
+                              color: palette.ink,
                             ),
                           ),
                         ),
@@ -300,10 +308,10 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: _ink,
+                        color: palette.ink,
                         letterSpacing: -0.2,
                       ),
                     ),
@@ -314,22 +322,22 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
             ),
           ),
 
-          // 2. Pill Search Bar (`48px` height, `#EEEEEE` fill)
+          // 2. Pill Search Bar (`48px` height, `#EEEEEE` / `#222226` fill)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: _pillGrey,
+                color: palette.pill,
                 borderRadius: BorderRadius.circular(999),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     CupertinoIcons.search,
                     size: 20,
-                    color: _muted,
+                    color: palette.muted,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -337,14 +345,14 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                       key: const Key('dl-search-input-field'),
                       controller: controller,
                       focusNode: focusNode,
-                      cursorColor: _ink,
+                      cursorColor: palette.ink,
                       textInputAction: TextInputAction.search,
                       onChanged: onChanged,
                       onSubmitted: onSubmitQuery,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w400,
-                        color: _ink,
+                        color: palette.ink,
                       ),
                       decoration: InputDecoration(
                         hintText: s.tr(
@@ -352,10 +360,10 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                           'Rechercher des pseudos ou annonces',
                           'Search for usernames',
                         ),
-                        hintStyle: const TextStyle(
+                        hintStyle: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
-                          color: _handleGrey,
+                          color: palette.subtle,
                         ),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -375,14 +383,14 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                         controller.clear();
                         onChanged('');
                       },
-                      child: const SizedBox(
+                      child: SizedBox(
                         width: 28,
                         height: 28,
                         child: Center(
                           child: Icon(
                             CupertinoIcons.clear_circled_solid,
                             size: 18,
-                            color: _handleGrey,
+                            color: palette.subtle,
                           ),
                         ),
                       ),
@@ -405,10 +413,10 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                     child: Text(
                       s.tr('اقتراحات', 'Suggestions', 'Suggestions'),
                       key: const Key('dl-search-suggestions-label'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
-                        color: _muted,
+                        color: palette.muted,
                       ),
                     ),
                   ),
@@ -428,6 +436,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                           account: acc,
                           isFollowed: isFollowed,
                           s: s,
+                          palette: palette,
                           onToggleFollow: () {
                             HapticFeedback.selectionClick();
                             state.toggleFollowSeller(acc.id);
@@ -466,8 +475,114 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                   ),
                 ],
 
-                // 4. Trending Queries (when input empty) OR Live Listing Matches (when typing)
+                // 4. Recent Searches + Popular Searches (when input empty) OR Live Listing Matches
                 if (rawQuery.isEmpty) ...[
+                  if (recentSearches.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              s.tr(
+                                'عمليات البحث الأخيرة',
+                                'Recherches récentes',
+                                'Recent searches',
+                              ),
+                              key: const Key('dl-recent-searches-label'),
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w500,
+                                color: palette.muted,
+                              ),
+                            ),
+                          ),
+                          if (onClearRecentSearches != null)
+                            GestureDetector(
+                              key: const Key('dl-recent-clear-all'),
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                onClearRecentSearches!();
+                              },
+                              child: Text(
+                                s.tr('مسح الكل', 'Effacer', 'Clear'),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: palette.ink,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    for (final item in recentSearches)
+                      InkWell(
+                        key: Key('dl-recent-query-$item'),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          controller.text = item;
+                          controller.selection = TextSelection.collapsed(
+                            offset: item.length,
+                          );
+                          onSubmitQuery(item);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: palette.pill,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  CupertinoIcons.clock,
+                                  size: 16,
+                                  color: palette.ink,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: palette.ink,
+                                  ),
+                                ),
+                              ),
+                              if (onRemoveRecentSearch != null)
+                                GestureDetector(
+                                  key: Key('dl-recent-remove-$item'),
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    onRemoveRecentSearch!(item);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Icon(
+                                      CupertinoIcons.xmark,
+                                      size: 14,
+                                      color: palette.subtle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 22, 16, 8),
                     child: Text(
@@ -476,10 +591,10 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                         'Recherches populaires',
                         'Popular searches',
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
-                        color: _muted,
+                        color: palette.muted,
                       ),
                     ),
                   ),
@@ -504,15 +619,15 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                             Container(
                               width: 34,
                               height: 34,
-                              decoration: const BoxDecoration(
-                                color: _pillGrey,
+                              decoration: BoxDecoration(
+                                color: palette.pill,
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
-                              child: const Icon(
+                              child: Icon(
                                 CupertinoIcons.search,
                                 size: 16,
-                                color: _ink,
+                                color: palette.ink,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -521,10 +636,10 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                                 suggestion,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w500,
-                                  color: _ink,
+                                  color: palette.ink,
                                 ),
                               ),
                             ),
@@ -533,7 +648,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                                   ? CupertinoIcons.arrow_up_left
                                   : CupertinoIcons.arrow_up_right,
                               size: 16,
-                              color: _handleGrey,
+                              color: palette.subtle,
                             ),
                           ],
                         ),
@@ -547,10 +662,10 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                         Expanded(
                           child: Text(
                             s.tr('الإعلانات المطابقة', 'Annonces', 'Listings'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w500,
-                              color: _muted,
+                              color: palette.muted,
                             ),
                           ),
                         ),
@@ -582,15 +697,15 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                           Container(
                             width: 38,
                             height: 38,
-                            decoration: const BoxDecoration(
-                              color: _pillGrey,
+                            decoration: BoxDecoration(
+                              color: palette.pill,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
-                            child: const Icon(
+                            child: Icon(
                               CupertinoIcons.search,
                               size: 17,
-                              color: _ink,
+                              color: palette.ink,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -599,10 +714,10 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                               '${s.tr('البحث عن', 'Rechercher', 'Search')} "$rawQuery"',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.w600,
-                                color: _ink,
+                                color: palette.ink,
                               ),
                             ),
                           ),
@@ -611,7 +726,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                     ),
                   ),
                   for (final ad in matchingAds.take(5))
-                    _QuickAdSuggestionTile(ad: ad, s: s),
+                    _QuickAdSuggestionTile(ad: ad, palette: palette),
                 ],
               ],
             ),
@@ -626,6 +741,7 @@ class _SuggestedAccountCard extends StatelessWidget {
   final ApoloSuggestedAccount account;
   final bool isFollowed;
   final AppStrings s;
+  final ApoloDlPalette palette;
   final VoidCallback onToggleFollow;
   final VoidCallback onOpenProfile;
 
@@ -633,6 +749,7 @@ class _SuggestedAccountCard extends StatelessWidget {
     required this.account,
     required this.isFollowed,
     required this.s,
+    required this.palette,
     required this.onToggleFollow,
     required this.onOpenProfile,
   });
@@ -643,17 +760,17 @@ class _SuggestedAccountCard extends StatelessWidget {
     return Container(
       width: 64,
       height: 64,
-      decoration: const BoxDecoration(
-        color: Color(0xFFEEEEEE),
+      decoration: BoxDecoration(
+        color: palette.pill,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: Text(
         letter,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF000000),
+          color: palette.ink,
         ),
       ),
     );
@@ -662,6 +779,7 @@ class _SuggestedAccountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatar = account.avatarUrl?.trim() ?? '';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       key: Key('dl-suggestion-card-${account.id}'),
@@ -670,10 +788,10 @@ class _SuggestedAccountCard extends StatelessWidget {
         width: 148,
         padding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? palette.surfaceSubtle : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFFEEEEEE),
+            color: palette.separator,
             width: 1.0,
           ),
         ),
@@ -700,10 +818,10 @@ class _SuggestedAccountCard extends StatelessWidget {
                     account.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF000000),
+                      color: palette.ink,
                       letterSpacing: -0.2,
                     ),
                   ),
@@ -720,10 +838,10 @@ class _SuggestedAccountCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textDirection: TextDirection.ltr,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF9E9E9E),
+                color: palette.subtle,
               ),
             ),
             const Spacer(),
@@ -735,9 +853,7 @@ class _SuggestedAccountCard extends StatelessWidget {
                   : 'Follow ${account.name}',
               child: Material(
                 key: Key('dl-suggestion-follow-${account.id}'),
-                color: isFollowed
-                    ? const Color(0xFFEEEEEE)
-                    : const Color(0xFF2997FF),
+                color: isFollowed ? palette.pill : const Color(0xFF2997FF),
                 borderRadius: BorderRadius.circular(999),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -755,9 +871,7 @@ class _SuggestedAccountCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isFollowed
-                              ? const Color(0xFF000000)
-                              : Colors.white,
+                          color: isFollowed ? palette.ink : Colors.white,
                         ),
                       ),
                     ),
@@ -774,11 +888,11 @@ class _SuggestedAccountCard extends StatelessWidget {
 
 class _QuickAdSuggestionTile extends StatelessWidget {
   final Map<String, dynamic> ad;
-  final AppStrings s;
+  final ApoloDlPalette palette;
 
   const _QuickAdSuggestionTile({
     required this.ad,
-    required this.s,
+    required this.palette,
   });
 
   @override
@@ -797,8 +911,8 @@ class _QuickAdSuggestionTile extends StatelessWidget {
           ? (first['url'] ?? first['image_path'] ?? '').toString()
           : first.toString();
     } else {
-      imgUrl =
-          (ad['main_image'] ?? ad['primary_image'] ?? ad['image'] ?? '').toString();
+      imgUrl = (ad['main_image'] ?? ad['primary_image'] ?? ad['image'] ?? '')
+          .toString();
     }
 
     return InkWell(
@@ -825,11 +939,11 @@ class _QuickAdSuggestionTile extends StatelessWidget {
                 child: imgUrl.isNotEmpty
                     ? AppImage(url: imgUrl, fit: BoxFit.cover)
                     : Container(
-                        color: const Color(0xFFEEEEEE),
-                        child: const Icon(
+                        color: palette.pill,
+                        child: Icon(
                           CupertinoIcons.photo,
                           size: 18,
-                          color: Color(0xFF9E9E9E),
+                          color: palette.subtle,
                         ),
                       ),
               ),
@@ -843,19 +957,19 @@ class _QuickAdSuggestionTile extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF000000),
+                      color: palette.ink,
                     ),
                   ),
                   if (priceFormatted.isNotEmpty)
                     PriceText(
                       priceFormatted,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF757575),
+                        color: palette.muted,
                       ),
                     ),
                 ],

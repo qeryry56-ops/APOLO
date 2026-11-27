@@ -2,12 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../widgets/apolo_search_suggestions_view.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
+import 'widgets/ad_card.dart';
 import 'widgets/app_image.dart';
 import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
@@ -49,11 +51,15 @@ class _SearchScreenState extends State<SearchScreen>
   bool _onlyNegotiable = false;
   String _sortBy = 'smart';
 
+  static const String _recentSearchesPrefsKey = 'apolo_recent_searches_v1';
+
   List<dynamic> _rawAds = [];
   List<Map<String, dynamic>> _ads = [];
   List<dynamic> _suggestedStores = [];
+  List<String> _recentSearches = [];
   bool _loading = true;
   bool _isSearchModeActive = false;
+  bool _compactGrid = false;
   bool _chromeVisible = true;
   double _accumulatedScrollDelta = 0.0;
   String? _lastZoneSignature;
@@ -88,6 +94,7 @@ class _SearchScreenState extends State<SearchScreen>
     _state.tabReselectCounter.addListener(_scrollToTop);
     _lastZoneSignature =
         '${_state.zoneFilterEnabled}_${_state.userLat}_${_state.userLng}_${_state.zoneRadiusKm}';
+    _loadRecentSearches();
     _searchAds();
     _loadSuggestedStores();
     if (_isSearchModeActive) {
@@ -124,6 +131,54 @@ class _SearchScreenState extends State<SearchScreen>
       setState(() => _isSearchModeActive = false);
     }
     _setChromeVisible(true);
+  }
+
+  Future<void> _loadRecentSearches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList(_recentSearchesPrefsKey) ?? const [];
+      if (!mounted) return;
+      setState(() {
+        _recentSearches = saved
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .take(6)
+            .toList();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _recordRecentSearch(String raw) async {
+    final cleaned = raw.trim();
+    if (cleaned.isEmpty) return;
+    final updated = <String>[
+      cleaned,
+      ..._recentSearches.where(
+        (item) => item.toLowerCase() != cleaned.toLowerCase(),
+      ),
+    ].take(6).toList();
+    setState(() => _recentSearches = updated);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_recentSearchesPrefsKey, updated);
+    } catch (_) {}
+  }
+
+  Future<void> _removeRecentSearch(String query) async {
+    final updated = _recentSearches.where((item) => item != query).toList();
+    setState(() => _recentSearches = updated);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_recentSearchesPrefsKey, updated);
+    } catch (_) {}
+  }
+
+  Future<void> _clearRecentSearches() async {
+    setState(() => _recentSearches = const []);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_recentSearchesPrefsKey);
+    } catch (_) {}
   }
 
   Future<void> _loadSuggestedStores() async {
@@ -329,6 +384,13 @@ class _SearchScreenState extends State<SearchScreen>
           return pa.compareTo(pb);
         });
         break;
+      case 'price_desc':
+        filtered.sort((a, b) {
+          final pa = double.tryParse((a['price'] ?? 0).toString()) ?? 0;
+          final pb = double.tryParse((b['price'] ?? 0).toString()) ?? 0;
+          return pb.compareTo(pa);
+        });
+        break;
       case 'popular':
         filtered.sort((a, b) {
           final va =
@@ -366,79 +428,142 @@ class _SearchScreenState extends State<SearchScreen>
     {
       'id': 9101,
       'title': 'Casa Oliva Villa',
-      'badge_label': 'Villa',
-      'highlight_label': 'Guest favorite',
-      'is_guest_favorite': true,
-      'rating': '4.8',
+      'category_id': 2,
+      'city_id': 3,
+      'category': {'id': 2, 'name_ar': 'عقارات', 'name_fr': 'Immobilier'},
+      'city': {'id': 3, 'name_ar': 'مراكش', 'name_fr': 'Marrakech'},
+      'is_vip': true,
+      'negotiable': true,
+      'rating': '4.9',
       'reviews_count': 126,
-      'specs_display': 'Cascais, 14 km · 3 bedrooms · Pool',
-      'free_cancellation': true,
-      'price': 233,
-      'total_price_display': '\$933',
-      'total_unit_label': 'total',
-      'nightly_price_display': '\$233 / night · taxes incl.',
+      'views_count': 340,
+      'seller_name': 'Casa Immobilier',
+      'seller_verified': true,
+      'description': 'Villa contemporaine 4 chambres avec piscine chauffée à Marrakech Palmeraie.',
+      'price': 2450000,
+      'price_formatted': '2 450 000 DH',
       'main_image':
           'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1000&q=80',
       'images': [
         'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1000&q=80',
         'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80',
         'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1000&q=80',
       ],
     },
     {
       'id': 9102,
-      'title': 'Dar Sol Palmeraie',
-      'badge_label': 'Riad',
-      'highlight_label': 'Guest favorite',
-      'is_guest_favorite': true,
+      'title': 'Mercedes-Benz Classe C 220d AMG',
+      'category_id': 1,
+      'city_id': 1,
+      'category': {'id': 1, 'name_ar': 'وسائل النقل', 'name_fr': 'Véhicules'},
+      'city': {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
+      'is_vip': true,
+      'negotiable': true,
       'rating': '4.9',
-      'reviews_count': 84,
-      'specs_display': 'Marrakech, 8 km · 4 bedrooms · Heated pool',
-      'free_cancellation': true,
-      'price': 195,
-      'total_price_display': '\$780',
-      'total_unit_label': 'total',
-      'nightly_price_display': '\$195 / night · taxes incl.',
+      'reviews_count': 94,
+      'views_count': 512,
+      'seller_name': 'Apolo Motors',
+      'seller_verified': true,
+      'description': 'Modèle 2023 · Boîte auto · Toit panoramique · 1ère main Maroc.',
+      'price': 385000,
+      'price_formatted': '385 000 DH',
       'main_image':
-          'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80',
       'images': [
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1617531653332-bd46c24f2068?auto=format&fit=crop&w=1000&q=80',
       ],
     },
     {
       'id': 9103,
-      'title': 'Oceanview Cedar Villa',
-      'badge_label': 'Villa',
-      'highlight_label': 'Guest favorite',
-      'is_guest_favorite': true,
-      'rating': '4.7',
-      'reviews_count': 92,
-      'specs_display': 'Taghazout, 3 km · 2 bedrooms · Terrace',
-      'free_cancellation': true,
-      'price': 168,
-      'total_price_display': '\$672',
-      'total_unit_label': 'total',
-      'nightly_price_display': '\$168 / night · taxes incl.',
+      'title': 'iPhone 16 Pro Max 256GB Natural Titanium',
+      'category_id': 4,
+      'city_id': 2,
+      'category': {'id': 4, 'name_ar': 'هواتف وتقنية', 'name_fr': 'Téléphones'},
+      'city': {'id': 2, 'name_ar': 'الرباط', 'name_fr': 'Rabat'},
+      'is_featured': true,
+      'negotiable': false,
+      'rating': '4.8',
+      'reviews_count': 78,
+      'views_count': 289,
+      'seller_name': 'Tech Store Rabat',
+      'seller_verified': true,
+      'description': 'Neuf scellé avec garantie officielle 12 mois · Batterie 100%.',
+      'price': 13900,
+      'price_formatted': '13 900 DH',
       'main_image':
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1000&q=80',
       'images': [
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1000&q=80',
+      ],
+    },
+    {
+      'id': 9104,
+      'title': 'MacBook Pro 14" M3 Pro · 18GB / 512GB SSD',
+      'category_id': 3,
+      'city_id': 4,
+      'category': {'id': 3, 'name_ar': 'إعلاميات وتقنية', 'name_fr': 'Informatique'},
+      'city': {'id': 4, 'name_ar': 'طنجة', 'name_fr': 'Tanger'},
+      'negotiable': true,
+      'rating': '4.9',
+      'reviews_count': 53,
+      'views_count': 198,
+      'seller_name': 'Yassine Pro',
+      'seller_verified': true,
+      'description': 'État neuf · 14 cycles batterie · Chargeur MagSafe 70W original.',
+      'price': 21500,
+      'price_formatted': '21 500 DH',
+      'main_image':
+          'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80',
+      'images': [
+        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1000&q=80',
+      ],
+    },
+    {
+      'id': 9105,
+      'title': 'Salon Marocain Moderne Bois Hêtre',
+      'category_id': 5,
+      'city_id': 5,
+      'category': {'id': 5, 'name_ar': 'أثاث وديكور', 'name_fr': 'Maison & Déco'},
+      'city': {'id': 5, 'name_ar': 'أكادير', 'name_fr': 'Agadir'},
+      'negotiable': true,
+      'rating': '4.7',
+      'reviews_count': 41,
+      'views_count': 142,
+      'seller_name': 'Dar Déco',
+      'seller_verified': false,
+      'description': 'Salon complet sur mesure avec table centrale et coussins anti-taches.',
+      'price': 9800,
+      'price_formatted': '9 800 DH',
+      'main_image':
+          'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=80',
+      'images': [
+        'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=80',
+      ],
+    },
+    {
+      'id': 9106,
+      'title': 'Montre Tissot PRX Powermatic 80',
+      'category_id': 6,
+      'city_id': 6,
+      'category': {'id': 6, 'name_ar': 'أزياء وجمال', 'name_fr': 'Mode & Beauté'},
+      'city': {'id': 6, 'name_ar': 'فاس', 'name_fr': 'Fès'},
+      'negotiable': false,
+      'rating': '4.8',
+      'reviews_count': 62,
+      'views_count': 176,
+      'seller_name': 'Karim Horlogerie',
+      'seller_verified': true,
+      'description': 'Authentique avec coffret et carte de garantie internationale.',
+      'price': 6400,
+      'price_formatted': '6 400 DH',
+      'main_image':
+          'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1000&q=80',
+      'images': [
+        'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1000&q=80',
       ],
     },
   ];
-
-  bool get _hasActiveQueryOrFilters =>
-      _categoryId != null ||
-      _cityId != null ||
-      _minPrice != null ||
-      _maxPrice != null ||
-      _onlyNegotiable ||
-      _queryCtrl.text.trim().isNotEmpty;
 
   Future<void> _searchAds() async {
     setState(() {
@@ -473,7 +598,7 @@ class _SearchScreenState extends State<SearchScreen>
     } catch (_) {}
     if (mounted) {
       final fallbackSource =
-          _hasActiveQueryOrFilters ? const [] : _fallbackExploreListings;
+          _rawAds.isNotEmpty ? _rawAds : _fallbackExploreListings;
       _rawAds = fallbackSource;
       setState(() {
         _ads = _filterAndSortAds(fallbackSource);
@@ -558,6 +683,10 @@ class _SearchScreenState extends State<SearchScreen>
       (
         key: 'price_asc',
         label: s.tr('الأقل ثمناً', 'Prix croissant', 'Lowest price'),
+      ),
+      (
+        key: 'price_desc',
+        label: s.tr('الأعلى ثمناً', 'Prix décroissant', 'Highest price'),
       ),
       (
         key: 'popular',
@@ -1435,7 +1564,8 @@ class _SearchScreenState extends State<SearchScreen>
                                 _ads = _filterAndSortAds(_rawAds);
                               });
                             },
-                            onSubmitted: (_) {
+                            onSubmitted: (val) {
+                              _recordRecentSearch(val);
                               _exitSearchMode();
                               _searchAds();
                             },
@@ -1663,11 +1793,142 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
+  String _sortShortLabel(AppStrings s) {
+    switch (_sortBy) {
+      case 'newest':
+        return s.tr('الأحدث', 'Plus récents', 'Newest');
+      case 'price_asc':
+        return s.tr('الأقل ثمناً', 'Prix croissant', 'Lowest price');
+      case 'price_desc':
+        return s.tr('الأعلى ثمناً', 'Prix décroissant', 'Highest price');
+      case 'popular':
+        return s.tr('الأكثر مشاهدة', 'Populaires', 'Most viewed');
+      default:
+        return s.tr('مقترح لك', 'Recommandé', 'Recommended');
+    }
+  }
+
+  String? _selectedCityLabel(AppStrings s) {
+    if (_cityId == null) return null;
+    for (final c in _effectiveCities) {
+      if (int.tryParse('${c['id']}') == _cityId) {
+        return (s.isAr
+                ? (c['name_ar'] ?? c['name'])
+                : (s.isEn
+                    ? (c['name_en'] ?? c['name_fr'] ?? c['name'])
+                    : (c['name_fr'] ?? c['name'])))
+            .toString();
+      }
+    }
+    return null;
+  }
+
+  Widget _buildActiveFilterChip({
+    required Key chipKey,
+    required String label,
+    required VoidCallback onRemove,
+  }) {
+    return GestureDetector(
+      key: chipKey,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onRemove();
+      },
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 11),
+        decoration: BoxDecoration(
+          color: _dlPill,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _dlInk,
+                ),
+              ),
+            ),
+            const SizedBox(width: 5),
+            Icon(
+              CupertinoIcons.xmark,
+              size: 11,
+              color: _dlMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _state.s;
     final canPop = Navigator.of(context).canPop();
     final filterCount = _activeFilterCount;
+    final cityChipLabel = _selectedCityLabel(s);
+    final hasPriceRange = _minPrice != null || _maxPrice != null;
+    final activeChips = <Widget>[
+      if (_queryCtrl.text.trim().isNotEmpty)
+        _buildActiveFilterChip(
+          chipKey: const Key('explore-chip-query'),
+          label: '"${_queryCtrl.text.trim()}"',
+          onRemove: () {
+            _queryCtrl.clear();
+            _searchAds();
+          },
+        ),
+      if (cityChipLabel != null)
+        _buildActiveFilterChip(
+          chipKey: const Key('explore-chip-city'),
+          label: cityChipLabel,
+          onRemove: () {
+            setState(() => _cityId = null);
+            _searchAds();
+          },
+        ),
+      if (hasPriceRange)
+        _buildActiveFilterChip(
+          chipKey: const Key('explore-chip-price'),
+          label: _minPrice != null && _maxPrice != null
+              ? '${_minPrice!.toInt()}–${_maxPrice!.toInt()} DH'
+              : (_minPrice != null
+                  ? '≥ ${_minPrice!.toInt()} DH'
+                  : '≤ ${_maxPrice!.toInt()} DH'),
+          onRemove: () {
+            setState(() {
+              _minPrice = null;
+              _maxPrice = null;
+            });
+            _searchAds();
+          },
+        ),
+      if (_onlyNegotiable)
+        _buildActiveFilterChip(
+          chipKey: const Key('explore-chip-negotiable'),
+          label: s.tr('قابل للتفاوض', 'Négociable', 'Negotiable'),
+          onRemove: () {
+            setState(() => _onlyNegotiable = false);
+            _searchAds();
+          },
+        ),
+      if (_sortBy != 'smart')
+        _buildActiveFilterChip(
+          chipKey: const Key('explore-chip-sort'),
+          label: _sortShortLabel(s),
+          onRemove: () {
+            setState(() => _sortBy = 'smart');
+            _searchAds();
+          },
+        ),
+    ];
     const double headerExtent = 64.0 + 54.0;
 
     return Scaffold(
@@ -1681,13 +1942,17 @@ class _SearchScreenState extends State<SearchScreen>
                 focusNode: _searchFocus,
                 accounts: _effectiveSuggestedAccounts,
                 matchingAds: _ads,
+                recentSearches: _recentSearches,
+                onRemoveRecentSearch: _removeRecentSearch,
+                onClearRecentSearches: _clearRecentSearches,
                 onBack: _exitSearchMode,
                 onChanged: (_) {
                   setState(() {
                     _ads = _filterAndSortAds(_rawAds);
                   });
                 },
-                onSubmitQuery: (_) {
+                onSubmitQuery: (val) {
+                  _recordRecentSearch(val);
                   _exitSearchMode();
                   _searchAds();
                 },
@@ -1721,6 +1986,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 filterCount,
                                 _queryCtrl.text,
                                 _effectiveCategories.length,
+                                Theme.of(context).brightness,
                               ),
                               child: _buildHeaderContent(
                                 context,
@@ -1733,65 +1999,140 @@ class _SearchScreenState extends State<SearchScreen>
                           SliverToBoxAdapter(
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  MarketplaceZonePill(
-                                    state: _state,
-                                    compact: true,
-                                    onTap: () =>
-                                        showMarketplaceZoneSheet(context),
-                                  ),
-                                  const Spacer(),
-                                  if (_state.hasActiveZone)
-                                    GestureDetector(
-                                      onTap: () => _state.clearZoneFilter(),
-                                      child: Text(
-                                        s.tr(
-                                          'كل المغرب',
-                                          'Tout voir',
-                                          'All areas',
-                                        ),
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: _dlInk,
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: MarketplaceZonePill(
+                                          state: _state,
+                                          compact: true,
+                                          onTap: () =>
+                                              showMarketplaceZoneSheet(context),
                                         ),
                                       ),
-                                    )
-                                  else
-                                    GestureDetector(
-                                      onTap: () =>
-                                          showMarketplaceZoneSheet(context),
-                                      child: Text(
-                                        s.tr(
-                                          'حدد منطقتك',
-                                          'Choisir zone',
-                                          'Set area',
+                                      const Spacer(),
+                                      if (_state.hasActiveZone)
+                                        GestureDetector(
+                                          onTap: () => _state.clearZoneFilter(),
+                                          child: Text(
+                                            s.tr(
+                                              'كل المغرب',
+                                              'Tout voir',
+                                              'All areas',
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: _dlInk,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        GestureDetector(
+                                          onTap: () =>
+                                              showMarketplaceZoneSheet(context),
+                                          child: Text(
+                                            s.tr(
+                                              'حدد منطقتك',
+                                              'Choisir zone',
+                                              'Set area',
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: _dlMuted,
+                                            ),
+                                          ),
                                         ),
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: _dlMuted,
+                                      if (!isWide) ...[
+                                        const SizedBox(width: 10),
+                                        Semantics(
+                                          button: true,
+                                          label: _compactGrid
+                                              ? s.tr(
+                                                  'عرض البطاقات الكبيرة',
+                                                  'Vue détaillée',
+                                                  'Feed view',
+                                                )
+                                              : s.tr(
+                                                  'عرض الشبكة',
+                                                  'Vue grille',
+                                                  'Grid view',
+                                                ),
+                                          child: PressableScale(
+                                            key: const Key(
+                                              'dl-explore-view-toggle',
+                                            ),
+                                            onTap: () {
+                                              HapticFeedback.selectionClick();
+                                              setState(
+                                                () =>
+                                                    _compactGrid = !_compactGrid,
+                                              );
+                                            },
+                                            child: Container(
+                                              width: 32,
+                                              height: 32,
+                                              decoration: BoxDecoration(
+                                                color: _compactGrid
+                                                    ? _dlInk
+                                                    : _dlPill,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              alignment: Alignment.center,
+                                              child: Icon(
+                                                _compactGrid
+                                                    ? CupertinoIcons
+                                                        .rectangle_grid_1x2
+                                                    : CupertinoIcons
+                                                        .rectangle_grid_2x2,
+                                                size: 15.5,
+                                                color: _compactGrid
+                                                    ? _dlOnInk
+                                                    : _dlInk,
+                                              ),
+                                            ),
+                                          ),
                                         ),
+                                      ],
+                                    ],
+                                  ),
+                                  if (activeChips.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      key: const Key(
+                                        'dl-explore-active-filters-row',
+                                      ),
+                                      height: 30,
+                                      child: ListView.separated(
+                                        scrollDirection: Axis.horizontal,
+                                        physics: const BouncingScrollPhysics(),
+                                        itemCount: activeChips.length,
+                                        separatorBuilder: (_, __) =>
+                                            const SizedBox(width: 8),
+                                        itemBuilder: (_, idx) =>
+                                            activeChips[idx],
                                       ),
                                     ),
+                                  ],
                                 ],
                               ),
                             ),
                           ),
                           if (_loading)
-                            const SliverFillRemaining(
+                            SliverFillRemaining(
                               hasScrollBody: true,
-                              child: SearchGridSkeleton(isGrid: false),
+                              child: SearchGridSkeleton(isGrid: _compactGrid),
                             )
                           else if (_ads.isEmpty)
                             SliverFillRemaining(
                               hasScrollBody: false,
-                              child: IllustratedStateView(
-                                assetPath: 'assets/images/state_empty_ads.png',
-                                imageSize: 156,
-                                title: s.noAdsFound,
-                                subtitle: _state.hasActiveZone
+                              child: ApoloDlEmptyState(
+                                icon: CupertinoIcons.search,
+                                headline: s.noAdsFound,
+                                description: _state.hasActiveZone
                                     ? s.tr(
                                         'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)}. يمكنك توسيع النطاق أو عرض كل المغرب.',
                                         'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km.',
@@ -1854,6 +2195,34 @@ class _SearchScreenState extends State<SearchScreen>
                                       'search_wide_${ad['id']}_$_sortBy',
                                     ),
                                     child: ExploreListingCard(ad: ad),
+                                  );
+                                },
+                              ),
+                            )
+                          else if (_compactGrid)
+                            SliverPadding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(20, 8, 20, 132),
+                              sliver: SliverGrid.builder(
+                                key: const Key('dl-explore-compact-grid'),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 0.72,
+                                ),
+                                itemCount: _ads.length + (_loadingMore ? 2 : 0),
+                                itemBuilder: (context, idx) {
+                                  if (idx >= _ads.length) {
+                                    return const AdGridCardSkeleton();
+                                  }
+                                  final ad = _ads[idx];
+                                  return RepaintBoundary(
+                                    key: ValueKey(
+                                      'search_compact_${ad['id']}_$_sortBy',
+                                    ),
+                                    child: AdCard(ad: ad),
                                   );
                                 },
                               ),
@@ -1929,7 +2298,7 @@ class _ExploreFloatingHeaderDelegate extends SliverPersistentHeaderDelegate {
     final visibleFraction =
         ((extent - shrinkOffset) / extent).clamp(0.0, 1.0);
     return Material(
-      color: Colors.white,
+      color: ApoloDlPalette.of(context).bg,
       child: ClipRect(
         child: OverflowBox(
           minHeight: extent,
@@ -1964,6 +2333,7 @@ class _ModalFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = ApoloDlPalette.of(context);
     return PressableScale(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -1978,7 +2348,7 @@ class _ModalFilterChip extends StatelessWidget {
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: active ? Colors.black : const Color(0xFFEEEEEE),
+              color: active ? palette.ink : palette.pill,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -1986,7 +2356,7 @@ class _ModalFilterChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                color: active ? Colors.white : Colors.black,
+                color: active ? palette.onInk : palette.ink,
               ),
             ),
           ),

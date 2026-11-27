@@ -4,6 +4,9 @@ import 'dart:typed_data';
 
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/search_screen.dart';
+import 'package:apolo_mobile/screens/widgets/ad_card.dart';
+import 'package:apolo_mobile/screens/widgets/explore_listing_card.dart';
+import 'package:apolo_mobile/theme/app_theme.dart';
 import 'package:apolo_mobile/widgets/apolo_badges_kit.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -161,4 +164,91 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     },
   );
+
+  testWidgets(
+    'Explore v2 supports Recent Searches, dismissible active filter chips, Feed/Grid switcher, and Dark Mode',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Use network failure adapter so curated Moroccan Explore catalog loads
+      state.api.dio = Dio(BaseOptions(baseUrl: 'https://offline.invalid'))
+        ..httpClientAdapter = _FailingSearchAdapter();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const Locale('en')),
+          darkTheme: AppTheme.dark(const Locale('en')),
+          themeMode: ThemeMode.dark,
+          home: const SearchScreen(),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ExploreListingCard), findsWidgets);
+      expect(find.byType(AdCard), findsNothing);
+
+      // Toggle from full-width Feed to 2-column Compact Grid and back
+      await tester.tap(find.byKey(const Key('dl-explore-view-toggle')));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byKey(const Key('dl-explore-compact-grid')), findsOneWidget);
+      expect(find.byType(AdCard), findsWidgets);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const Key('dl-explore-view-toggle')));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byType(ExploreListingCard), findsWidgets);
+
+      // Enter Search Suggestions in Dark Mode and submit a query -> saves to Recent searches & shows active chip
+      await tester.tap(find.byKey(const Key('explore-search-bar-field')));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byKey(const Key('dl-search-suggestions-screen')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('dl-search-input-field')),
+        'Mercedes',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // Active query chip is shown and dismissible
+      expect(find.byKey(const Key('explore-chip-query')), findsOneWidget);
+      expect(find.text('Mercedes-Benz Classe C 220d AMG'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('explore-chip-query')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const Key('explore-chip-query')), findsNothing);
+
+      // Re-opening Search Suggestions displays 'Mercedes' under Recent searches and allows clearing
+      await tester.tap(find.byKey(const Key('explore-search-bar-field')));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byKey(const Key('dl-recent-searches-label')), findsOneWidget);
+      expect(find.byKey(const Key('dl-recent-query-Mercedes')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('dl-recent-clear-all')));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byKey(const Key('dl-recent-query-Mercedes')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
+
+class _FailingSearchAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    throw DioException.connectionError(
+      requestOptions: options,
+      reason: 'offline',
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

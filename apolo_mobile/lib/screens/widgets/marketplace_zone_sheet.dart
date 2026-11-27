@@ -24,13 +24,10 @@ class MarketplaceZonePill extends StatelessWidget {
     this.compact = false,
   });
 
-  static const Color _ink = Color(0xFF000000);
-  static const Color _activeFill = Color(0xFF000000);
-  static const Color _inactiveFill = Color(0xFFEEEEEE);
-
   @override
   Widget build(BuildContext context) {
     final s = state.s;
+    final palette = ApoloDlPalette.of(context);
     final active = state.hasActiveZone;
     final label = active
         ? state.activeZoneBadgeLabel(s)
@@ -46,7 +43,7 @@ class MarketplaceZonePill extends StatelessWidget {
         height: compact ? 32 : 36,
         padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
         decoration: BoxDecoration(
-          color: active ? _activeFill : _inactiveFill,
+          color: active ? palette.ink : palette.pill,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -55,7 +52,7 @@ class MarketplaceZonePill extends StatelessWidget {
             Icon(
               CupertinoIcons.location_solid,
               size: compact ? 12.5 : 13.5,
-              color: active ? Colors.white : _ink,
+              color: active ? palette.onInk : palette.ink,
             ),
             const SizedBox(width: 5),
             Flexible(
@@ -66,7 +63,7 @@ class MarketplaceZonePill extends StatelessWidget {
                 style: TextStyle(
                   fontSize: compact ? 11.5 : 12.5,
                   fontWeight: FontWeight.w700,
-                  color: active ? Colors.white : _ink,
+                  color: active ? palette.onInk : palette.ink,
                 ),
               ),
             ),
@@ -74,7 +71,9 @@ class MarketplaceZonePill extends StatelessWidget {
             Icon(
               CupertinoIcons.chevron_down,
               size: compact ? 10.5 : 11.5,
-              color: active ? Colors.white70 : const Color(0xFF757575),
+              color: active
+                  ? palette.onInk.withValues(alpha: 0.72)
+                  : palette.muted,
             ),
           ],
         ),
@@ -86,12 +85,13 @@ class MarketplaceZonePill extends StatelessWidget {
 /// Opens the Dynamic Layer v5.1 Marketplace Zone & Radius Bottom Sheet.
 Future<bool?> showMarketplaceZoneSheet(BuildContext context) {
   final state = AppState();
+  final palette = ApoloDlPalette.of(context);
   HapticFeedback.selectionClick();
 
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: palette.bg,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -114,11 +114,12 @@ class MarketplaceZoneContent extends StatefulWidget {
 }
 
 class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
 
   late double _lat;
   late double _lng;
@@ -281,7 +282,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                             'Zone des annonces',
                             'Marketplace Location',
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18.5,
                             fontWeight: FontWeight.w800,
                             color: _dlInk,
@@ -294,7 +295,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                             'Affichez uniquement les annonces autour de votre zone',
                             'Only see listings inside your local area',
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
                             color: _dlMuted,
                           ),
@@ -324,7 +325,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           Icon(
                             CupertinoIcons.globe,
                             size: 13.5,
-                            color: _allMorocco ? Colors.white : _dlInk,
+                            color: _allMorocco ? _dlOnInk : _dlInk,
                           ),
                           const SizedBox(width: 5),
                           Text(
@@ -332,7 +333,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: _allMorocco ? Colors.white : _dlInk,
+                              color: _allMorocco ? _dlOnInk : _dlInk,
                             ),
                           ),
                         ],
@@ -363,7 +364,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           CupertinoIcons.search,
                           size: 16,
                           color: _dlMuted,
@@ -388,7 +389,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                               controller: _searchCtrl,
                               onChanged: _onSearchChanged,
                               cursorColor: _dlInk,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w500,
                                 color: _dlInk,
@@ -407,7 +408,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                   'Rechercher un quartier, une ville...',
                                   'Search neighborhood, city, address...',
                                 ),
-                                hintStyle: const TextStyle(
+                                hintStyle: TextStyle(
                                   fontSize: 13,
                                   color: _dlMuted,
                                   fontWeight: FontWeight.w400,
@@ -427,7 +428,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                 _searching = false;
                               });
                             },
-                            child: const Icon(
+                            child: Icon(
                               CupertinoIcons.xmark_circle_fill,
                               size: 17,
                               color: _dlMuted,
@@ -476,7 +477,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       CupertinoIcons.location_solid,
                                       size: 14,
                                       color: _dlInk,
@@ -491,7 +492,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                             _searchResults[i].title,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700,
                                               color: _dlInk,
@@ -504,7 +505,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                               _searchResults[i].subtitle,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 11.5,
                                                 color: _dlMuted,
                                               ),
@@ -562,7 +563,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             CupertinoIcons.location_solid,
                             size: 12,
                             color: _dlInk,
@@ -572,7 +573,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                             _allMorocco
                                 ? s.tr('نطاق مفتوح', 'Sans limite', 'Nationwide')
                                 : '$activeCityLabel · ${_radiusKm.round()} ${s.tr("كم", "km", "km")}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               color: _dlInk,
@@ -599,7 +600,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           if (_detecting)
                             const CupertinoActivityIndicator(radius: 8)
                           else
-                            const Icon(
+                            Icon(
                               CupertinoIcons.location_fill,
                               size: 16,
                               color: _dlInk,
@@ -614,7 +615,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: _dlInk,
@@ -654,7 +655,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: _dlInk,
@@ -670,7 +671,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                 'All of Morocco',
                               )
                             : '${_radiusKm.round()} ${s.tr("كم", "km", "km")}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: _dlInk,
@@ -710,7 +711,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: selected ? Colors.white : _dlInk,
+                                  color: selected ? _dlOnInk : _dlInk,
                                 ),
                               ),
                             ),
@@ -724,7 +725,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                   const SizedBox(height: 14),
                   Text(
                     s.tr('اختر المدينة', 'Choisir une ville', 'Select city'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: _dlInk,
@@ -771,7 +772,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: selected ? Colors.white : _dlInk,
+                                color: selected ? _dlOnInk : _dlInk,
                               ),
                             ),
                           ),
@@ -824,10 +825,10 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                 alignment: Alignment.center,
                 child: Text(
                   s.tr('تطبيق المنطقة', 'Appliquer la zone', 'Apply zone'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15.5,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: _dlOnInk,
                   ),
                 ),
               ),
@@ -845,7 +846,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
     }
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _dlBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
