@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../widgets/apolo_badges_kit.dart';
+import '../widgets/apolo_infeed_upgrade_card.dart';
 import '../widgets/apolo_search_suggestions_view.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
@@ -2310,10 +2311,17 @@ class _SearchScreenState extends State<SearchScreen>
                                 },
                               ),
                             )
-                          else if (_compactGrid)
+                          else if (_compactGrid) ...[
                             SliverPadding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(20, 8, 20, 132),
+                              padding: EdgeInsets.fromLTRB(
+                                20,
+                                8,
+                                20,
+                                _state.shouldShowInFeedUpgradePromo &&
+                                        _queryCtrl.text.trim().isEmpty
+                                    ? 16
+                                    : 132,
+                              ),
                               sliver: SliverGrid.builder(
                                 key: const Key('dl-explore-compact-grid'),
                                 gridDelegate:
@@ -2337,25 +2345,57 @@ class _SearchScreenState extends State<SearchScreen>
                                   );
                                 },
                               ),
-                            )
-                          else
+                            ),
+                            if (_state.shouldShowInFeedUpgradePromo &&
+                                _queryCtrl.text.trim().isEmpty)
+                              const SliverToBoxAdapter(
+                                child: ApoloInFeedUpgradePromoCard(
+                                  margin: EdgeInsets.fromLTRB(20, 0, 20, 132),
+                                ),
+                              ),
+                          ] else
                             SliverPadding(
                               padding:
                                   const EdgeInsets.fromLTRB(20, 8, 20, 132),
-                              sliver: SliverList.separated(
-                                itemCount: _ads.length + (_loadingMore ? 1 : 0),
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 16),
-                                itemBuilder: (context, idx) {
-                                  if (idx >= _ads.length) {
-                                    return const SearchListCardSkeleton();
-                                  }
-                                  final ad = _ads[idx];
-                                  return RepaintBoundary(
-                                    key: ValueKey(
-                                      'search_explore_${ad['id']}_$_sortBy',
-                                    ),
-                                    child: ExploreListingCard(ad: ad),
+                              sliver: Builder(
+                                builder: (context) {
+                                  final showPromo =
+                                      _state.shouldShowInFeedUpgradePromo &&
+                                          _queryCtrl.text.trim().isEmpty &&
+                                          _ads.isNotEmpty;
+                                  final promoIndex =
+                                      _ads.length >= 2 ? 2 : _ads.length;
+                                  final baseCount = _ads.length +
+                                      (showPromo ? 1 : 0);
+                                  return SliverList.separated(
+                                    itemCount:
+                                        baseCount + (_loadingMore ? 1 : 0),
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 16),
+                                    itemBuilder: (context, idx) {
+                                      if (idx >= baseCount) {
+                                        return const SearchListCardSkeleton();
+                                      }
+                                      if (showPromo && idx == promoIndex) {
+                                        return const RepaintBoundary(
+                                          key: ValueKey(
+                                            'explore_infeed_upgrade_promo',
+                                          ),
+                                          child: ApoloInFeedUpgradePromoCard(),
+                                        );
+                                      }
+                                      final adIdx =
+                                          showPromo && idx > promoIndex
+                                              ? idx - 1
+                                              : idx;
+                                      final ad = _ads[adIdx];
+                                      return RepaintBoundary(
+                                        key: ValueKey(
+                                          'search_explore_${ad['id']}_$_sortBy',
+                                        ),
+                                        child: ExploreListingCard(ad: ad),
+                                      );
+                                    },
                                   );
                                 },
                               ),

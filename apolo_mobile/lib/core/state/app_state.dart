@@ -44,6 +44,25 @@ class AppState extends ChangeNotifier {
   int? preferredCityId;
   String accountType = 'individual'; // 'individual' | 'pro_plus'
   Map<String, int> _dailyAdsCounts = {};
+  bool _inFeedUpgradePromoDismissed = false;
+
+  bool get isInFeedUpgradePromoDismissed => _inFeedUpgradePromoDismissed;
+
+  bool get shouldShowInFeedUpgradePromo =>
+      AppConfig.enablePremiumAndBusinessTiers &&
+      !isProPlusAccount &&
+      !_inFeedUpgradePromoDismissed;
+
+  void dismissInFeedUpgradePromo() {
+    if (_inFeedUpgradePromoDismissed) return;
+    _inFeedUpgradePromoDismissed = true;
+    notifyListeners();
+  }
+
+  void resetInFeedUpgradePromoForTesting() {
+    _inFeedUpgradePromoDismissed = false;
+    notifyListeners();
+  }
 
   static String todayDateKey([DateTime? now]) {
     final d = (now ?? DateTime.now()).toLocal();

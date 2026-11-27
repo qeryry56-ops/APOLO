@@ -7,6 +7,7 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/apolo_badges_kit.dart';
+import '../widgets/apolo_infeed_upgrade_card.dart';
 import '../widgets/dl_settings_kit.dart';
 import '../widgets/notification_badge.dart';
 import 'notifications_screen.dart';
@@ -769,7 +770,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 )
-                              else if (isWide)
+                              else if (isWide) ...[
                                 SliverPadding(
                                   padding: const EdgeInsets.fromLTRB(
                                     20,
@@ -794,8 +795,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                       );
                                     },
                                   ),
-                                )
-                              else
+                                ),
+                                if (_state.shouldShowInFeedUpgradePromo)
+                                  SliverToBoxAdapter(
+                                    child: Center(
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 460,
+                                        ),
+                                        child: const ApoloInFeedUpgradePromoCard(
+                                          margin: EdgeInsets.fromLTRB(
+                                            20,
+                                            0,
+                                            20,
+                                            24,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ] else
                                 SliverPadding(
                                   padding: const EdgeInsets.fromLTRB(
                                     20,
@@ -803,17 +822,42 @@ class _HomeScreenState extends State<HomeScreen> {
                                     20,
                                     20,
                                   ),
-                                  sliver: SliverList.separated(
-                                    itemCount: feedAds.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 16),
-                                    itemBuilder: (context, idx) {
-                                      final ad = feedAds[idx];
-                                      return RepaintBoundary(
-                                        key: ValueKey(
-                                          'home_explore_${ad['id']}',
-                                        ),
-                                        child: ExploreListingCard(ad: ad),
+                                  sliver: Builder(
+                                    builder: (context) {
+                                      final showPromo =
+                                          _state.shouldShowInFeedUpgradePromo &&
+                                              feedAds.isNotEmpty;
+                                      final promoIndex = feedAds.length >= 2
+                                          ? 2
+                                          : feedAds.length;
+                                      final totalCount = feedAds.length +
+                                          (showPromo ? 1 : 0);
+                                      return SliverList.separated(
+                                        itemCount: totalCount,
+                                        separatorBuilder: (_, __) =>
+                                            const SizedBox(height: 16),
+                                        itemBuilder: (context, idx) {
+                                          if (showPromo && idx == promoIndex) {
+                                            return const RepaintBoundary(
+                                              key: ValueKey(
+                                                'home_infeed_upgrade_promo',
+                                              ),
+                                              child:
+                                                  ApoloInFeedUpgradePromoCard(),
+                                            );
+                                          }
+                                          final adIdx = showPromo &&
+                                                  idx > promoIndex
+                                              ? idx - 1
+                                              : idx;
+                                          final ad = feedAds[adIdx];
+                                          return RepaintBoundary(
+                                            key: ValueKey(
+                                              'home_explore_${ad['id']}',
+                                            ),
+                                            child: ExploreListingCard(ad: ad),
+                                          );
+                                        },
                                       );
                                     },
                                   ),
