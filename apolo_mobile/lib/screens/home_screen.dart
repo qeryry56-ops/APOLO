@@ -2,9 +2,12 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../widgets/apolo_badges_kit.dart';
+import '../widgets/dl_settings_kit.dart';
 import '../widgets/notification_badge.dart';
 import 'notifications_screen.dart';
 import 'post_ad_screen.dart';
@@ -18,14 +21,14 @@ import 'widgets/kinetic_widgets.dart';
 import 'widgets/marketplace_zone_sheet.dart';
 import 'widgets/skeleton_loader.dart';
 
-/// 2026 Apple Whitespace Home Screen:
-/// - Concise Gateway & Overview of Apolo ("نبذة عن التطبيق")
-/// - Search Bar removed from Home (users are guided directly to the dedicated Search screen)
-/// - Static & elegantly-scaled 3D Hero Car (no float/wobble motion)
-/// - Categories Bento: 1-tap deep link to the dedicated Search/Annonces screen
-/// - Featured & Trending Deals Carousel with "عرض جميع الإعلانات" CTA
-/// - "علاش تختار Apolo؟" Trust & Overview highlights (0% عمولة، شات مباشر، حسابات موثقة)
-/// - 1-tap Seller CTA Banner to Post Ads
+/// Dynamic Layer v5.1 Home Screen:
+/// - Pure #FFFFFF canvas + #F6F6F6 flat cards + #EEEEEE pills + #000000 primary CTAs
+/// - 44x44 #EEEEEE profile avatar + Name (+ Verified/Rank badges when logged in) + Location + 40x40 #EEEEEE Bell
+/// - 1-tap #EEEEEE Quick Search trigger pill opening Dynamic Layer Search Suggestions
+/// - Monochrome #F6F6F6 Hero Showcase Stage with static 3D car & #000000 capsule CTA
+/// - Flat #F6F6F6 Categories Bento with #FFFFFF 3D icon circles
+/// - Exclusive Deals Carousel (AccommodationCard) + Latest Listings Feed (ExploreListingCard)
+/// - Why Choose Apolo (#F6F6F6 grouped list) + #000000 Post Ad CTA + Verified Official Stores card
 class HomeScreen extends StatefulWidget {
   final void Function(int? categoryId)? onOpenSearch;
   final VoidCallback? onOpenPostAd;
@@ -53,11 +56,13 @@ class _HomeScreenState extends State<HomeScreen> {
   double _trendingStride = 318.0;
   Timer? _autoSlideTimer;
 
-  static const Color _primary = Color(0xFF0A0A0A);
-  static const Color _primarySoft = Color(0xFFE8EAEE);
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _surface = Color(0xFFF2F3F7);
+  // Dynamic Layer v5.1 Strict Palette Tokens
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlSubtle = Color(0xFF9E9E9E);
 
   @override
   void initState() {
@@ -127,7 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ];
       }
 
-      // If home ads are few, paginate directly from /ads to show rich feed
       if (rawAds.length < 24) {
         try {
           final adsRes = await _state.api.dio
@@ -247,15 +251,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return parts.first.characters.take(2).toString().toUpperCase();
   }
 
-  void _openSearchScreen([int? categoryId]) {
+  void _openSearchScreen([int? categoryId, bool startActive = false]) {
     HapticFeedback.selectionClick();
-    if (widget.onOpenSearch != null) {
+    if (widget.onOpenSearch != null && !startActive) {
       widget.onOpenSearch!(categoryId);
     } else {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => SearchScreen(initialCategoryId: categoryId),
+          builder: (_) => SearchScreen(
+            initialCategoryId: categoryId,
+            initialSearchActive: startActive,
+          ),
         ),
       );
     }
@@ -279,9 +286,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final isAr = s.isAr;
     final trending = _trendingAds;
     final feedAds = _feedAds;
+    final user = _state.currentUser;
+    final isVerifiedUser = user != null &&
+        (user['is_verified'] == true ||
+            user['verified'] == true ||
+            _state.isProPlusAccount ||
+            _state.isBusinessAccount);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      key: const Key('dl-home-screen'),
+      backgroundColor: _dlBg,
       body: SafeArea(
         bottom: false,
         child: _loading
@@ -300,15 +314,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Vérifiez votre connexion réseau et réessayez pour charger les annonces.',
                       'Check your network connection and try again to load listings.',
                     ),
-                    actionLabel: _state.s.tr('إعادة المحاولة', 'Réessayer', 'Try again'),
+                    actionLabel:
+                        _state.s.tr('إعادة المحاولة', 'Réessayer', 'Try again'),
                     onAction: () {
                       setState(() => _loading = true);
                       _loadData();
                     },
                   )
                 : RefreshIndicator(
-                    color: _primary,
-                    backgroundColor: Colors.white,
+                    color: _dlInk,
+                    backgroundColor: _dlBg,
                     onRefresh: _loadData,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -319,486 +334,537 @@ class _HomeScreenState extends State<HomeScreen> {
                             parent: AlwaysScrollableScrollPhysics(),
                           ),
                           slivers: [
-                        // 1. Top Header Row (Profile Avatar + Name + Location below + Bare Notification Bell)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Profile Photo / Initials Avatar
-                                PressableScale(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const ProfileScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF0A0A0A),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                        width: 1.0,
-                                      ),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    alignment: Alignment.center,
-                                    child: _userAvatarUrl.isNotEmpty
-                                        ? AppImage(
-                                            url: _userAvatarUrl,
-                                            width: 44,
-                                            height: 44,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : (_userName.isNotEmpty
-                                            ? Text(
-                                                _userInitials,
-                                                style: const TextStyle(
-                                                  fontSize: 14.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Colors.white,
-                                                  letterSpacing: 0.3,
-                                                ),
-                                              )
-                                            : const Icon(
-                                                CupertinoIcons.person_fill,
-                                                size: 20,
-                                                color: Colors.white,
-                                              )),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                // User Name + Location below
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _userFullName.isEmpty
-                                            ? s.tr(
-                                                'مرحباً بك في Apolo',
-                                                'Bienvenue sur Apolo',
-                                                'Welcome to Apolo',
-                                              )
-                                            : _userFullName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing:
-                                              AppTypography.trackingForContext(
-                                                  context, -0.3),
-                                          color: _ink,
-                                          height: 1.2,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      GestureDetector(
-                                        onTap: () {
-                                          HapticFeedback.selectionClick();
-                                          showMarketplaceZoneSheet(context);
-                                        },
-                                        behavior: HitTestBehavior.opaque,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              CupertinoIcons.location_solid,
-                                              size: 13,
-                                              color: _ink,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                              child: Text(
-                                                _state.hasActiveZone
-                                                    ? _state
-                                                        .activeZoneBadgeLabel(s)
-                                                    : _state
-                                                        .activeZoneCityLabel(s),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: _muted,
-                                                  height: 1.2,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 3),
-                                            const Icon(
-                                              CupertinoIcons.chevron_down,
-                                              size: 11,
-                                              color: _muted,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                // Notification Bell Icon with accessible capped red badge
-                                PressableScale(
-                                  key: const Key('home-notifications-bell'),
-                                  onTap: () {
-                                    _state.clearUnreadNotificationsOptimistically(
-                                      syncRemote: false,
-                                    );
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const NotificationsScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: SizedBox(
-                                    width: 40,
-                                    height: 40,
-                                    child: Center(
-                                      child: NotificationBadge(
-                                        count: _state.unreadNotificationsCount,
-                                        type: NotificationBadgeType.number,
-                                        variant: NotificationBadgeVariant.red,
-                                        top: -7,
-                                        right: -9,
-                                        child: const Icon(
-                                          CupertinoIcons.bell,
-                                          size: 23,
-                                          color: _ink,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // 2. Hero Card with Static 3D Car & Clear Gateway CTA
-                        SliverToBoxAdapter(
-                          child: _buildHeroStage(isAr),
-                        ),
-
-                        // 3. Clean Categories Bento Strip (Direct Deep Link to Search Screen)
-                        SliverToBoxAdapter(
-                          child: _buildCategoriesBento(s, isAr),
-                        ),
-
-                        // 4. Featured / Exclusive Deals Showcase Carousel
-                        if (trending.isNotEmpty)
-                          SliverToBoxAdapter(
-                            child: _buildTrendingSection(trending, isAr),
-                          ),
-
-                        // 5. Explore-Style Listings Feed directly beneath Exclusive Deals
-                        if (feedAds.isNotEmpty || _ads.isNotEmpty) ...[
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Wrap(
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      spacing: 8,
-                                      runSpacing: 6,
-                                      children: [
-                                        Text(
-                                          s.tr(
-                                            'أحدث الإعلانات',
-                                            'Dernières annonces',
-                                            'Latest listings',
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 18.5,
-                                            fontWeight: FontWeight.w900,
-                                            color: _ink,
-                                            letterSpacing: AppTypography
-                                                .trackingForContext(
-                                              context,
-                                              -0.4,
-                                            ),
-                                          ),
-                                        ),
-                                        MarketplaceZonePill(
-                                          state: _state,
-                                          compact: true,
-                                          onTap: () =>
-                                              showMarketplaceZoneSheet(context),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: () => _openSearchScreen(null),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          s.tr('عرض الكل', 'Tout voir',
-                                              'See all'),
-                                          style: const TextStyle(
-                                            color: _primary,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Icon(
-                                          isAr
-                                              ? CupertinoIcons.chevron_left
-                                              : CupertinoIcons.chevron_right,
-                                          size: 13,
-                                          color: _primary,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (feedAds.isEmpty)
+                            // 1. Dynamic Layer v5.1 Top Header Row (44x44 #EEEEEE Avatar + Name + Location + 40x40 #EEEEEE Bell)
                             SliverToBoxAdapter(
                               child: Padding(
                                 padding:
-                                    const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(
-                                      color: const Color(0xFFE2E8F0),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        s.tr(
-                                          'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)} حالياً',
-                                          'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km autour de ${_state.activeZoneCityLabel(s)}',
-                                          'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)} yet',
-                                        ),
-                                        style: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: _ink,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          PressableScale(
-                                            onTap: () => _state.clearZoneFilter(),
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 14,
-                                                vertical: 8,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: _ink,
-                                                borderRadius:
-                                                    BorderRadius.circular(999),
-                                              ),
-                                              child: Text(
-                                                s.tr(
-                                                  'عرض كل المغرب',
-                                                  'Tout le Maroc',
-                                                  'Show all Morocco',
-                                                ),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ),
+                                    const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    PressableScale(
+                                      onTap: () {
+                                        HapticFeedback.selectionClick();
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const ProfileScreen(),
                                           ),
-                                          PressableScale(
-                                            onTap: () =>
-                                                showMarketplaceZoneSheet(
-                                                    context),
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 14,
-                                                vertical: 8,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(999),
-                                                border: Border.all(
-                                                  color:
-                                                      const Color(0xFFD0D5DD),
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: const BoxDecoration(
+                                          color: _dlPill,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        clipBehavior: Clip.antiAlias,
+                                        alignment: Alignment.center,
+                                        child: _userAvatarUrl.isNotEmpty
+                                            ? AppImage(
+                                                url: _userAvatarUrl,
+                                                width: 44,
+                                                height: 44,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : (_userName.isNotEmpty
+                                                ? Text(
+                                                    _userInitials,
+                                                    style: const TextStyle(
+                                                      fontSize: 14.5,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: _dlInk,
+                                                    ),
+                                                  )
+                                                : const Icon(
+                                                    CupertinoIcons.person_fill,
+                                                    size: 20,
+                                                    color: _dlInk,
+                                                  )),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  _userFullName.isEmpty
+                                                      ? s.tr(
+                                                          'مرحباً بك في Apolo',
+                                                          'Bienvenue sur Apolo',
+                                                          'Welcome to Apolo',
+                                                        )
+                                                      : _userFullName,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: AppTypography
+                                                        .trackingForContext(
+                                                      context,
+                                                      -0.25,
+                                                    ),
+                                                    color: _dlInk,
+                                                    height: 1.2,
+                                                  ),
                                                 ),
                                               ),
-                                              child: Text(
-                                                s.tr(
-                                                  'تغيير المنطقة',
-                                                  'Changer de zone',
-                                                  'Change zone',
+                                              if (isVerifiedUser) ...[
+                                                const SizedBox(width: 5),
+                                                const ApoloVerifiedBadge(
+                                                  size: 16,
                                                 ),
-                                                style: const TextStyle(
-                                                  color: _ink,
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w700,
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          GestureDetector(
+                                            onTap: () {
+                                              HapticFeedback.selectionClick();
+                                              showMarketplaceZoneSheet(context);
+                                            },
+                                            behavior: HitTestBehavior.opaque,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  CupertinoIcons.location_solid,
+                                                  size: 12.5,
+                                                  color: _dlInk,
                                                 ),
-                                              ),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(
+                                                    _state.hasActiveZone
+                                                        ? _state
+                                                            .activeZoneBadgeLabel(
+                                                            s,
+                                                          )
+                                                        : _state
+                                                            .activeZoneCityLabel(
+                                                            s,
+                                                          ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 12.5,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: _dlMuted,
+                                                      height: 1.2,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 3),
+                                                const Icon(
+                                                  CupertinoIcons.chevron_down,
+                                                  size: 11,
+                                                  color: _dlMuted,
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
                                       ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // 40x40 #EEEEEE Dynamic Layer Notification Bell Circle
+                                    PressableScale(
+                                      key: const Key('home-notifications-bell'),
+                                      onTap: () {
+                                        _state
+                                            .clearUnreadNotificationsOptimistically(
+                                          syncRemote: false,
+                                        );
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const NotificationsScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: const BoxDecoration(
+                                          color: _dlPill,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: NotificationBadge(
+                                          count:
+                                              _state.unreadNotificationsCount,
+                                          type: NotificationBadgeType.number,
+                                          variant: NotificationBadgeVariant.red,
+                                          top: -7,
+                                          right: -9,
+                                          child: const Icon(
+                                            CupertinoIcons.bell_fill,
+                                            size: 19,
+                                            color: _dlInk,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // 2. Dynamic Layer v5.1 Quick Search Trigger Pill (`46px`, `#EEEEEE`)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 10, 20, 2),
+                                child: PressableScale(
+                                  key: const Key('dl-home-search-pill'),
+                                  onTap: () => _openSearchScreen(null, true),
+                                  child: Container(
+                                    height: 46,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _dlPill,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          CupertinoIcons.search,
+                                          size: 19,
+                                          color: _dlMuted,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            s.tr(
+                                              'ابحث عن سيارات، عقارات، هواتف أو حسابات...',
+                                              'Rechercher voitures, immo, téléphones...',
+                                              'Search cars, homes, phones, or accounts...',
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w400,
+                                              color: _dlSubtle,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // 3. Dynamic Layer v5.1 Hero Stage (`#F6F6F6` flat card + `#000000` CTA + static 3D car)
+                            SliverToBoxAdapter(
+                              child: _buildHeroStage(isAr),
+                            ),
+
+                            // 4. Clean `#F6F6F6` Categories Bento Strip
+                            SliverToBoxAdapter(
+                              child: _buildCategoriesBento(s, isAr),
+                            ),
+
+                            // 5. Exclusive Deals Showcase Carousel
+                            if (trending.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: _buildTrendingSection(trending, isAr),
+                              ),
+
+                            // 6. Explore-Style Listings Feed directly beneath Exclusive Deals
+                            if (feedAds.isNotEmpty || _ads.isNotEmpty) ...[
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Wrap(
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          spacing: 8,
+                                          runSpacing: 6,
+                                          children: [
+                                            Text(
+                                              s.tr(
+                                                'أحدث الإعلانات',
+                                                'Dernières annonces',
+                                                'Latest listings',
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 18.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: _dlInk,
+                                                letterSpacing: AppTypography
+                                                    .trackingForContext(
+                                                  context,
+                                                  -0.35,
+                                                ),
+                                              ),
+                                            ),
+                                            MarketplaceZonePill(
+                                              state: _state,
+                                              compact: true,
+                                              onTap: () =>
+                                                  showMarketplaceZoneSheet(
+                                                context,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () => _openSearchScreen(null),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _dlPill,
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: Text(
+                                            s.tr(
+                                              'عرض الكل',
+                                              'Tout voir',
+                                              'See all',
+                                            ),
+                                            style: const TextStyle(
+                                              color: _dlInk,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12.5,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                               ),
-                            )
-                          else if (isWide)
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              sliver: SliverGrid.builder(
-                                gridDelegate:
-                                    const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 400,
-                                  mainAxisExtent: 374,
-                                  mainAxisSpacing: 18,
-                                  crossAxisSpacing: 18,
-                                ),
-                                itemCount: feedAds.length,
-                                itemBuilder: (context, idx) {
-                                  final ad = feedAds[idx];
-                                  return RepaintBoundary(
-                                    key: ValueKey('home_wide_${ad['id']}'),
-                                    child: ExploreListingCard(ad: ad),
-                                  );
-                                },
-                              ),
-                            )
-                          else
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              sliver: SliverList.separated(
-                                itemCount: feedAds.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 16),
-                                itemBuilder: (context, idx) {
-                                  final ad = feedAds[idx];
-                                  return RepaintBoundary(
-                                    key: ValueKey('home_explore_${ad['id']}'),
-                                    child: ExploreListingCard(ad: ad),
-                                  );
-                                },
-                              ),
-                            ),
-                        ],
-
-                        // 5. Explore All Ads Button Bar (Gateway to Search/Annonces Screen)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                            child: PressableScale(
-                              onTap: () => _openSearchScreen(null),
-                              child: Container(
-                                height: 54,
-                                decoration: BoxDecoration(
-                                  color: _ink,
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _ink.withValues(alpha: 0.16),
-                                      blurRadius: 18,
-                                      offset: const Offset(0, 6),
+                              if (feedAds.isEmpty)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      20,
+                                      0,
+                                      20,
+                                      20,
                                     ),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      CupertinoIcons.search,
-                                      color: Colors.white,
-                                      size: 19,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        _state.s.tr(
-                                          'تصفح الإعلانات في المغرب',
-                                          'Explorer toutes les annonces au Maroc',
-                                          'Browse all listings in Morocco',
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: _dlSurface,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            s.tr(
+                                              'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)} حالياً',
+                                              'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km autour de ${_state.activeZoneCityLabel(s)}',
+                                              'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)} yet',
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: _dlInk,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: [
+                                              PressableScale(
+                                                onTap: () =>
+                                                    _state.clearZoneFilter(),
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 8,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: _dlInk,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      999,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    s.tr(
+                                                      'عرض كل المغرب',
+                                                      'Tout le Maroc',
+                                                      'Show all Morocco',
+                                                    ),
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12.5,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              PressableScale(
+                                                onTap: () =>
+                                                    showMarketplaceZoneSheet(
+                                                  context,
+                                                ),
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 8,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: _dlBg,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      999,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    s.tr(
+                                                      'تغيير المنطقة',
+                                                      'Changer de zone',
+                                                      'Change zone',
+                                                    ),
+                                                    style: const TextStyle(
+                                                      color: _dlInk,
+                                                      fontSize: 12.5,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                    Icon(
-                                      isAr
-                                          ? CupertinoIcons.arrow_left
-                                          : CupertinoIcons.arrow_right,
-                                      color: Colors.white70,
-                                      size: 16,
+                                  ),
+                                )
+                              else if (isWide)
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    0,
+                                    20,
+                                    20,
+                                  ),
+                                  sliver: SliverGrid.builder(
+                                    gridDelegate:
+                                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 400,
+                                      mainAxisExtent: 374,
+                                      mainAxisSpacing: 18,
+                                      crossAxisSpacing: 18,
                                     ),
-                                  ],
+                                    itemCount: feedAds.length,
+                                    itemBuilder: (context, idx) {
+                                      final ad = feedAds[idx];
+                                      return RepaintBoundary(
+                                        key: ValueKey('home_wide_${ad['id']}'),
+                                        child: ExploreListingCard(ad: ad),
+                                      );
+                                    },
+                                  ),
+                                )
+                              else
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    0,
+                                    20,
+                                    20,
+                                  ),
+                                  sliver: SliverList.separated(
+                                    itemCount: feedAds.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 16),
+                                    itemBuilder: (context, idx) {
+                                      final ad = feedAds[idx];
+                                      return RepaintBoundary(
+                                        key: ValueKey(
+                                          'home_explore_${ad['id']}',
+                                        ),
+                                        child: ExploreListingCard(ad: ad),
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
+
+                            // 7. Browse All Listings Capsule CTA (`#000000`)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 4, 20, 22),
+                                child: ApoloDlButton(
+                                  label: _state.s.tr(
+                                    'تصفح الإعلانات في المغرب',
+                                    'Explorer toutes les annonces au Maroc',
+                                    'Browse all listings in Morocco',
+                                  ),
+                                  leadingIcon: CupertinoIcons.search,
+                                  variant: ApoloDlButtonVariant.primary,
+                                  borderRadius: 999,
+                                  height: 52,
+                                  fullWidth: true,
+                                  onPressed: () => _openSearchScreen(null),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
 
-                        // 6. Nobda / Overview Section: "علاش تختار Apolo؟"
-                        SliverToBoxAdapter(
-                          child: _buildAppOverview(isAr),
-                        ),
+                            // 8. Why Choose Apolo (`#F6F6F6` grouped list)
+                            SliverToBoxAdapter(
+                              child: _buildAppOverview(isAr),
+                            ),
 
-                        // 7. Seller Call-To-Action Banner: "عندك ما تبيع؟"
-                        SliverToBoxAdapter(
-                          child: _buildSellerBanner(isAr),
-                        ),
+                            // 9. Seller Call-To-Action Card (`#000000` capsule card)
+                            SliverToBoxAdapter(
+                              child: _buildSellerBanner(isAr),
+                            ),
 
-                        // 8. Verified Pro Boutiques Strip
-                        SliverToBoxAdapter(
-                          child: _buildStoresBanner(isAr),
-                        ),
+                            // 10. Verified Official Stores Card (`#F6F6F6` + ApoloVerifiedBadge)
+                            SliverToBoxAdapter(
+                              child: _buildStoresBanner(isAr),
+                            ),
 
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 132),
-                        ),
-                      ],
-                    );
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 132),
+                            ),
+                          ],
+                        );
                       },
                     ),
                   ),
@@ -806,216 +872,134 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Clean Hero Showcase Card:
-  /// - Scaled, non-overlapping static 3D car (`hero_car.png`)
-  /// - Zero movement/float animation (`MATKOCH KATHARK`)
-  /// - Clear CTA directing to the dedicated Search screen
+  /// Dynamic Layer v5.1 Hero Showcase Card (`#F6F6F6` flat card, `#000000` CTA, static 3D car)
   Widget _buildHeroStage(bool isAr) {
     final s = _state.s;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Vibrant Red Gradient Container
           Container(
+            key: const Key('dl-home-hero-card'),
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFC80E16),
-                  Color(0xFFE31B23),
-                  Color(0xFFEA2E37),
-                ],
-                stops: [0.0, 0.58, 1.0],
-                begin: AlignmentDirectional.topStart,
-                end: AlignmentDirectional.bottomEnd,
-              ),
+              color: _dlSurface,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.28),
-                width: 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFE31B23).withValues(alpha: 0.30),
-                  blurRadius: 22,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 18, 138, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PositionedDirectional(
-                  end: -10,
-                  top: -55,
-                  child: Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.30),
-                          Colors.white.withValues(alpha: 0.08),
-                          Colors.white.withValues(alpha: 0.0),
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      ),
+                // Tagline pill (pure Text child — no Row sibling dot)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _dlBg,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    _state.s.tr(
+                      'سوقك الأول فالمغرب 🇲🇦',
+                      'Marketplace #1 au Maroc 🇲🇦',
+                      '#1 Marketplace in Morocco 🇲🇦',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _dlInk,
                     ),
                   ),
                 ),
-                Padding(
-                  padding:
-                      const EdgeInsetsDirectional.fromSTEB(20, 18, 140, 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Marketing tagline pill (no decorative badge dot — Rule 7)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.20),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.35),
+                const SizedBox(height: 10),
+                Text(
+                  _state.s.tr(
+                    'بيع واشري بأمان وبلا وسيط',
+                    'Achetez et vendez en toute sécurité',
+                    'Buy and sell safely without middlemen',
+                  ),
+                  maxLines: 2,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing:
+                        AppTypography.trackingForContext(context, -0.4),
+                    color: _dlInk,
+                    height: 1.24,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _state.s.tr(
+                    'طوموبيلات، هواتف وعقارات. اكتشف الإعلانات القريبة منك.',
+                    'Voitures, smartphones, immobilier près de chez vous.',
+                    'Cars, phones, real estate. Discover listings near you.',
+                  ),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.38,
+                    fontWeight: FontWeight.w400,
+                    color: _dlMuted,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                PressableScale(
+                  onTap: () => _openSearchScreen(null),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 9.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _dlInk,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _state.s.tr(
+                              'استكشف الإعلانات',
+                              'Explorer les annonces',
+                              'Explore listings',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          _state.s.tr(
-                            'سوقك الأول فالمغرب 🇲🇦',
-                            'Marketplace #1 au Maroc 🇲🇦',
-                            '#1 Marketplace in Morocco 🇲🇦',
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _state.s.tr(
-                          'بيع واشري بأمان وبلا وسيط',
-                          'Achetez et vendez en toute sécurité',
-                          'Buy and sell safely without middlemen',
-                        ),
-                        maxLines: 2,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing:
-                              AppTypography.trackingForContext(context, -0.4),
+                        const SizedBox(width: 5),
+                        Icon(
+                          isAr
+                              ? CupertinoIcons.arrow_left
+                              : CupertinoIcons.arrow_right,
+                          size: 13,
                           color: Colors.white,
-                          height: 1.25,
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _state.s.tr(
-                          'طوموبيلات، هواتف وعقارات. اكتشف الإعلانات القريبة منك.',
-                          'Voitures, smartphones, immobilier. Découvrez les annonces près de chez vous.',
-                          'Cars, phones, real estate. Discover listings near you.',
-                        ),
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 1.35,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.92),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      PressableScale(
-                        onTap: () => _openSearchScreen(null),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.16),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  _state.s.tr(
-                                    'استكشف الإعلانات',
-                                    'Explorer les annonces',
-                                    'Explore listings',
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFFE31B23),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Icon(
-                                isAr
-                                    ? CupertinoIcons.arrow_left
-                                    : CupertinoIcons.arrow_right,
-                                size: 13,
-                                color: const Color(0xFFE31B23),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
-          // Ground Contact Shadow under the 3D Car
+          // Crisp Static 3D Car
           PositionedDirectional(
-            end: 4,
+            end: -4,
             bottom: -6,
-            width: 156,
-            height: 20,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _ink.withValues(alpha: 0.24),
-                      blurRadius: 14,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Scaled Static 3D Car (Crisp, Stable, No Continuous Motion)
-          PositionedDirectional(
-            end: -6,
-            bottom: -8,
-            width: 178,
-            height: 126,
+            width: 172,
+            height: 122,
             child: IgnorePointer(
               child: Transform.flip(
                 flipX: s.isAr,
@@ -1032,7 +1016,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Categories Bento Strip: 1-Tap Deep Link to Dedicated Search/Annonces Screen
+  /// Dynamic Layer v5.1 Categories Bento Strip (`#F6F6F6` cards with `#FFFFFF` icon circles)
   Widget _buildCategoriesBento(AppStrings s, bool isAr) {
     if (_categories.isEmpty) return const SizedBox.shrink();
 
@@ -1050,40 +1034,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      _state.s.tr('تصفح حسب الفئات', 'Catégories', 'Categories'),
+                      _state.s.tr(
+                        'تصفح حسب الفئات',
+                        'Catégories',
+                        'Categories',
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 18.5,
-                        fontWeight: FontWeight.w900,
-                        color: _ink,
+                        fontWeight: FontWeight.w800,
+                        color: _dlInk,
                         letterSpacing:
-                            AppTypography.trackingForContext(context, -0.4),
+                            AppTypography.trackingForContext(context, -0.35),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () => _openSearchScreen(null),
-                    child: Row(
-                      children: [
-                        Text(
-                          _state.s.tr('عرض الكل', 'Tout voir', 'See all'),
-                          style: const TextStyle(
-                            color: _primary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                          ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _dlPill,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        _state.s.tr('عرض الكل', 'Tout voir', 'See all'),
+                        style: const TextStyle(
+                          color: _dlInk,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12.5,
                         ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          isAr
-                              ? CupertinoIcons.chevron_left
-                              : CupertinoIcons.chevron_right,
-                          size: 13,
-                          color: _primary,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -1091,7 +1077,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 110,
+              height: 108,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 scrollDirection: Axis.horizontal,
@@ -1104,62 +1090,59 @@ class _HomeScreenState extends State<HomeScreen> {
                   final assetPath = _state.assetForCategory(cat);
                   final label = _state.formatCategoryLabel(cat);
 
-                  return ScrollReveal(
-                    delay: Duration(milliseconds: 35 * (idx % 6)),
-                    beginOffset: const Offset(16, 0),
-                    child: PressableScale(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        _state.recordCategoryInterest(catId, weight: 3);
-                        _openSearchScreen(catId);
-                      },
-                      child: Container(
-                        width: 86,
-                        padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
-                        decoration: BoxDecoration(
-                          color: _surface,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1.0,
+                  return PressableScale(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      _state.recordCategoryInterest(catId, weight: 3);
+                      _openSearchScreen(catId);
+                    },
+                    child: Container(
+                      width: 88,
+                      padding: const EdgeInsets.fromLTRB(6, 10, 6, 8),
+                      decoration: BoxDecoration(
+                        color: _dlSurface,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            padding: const EdgeInsets.all(7),
+                            decoration: const BoxDecoration(
+                              color: _dlBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Image.asset(
+                              assetPath,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                CupertinoIcons.cube_box,
+                                size: 22,
+                                color: _dlMuted,
+                              ),
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: Image.asset(
-                                assetPath,
-                                fit: BoxFit.contain,
-                                filterQuality: FilterQuality.high,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  CupertinoIcons.cube_box,
-                                  size: 26,
-                                  color: _muted,
-                                ),
+                          const SizedBox(height: 7),
+                          Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: _dlInk,
+                              height: AppTypography.lineHeightForContext(
+                                context,
+                                1.15,
+                                arabicMin: 1.25,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              label,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                                color: _ink,
-                                height: AppTypography.lineHeightForContext(
-                                  context,
-                                  1.15,
-                                  arabicMin: 1.28,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -1172,11 +1155,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Nearby Stays Horizontal Carousel (AccommodationCard)
-  /// - Card width: 78% of available horizontal carousel width
-  /// - Portrait aspect ratio: 0.84:1 (width : height)
-  /// - Shows the next card partially on the right with a consistent 14px gap
-  /// Featured & Trending Deals Carousel using AccommodationCard
+  /// Exclusive Deals Horizontal Carousel using AccommodationCard
   Widget _buildTrendingSection(
     List<Map<String, dynamic>> trending,
     bool isAr,
@@ -1194,30 +1173,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          CupertinoIcons.flame_fill,
-                          color: _primary,
-                          size: 19,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            _state.s.tr('عروض حصرية مميزة',
-                                'Offres exclusives', 'Exclusive Deals'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 18.5,
-                              fontWeight: FontWeight.w900,
-                              color: _ink,
-                              letterSpacing: AppTypography.trackingForContext(
-                                  context, -0.4),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      _state.s.tr(
+                        'عروض حصرية مميزة',
+                        'Offres exclusives',
+                        'Exclusive Deals',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18.5,
+                        fontWeight: FontWeight.w800,
+                        color: _dlInk,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.35),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1225,12 +1195,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: List.generate(trending.length, (i) {
                       final active = i == _activeTrendingPage;
                       return AnimatedContainer(
-                        duration: const Duration(milliseconds: 240),
+                        duration: const Duration(milliseconds: 220),
                         margin: const EdgeInsets.symmetric(horizontal: 2.5),
                         width: active ? 16 : 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: active ? _primary : const Color(0xFFE2E8F0),
+                          color: active ? _dlInk : _dlPill,
                           borderRadius: BorderRadius.circular(999),
                         ),
                       );
@@ -1293,10 +1263,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Overview Section: "علاش تختار Apolo؟"
+  /// Dynamic Layer v5.1 Overview Section (`#F6F6F6` grouped card)
   Widget _buildAppOverview(bool isAr) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1308,27 +1278,22 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             style: TextStyle(
               fontSize: 18.5,
-              fontWeight: FontWeight.w900,
-              color: _ink,
-              letterSpacing: AppTypography.trackingForContext(context, -0.4),
+              fontWeight: FontWeight.w800,
+              color: _dlInk,
+              letterSpacing: AppTypography.trackingForContext(context, -0.35),
             ),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: _surface,
+              color: _dlSurface,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: const Color(0xFFE2E8F0),
-                width: 1.0,
-              ),
             ),
             child: Column(
               children: [
                 _buildOverviewRow(
                   icon: CupertinoIcons.tag_fill,
-                  iconColor: _primary,
                   title: _state.s.tr(
                     '\u20660%\u2069 عمولة وبالمجان',
                     '0% Commission',
@@ -1342,11 +1307,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  child: ApoloDlSeparator(),
                 ),
                 _buildOverviewRow(
                   icon: CupertinoIcons.chat_bubble_2_fill,
-                  iconColor: _ink,
                   title: _state.s.tr(
                     'شات واتصال مباشر',
                     'Discussion directe',
@@ -1360,11 +1324,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  child: ApoloDlSeparator(),
                 ),
                 _buildOverviewRow(
                   icon: CupertinoIcons.checkmark_shield_fill,
-                  iconColor: const Color(0xFF10B981),
                   title: _state.s.tr(
                     'إعلانات مفحوصة وموثقة',
                     'Annonces vérifiées',
@@ -1386,7 +1349,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildOverviewRow({
     required IconData icon,
-    required Color iconColor,
     required String title,
     required String subtitle,
   }) {
@@ -1394,13 +1356,14 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.12),
+          width: 40,
+          height: 40,
+          decoration: const BoxDecoration(
+            color: _dlBg,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 19),
+          alignment: Alignment.center,
+          child: Icon(icon, color: _dlInk, size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1411,8 +1374,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 title,
                 style: const TextStyle(
                   fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
-                  color: _ink,
+                  fontWeight: FontWeight.w700,
+                  color: _dlInk,
                 ),
               ),
               const SizedBox(height: 2),
@@ -1420,9 +1383,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle,
                 style: const TextStyle(
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: _muted,
-                  height: 1.35,
+                  fontWeight: FontWeight.w400,
+                  color: _dlMuted,
+                  height: 1.38,
                 ),
               ),
             ],
@@ -1432,42 +1395,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Seller Banner: "عندك ما تبيع؟"
+  /// Dynamic Layer v5.1 Seller Post Card (Pure `#000000` card + `#FFFFFF` CTA pill)
   Widget _buildSellerBanner(bool isAr) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
       child: PressableScale(
         onTap: _openPostAdScreen,
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: _dlInk,
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: _ink.withValues(alpha: 0.18),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: _primary,
-                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
                 ),
+                alignment: Alignment.center,
                 child: const Icon(
-                  CupertinoIcons.plus_circle_fill,
+                  CupertinoIcons.plus,
                   color: Colors.white,
-                  size: 26,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 14),
@@ -1483,11 +1436,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14.5,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       _state.s.tr(
                         'انشر فـ 30 ثانية بالمجان وتوصل باتصالات المشترين',
@@ -1497,28 +1450,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.72),
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _dlBg,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   _state.s.tr('نشر +', 'Publier +', 'Post +'),
                   style: const TextStyle(
-                    color: _ink,
+                    color: _dlInk,
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -1529,7 +1482,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Official Boutiques / Stores Banner
+  /// Dynamic Layer v5.1 Verified Official Stores Card (`#F6F6F6` + `ApoloVerifiedBadge`)
   Widget _buildStoresBanner(bool isAr) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -1541,22 +1494,22 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: _surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: _dlSurface,
+            borderRadius: BorderRadius.circular(22),
           ),
           child: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 44,
+                height: 44,
                 decoration: const BoxDecoration(
-                  color: _primarySoft,
+                  color: _dlBg,
                   shape: BoxShape.circle,
                 ),
+                alignment: Alignment.center,
                 child: const Icon(
                   CupertinoIcons.bag_fill,
-                  color: _primary,
+                  color: _dlInk,
                   size: 20,
                 ),
               ),
@@ -1577,20 +1530,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: _ink,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
+                              color: _dlInk,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14.5,
                               letterSpacing: AppTypography.trackingForContext(
-                                  context, -0.2),
+                                context,
+                                -0.2,
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 5),
-                        const Icon(
-                          CupertinoIcons.checkmark_seal_fill,
-                          color: _primary,
-                          size: 14,
-                        ),
+                        const SizedBox(width: 6),
+                        const ApoloVerifiedBadge(size: 16),
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -1603,20 +1554,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _muted,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
+                        color: _dlMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                isAr
-                    ? CupertinoIcons.chevron_left
-                    : CupertinoIcons.chevron_right,
-                color: _muted,
-                size: 15,
+              const SizedBox(width: 8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: _dlBg,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  isAr
+                      ? CupertinoIcons.chevron_left
+                      : CupertinoIcons.chevron_right,
+                  color: _dlInk,
+                  size: 14,
+                ),
               ),
             ],
           ),

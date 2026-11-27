@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/home_screen.dart';
 import 'package:apolo_mobile/screens/widgets/accommodation_card.dart';
 import 'package:apolo_mobile/screens/widgets/explore_listing_card.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _StubHomeHttpAdapter implements HttpClientAdapter {
   @override
@@ -41,17 +42,23 @@ class _StubHomeHttpAdapter implements HttpClientAdapter {
             'is_vip': true,
             'views_count': 84,
             'main_image': 'assets/images/cat_realestate.png',
-            'category': {'id': 1, 'name_ar': 'عقارات', 'name_fr': 'Immobilier'},
-            'city': {'id': 1, 'name_ar': 'الدار البيضاء', 'name_fr': 'Casablanca'},
+            'category': {
+              'id': 1,
+              'name_ar': 'عقارات',
+              'name_fr': 'Immobilier',
+            },
+            'city': {
+              'id': 1,
+              'name_ar': 'الدار البيضاء',
+              'name_fr': 'Casablanca',
+            },
           },
         ],
         'featured_ads': const [],
         'latest_ads': const [],
       };
-    } else if (path.contains('/ads')) {
-      payload = {'data': const []};
     } else {
-      payload = {'data': const []};
+      payload = {'status': 'success', 'data': const []};
     }
     return ResponseBody.fromString(
       jsonEncode(payload),
@@ -67,6 +74,14 @@ class _StubHomeHttpAdapter implements HttpClientAdapter {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await AppState().initialize(loadRemote: false);
+    AppState().currentUser = null;
+  });
+
   testWidgets(
       'AccommodationCard reproduces exact reference badges, bottom panel, aspect ratio, and favorite toggle',
       (WidgetTester tester) async {
@@ -101,23 +116,19 @@ void main() {
       ),
     );
 
-    // Verify 0.84:1 aspect ratio
     final aspectFinder = find.byType(AspectRatio);
     expect(aspectFinder, findsOneWidget);
     final aspectWidget = tester.widget<AspectRatio>(aspectFinder);
     expect(aspectWidget.aspectRatio, closeTo(0.84, 0.001));
 
-    // Verify top-left badges: "Cabin" and "4.9"
     expect(find.text('Cabin'), findsOneWidget);
     expect(find.text('4.9'), findsOneWidget);
     expect(find.byIcon(Icons.star_rounded), findsOneWidget);
 
-    // Verify bottom info panel text elements
     expect(find.text('Lakeside Cabin'), findsOneWidget);
     expect(find.text('Sintra, Portugal'), findsOneWidget);
     expect(find.text('\$651 total · 4 nights'), findsOneWidget);
 
-    // Verify top-right heart outline icon initially and toggle behavior
     expect(find.byIcon(CupertinoIcons.heart), findsOneWidget);
     expect(find.byIcon(CupertinoIcons.heart_fill), findsNothing);
 
@@ -131,6 +142,13 @@ void main() {
   testWidgets(
       'AccommodationCard formats real Apolo ad cleanly without stay suffixes',
       (WidgetTester tester) async {
+    final state = AppState();
+    final prevLocale = state.locale;
+    await tester.runAsync(() => state.setLocale(const Locale('ar')));
+    addTearDown(() async {
+      await tester.runAsync(() => state.setLocale(prevLocale));
+    });
+
     final realAd = <String, dynamic>{
       'id': 108,
       'title': 'حامل الهاتف',
@@ -167,7 +185,7 @@ void main() {
   });
 
   testWidgets(
-      'HomeScreen uses AccommodationCard inside Exclusive Deals carousel with no Nearby stays section',
+      'HomeScreen uses Dynamic Layer v5.1 tokens, Quick Search pill, and AccommodationCard inside Exclusive Deals',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -175,9 +193,14 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final state = AppState();
+    final prevLocale = state.locale;
+    await tester.runAsync(() => state.setLocale(const Locale('ar')));
     final previousAdapter = state.api.dio.httpClientAdapter;
     state.api.dio.httpClientAdapter = _StubHomeHttpAdapter();
-    addTearDown(() => state.api.dio.httpClientAdapter = previousAdapter);
+    addTearDown(() async {
+      state.api.dio.httpClientAdapter = previousAdapter;
+      await tester.runAsync(() => state.setLocale(prevLocale));
+    });
 
     await tester.pumpWidget(
       const MaterialApp(
@@ -190,6 +213,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pump(const Duration(milliseconds: 800));
 
+    expect(find.byKey(const Key('dl-home-screen')), findsOneWidget);
+    expect(find.byKey(const Key('dl-home-search-pill')), findsOneWidget);
+    expect(find.byKey(const Key('dl-home-hero-card')), findsOneWidget);
+    expect(find.byKey(const Key('home-notifications-bell')), findsOneWidget);
     expect(find.text('Nearby stays'), findsNothing);
     expect(find.text('عروض حصرية مميزة'), findsOneWidget);
     expect(find.byType(AccommodationCard), findsWidgets);
@@ -201,7 +228,7 @@ void main() {
   });
 
   testWidgets(
-      'HomeScreen renders ExploreListingCard feed directly below Exclusive Deals carousel',
+      'HomeScreen renders ExploreListingCard feed directly below Exclusive Deals carousel and supports EN LTR cleanly',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -209,14 +236,19 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final state = AppState();
+    final prevLocale = state.locale;
+    await tester.runAsync(() => state.setLocale(const Locale('en')));
     final previousAdapter = state.api.dio.httpClientAdapter;
     state.api.dio.httpClientAdapter = _StubHomeHttpAdapter();
-    addTearDown(() => state.api.dio.httpClientAdapter = previousAdapter);
+    addTearDown(() async {
+      state.api.dio.httpClientAdapter = previousAdapter;
+      await tester.runAsync(() => state.setLocale(prevLocale));
+    });
 
     await tester.pumpWidget(
       const MaterialApp(
         home: Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: TextDirection.ltr,
           child: HomeScreen(),
         ),
       ),
@@ -224,21 +256,23 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pump(const Duration(milliseconds: 800));
 
-    final exclusivePos = tester.getTopLeft(find.text('عروض حصرية مميزة'));
+    expect(find.text('Welcome to Apolo'), findsOneWidget);
+    expect(find.text('Exclusive Deals'), findsOneWidget);
+    final exclusivePos = tester.getTopLeft(find.text('Exclusive Deals'));
 
     // Scroll down below the Exclusive Deals carousel to reveal the Explore-style ad feed
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -450));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -520));
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('أحدث الإعلانات'), findsOneWidget);
+    expect(find.text('Latest listings'), findsOneWidget);
     expect(find.byType(ExploreListingCard), findsWidgets);
 
-    final feedTitlePos = tester.getTopLeft(find.text('أحدث الإعلانات'));
+    final feedTitlePos = tester.getTopLeft(find.text('Latest listings'));
     final firstExploreCard = find.byType(ExploreListingCard).first;
     final exploreCardPos = tester.getTopLeft(firstExploreCard);
     final exploreCardSize = tester.getSize(firstExploreCard);
 
-    expect(feedTitlePos.dy, greaterThan(exclusivePos.dy - 450));
+    expect(feedTitlePos.dy, greaterThan(exclusivePos.dy - 520));
     expect(exploreCardPos.dy, greaterThan(feedTitlePos.dy));
     expect(exploreCardSize.width, inInclusiveRange(342, 355));
     expect(tester.takeException(), isNull);

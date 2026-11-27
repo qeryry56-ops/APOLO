@@ -2,22 +2,20 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../core/state/app_state.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
 
-/// Exact UI reproduction of the Accommodation Listing Card for the Home Screen
-/// "Nearby stays" horizontal carousel.
-///
-/// Proportions & visual hierarchy:
+/// Dynamic Layer v5.1 Exclusive Deals / Accommodation Showcase Card:
 /// - 0.84:1 portrait aspect ratio (width : height)
-/// - 24px rounded corners with edge-to-edge BoxFit.cover image
-/// - Top-left translucent glass pills: Category badge (e.g. "Cabin") + Rating badge ("★ 4.9")
-/// - Top-right circular translucent favorite button (44x44pt hit target) with white heart toggle
-/// - Overlapping bottom off-white rounded info panel:
-///   - Row 1: Property name on left ("Lakeside Cabin") + Price on right ("$148 /night")
-///   - Row 2: Location pin + Location text ("Sintra, Portugal") + "|" separator + "$651 total · 4 nights"
+/// - Crisp 24px rounded corners with 1px #EEEEEE border (zero muddy drop shadow)
+/// - Top-start translucent pills: Category badge + Star rating (#FFB800 ★)
+/// - Top-end 40x40 circular favorite button (44x44pt hit target) with #FF3B30 heart
+/// - Bottom pure #FFFFFF rounded (20px) floating info panel:
+///   - Row 1: Bold #000000 title + #000000 tabular price
+///   - Row 2: Pin + #757575 location + 1px #EEEEEE divider + #757575 summary
 class AccommodationCard extends StatefulWidget {
   final Map<String, dynamic> ad;
   final VoidCallback? onTap;
@@ -37,6 +35,14 @@ class AccommodationCard extends StatefulWidget {
 class _AccommodationCardState extends State<AccommodationCard> {
   final AppState _state = AppState();
   bool? _localFavoriteOverride;
+
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlSeparator = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlHeartRed = Color(0xFFFF3B30);
+  static const Color _dlStarAmber = Color(0xFFFFB800);
 
   int get _adId {
     final raw = widget.ad['id'];
@@ -325,26 +331,17 @@ class _AccommodationCardState extends State<AccommodationCard> {
   Widget _buildFallbackPhoto({String? assetOverride}) {
     final assetPath = assetOverride ?? _resolveCategoryAsset();
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFF1F5F9),
-            Color(0xFFE2E8F0),
-          ],
-        ),
-      ),
-      alignment: const Alignment(0, -0.25),
+      color: _dlSurface,
+      alignment: const Alignment(0, -0.22),
       child: Image.asset(
         assetPath,
         fit: BoxFit.contain,
-        width: 156,
-        height: 156,
+        width: 152,
+        height: 152,
         errorBuilder: (_, __, ___) => const Icon(
           CupertinoIcons.photo,
-          color: Color(0xFF94A3B8),
-          size: 48,
+          color: _dlMuted,
+          size: 46,
         ),
       ),
     );
@@ -354,16 +351,12 @@ class _AccommodationCardState extends State<AccommodationCard> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6.5),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.22),
+            color: Colors.black.withValues(alpha: 0.42),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.22),
-              width: 0.8,
-            ),
           ),
           child: child,
         ),
@@ -389,274 +382,252 @@ class _AccommodationCardState extends State<AccommodationCard> {
         onTap: _handleCardTap,
         child: Container(
           decoration: BoxDecoration(
+            color: _dlSurface,
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            border: Border.all(color: _dlSeparator, width: 1),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // 1. Main Edge-to-Edge Accommodation Photo (object-fit: cover)
-                Positioned.fill(
-                  child: _buildBackgroundImage(imageUrl),
-                ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 1. Main Edge-to-Edge Listing Photo
+              Positioned.fill(
+                child: _buildBackgroundImage(imageUrl),
+              ),
 
-                // Subtle top vignette for badge legibility over bright skies
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 84,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.16),
-                            Colors.transparent,
-                          ],
-                        ),
+              // Subtle top vignette for crisp pill contrast
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 76,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.18),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
                   ),
                 ),
+              ),
 
-                // 2. Top Overlay Elements (Category badge + Rating badge on start, Heart button on end)
-                Positioned(
-                  top: 14,
-                  left: 14,
-                  right: 14,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Top-start badges
-                      Flexible(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: _buildGlassPill(
-                                child: Text(
-                                  badgeLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+              // 2. Top Overlay Elements
+              Positioned(
+                top: 12,
+                left: 12,
+                right: 12,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: _buildGlassPill(
+                              child: Text(
+                                badgeLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildGlassPill(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star_rounded,
+                                  color: _dlStarAmber,
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  rating,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 13.5,
+                                    fontSize: 12.5,
                                     fontWeight: FontWeight.w600,
-                                    letterSpacing: -0.1,
                                     height: 1.1,
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            _buildGlassPill(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.star_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    rating,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: -0.1,
-                                      height: 1.1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-
-                      // Top-end circular translucent favorite button (44x44pt touch target)
-                      Semantics(
-                        button: true,
-                        label: 'Favorite accommodation',
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _handleFavoriteTap,
-                          child: ClipOval(
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                              child: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.24),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.22),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  isFav
-                                      ? CupertinoIcons.heart_fill
-                                      : CupertinoIcons.heart,
-                                  color: isFav
-                                      ? const Color(0xFFFF3B5C)
-                                      : Colors.white,
-                                  size: 21,
-                                ),
+                    ),
+                    Semantics(
+                      button: true,
+                      label: 'Favorite accommodation',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _handleFavoriteTap,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: isFav
+                                    ? _dlBg
+                                    : Colors.black.withValues(alpha: 0.38),
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                isFav
+                                    ? CupertinoIcons.heart_fill
+                                    : CupertinoIcons.heart,
+                                color: isFav ? _dlHeartRed : Colors.white,
+                                size: 19,
                               ),
                             ),
                           ),
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 3. Bottom Dynamic Layer Pure #FFFFFF Floating Info Panel
+              Positioned(
+                left: 10,
+                right: 10,
+                bottom: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 15,
+                    vertical: 13,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _dlBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _dlSeparator, width: 1),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _dlInk,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: nightlyPrice,
+                                    style: const TextStyle(
+                                      color: _dlInk,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.3,
+                                      fontFeatures: [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                  if (priceUnit.isNotEmpty)
+                                    TextSpan(
+                                      text: ' $priceUnit',
+                                      style: const TextStyle(
+                                        color: _dlMuted,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 14.5,
+                            color: _dlMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _dlMuted,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Container(
+                              width: 1,
+                              height: 12,
+                              color: _dlSeparator,
+                            ),
+                          ),
+                          Flexible(
+                            child: Text(
+                              totalSummary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _dlMuted,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-
-                // 3. Bottom Overlapping Off-White Information Panel
-                Positioned(
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F4).withValues(alpha: 0.96),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // First Row: Property name on start, Price on end
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF18181B),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.3,
-                                  height: 1.2,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Directionality(
-                              textDirection: TextDirection.ltr,
-                              child: RichText(
-                                text: TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: nightlyPrice,
-                                      style: const TextStyle(
-                                        color: Color(0xFF18181B),
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.3,
-                                      ),
-                                    ),
-                                    if (priceUnit.isNotEmpty)
-                                      TextSpan(
-                                        text: ' $priceUnit',
-                                        style: const TextStyle(
-                                          color: Color(0xFF71717A),
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-
-                        // Second Row: Location pin + location text | secondary summary
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on_rounded,
-                              size: 15,
-                              color: Color(0xFF71717A),
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                location,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF71717A),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.2,
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8),
-                              child: Container(
-                                width: 1,
-                                height: 12,
-                                color: const Color(0xFFD4D4D8),
-                              ),
-                            ),
-                            Flexible(
-                              child: Text(
-                                totalSummary,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF71717A),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
