@@ -119,7 +119,14 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Hero tags & video tour pill
+    // Dynamic Layer v5.1 Top Nav, Hero tags & video tour pill
+    expect(find.byKey(const Key('dl-detail-top-nav')), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-back-btn')), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-fav-btn')), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-more-btn')), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-bottom-bar')), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-primary-cta')), findsOneWidget);
+    expect(find.text('Details'), findsOneWidget);
     expect(find.text('Video tour'), findsOneWidget);
     expect(find.text('0:45'), findsOneWidget);
     expect(find.text('Villa'), findsWidgets);
@@ -207,6 +214,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('حامل الهاتف المغناطيسي للسيارة'), findsOneWidget);
+    expect(find.text('تفاصيل الإعلان'), findsOneWidget);
+    expect(find.byKey(const Key('dl-detail-call-btn')), findsOneWidget);
     expect(find.text('99 MAD'), findsWidgets);
     expect(find.text('رسالة'), findsOneWidget);
     expect(find.text('167'), findsOneWidget);
@@ -282,6 +291,7 @@ void main() {
     expect(find.text('450 MAD'), findsWidgets);
     expect(find.text('Just listed · 19 hours ago'), findsOneWidget);
     expect(find.text('Message seller'), findsOneWidget);
+    expect(find.text('Contact seller'), findsOneWidget);
     expect(find.byKey(const Key('detail-quick-msg')), findsOneWidget);
     expect(find.byKey(const Key('detail-quick-send')), findsOneWidget);
     expect(find.text('Send'), findsOneWidget);

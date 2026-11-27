@@ -11,6 +11,7 @@ import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/apolo_badges_kit.dart';
+import '../widgets/dl_settings_kit.dart';
 import 'widgets/price_text.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
@@ -57,19 +58,21 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   bool _openingChat = false;
   bool _savingFavorite = false;
   bool _alertEnabled = false;
-  bool _followingSeller = false;
+  bool _followingSellerLocal = false;
   bool _hiddenListing = false;
 
-  // Calibrated 2026 Monochrome Light Tokens (Crimson reserved for favorites/destructive)
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _red = Color(0xFF0A0A0A);
-  static const Color _redSoft = Color(0xFFE8EAEE);
-  static const Color _surface = Color(0xFFF2F3F7);
-  static const Color _pillGrey = Color(0xFFE8EAEE);
-  static const Color _fbBlue = Color(0xFF0A0A0A);
-  static const Color _fbBlueSoft = Color(0xFFF2F3F7);
-  static const Color _mutedText = Color(0xFF6B7280);
-  static const Color _starOrange = Color(0xFFE87A24);
+  // Dynamic Layer v5.1 Strict Palette Tokens
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlSeparator = Color(0xFFEEEEEE);
+  static const Color _dlBorder = Color(0xFFE4E4E7);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlSubtle = Color(0xFF9E9E9E);
+  static const Color _dlFollowBlue = Color(0xFF2997FF);
+  static const Color _dlHeartRed = Color(0xFFFF3B30);
+  static const Color _dlStarAmber = Color(0xFFFFB800);
 
   @override
   void initState() {
@@ -83,6 +86,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     if (_ad != null) {
       final catId = _state.extractAdCategoryId(_ad!);
       _state.recordCategoryInterest(catId, weight: 2);
+      final initSellerId = _extractSellerIdFromAdMap(_ad);
+      if (initSellerId > 0) {
+        _followingSellerLocal = _state.isFollowingSeller(initSellerId);
+      }
     }
     _state.addListener(_onStateChanged);
     _fetchDetails().then((_) {
@@ -102,25 +109,57 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     if (mounted) setState(() {});
   }
 
+  bool _isFollowingSeller(int sellerId) {
+    if (sellerId > 0) {
+      return _state.isFollowingSeller(sellerId) || _followingSellerLocal;
+    }
+    return _followingSellerLocal;
+  }
+
+  void _toggleFollowSeller(int sellerId) {
+    HapticFeedback.selectionClick();
+    if (sellerId > 0) {
+      final next = !_isFollowingSeller(sellerId);
+      setState(() => _followingSellerLocal = next);
+      if (_state.isFollowingSeller(sellerId) != next) {
+        _state.toggleFollowSeller(sellerId);
+      }
+    } else {
+      setState(() => _followingSellerLocal = !_followingSellerLocal);
+    }
+  }
+
   Future<void> _toggleFavorite() async {
     if (_savingFavorite) return;
+    HapticFeedback.selectionClick();
     if (!_state.isLoggedIn) {
       await Navigator.push(
-          context, MaterialPageRoute(builder: (_) => const AuthScreen()));
+        context,
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+      );
       return;
     }
     _savingFavorite = true;
     final previous = _state.favoriteAdIds.contains(widget.adId);
     try {
-      final result = await _state.toggleFavorite(widget.adId,
-          categoryId: _ad == null ? null : _state.extractAdCategoryId(_ad!));
+      final result = await _state.toggleFavorite(
+        widget.adId,
+        categoryId: _ad == null ? null : _state.extractAdCategoryId(_ad!),
+      );
       if (mounted && result == previous) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(_state.s.tr(
-              'تعذر تحديث المفضلة. حاول مرة أخرى.',
-              'Impossible de modifier les favoris. Réessayez.',
-              'Could not update favorites. Please try again.',
-            ))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: _dlInk,
+            content: Text(
+              _state.s.tr(
+                'تعذر تحديث المفضلة. حاول مرة أخرى.',
+                'Impossible de modifier les favoris. Réessayez.',
+                'Could not update favorites. Please try again.',
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       _savingFavorite = false;
@@ -138,7 +177,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             _state.recordCategoryInterest(catId, weight: 2);
           }
           setState(() {
-            _ad = loadedAd;
+            _ad = loadedAd is Map
+                ? Map<String, dynamic>.from(loadedAd)
+                : _ad;
             _relatedAds = res.data['related_ads'] ?? [];
             _loading = false;
           });
@@ -154,22 +195,22 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final s = _state.s;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _dlBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 38,
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: _dlPill,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -178,22 +219,22 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   width: 56,
                   height: 56,
                   decoration: const BoxDecoration(
-                    color: _redSoft,
+                    color: _dlPill,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     CupertinoIcons.phone_fill,
-                    color: _red,
-                    size: 26,
+                    color: _dlInk,
+                    size: 24,
                   ),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   sellerName,
                   style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: _dlInk,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -202,10 +243,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   textDirection: TextDirection.ltr,
                   style: TextStyle(
                     fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: _red,
+                    fontWeight: FontWeight.w800,
+                    color: _dlInk,
                     letterSpacing:
-                        AppTypography.trackingForContext(context, 0.8),
+                        AppTypography.trackingForContext(context, 0.6),
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -220,38 +261,41 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               behavior: SnackBarBehavior.floating,
-                              backgroundColor: _ink,
+                              backgroundColor: _dlInk,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               content: Text(
-                                s.tr('تم نسخ رقم الهاتف', 'Numéro copié',
-                                    'Phone number copied'),
+                                s.tr(
+                                  'تم نسخ رقم الهاتف',
+                                  'Numéro copié',
+                                  'Phone number copied',
+                                ),
                               ),
                             ),
                           );
                         },
                         child: Container(
-                          height: 52,
+                          height: 48,
                           decoration: BoxDecoration(
-                            color: _surface,
-                            borderRadius: BorderRadius.circular(16),
+                            color: _dlPill,
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(
                                 CupertinoIcons.doc_on_doc,
-                                size: 17,
-                                color: _ink,
+                                size: 16,
+                                color: _dlInk,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 s.tr('نسخ الرقم', 'Copier', 'Copy'),
                                 style: const TextStyle(
                                   fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: _ink,
+                                  fontWeight: FontWeight.w700,
+                                  color: _dlInk,
                                 ),
                               ),
                             ],
@@ -259,7 +303,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: PressableScale(
                         onTap: () async {
@@ -273,17 +317,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           }
                         },
                         child: Container(
-                          height: 52,
+                          height: 48,
                           decoration: BoxDecoration(
-                            color: _red,
-                            borderRadius: BorderRadius.circular(16),
+                            color: _dlInk,
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(
                                 CupertinoIcons.phone_fill,
-                                size: 17,
+                                size: 16,
                                 color: Colors.white,
                               ),
                               const SizedBox(width: 8),
@@ -291,7 +335,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 s.tr('اتصال الآن', 'Appeler', 'Call'),
                                 style: const TextStyle(
                                   fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                 ),
                               ),
@@ -313,10 +357,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   int _extractSellerIdFromAdMap(Map<String, dynamic>? ad) {
     if (ad == null) return 0;
     final direct = int.tryParse(
-            '${ad['user_id'] ?? ad['seller_id'] ?? ad['seller']?['id'] ?? ad['user']?['id'] ?? ad['store']?['user_id'] ?? ''}') ??
+          '${ad['user_id'] ?? ad['seller_id'] ?? ad['seller']?['id'] ?? ad['user']?['id'] ?? ad['store']?['user_id'] ?? ''}',
+        ) ??
         0;
     if (direct > 0) return direct;
-    // Fallback: Apolo ad slugs end with `-<sellerId>-<seq>` (e.g. `tissot-watch-black-685-1`)
     final slug = (ad['slug'] ?? '').toString().trim();
     final match = RegExp(r'-(\d+)-\d+$').firstMatch(slug);
     if (match != null) {
@@ -342,7 +386,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
     _openingChat = true;
     try {
-      // Ensure full ad details (including seller.id) are loaded if opened from a feed card
       if (_extractSellerIdFromAdMap(_ad) <= 0) {
         await _fetchDetails();
       }
@@ -369,7 +412,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       int rawPeerId = _extractSellerIdFromAdMap(_ad);
       int backendConvId = 0;
 
-      // Also start/sync conversation on the Laravel backend so both REST and Firestore stay in sync
       try {
         final res = await _state.api.dio
             .post('/chat/start', data: {'ad_id': widget.adId});
@@ -404,8 +446,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
       int peerId = rawPeerId > 0 ? rawPeerId : (1000000 + widget.adId);
 
-      // If the seller clicked Chat on their own ad, open the latest buyer conversation for this ad
-      // instead of creating an empty self-chat (u_685_685).
       if (FirebaseChatService.instance.isReady &&
           myUserId > 0 &&
           peerId == myUserId) {
@@ -422,7 +462,6 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         }
       }
 
-      // Primary path: Real-time Firebase Firestore Chat (dual-synced with backend)
       if (FirebaseChatService.instance.isReady && myUserId > 0) {
         final myName = (_state.currentUser?['name'] ??
                 _state.currentUser?['full_name'] ??
@@ -519,24 +558,30 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         return;
       }
     } catch (_) {
-      // Do not invent a conversation identifier when chat creation fails.
     } finally {
       _openingChat = false;
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_state.s.tr(
-        'تعذر فتح المحادثة. حاول مرة أخرى.',
-        'Impossible de démarrer la conversation. Réessayez.',
-        'Could not start conversation. Please try again.',
-      ))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: _dlInk,
+          content: Text(
+            _state.s.tr(
+              'تعذر فتح المحادثة. حاول مرة أخرى.',
+              'Impossible de démarrer la conversation. Réessayez.',
+              'Could not start conversation. Please try again.',
+            ),
+          ),
+        ),
+      );
     }
   }
 
   void _openFullScreenImage(String imgUrl, String caption) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.94),
+      barrierColor: Colors.black.withValues(alpha: 0.96),
       builder: (ctx) => Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -547,14 +592,20 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             caption,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 15),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         body: Center(
           child: InteractiveViewer(
             minScale: 0.8,
             maxScale: 4.0,
-            child: AppImage(url: imgUrl, fit: BoxFit.contain),
+            child: imgUrl.startsWith('assets/')
+                ? Image.asset(imgUrl, fit: BoxFit.contain)
+                : AppImage(url: imgUrl, fit: BoxFit.contain),
           ),
         ),
       ),
@@ -589,7 +640,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: _ink,
+          backgroundColor: _dlInk,
           content: Text(
             _state.s.tr(
               'تم حظر هذا المستخدم بنجاح',
@@ -612,29 +663,29 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _dlBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 38,
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: _dlPill,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 _SheetActionRow(
                   icon: CupertinoIcons.flag_fill,
-                  iconColor: _red,
+                  iconColor: _dlHeartRed,
                   title: s.tr(
                     'الإبلاغ عن هذا الإعلان أو محتوى AI',
                     'Signaler cette annonce / contenu IA',
@@ -660,7 +711,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   const SizedBox(height: 10),
                   _SheetActionRow(
                     icon: CupertinoIcons.nosign,
-                    iconColor: _ink,
+                    iconColor: _dlInk,
                     title: s.blockUser,
                     subtitle: s.tr(
                       'إخفاء جميع إعلانات هذا البائع',
@@ -681,7 +732,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     );
   }
 
-  Future<void> _openVideoTour(String? videoUrl, List<String> images, String title) async {
+  Future<void> _openVideoTour(
+    String? videoUrl,
+    List<String> images,
+    String title,
+  ) async {
     HapticFeedback.lightImpact();
     final trimmed = (videoUrl ?? '').trim();
     if (trimmed.isNotEmpty) {
@@ -695,7 +750,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
     if (!mounted) return;
     if (images.isNotEmpty) {
-      _openFullScreenImage(images[_currentImgIndex.clamp(0, images.length - 1)], title);
+      _openFullScreenImage(
+        images[_currentImgIndex.clamp(0, images.length - 1)],
+        title,
+      );
     }
   }
 
@@ -707,31 +765,34 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _dlBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 38,
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: _dlPill,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
                 const SizedBox(height: 18),
                 _SheetActionRow(
                   icon: CupertinoIcons.chat_bubble_2_fill,
-                  iconColor: const Color(0xFF4A4EED),
-                  title: s.tr('محادثة فورية عبر Apolo', 'Message sur Apolo',
-                      'Message on Apolo'),
+                  iconColor: _dlInk,
+                  title: s.tr(
+                    'محادثة فورية عبر Apolo',
+                    'Message sur Apolo',
+                    'Message on Apolo',
+                  ),
                   subtitle: s.tr(
                     'تواصل مباشرة مع $sellerDisplayName داخل التطبيق',
                     'Discuter directement avec $sellerDisplayName',
@@ -746,9 +807,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   const SizedBox(height: 10),
                   _SheetActionRow(
                     icon: CupertinoIcons.phone_fill,
-                    iconColor: _red,
-                    title: s.tr('اتصال هاتفي مباشر',
-                        'Appeler $sellerDisplayName', 'Call $sellerDisplayName'),
+                    iconColor: _dlInk,
+                    title: s.tr(
+                      'اتصال هاتفي مباشر',
+                      'Appeler $sellerDisplayName',
+                      'Call $sellerDisplayName',
+                    ),
                     subtitle: phone,
                     onTap: () {
                       Navigator.pop(ctx);
@@ -813,31 +877,38 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final ad = _ad;
     if (ad == null && _loading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF8F9FA),
+        backgroundColor: _dlBg,
         body: AdDetailSkeleton(),
       );
     }
     if (ad == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-        ),
-        body: IllustratedStateView(
-          assetPath: 'assets/images/state_empty_ads.png',
-          title: s.tr(
-            'الإعلان غير متوفر',
-            'Annonce introuvable',
-            'Listing unavailable',
+        backgroundColor: _dlBg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              ApoloDlTopNav(
+                title: s.tr('تفاصيل الإعلان', 'Détails', 'Details'),
+              ),
+              Expanded(
+                child: IllustratedStateView(
+                  assetPath: 'assets/images/state_empty_ads.png',
+                  title: s.tr(
+                    'الإعلان غير متوفر',
+                    'Annonce introuvable',
+                    'Listing unavailable',
+                  ),
+                  subtitle: s.tr(
+                    'ربما تم بيع هذا المنتج أو حذفه من طرف البائع.',
+                    'Cet article a peut-être été vendu ou retiré.',
+                    'This item may have been sold or removed by the seller.',
+                  ),
+                  actionLabel: s.tr('العودة', 'Retour', 'Go back'),
+                  onAction: () => Navigator.pop(context),
+                ),
+              ),
+            ],
           ),
-          subtitle: s.tr(
-            'ربما تم بيع هذا المنتج أو حذفه من طرف البائع.',
-            'Cet article a peut-être été vendu ou retiré.',
-            'This item may have been sold or removed by the seller.',
-          ),
-          actionLabel: s.tr('العودة', 'Retour', 'Go back'),
-          onAction: () => Navigator.pop(context),
         ),
       );
     }
@@ -858,7 +929,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         seller != null &&
         _state.currentUser!['id'].toString() == seller['id'].toString();
     final int sellerId = int.tryParse(
-            '${seller?['id'] ?? ad['seller_id'] ?? ad['user_id'] ?? ''}') ??
+          '${seller?['id'] ?? ad['seller_id'] ?? ad['user_id'] ?? ''}',
+        ) ??
         0;
     final String sellerDisplayName =
         (store?['name'] ?? seller?['name'] ?? 'Apolo Seller').toString();
@@ -873,14 +945,13 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 : (ad['city_fr'] ?? ad['city_name'] ?? 'Casablanca'))
             .toString();
 
-    final String locationSubtitle = (ad['location_display'] ??
-            ad['location'] ??
-            '')
-        .toString()
-        .trim()
-        .isNotEmpty
-        ? (ad['location_display'] ?? ad['location']).toString().trim()
-        : cityName;
+    final String locationSubtitle =
+        (ad['location_display'] ?? ad['location'] ?? '')
+                .toString()
+                .trim()
+                .isNotEmpty
+            ? (ad['location_display'] ?? ad['location']).toString().trim()
+            : cityName;
 
     final Map<String, dynamic> catMap = ad['category'] is Map
         ? Map<String, dynamic>.from(ad['category'])
@@ -899,8 +970,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             .trim()
         : categoryName;
 
-    final bool isNegotiable =
-        ad['negotiable'] == true || ad['is_negotiable'] == true || metadata['negotiable'] == true;
+    final bool isNegotiable = ad['negotiable'] == true ||
+        ad['is_negotiable'] == true ||
+        metadata['negotiable'] == true;
     final int viewsCount =
         int.tryParse((ad['views_count'] ?? ad['views'] ?? 0).toString()) ?? 0;
 
@@ -938,7 +1010,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         .toList();
 
     final List<({String value, String label})> quickSpecCards =
-        _buildQuickSpecCards(ad, s, isStayListing, viewsCount, cityName, metadata, rawSpecs);
+        _buildQuickSpecCards(
+      ad,
+      s,
+      isStayListing,
+      viewsCount,
+      cityName,
+      metadata,
+      rawSpecs,
+    );
 
     final List<MapEntry<String, String>> structuredSpecs = [
       MapEntry(s.tr('القسم', 'Catégorie', 'Category'), categoryName),
@@ -950,170 +1030,193 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 s.tr('غير محددة', 'Non précisé', 'Not specified'))
             .toString(),
       ),
-      MapEntry(s.tr('رقم الإعلان', 'Référence', 'Reference'), '#AP-${widget.adId}'),
+      MapEntry(
+        s.tr('رقم الإعلان', 'Référence', 'Reference'),
+        '#AP-${widget.adId}',
+      ),
       ...rawSpecs,
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      key: const Key('dl-ad-detail-screen'),
+      backgroundColor: _dlBg,
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          scrollCacheExtent: const ScrollCacheExtent.pixels(700),
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 120),
+        child: Column(
           children: [
-            // 1. Hero Image Card (UNTOUCHED per user instruction)
-            _buildHeroImageCard(
+            // 1. Dynamic Layer v5.1 Top Navigation Bar (`52px`, `40×40` `#EEEEEE` buttons)
+            _buildDlTopNav(
               s: s,
               ad: ad,
-              images: images,
+              seller: seller,
+              isOwner: isOwner,
               isFav: isFav,
-              categoryAsset: categoryAsset,
-              heroTypeTag: heroTypeTag,
-              viewsCount: viewsCount,
-              isNegotiable: isNegotiable,
-              metadata: metadata,
-              priceFormatted: priceFormatted,
             ),
 
-            // 2. Title, Price & "Just listed" Header
-            _buildMarketplaceHeader(
-              s: s,
-              ad: ad,
-              title: (ad['title'] ?? '').toString(),
-              locationSubtitle: locationSubtitle,
-              priceFormatted: priceFormatted,
-              priceFrequency: priceFrequency,
-            ),
-
-            // Optional compact gallery thumbnails when multiple images exist
-            if (images.length > 1)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: SizedBox(
-                  height: 52,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: images.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, idx) {
-                      final active = idx == _currentImgIndex;
-                      return PressableScale(
-                        onTap: () {
-                          _pageCtrl.animateToPage(
-                            idx,
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeOutCubic,
-                          );
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 52,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: active ? _fbBlue : const Color(0xFFE5E7EB),
-                              width: active ? 2 : 1,
-                            ),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: images[idx].startsWith('assets/')
-                                ? Image.asset(images[idx], fit: BoxFit.cover)
-                                : AppImage(url: images[idx], fit: BoxFit.cover),
-                          ),
-                        ),
-                      );
-                    },
+            // 2. Scrollable Dynamic Layer v5.1 Content Canvas
+            Expanded(
+              child: ListView(
+                scrollCacheExtent: const ScrollCacheExtent.pixels(700),
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 120),
+                children: [
+                  // Hero Media Gallery Card (`24px` radius, crisp flat frame)
+                  _buildHeroImageCard(
+                    s: s,
+                    ad: ad,
+                    images: images,
+                    categoryAsset: categoryAsset,
+                    heroTypeTag: heroTypeTag,
+                    viewsCount: viewsCount,
+                    isNegotiable: isNegotiable,
+                    metadata: metadata,
                   ),
-                ),
+
+                  // Multi-image thumbnail selector (`52×52` `12px` radius, `2px` `#000000` active ring)
+                  if (images.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: SizedBox(
+                        height: 52,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: images.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (_, idx) {
+                            final active = idx == _currentImgIndex;
+                            return PressableScale(
+                              onTap: () {
+                                _pageCtrl.animateToPage(
+                                  idx,
+                                  duration: const Duration(milliseconds: 240),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                width: 52,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: active ? _dlInk : _dlPill,
+                                    width: active ? 2 : 1,
+                                  ),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: images[idx].startsWith('assets/')
+                                      ? Image.asset(
+                                          images[idx],
+                                          fit: BoxFit.cover,
+                                        )
+                                      : AppImage(
+                                          url: images[idx],
+                                          fit: BoxFit.cover,
+                                        ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                  // Title, Price & Location Meta Header
+                  _buildMarketplaceHeader(
+                    s: s,
+                    ad: ad,
+                    title: (ad['title'] ?? '').toString(),
+                    locationSubtitle: locationSubtitle,
+                    priceFormatted: priceFormatted,
+                    priceFrequency: priceFrequency,
+                  ),
+
+                  // Inline Dynamic Layer Quick Message Card (or Boost card for Owner)
+                  _buildMessageSellerCard(
+                    s: s,
+                    ad: ad,
+                    isOwner: isOwner,
+                  ),
+
+                  // 4 Dynamic Layer `#EEEEEE` Circular Quick Actions
+                  _buildQuickActionCircleRow(
+                    s: s,
+                    ad: ad,
+                    isFav: isFav,
+                    priceFormatted: priceFormatted,
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: ApoloDlSeparator(indentStart: 16, indentEnd: 16),
+                  ),
+
+                  // Description + 2×2 Spec Cards + Structured Metadata + Direct Phone Row
+                  _buildDescriptionSection(
+                    s: s,
+                    ad: ad,
+                    quickSpecCards: quickSpecCards,
+                    rawSpecs: rawSpecs,
+                    structuredSpecs: structuredSpecs,
+                    isOwner: isOwner,
+                    phone: phone,
+                    sellerDisplayName: sellerDisplayName,
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: ApoloDlSeparator(indentStart: 16, indentEnd: 16),
+                  ),
+
+                  // Seller Profile Card with ApoloVerifiedBadge, ApoloRankBadge & `#2997FF` Follow Pill
+                  _buildSellerSection(
+                    s: s,
+                    ad: ad,
+                    seller: seller,
+                    store: store,
+                    sellerId: sellerId,
+                    sellerDisplayName: sellerDisplayName,
+                    cityName: cityName,
+                    phone: phone,
+                    isOwner: isOwner,
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: ApoloDlSeparator(indentStart: 16, indentEnd: 16),
+                  ),
+
+                  // Approximate Location Map Preview
+                  _buildLocationSection(
+                    s: s,
+                    ad: ad,
+                    cityName: cityName,
+                    locationSubtitle: locationSubtitle,
+                  ),
+
+                  // `#EEEEEE` Related Search Chips
+                  _buildRelatedSearchesSection(
+                    s: s,
+                    ad: ad,
+                    categoryName: categoryName,
+                    cityName: cityName,
+                  ),
+
+                  // Hide Listing & Trust/Safety Card
+                  _buildHideListingCard(
+                    s: s,
+                    ad: ad,
+                    seller: seller,
+                    isOwner: isOwner,
+                  ),
+
+                  // Similar Listings Feed
+                  if (_relatedAds.isNotEmpty) _buildRelatedExploreFeed(s),
+                ],
               ),
-
-            // 3. Inline "Message seller" Card (or Boost banner for Owner)
-            _buildMessageSellerCard(
-              s: s,
-              ad: ad,
-              isOwner: isOwner,
             ),
-
-            // 4. 4 Circular Quick Action Buttons (Alerts, Message, Share, Save)
-            _buildQuickActionCircleRow(
-              s: s,
-              ad: ad,
-              isFav: isFav,
-              priceFormatted: priceFormatted,
-            ),
-
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
-            ),
-
-            // 5. Description + Key Specs + Optional Direct Phone Row
-            _buildDescriptionSection(
-              s: s,
-              ad: ad,
-              quickSpecCards: quickSpecCards,
-              rawSpecs: rawSpecs,
-              structuredSpecs: structuredSpecs,
-              isOwner: isOwner,
-              phone: phone,
-              sellerDisplayName: sellerDisplayName,
-            ),
-
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 0),
-              child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
-            ),
-
-            // 6. Seller Header ("Seller >" + "See reviews") + Profile + Follow
-            _buildSellerSection(
-              s: s,
-              ad: ad,
-              seller: seller,
-              store: store,
-              sellerId: sellerId,
-              sellerDisplayName: sellerDisplayName,
-              cityName: cityName,
-              phone: phone,
-              isOwner: isOwner,
-            ),
-
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 0),
-              child: Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
-            ),
-
-            // 7. Real Interactive Approximate Location Map Preview
-            _buildLocationSection(
-              s: s,
-              ad: ad,
-              cityName: cityName,
-              locationSubtitle: locationSubtitle,
-            ),
-
-            // 8. Related Searches Chips
-            _buildRelatedSearchesSection(
-              s: s,
-              ad: ad,
-              categoryName: categoryName,
-              cityName: cityName,
-            ),
-
-            // 9. Hide Listing & Safety Footer Card
-            _buildHideListingCard(
-              s: s,
-              ad: ad,
-              seller: seller,
-              isOwner: isOwner,
-            ),
-
-            // 10. Similar / Related Ads using ExploreListingCard (matching Explore Screen)
-            if (_relatedAds.isNotEmpty)
-              _buildRelatedExploreFeed(s),
           ],
         ),
       ),
@@ -1127,6 +1230,67 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         fallbackPrice: priceFormatted,
         sellerDisplayName: sellerDisplayName,
         phone: phone,
+      ),
+    );
+  }
+
+  Widget _buildDlTopNav({
+    required AppStrings s,
+    required Map<String, dynamic> ad,
+    required Map<String, dynamic>? seller,
+    required bool isOwner,
+    required bool isFav,
+  }) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    return Container(
+      key: const Key('dl-detail-top-nav'),
+      height: 52,
+      color: _dlBg,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          ApoloDlIconCircleButton(
+            key: const Key('dl-detail-back-btn'),
+            icon: isRtl
+                ? CupertinoIcons.chevron_forward
+                : CupertinoIcons.chevron_back,
+            iconSize: 19,
+            tooltip: s.tr('رجوع', 'Retour', 'Back'),
+            onPressed: () => Navigator.maybePop(context),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              s.tr('تفاصيل الإعلان', 'Détails', 'Details'),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _dlInk,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ApoloDlIconCircleButton(
+            key: const Key('dl-detail-fav-btn'),
+            icon: isFav ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
+            iconSize: 19,
+            iconColor: isFav ? _dlHeartRed : _dlInk,
+            tooltip: s.tr('المفضلة', 'Favori', 'Favorite'),
+            onPressed: _toggleFavorite,
+          ),
+          const SizedBox(width: 8),
+          ApoloDlIconCircleButton(
+            key: const Key('dl-detail-more-btn'),
+            icon: CupertinoIcons.ellipsis,
+            iconSize: 19,
+            tooltip: s.tr('المزيد', 'Plus', 'More'),
+            onPressed: () => _showMoreActionsSheet(s, ad, seller, isOwner),
+          ),
+        ],
       ),
     );
   }
@@ -1188,10 +1352,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       final custom = (ad['quick_specs'] as List)
           .whereType<Map>()
           .take(4)
-          .map((m) => (
-                value: (m['value'] ?? '—').toString(),
-                label: (m['label'] ?? '').toString(),
-              ))
+          .map(
+            (m) => (
+              value: (m['value'] ?? '—').toString(),
+              label: (m['label'] ?? '').toString(),
+            ),
+          )
           .toList();
       if (custom.length == 4) return custom;
     }
@@ -1245,13 +1411,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     required AppStrings s,
     required Map<String, dynamic> ad,
     required List<String> images,
-    required bool isFav,
     required String categoryAsset,
     required String heroTypeTag,
     required int viewsCount,
     required bool isNegotiable,
     required Map<String, dynamic> metadata,
-    required String priceFormatted,
   }) {
     final String videoUrl =
         (ad['video_url'] ?? metadata['video_url'] ?? ad['video'] ?? '')
@@ -1261,8 +1425,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         (ad['video_duration'] ?? metadata['video_duration'] ?? '')
             .toString()
             .trim();
-    final bool showVideoTour =
-        videoUrl.isNotEmpty || ad['has_video'] == true || videoDuration.isNotEmpty;
+    final bool showVideoTour = videoUrl.isNotEmpty ||
+        ad['has_video'] == true ||
+        videoDuration.isNotEmpty;
 
     final String ratingRaw =
         (ad['rating'] ?? ad['stars'] ?? '').toString().trim();
@@ -1295,238 +1460,160 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         : '${_currentImgIndex + 1}/${images.isNotEmpty ? images.length : 1}';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
       child: SizedBox(
-        height: 380,
+        height: 312,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: _dlSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _dlSeparator, width: 1),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (images.isNotEmpty)
-                  PageView.builder(
-                    controller: _pageCtrl,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: images.length,
-                    onPageChanged: (i) =>
-                        setState(() => _currentImgIndex = i),
-                    itemBuilder: (_, idx) {
-                      final imgUrl = images[idx];
-                      return GestureDetector(
-                        onTap: () => _openFullScreenImage(
-                          imgUrl,
-                          (ad['title'] ?? '').toString(),
-                        ),
-                        child: imgUrl.startsWith('assets/')
-                            ? Image.asset(
-                                imgUrl,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (_, __, ___) => Center(
-                                  child: Floating3DIllustration(
-                                    assetPath: categoryAsset,
-                                    size: 135,
-                                  ),
-                                ),
-                              )
-                            : AppImage(
-                                url: imgUrl,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                fallback: Container(
-                                  color: const Color(0xFFE2E8F0),
-                                  alignment: Alignment.center,
-                                  child: Floating3DIllustration(
-                                    assetPath: categoryAsset,
-                                    size: 135,
-                                  ),
-                                ),
-                              ),
-                      );
-                    },
-                  )
-                else
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Floating3DIllustration(
-                      assetPath: categoryAsset,
-                      size: 145,
-                    ),
-                  ),
-
-                // Top & bottom subtle gradient scrims for crisp overlay contrast
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 88,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.22),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: 84,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.26),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Top-start Back Button + Top-end Share & Favorite Buttons (38x38 glass)
-                PositionedDirectional(
-                  top: 14,
-                  start: 14,
-                  end: 14,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _GlassCircleButton(
-                        icon: s.isAr
-                            ? CupertinoIcons.chevron_right
-                            : CupertinoIcons.chevron_left,
-                        tooltip: s.tr('رجوع', 'Retour', 'Back'),
-                        onTap: () => Navigator.pop(context),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _GlassCircleButton(
-                            icon: CupertinoIcons.share,
-                            tooltip: s.tr('مشاركة', 'Partager', 'Share'),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              final shareUrl =
-                                  ad['share_url'] ?? 'https://apolo.ma';
-                              Share.share(
-                                '${ad['title']} - $priceFormatted\n$shareUrl',
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _GlassCircleButton(
-                            icon: isFav
-                                ? CupertinoIcons.heart_fill
-                                : CupertinoIcons.heart,
-                            iconColor:
-                                isFav ? const Color(0xFFFF3B5C) : Colors.white,
-                            tooltip: s.tr('المفضلة', 'Favori', 'Favorite'),
-                            onTap: _toggleFavorite,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Center Floating Video Tour Pill (when video metadata exists)
-                if (showVideoTour)
-                  Center(
-                    child: _VideoTourPill(
-                      label: s.tr('فيديو الإعلان', 'Visite vidéo', 'Video tour'),
-                      duration:
-                          videoDuration.isNotEmpty ? videoDuration : '0:45',
-                      onTap: () => _openVideoTour(
-                        videoUrl,
-                        images,
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (images.isNotEmpty)
+                PageView.builder(
+                  controller: _pageCtrl,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: images.length,
+                  onPageChanged: (i) => setState(() => _currentImgIndex = i),
+                  itemBuilder: (_, idx) {
+                    final imgUrl = images[idx];
+                    return GestureDetector(
+                      onTap: () => _openFullScreenImage(
+                        imgUrl,
                         (ad['title'] ?? '').toString(),
                       ),
-                    ),
-                  ),
-
-                // Bottom Overlay Image Tags (Type pill, Rating/Views pill, Highlight pill, Counter pill)
-                PositionedDirectional(
-                  bottom: 14,
-                  start: 12,
-                  end: 12,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _ImageTagPill(label: heroTypeTag),
-                              const SizedBox(width: 6),
-                              _ImageTagPill(
-                                leadingIcon: Icons.star_rounded,
-                                leadingIconColor: const Color(0xFFFBBF24),
-                                label: ratingPillLabel,
-                              ),
-                              if (highlightLabel != null) ...[
-                                const SizedBox(width: 6),
-                                _ImageTagPill(
-                                  label: highlightLabel,
-                                  isLight: true,
+                      child: imgUrl.startsWith('assets/')
+                          ? Image.asset(
+                              imgUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (_, __, ___) => Center(
+                                child: Floating3DIllustration(
+                                  assetPath: categoryAsset,
+                                  size: 130,
                                 ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (images.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => _openFullScreenImage(
-                            images[_currentImgIndex.clamp(0, images.length - 1)],
-                            (ad['title'] ?? '').toString(),
-                          ),
-                          child: _ImageTagPill(
-                            label: totalCountLabel,
-                            tabular: true,
-                          ),
-                        ),
-                      ],
-                    ],
+                              ),
+                            )
+                          : AppImage(
+                              url: imgUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              fallback: Container(
+                                color: _dlSurface,
+                                alignment: Alignment.center,
+                                child: Floating3DIllustration(
+                                  assetPath: categoryAsset,
+                                  size: 130,
+                                ),
+                              ),
+                            ),
+                    );
+                  },
+                )
+              else
+                Container(
+                  color: _dlSurface,
+                  alignment: Alignment.center,
+                  child: Floating3DIllustration(
+                    assetPath: categoryAsset,
+                    size: 140,
                   ),
                 ),
-              ],
-            ),
+
+              // Subtle bottom gradient scrim for clean pill contrast
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 80,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.28),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              if (showVideoTour)
+                Center(
+                  child: _VideoTourPill(
+                    label: s.tr('فيديو الإعلان', 'Visite vidéo', 'Video tour'),
+                    duration:
+                        videoDuration.isNotEmpty ? videoDuration : '0:45',
+                    onTap: () => _openVideoTour(
+                      videoUrl,
+                      images,
+                      (ad['title'] ?? '').toString(),
+                    ),
+                  ),
+                ),
+
+              // Bottom Overlay Image Tags (Type pill, Rating/Views pill, Highlight pill, Counter pill)
+              PositionedDirectional(
+                bottom: 12,
+                start: 12,
+                end: 12,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (heroTypeTag.isNotEmpty) ...[
+                              _ImageTagPill(label: heroTypeTag),
+                              const SizedBox(width: 6),
+                            ],
+                            _ImageTagPill(
+                              leadingIcon: Icons.star_rounded,
+                              leadingIconColor: _dlStarAmber,
+                              label: ratingPillLabel,
+                            ),
+                            if (highlightLabel != null) ...[
+                              const SizedBox(width: 6),
+                              _ImageTagPill(
+                                label: highlightLabel,
+                                isLight: true,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (images.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () => _openFullScreenImage(
+                          images[
+                              _currentImgIndex.clamp(0, images.length - 1)],
+                          (ad['title'] ?? '').toString(),
+                        ),
+                        child: _ImageTagPill(
+                          label: totalCountLabel,
+                          tabular: true,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1586,7 +1673,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final String listedLabel = _resolveListedTimeLabel(ad, s);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1595,48 +1682,58 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w700,
-              color: _ink,
-              letterSpacing: AppTypography.trackingForContext(context, -0.35),
-              height: 1.25,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: _dlInk,
+              letterSpacing: AppTypography.trackingForContext(context, -0.4),
+              height: 1.22,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 6,
-            runSpacing: 2,
+            spacing: 8,
+            runSpacing: 4,
             children: [
               Directionality(
                 textDirection: TextDirection.ltr,
                 child: PriceText(
                   priceFormatted,
                   style: const TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w600,
-                    color: _ink,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: _dlInk,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
               if (priceFrequency.isNotEmpty)
-                Text(
-                  priceFrequency,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: _mutedText,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _dlPill,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    priceFrequency,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: _dlInk,
+                    ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 4,
+            spacing: 5,
             runSpacing: 2,
             children: [
               Text(
@@ -1644,7 +1741,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: _mutedText,
+                  color: _dlMuted,
                 ),
               ),
               if (locationSubtitle.isNotEmpty) ...[
@@ -1652,7 +1749,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   '·',
                   style: TextStyle(
                     fontSize: 13,
-                    color: _mutedText,
+                    color: _dlMuted,
                   ),
                 ),
                 Text(
@@ -1661,8 +1758,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: _mutedText,
+                    fontWeight: FontWeight.w500,
+                    color: _dlMuted,
                   ),
                 ),
               ],
@@ -1680,7 +1777,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   }) {
     if (isOwner) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
         child: PressableScale(
           onTap: () {
             showModalBottomSheet(
@@ -1696,19 +1793,28 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             });
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(14),
+              color: _dlSurface,
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
               children: [
-                const Icon(
-                  CupertinoIcons.bolt_fill,
-                  color: Color(0xFFD97706),
-                  size: 20,
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: _dlInk,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    CupertinoIcons.bolt_fill,
+                    color: Colors.white,
+                    size: 16,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     s.tr(
@@ -1717,9 +1823,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       'Boost this listing ⚡',
                     ),
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w700,
-                      color: _ink,
+                      color: _dlInk,
                     ),
                   ),
                 ),
@@ -1728,7 +1834,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       ? CupertinoIcons.chevron_left
                       : CupertinoIcons.chevron_right,
                   size: 16,
-                  color: _ink,
+                  color: _dlMuted,
                 ),
               ],
             ),
@@ -1738,25 +1844,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _dlSurface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE4E7EE), width: 1.1),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.055),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1766,9 +1859,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: BoxDecoration(
-                    color: _ink,
-                    borderRadius: BorderRadius.circular(9),
+                  decoration: const BoxDecoration(
+                    color: _dlInk,
+                    shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: const Icon(
@@ -1780,13 +1873,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    s.tr('راسل البائع', 'Contacter le vendeur', 'Message seller'),
+                    s.tr(
+                      'راسل البائع',
+                      'Contacter le vendeur',
+                      'Message seller',
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: _ink,
+                      color: _dlInk,
                     ),
                   ),
                 ),
@@ -1796,32 +1893,32 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _surface,
+                    color: _dlBg,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     s.tr('رد سريع', 'Réponse rapide', 'Fast reply'),
                     style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: _ink,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _dlInk,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 11),
             Row(
               children: [
                 Expanded(
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 46),
+                    constraints: const BoxConstraints(minHeight: 44),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
+                      horizontal: 15,
+                      vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: _surface,
+                      color: _dlBg,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     alignment: AlignmentDirectional.centerStart,
@@ -1845,11 +1942,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         controller: _quickMsgCtrl,
                         minLines: 1,
                         maxLines: 2,
+                        cursorColor: _dlInk,
                         style: const TextStyle(
                           fontSize: 13.5,
-                          color: _ink,
+                          color: _dlInk,
                           height: 1.3,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w400,
                         ),
                         decoration: InputDecoration(
                           filled: false,
@@ -1868,14 +1966,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           ),
                           hintStyle: const TextStyle(
                             fontSize: 13.5,
-                            color: _mutedText,
+                            color: _dlSubtle,
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 9),
+                const SizedBox(width: 8),
                 PressableScale(
                   key: const Key('detail-quick-send'),
                   onTap: () {
@@ -1886,11 +1984,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     );
                   },
                   child: Container(
-                    height: 46,
-                    constraints: const BoxConstraints(minWidth: 78),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    height: 44,
+                    constraints: const BoxConstraints(minWidth: 76),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
                     decoration: BoxDecoration(
-                      color: _ink,
+                      color: _dlInk,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     alignment: Alignment.center,
@@ -1898,7 +1996,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       s.tr('إرسال', 'Envoyer', 'Send'),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1918,15 +2016,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     setState(() => _alertEnabled = next);
     if (next && _state.api.isAuthenticated) {
       try {
-        await _state.api.dio.post('/saved-searches', data: {
-          'query': (ad['title'] ?? '').toString().trim(),
-        });
+        await _state.api.dio.post(
+          '/saved-searches',
+          data: {'query': (ad['title'] ?? '').toString().trim()},
+        );
       } catch (_) {}
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: _dlInk,
         content: Text(
           next
               ? s.tr(
@@ -1951,12 +2051,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     required String priceFormatted,
   }) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 18, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: _MarketplaceActionCircle(
+            child: _DlActionCircle(
               icon: _alertEnabled
                   ? CupertinoIcons.bell_fill
                   : CupertinoIcons.bell,
@@ -1966,15 +2066,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             ),
           ),
           Expanded(
-            child: _MarketplaceActionCircle(
+            child: _DlActionCircle(
               icon: CupertinoIcons.chat_bubble_fill,
               label: s.tr('رسالة', 'Message', 'Message'),
               onTap: () => _openInAppChat(),
             ),
           ),
           Expanded(
-            child: _MarketplaceActionCircle(
-              icon: CupertinoIcons.arrowshape_turn_up_right_fill,
+            child: _DlActionCircle(
+              icon: CupertinoIcons.share,
               label: s.tr('مشاركة', 'Partager', 'Share'),
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -1986,7 +2086,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             ),
           ),
           Expanded(
-            child: _MarketplaceActionCircle(
+            child: _DlActionCircle(
               icon: isFav
                   ? CupertinoIcons.bookmark_fill
                   : CupertinoIcons.bookmark,
@@ -2002,7 +2102,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
   Widget _buildQuickSpecGrid(
     List<({String value, String label})> cards, {
-    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(20, 14, 20, 0),
+    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(16, 12, 16, 0),
   }) {
     if (cards.isEmpty) return const SizedBox.shrink();
     final rows = <Widget>[];
@@ -2043,7 +2143,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     if (l.contains('guest') || l.contains('ضيف') || l.contains('voyageur')) {
       return CupertinoIcons.person_2_fill;
     }
-    if (l.contains('bed') || l.contains('غرف') || l.contains('سري') || l.contains('chambre')) {
+    if (l.contains('bed') ||
+        l.contains('غرف') ||
+        l.contains('سري') ||
+        l.contains('chambre')) {
       return CupertinoIcons.bed_double_fill;
     }
     if (l.contains('bath') || l.contains('حمام') || l.contains('bain')) {
@@ -2081,42 +2184,27 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         : rawDesc;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Soft Gray-Outlined Rounded Description Container (subtle outline, not a heavy card)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(15, 13, 15, 14),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
             decoration: BoxDecoration(
-              color: const Color(0xFFFAFAFC),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: const Color(0xFFDADEE6),
-                width: 1.15,
-              ),
+              color: _dlSurface,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      CupertinoIcons.doc_text,
-                      size: 16,
-                      color: Color(0xFF64748B),
-                    ),
-                    const SizedBox(width: 7),
-                    Text(
-                      s.tr('الوصف', 'Description', 'Description'),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _ink,
-                      ),
-                    ),
-                  ],
+                Text(
+                  s.tr('الوصف', 'Description', 'Description'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _dlInk,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -2126,17 +2214,16 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       ? TextOverflow.visible
                       : TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.5,
                     height: 1.48,
-                    color: Color(0xFF1E293B),
+                    color: _dlInk,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
                 if (fullDescription.length > 140) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () =>
-                        setState(() => _descExpanded = !_descExpanded),
+                    onTap: () => setState(() => _descExpanded = !_descExpanded),
                     child: Text(
                       _descExpanded
                           ? s.tr('عرض أقل', 'Voir moins', 'See less')
@@ -2144,7 +2231,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: _fbBlue,
+                        color: _dlFollowBlue,
                       ),
                     ),
                   ),
@@ -2153,100 +2240,100 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             ),
           ),
 
-          // Balanced 2x2 Bento Spec Cards
+          // 2×2 Dynamic Layer Spec Grid
           _buildQuickSpecGrid(
             quickSpecCards,
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: 10),
           ),
 
-          // Clean Key-Value Spec Card rows when listing has extra metadata
+          // Extra Key-Value Metadata Group
           if (rawSpecs.length > 2) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                color: _dlSurface,
+                borderRadius: BorderRadius.circular(18),
               ),
               child: Column(
-                children: structuredSpecs.skip(2).take(6).map((e) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.5),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            e.key,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              color: _mutedText,
-                              fontWeight: FontWeight.w500,
+                children: structuredSpecs.skip(2).take(6).toList().asMap().entries.map((entry) {
+                  final isLast =
+                      entry.key == structuredSpecs.skip(2).take(6).length - 1;
+                  final e = entry.value;
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                e.key,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: _dlMuted,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            e.value,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: _ink,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                e.value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _dlInk,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      if (!isLast) const ApoloDlSeparator(),
+                    ],
                   );
                 }).toList(),
               ),
             ),
           ],
 
+          // Direct Phone Row
           if (!isOwner && phone != null && phone.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             PressableScale(
               onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
               child: Container(
                 width: double.infinity,
-                height: 50,
+                height: 52,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  color: _dlSurface,
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 34,
+                      height: 34,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFECFDF5),
+                        color: _dlInk,
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
                       child: const Icon(
                         CupertinoIcons.phone_fill,
                         size: 15,
-                        color: Color(0xFF059669),
+                        color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 11),
                     Expanded(
                       child: Text(
                         s.tr(
@@ -2257,9 +2344,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: _ink,
+                          color: _dlInk,
                         ),
                       ),
                     ),
@@ -2268,11 +2355,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       textDirection: TextDirection.ltr,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
+                          horizontal: 11,
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: _dlBg,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -2280,7 +2367,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
-                            color: _ink,
+                            color: _dlInk,
                             fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -2348,9 +2435,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     required String? phone,
     required bool isOwner,
   }) {
-    final String hostTitle = (ad['host_title'] ?? '').toString().trim().isNotEmpty
-        ? ad['host_title'].toString().trim()
-        : sellerDisplayName;
+    final String hostTitle =
+        (ad['host_title'] ?? '').toString().trim().isNotEmpty
+            ? ad['host_title'].toString().trim()
+            : sellerDisplayName;
 
     final String hostSubtitle = (ad['host_subtitle'] ?? '')
             .toString()
@@ -2360,10 +2448,16 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         : (seller?['joined_label']?.toString().trim().isNotEmpty == true
             ? seller!['joined_label'].toString().trim()
             : (store != null
-                ? s.tr('متجر على Apolo · $cityName', 'Boutique Apolo · $cityName',
-                    'Apolo Store · $cityName')
-                : s.tr('بائع على Apolo · $cityName',
-                    'Vendeur Apolo · $cityName', 'Apolo Seller · $cityName')));
+                ? s.tr(
+                    'متجر على Apolo · $cityName',
+                    'Boutique Apolo · $cityName',
+                    'Apolo Store · $cityName',
+                  )
+                : s.tr(
+                    'بائع على Apolo · $cityName',
+                    'Vendeur Apolo · $cityName',
+                    'Apolo Seller · $cityName',
+                  )));
 
     final String hostInitials =
         (ad['host_initials'] ?? _initialsFromName(sellerDisplayName))
@@ -2373,14 +2467,27 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         (store?['logo_url'] ?? seller?['avatar_url'])?.toString().trim();
 
     final double? ratingVal = double.tryParse(
-        (seller?['rating'] ?? seller?['avg_rating'] ?? ad['seller_rating'] ?? '')
-            .toString());
+      (seller?['rating'] ?? seller?['avg_rating'] ?? ad['seller_rating'] ?? '')
+          .toString(),
+    );
     final int? reviewsCountVal = int.tryParse(
-        (seller?['reviews_count'] ?? ad['seller_reviews_count'] ?? '')
-            .toString());
+      (seller?['reviews_count'] ?? ad['seller_reviews_count'] ?? '').toString(),
+    );
+
+    final bool isVerifiedSeller =
+        seller?['is_verified'] == true || store != null;
+    final bool isProPlusSeller =
+        store?['is_pro_plus'] == true || seller?['is_pro_plus'] == true;
+    final sellerRank = ApoloSellerRank.resolve(
+      user: seller,
+      isProPlus: isProPlusSeller,
+      isBusiness: store != null,
+      isVerified: isVerifiedSeller,
+    );
+    final bool isFollowing = _isFollowingSeller(sellerId);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2406,8 +2513,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       s.tr('البائع', 'Vendeur', 'Seller'),
                       style: const TextStyle(
                         fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: _ink,
+                        fontWeight: FontWeight.w700,
+                        color: _dlInk,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -2416,7 +2523,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           ? CupertinoIcons.chevron_left
                           : CupertinoIcons.chevron_right,
                       size: 15,
-                      color: _mutedText,
+                      color: _dlMuted,
                     ),
                   ],
                 ),
@@ -2442,11 +2549,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
+                    horizontal: 12,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _fbBlueSoft,
+                    color: _dlPill,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
@@ -2455,15 +2562,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       const Icon(
                         Icons.star_rounded,
                         size: 14,
-                        color: _fbBlue,
+                        color: _dlInk,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         s.tr('عرض التقييمات', 'Voir les avis', 'See reviews'),
                         style: const TextStyle(
                           fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: _fbBlue,
+                          fontWeight: FontWeight.w600,
+                          color: _dlInk,
                         ),
                       ),
                     ],
@@ -2472,13 +2579,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+              color: _dlSurface,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               children: [
@@ -2497,68 +2603,26 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     behavior: HitTestBehavior.opaque,
                     child: Row(
                       children: [
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFFF59E0B),
-                                    Color(0xFFE67E22),
-                                  ],
-                                ),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: const BoxDecoration(
+                            color: _dlPill,
+                            shape: BoxShape.circle,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          alignment: Alignment.center,
+                          child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                              ? AppImage(
+                                  url: avatarUrl,
+                                  width: 52,
+                                  height: 52,
+                                  fit: BoxFit.cover,
+                                  fallback: _InitialsCircle(
+                                    initials: hostInitials,
                                   ),
-                                ],
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              alignment: Alignment.center,
-                              child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                                  ? AppImage(
-                                      url: avatarUrl,
-                                      width: 50,
-                                      height: 50,
-                                      fit: BoxFit.cover,
-                                      fallback: _InitialsCircle(
-                                        initials: hostInitials,
-                                      ),
-                                    )
-                                  : _InitialsCircle(initials: hostInitials),
-                            ),
-                            if (seller?['is_verified'] == true)
-                              PositionedDirectional(
-                                bottom: -1,
-                                end: -1,
-                                child: Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const ApoloVerifiedBadge(size: 16),
-                                ),
-                              ),
-                          ],
+                                )
+                              : _InitialsCircle(initials: hostInitials),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -2575,25 +2639,26 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                       style: const TextStyle(
                                         fontSize: 15.5,
                                         fontWeight: FontWeight.w700,
-                                        color: _ink,
+                                        color: _dlInk,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
-                                  ApoloRankBadge(
-                                    rank: ApoloSellerRank.resolve(
-                                      user: seller,
-                                      isProPlus: store?['is_pro_plus'] == true ||
-                                          seller?['is_pro_plus'] == true,
+                                  if (isVerifiedSeller) ...[
+                                    const SizedBox(width: 5),
+                                    ApoloVerifiedBadge(
+                                      size: 16,
+                                      interactive: true,
+                                      rank: sellerRank,
+                                      isProPlus: isProPlusSeller,
                                       isBusiness: store != null,
-                                      isVerified: seller?['is_verified'] == true ||
-                                          store != null,
                                     ),
+                                  ],
+                                  const SizedBox(width: 5),
+                                  ApoloRankBadge(
+                                    rank: sellerRank,
                                     size: 17,
-                                    isVerified: seller?['is_verified'] == true ||
-                                        store != null,
-                                    isProPlus: store?['is_pro_plus'] == true ||
-                                        seller?['is_pro_plus'] == true,
+                                    isVerified: isVerifiedSeller,
+                                    isProPlus: isProPlusSeller,
                                     isBusiness: store != null,
                                     interactive: true,
                                   ),
@@ -2614,8 +2679,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                             : (filled
                                                 ? Icons.star_rounded
                                                 : Icons.star_outline_rounded),
-                                        size: 14,
-                                        color: _starOrange,
+                                        size: 13.5,
+                                        color: _dlStarAmber,
                                       );
                                     }),
                                     const SizedBox(width: 4),
@@ -2624,7 +2689,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                       style: const TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
-                                        color: _ink,
+                                        color: _dlInk,
                                       ),
                                     ),
                                     if (reviewsCountVal != null)
@@ -2632,7 +2697,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                         ' ($reviewsCountVal)',
                                         style: const TextStyle(
                                           fontSize: 12,
-                                          color: _mutedText,
+                                          color: _dlMuted,
                                         ),
                                       ),
                                   ],
@@ -2646,7 +2711,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 style: const TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w400,
-                                  color: _mutedText,
+                                  color: _dlMuted,
                                   height: 1.25,
                                 ),
                               ),
@@ -2661,47 +2726,25 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   const SizedBox(width: 10),
                   PressableScale(
                     key: const Key('detail-follow-seller'),
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _followingSeller = !_followingSeller);
-                    },
+                    onTap: () => _toggleFollowSeller(sellerId),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
+                      duration: const Duration(milliseconds: 180),
                       height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: _followingSeller ? _fbBlueSoft : _ink,
+                        color: isFollowing ? _dlPill : _dlFollowBlue,
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: _followingSeller
-                              ? _fbBlue.withValues(alpha: 0.35)
-                              : _ink,
-                          width: 1,
-                        ),
                       ),
                       alignment: Alignment.center,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_followingSeller) ...[
-                            const Icon(
-                              CupertinoIcons.checkmark_alt,
-                              size: 13.5,
-                              color: _fbBlue,
-                            ),
-                            const SizedBox(width: 3),
-                          ],
-                          Text(
-                            _followingSeller
-                                ? s.tr('متابَع', 'Suivi', 'Following')
-                                : s.tr('متابعة', 'Suivre', 'Follow'),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: _followingSeller ? _fbBlue : Colors.white,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        isFollowing
+                            ? s.tr('متابَع', 'Suivi', 'Following')
+                            : s.tr('متابعة', 'Suivre', 'Follow'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isFollowing ? _dlInk : Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -2726,11 +2769,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       _state.userLat,
       _state.userLng,
     );
-    final bool inZone =
-        distKm != null && (!_state.hasActiveZone || distKm <= _state.zoneRadiusKm);
+    final bool inZone = distKm != null &&
+        (!_state.hasActiveZone || distKm <= _state.zoneRadiusKm);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2741,8 +2784,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 s.tr('موقع الإعلان', 'Localisation', 'Location'),
                 style: const TextStyle(
                   fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: _ink,
+                  fontWeight: FontWeight.w700,
+                  color: _dlInk,
                 ),
               ),
               MarketplaceZonePill(
@@ -2760,8 +2803,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             circleRadiusKm: 3.4,
             userLat: _state.userLat,
             userLng: _state.userLng,
-            height: 192,
-            borderRadius: 18,
+            height: 188,
+            borderRadius: 20,
             interactive: true,
             topOverlay: distKm == null
                 ? null
@@ -2771,9 +2814,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.94),
+                      color: Colors.white.withValues(alpha: 0.96),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -2782,7 +2824,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           width: 7,
                           height: 7,
                           decoration: BoxDecoration(
-                            color: inZone ? const Color(0xFF059669) : _fbBlue,
+                            color: inZone
+                                ? const Color(0xFF15803D)
+                                : _dlFollowBlue,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -2802,7 +2846,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           style: const TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
-                            color: _ink,
+                            color: _dlInk,
                           ),
                         ),
                       ],
@@ -2848,7 +2892,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
-                        color: _ink,
+                        color: _dlInk,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -2861,7 +2905,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w400,
-                        color: _mutedText,
+                        color: _dlMuted,
                       ),
                     ),
                   ],
@@ -2880,19 +2924,19 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
+                    horizontal: 12,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _fbBlueSoft,
+                    color: _dlPill,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     s.tr('عرض الخريطة', 'Voir la carte', 'Full map'),
                     style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _fbBlue,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: _dlInk,
                     ),
                   ),
                 ),
@@ -2919,7 +2963,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
 
     final rawTitle = (ad['title'] ?? '').toString().trim();
     if (rawTitle.isNotEmpty) {
-      final words = rawTitle.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+      final words =
+          rawTitle.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
       addTerm(words.length > 4 ? words.take(4).join(' ') : rawTitle);
       if (words.length >= 2) {
         addTerm('${words.first} $cityName');
@@ -2943,16 +2988,20 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     if (terms.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            s.tr('عمليات بحث ذات صلة', 'Recherches similaires', 'Related searches'),
+            s.tr(
+              'عمليات بحث ذات صلة',
+              'Recherches similaires',
+              'Related searches',
+            ),
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: _ink,
+              color: _dlInk,
             ),
           ),
           const SizedBox(height: 12),
@@ -2971,19 +3020,21 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   );
                 },
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 9,
+                  ),
                   decoration: BoxDecoration(
-                    color: _pillGrey,
-                    borderRadius: BorderRadius.circular(20),
+                    color: _dlPill,
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         CupertinoIcons.search,
-                        size: 15,
-                        color: _ink,
+                        size: 14.5,
+                        color: _dlInk,
                       ),
                       const SizedBox(width: 6),
                       Flexible(
@@ -2994,7 +3045,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           style: const TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color: _ink,
+                            color: _dlInk,
                           ),
                         ),
                       ),
@@ -3016,21 +3067,13 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     required bool isOwner,
   }) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          color: _dlSurface,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3039,8 +3082,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               TextSpan(
                 style: const TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF475569),
-                  height: 1.4,
+                  color: _dlMuted,
+                  height: 1.42,
                 ),
                 children: [
                   TextSpan(
@@ -3058,7 +3101,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     ),
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: _ink,
+                      color: _dlInk,
                     ),
                   ),
                   TextSpan(
@@ -3080,6 +3123,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     behavior: SnackBarBehavior.floating,
+                    backgroundColor: _dlInk,
                     content: Text(
                       _hiddenListing
                           ? s.tr(
@@ -3102,12 +3146,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               child: Container(
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFE2E8F0),
-                    width: 1,
-                  ),
+                  color: _dlBg,
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 alignment: Alignment.center,
                 child: Row(
@@ -3118,7 +3158,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           ? CupertinoIcons.eye
                           : CupertinoIcons.eye_slash,
                       size: 16,
-                      color: _ink,
+                      color: _dlInk,
                     ),
                     const SizedBox(width: 7),
                     Text(
@@ -3131,8 +3171,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                             ),
                       style: const TextStyle(
                         fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: _ink,
+                        fontWeight: FontWeight.w600,
+                        color: _dlInk,
                       ),
                     ),
                   ],
@@ -3153,7 +3193,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       const Icon(
                         CupertinoIcons.shield_lefthalf_fill,
                         size: 13.5,
-                        color: _mutedText,
+                        color: _dlMuted,
                       ),
                       const SizedBox(width: 5),
                       Text(
@@ -3165,7 +3205,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: _mutedText,
+                          color: _dlMuted,
                         ),
                       ),
                     ],
@@ -3194,13 +3234,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
-          child: _SectionHeader(
-            icon: CupertinoIcons.square_grid_2x2_fill,
-            title: s.tr(
+          padding: const EdgeInsets.fromLTRB(16, 22, 16, 14),
+          child: Text(
+            s.tr(
               'إعلانات مشابهة فـ نفس القسم',
               'Annonces similaires',
               'Similar listings',
+            ),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: _dlInk,
             ),
           ),
         ),
@@ -3211,12 +3255,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 400,
                   mainAxisExtent: 374,
-                  mainAxisSpacing: 18,
-                  crossAxisSpacing: 18,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
                 ),
                 itemCount: related.length,
                 itemBuilder: (_, idx) => ExploreListingCard(ad: related[idx]),
@@ -3225,7 +3269,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             return ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: related.length,
               separatorBuilder: (_, __) => const SizedBox(height: 16),
               itemBuilder: (_, idx) => ExploreListingCard(ad: related[idx]),
@@ -3251,40 +3295,41 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         (ad['total_price_display'] ?? '').toString().trim().isNotEmpty
             ? ad['total_price_display'].toString().trim()
             : fallbackPrice;
-    final String totalUnit =
-        (ad['total_unit_label'] ?? (ad.containsKey('total_price_display') ? 'total' : ''))
+    final String totalUnit = (ad['total_unit_label'] ??
+            (ad.containsKey('total_price_display') ? 'total' : ''))
+        .toString()
+        .trim();
+    final String totalSubtitle = (ad['total_subtitle'] ??
+                ad['stay_dates_label'] ??
+                '')
             .toString()
-            .trim();
-    final String totalSubtitle =
-        (ad['total_subtitle'] ?? ad['stay_dates_label'] ?? '').toString().trim().isNotEmpty
-            ? (ad['total_subtitle'] ?? ad['stay_dates_label']).toString().trim()
-            : (isStayListing
-                ? 'taxes incl.'
-                : '${isNegotiable ? s.tr('ثمن قابل للنقاش', 'Prix négociable', 'Negotiable') : s.tr('توصيل / معاينة مباشرة', 'Remise en main propre', 'Meetup / Delivery')} · $cityName');
-    final String ctaLabel = (ad['cta_label'] ?? '').toString().trim().isNotEmpty
-        ? ad['cta_label'].toString().trim()
-        : (isOwner
-            ? s.tr('ترقية الإعلان ⚡', 'Booster ⚡', 'Boost ⚡')
-            : (isStayListing
-                ? s.tr('احجز الآن', 'Réserver', 'Book now')
-                : s.tr('تواصل للشراء', 'Contacter', 'Message seller')));
+            .trim()
+            .isNotEmpty
+        ? (ad['total_subtitle'] ?? ad['stay_dates_label']).toString().trim()
+        : (isStayListing
+            ? 'taxes incl.'
+            : '${isNegotiable ? s.tr('ثمن قابل للنقاش', 'Prix négociable', 'Negotiable') : s.tr('معاينة مباشرة', 'Remise directe', 'Meetup / Delivery')} · $cityName');
+    final String ctaLabel =
+        (ad['cta_label'] ?? '').toString().trim().isNotEmpty
+            ? ad['cta_label'].toString().trim()
+            : (isOwner
+                ? s.tr('ترقية الإعلان ⚡', 'Booster ⚡', 'Boost ⚡')
+                : (isStayListing
+                    ? s.tr('احجز الآن', 'Réserver', 'Book now')
+                    : s.tr('تواصل للشراء', 'Contacter', 'Contact seller')));
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
+      key: const Key('dl-detail-bottom-bar'),
+      decoration: const BoxDecoration(
+        color: _dlBg,
+        border: Border(
+          top: BorderSide(color: _dlSeparator, width: 1),
+        ),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Row(
             children: [
               Expanded(
@@ -3302,9 +3347,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                             TextSpan(
                               text: totalMain,
                               style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1A1A1A),
+                                fontSize: 18.5,
+                                fontWeight: FontWeight.w800,
+                                color: _dlInk,
                                 fontFeatures: [FontFeature.tabularFigures()],
                               ),
                             ),
@@ -3314,7 +3359,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 style: const TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w500,
-                                  color: Color(0xFF1A1A1A),
+                                  color: _dlMuted,
                                 ),
                               ),
                           ],
@@ -3327,16 +3372,38 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w400,
-                        color: Color(0xFF8E8E93),
+                        color: _dlMuted,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              if (!isOwner && phone != null && phone.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                PressableScale(
+                  key: const Key('dl-detail-call-btn'),
+                  onTap: () => _showCallSheetOrDial(phone, sellerDisplayName),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: _dlPill,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      CupertinoIcons.phone_fill,
+                      size: 19,
+                      color: _dlInk,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 10),
               PressableScale(
+                key: const Key('dl-detail-primary-cta'),
                 onTap: () {
                   if (isOwner) {
                     showModalBottomSheet(
@@ -3359,27 +3426,16 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   }
                 },
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 140, minHeight: 48),
+                  constraints: const BoxConstraints(
+                    minWidth: 140,
+                    minHeight: 48,
+                  ),
                   child: Container(
                     height: 48,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 14,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF4444F0), Color(0xFF5B54F6)],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF4A4EED).withValues(alpha: 0.28),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+                      color: _dlInk,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -3388,64 +3444,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassCircleButton extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String? tooltip;
-  final VoidCallback onTap;
-
-  const _GlassCircleButton({
-    required this.icon,
-    this.iconColor = Colors.white,
-    this.tooltip,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: tooltip,
-      child: PressableScale(
-        onTap: onTap,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
-            child: ClipOval(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      width: 0.8,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(icon, size: 16, color: iconColor),
-                ),
-              ),
-            ),
           ),
         ),
       ),
@@ -3476,7 +3482,7 @@ class _VideoTourPill extends StatelessWidget {
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.35),
+              color: Colors.black.withValues(alpha: 0.42),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.24),
@@ -3497,7 +3503,7 @@ class _VideoTourPill extends StatelessWidget {
                   child: const Icon(
                     Icons.play_arrow_rounded,
                     size: 13,
-                    color: Color(0xFF1A1A1A),
+                    color: Colors.black,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -3523,7 +3529,7 @@ class _VideoTourPill extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.70),
+                          color: Colors.white.withValues(alpha: 0.76),
                           fontSize: 9,
                           fontWeight: FontWeight.w400,
                           height: 1.05,
@@ -3560,7 +3566,7 @@ class _ImageTagPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(999),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
@@ -3569,8 +3575,8 @@ class _ImageTagPill extends StatelessWidget {
           decoration: BoxDecoration(
             color: isLight
                 ? Colors.white
-                : Colors.black.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(16),
+                : Colors.black.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(999),
           ),
           alignment: Alignment.center,
           child: Row(
@@ -3581,7 +3587,7 @@ class _ImageTagPill extends StatelessWidget {
                   leadingIcon,
                   size: 13,
                   color: leadingIconColor ??
-                      (isLight ? const Color(0xFF1A1A1A) : Colors.white),
+                      (isLight ? Colors.black : Colors.white),
                 ),
                 const SizedBox(width: 4),
               ],
@@ -3590,9 +3596,9 @@ class _ImageTagPill extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isLight ? FontWeight.w600 : FontWeight.w500,
-                  color: isLight ? const Color(0xFF1A1A1A) : Colors.white,
+                  fontSize: 11.5,
+                  fontWeight: isLight ? FontWeight.w700 : FontWeight.w600,
+                  color: isLight ? Colors.black : Colors.white,
                   fontFeatures:
                       tabular ? const [FontFeature.tabularFigures()] : null,
                 ),
@@ -3620,30 +3626,28 @@ class _SpecStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 54,
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+        color: const Color(0xFFF6F6F6),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
           Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Icon(
               icon,
-              size: 14,
-              color: const Color(0xFF475569),
+              size: 15,
+              color: Colors.black,
             ),
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -3654,9 +3658,9 @@ class _SpecStatCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
+                    color: Color(0xFF757575),
                     height: 1.15,
                   ),
                 ),
@@ -3667,8 +3671,8 @@ class _SpecStatCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
                     height: 1.15,
                   ),
                 ),
@@ -3692,44 +3696,11 @@ class _InitialsCircle extends StatelessWidget {
       child: Text(
         initials,
         style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13,
+          color: Colors.black,
+          fontSize: 15,
           fontWeight: FontWeight.w700,
         ),
       ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-
-  const _SectionHeader({
-    required this.icon,
-    required this.title,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 17, color: const Color(0xFF4A4EED)),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF1A1A1A),
-              letterSpacing: AppTypography.trackingForContext(context, -0.3),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -3756,7 +3727,7 @@ class _SheetActionRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F6F8),
+          color: const Color(0xFFF6F6F6),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
@@ -3779,8 +3750,8 @@ class _SheetActionRow extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -3788,8 +3759,8 @@ class _SheetActionRow extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF64748B),
-                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF757575),
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
@@ -3802,13 +3773,13 @@ class _SheetActionRow extends StatelessWidget {
   }
 }
 
-class _MarketplaceActionCircle extends StatelessWidget {
+class _DlActionCircle extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
   final VoidCallback onTap;
 
-  const _MarketplaceActionCircle({
+  const _DlActionCircle({
     required this.icon,
     required this.label,
     this.active = false,
@@ -3824,24 +3795,17 @@ class _MarketplaceActionCircle extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: 46,
-            height: 46,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color:
-                  active ? const Color(0xFFE7F3FF) : const Color(0xFFF2F4F7),
+              color: active ? Colors.black : const Color(0xFFEEEEEE),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: active
-                    ? const Color(0xFF0866FF).withValues(alpha: 0.35)
-                    : const Color(0xFFE5E7EB),
-                width: 1,
-              ),
             ),
             alignment: Alignment.center,
             child: Icon(
               icon,
               size: 19,
-              color: active ? const Color(0xFF0866FF) : const Color(0xFF0F172A),
+              color: active ? Colors.white : Colors.black,
             ),
           ),
           const SizedBox(height: 6),
@@ -3852,8 +3816,8 @@ class _MarketplaceActionCircle extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: active ? const Color(0xFF0866FF) : const Color(0xFF1E293B),
+              fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+              color: Colors.black,
             ),
           ),
         ],
@@ -3882,15 +3846,16 @@ class _SellerReviewsScreen extends StatefulWidget {
 }
 
 class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
-  int _minStarsFilter = 0; // 0: All, or exact / >= star filter
+  int _minStarsFilter = 0;
   bool _highestFirst = false;
   final Set<int> _helpfulIndices = {};
 
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _fbBlue = Color(0xFF0866FF);
-  static const Color _fbBlueSoft = Color(0xFFE7F3FF);
-  static const Color _starOrange = Color(0xFFF59E0B);
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlPill = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlStarAmber = Color(0xFFFFB800);
 
   List<Map<String, dynamic>> get _reviews {
     final raw = (widget.rawReviews ?? [])
@@ -3927,532 +3892,539 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
     final int maxCount = counts.values.fold<int>(1, (m, c) => c > m ? c : m);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(
-            s.isAr
-                ? CupertinoIcons.chevron_right
-                : CupertinoIcons.chevron_left,
-            color: _ink,
-          ),
-        ),
-        centerTitle: true,
-        title: Column(
+      backgroundColor: _dlBg,
+      body: SafeArea(
+        child: Column(
           children: [
-            Text(
-              s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
-              style: const TextStyle(
-                fontSize: 16.5,
-                fontWeight: FontWeight.w800,
-                color: _ink,
-              ),
+            ApoloDlTopNav(
+              title: s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
             ),
-            Text(
-              widget.sellerName,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: _muted,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-        children: [
-          // 2026 Hero Rating Summary Card
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: _ink.withValues(alpha: 0.045),
-                  blurRadius: 16,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  s.tr('تقييم البائع', 'Note du vendeur', 'Seller rating'),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Big Score Pillar
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+            Expanded(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                children: [
+                  // Dynamic Layer v5.1 Rating Summary Card
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: _dlSurface,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          ratingValue > 0 ? ratingValue.toStringAsFixed(1) : '—',
-                          style: const TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w900,
-                            color: _ink,
-                            height: 1.0,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
                         Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: List.generate(5, (i) {
-                            final filled = i + 1 <= ratingValue.floor();
-                            final half = !filled && (ratingValue - i) >= 0.4;
-                            return Icon(
-                              half
-                                  ? Icons.star_half_rounded
-                                  : (filled
-                                      ? Icons.star_rounded
-                                      : Icons.star_outline_rounded),
-                              size: 15,
-                              color: _starOrange,
-                            );
-                          }),
+                          children: [
+                            Expanded(
+                              child: Text(
+                                s.tr(
+                                  'تقييم البائع',
+                                  'Note du vendeur',
+                                  'Seller rating',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: _dlInk,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                widget.sellerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: _dlMuted,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '($totalCount)',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: _muted,
-                          ),
+                        const SizedBox(height: 14),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  ratingValue > 0
+                                      ? ratingValue.toStringAsFixed(1)
+                                      : '—',
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w800,
+                                    color: _dlInk,
+                                    height: 1.0,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(5, (i) {
+                                    final filled = i + 1 <= ratingValue.floor();
+                                    final half =
+                                        !filled && (ratingValue - i) >= 0.4;
+                                    return Icon(
+                                      half
+                                          ? Icons.star_half_rounded
+                                          : (filled
+                                              ? Icons.star_rounded
+                                              : Icons.star_outline_rounded),
+                                      size: 15,
+                                      color: _dlStarAmber,
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '($totalCount)',
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: _dlMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Container(
+                              width: 1,
+                              height: 92,
+                              color: _dlPill,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  for (int star = 5; star >= 1; star--)
+                                    GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.selectionClick();
+                                        setState(() {
+                                          _minStarsFilter =
+                                              _minStarsFilter == star
+                                                  ? 0
+                                                  : star;
+                                        });
+                                      },
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 3.5,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            SizedBox(
+                                              width: 54,
+                                              child: Text(
+                                                s.tr(
+                                                  '$star نجوم',
+                                                  '$star é.',
+                                                  star == 1
+                                                      ? '1 star'
+                                                      : '$star stars',
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight:
+                                                      _minStarsFilter == star
+                                                          ? FontWeight.w700
+                                                          : FontWeight.w500,
+                                                  color: _dlInk,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(99),
+                                                child: LinearProgressIndicator(
+                                                  value: (counts[star] ?? 0) /
+                                                      maxCount,
+                                                  minHeight: 6,
+                                                  backgroundColor: _dlPill,
+                                                  valueColor:
+                                                      const AlwaysStoppedAnimation<
+                                                          Color>(_dlInk),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            SizedBox(
+                                              width: 18,
+                                              child: Text(
+                                                '${counts[star] ?? 0}',
+                                                textAlign: TextAlign.end,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _dlMuted,
+                                                  fontFeatures: [
+                                                    FontFeature
+                                                        .tabularFigures(),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(width: 16),
-                    Container(
-                      width: 1,
-                      height: 92,
-                      color: const Color(0xFFE5E7EB),
-                    ),
-                    const SizedBox(width: 16),
+                  ),
 
-                    // Interactive 5-to-1 Bars
-                    Expanded(
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s.tr(
+                            'تقييمات البائع ($totalCount)',
+                            'Avis sur le vendeur ($totalCount)',
+                            'Seller reviews ($totalCount)',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: _dlInk,
+                          ),
+                        ),
+                      ),
+                      if (_minStarsFilter != 0)
+                        GestureDetector(
+                          onTap: () => setState(() => _minStarsFilter = 0),
+                          child: Text(
+                            s.tr('عرض الكل', 'Tout afficher', 'Show all'),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _dlInk,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Dynamic Layer Filter & Sort Pills (`#000000` active / `#EEEEEE` idle)
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _minStarsFilter = _minStarsFilter == 0 ? 5 : 0;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: _minStarsFilter != 0 ? _dlInk : _dlPill,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.tune_rounded,
+                                size: 16,
+                                color: _minStarsFilter != 0
+                                    ? Colors.white
+                                    : _dlInk,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _minStarsFilter == 5
+                                    ? s.tr(
+                                        '5 نجوم فقط',
+                                        '5 étoiles',
+                                        '5 stars',
+                                      )
+                                    : s.tr('تصفية', 'Filtres', 'Filters'),
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _minStarsFilter != 0
+                                      ? Colors.white
+                                      : _dlInk,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _highestFirst = !_highestFirst);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: _highestFirst ? _dlInk : _dlPill,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.swap_vert_rounded,
+                                size: 16,
+                                color: _highestFirst ? Colors.white : _dlInk,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _highestFirst
+                                    ? s.tr(
+                                        'الأعلى تقييماً',
+                                        'Meilleurs',
+                                        'Highest',
+                                      )
+                                    : s.tr('ترتيب', 'Trier', 'Sort'),
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _highestFirst ? Colors.white : _dlInk,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                  if (items.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: _dlSurface,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       child: Column(
                         children: [
-                          for (int star = 5; star >= 1; star--)
+                          const Icon(
+                            CupertinoIcons.star_circle,
+                            size: 36,
+                            color: _dlMuted,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            s.tr(
+                              'لا توجد تقييمات نصية منشورة لـ ${widget.sellerName} حالياً',
+                              'Aucun avis publié pour ${widget.sellerName} pour le moment',
+                              'No written reviews for ${widget.sellerName} yet',
+                            ),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              color: _dlMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    for (int idx = 0; idx < items.length; idx++)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: _dlSurface,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: const BoxDecoration(
+                                    color: _dlPill,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    CupertinoIcons.person_fill,
+                                    color: _dlInk,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        (items[idx]['author'] ??
+                                                items[idx]['name'] ??
+                                                '')
+                                            .toString(),
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: _dlInk,
+                                        ),
+                                      ),
+                                      if ((items[idx]['date'] ?? '')
+                                          .toString()
+                                          .isNotEmpty)
+                                        Text(
+                                          items[idx]['date'].toString(),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: _dlMuted,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _dlBg,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.star_rounded,
+                                        size: 13.5,
+                                        color: _dlStarAmber,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '${int.tryParse((items[idx]['rating'] ?? 5).toString()) ?? 5}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: _dlInk,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: List.generate(5, (i) {
+                                final st = int.tryParse(
+                                      (items[idx]['rating'] ?? 5).toString(),
+                                    ) ??
+                                    5;
+                                return Icon(
+                                  i < st
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  size: 15,
+                                  color: _dlStarAmber,
+                                );
+                              }),
+                            ),
+                            if ((items[idx]['comment'] ?? '')
+                                .toString()
+                                .isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                items[idx]['comment'].toString(),
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  color: _dlInk,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 10),
                             GestureDetector(
                               onTap: () {
                                 HapticFeedback.selectionClick();
                                 setState(() {
-                                  _minStarsFilter =
-                                      _minStarsFilter == star ? 0 : star;
+                                  if (_helpfulIndices.contains(idx)) {
+                                    _helpfulIndices.remove(idx);
+                                  } else {
+                                    _helpfulIndices.add(idx);
+                                  }
                                 });
                               },
-                              behavior: HitTestBehavior.opaque,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 3.5),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _helpfulIndices.contains(idx)
+                                      ? _dlInk
+                                      : _dlBg,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    SizedBox(
-                                      width: 54,
-                                      child: Text(
-                                        s.tr(
-                                          '$star نجوم',
-                                          '$star é.',
-                                          star == 1 ? '1 star' : '$star stars',
-                                        ),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: _minStarsFilter == star
-                                              ? FontWeight.w700
-                                              : FontWeight.w500,
-                                          color: _minStarsFilter == star
-                                              ? _fbBlue
-                                              : _ink,
-                                        ),
-                                      ),
+                                    Icon(
+                                      _helpfulIndices.contains(idx)
+                                          ? CupertinoIcons.hand_thumbsup_fill
+                                          : CupertinoIcons.hand_thumbsup,
+                                      size: 13,
+                                      color: _helpfulIndices.contains(idx)
+                                          ? Colors.white
+                                          : _dlMuted,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(99),
-                                        child: LinearProgressIndicator(
-                                          value: (counts[star] ?? 0) / maxCount,
-                                          minHeight: 7,
-                                          backgroundColor:
-                                              const Color(0xFFF1F5F9),
-                                          valueColor:
-                                              const AlwaysStoppedAnimation<
-                                                  Color>(_starOrange),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    SizedBox(
-                                      width: 18,
-                                      child: Text(
-                                        '${counts[star] ?? 0}',
-                                        textAlign: TextAlign.end,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: _muted,
-                                          fontFeatures: [
-                                            FontFeature.tabularFigures(),
-                                          ],
-                                        ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      s.tr('مفيد', 'Utile', 'Helpful'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _helpfulIndices.contains(idx)
+                                            ? Colors.white
+                                            : _dlMuted,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  s.tr(
-                    'تقييمات البائع ($totalCount)',
-                    'Avis sur le vendeur ($totalCount)',
-                    'Seller reviews ($totalCount)',
-                  ),
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: _ink,
-                  ),
-                ),
-              ),
-              if (_minStarsFilter != 0)
-                GestureDetector(
-                  onTap: () => setState(() => _minStarsFilter = 0),
-                  child: Text(
-                    s.tr('عرض الكل', 'Tout afficher', 'Show all'),
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: _fbBlue,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Filters & Sort Pills
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    _minStarsFilter = _minStarsFilter == 0 ? 5 : 0;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: _minStarsFilter != 0 ? _fbBlue : _fbBlueSoft,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.tune_rounded,
-                        size: 16,
-                        color: _minStarsFilter != 0 ? Colors.white : _fbBlue,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _minStarsFilter == 5
-                            ? s.tr('5 نجوم فقط', '5 étoiles', '5 stars')
-                            : s.tr('تصفية', 'Filtres', 'Filters'),
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: _minStarsFilter != 0 ? Colors.white : _fbBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _highestFirst = !_highestFirst);
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: _highestFirst ? _fbBlue : _fbBlueSoft,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.swap_vert_rounded,
-                        size: 16,
-                        color: _highestFirst ? Colors.white : _fbBlue,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _highestFirst
-                            ? s.tr('الأعلى تقييماً', 'Meilleurs', 'Highest')
-                            : s.tr('ترتيب', 'Trier', 'Sort'),
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: _highestFirst ? Colors.white : _fbBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-          if (items.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: Column(
-                children: [
-                  const Icon(
-                    CupertinoIcons.star_circle,
-                    size: 36,
-                    color: _muted,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    s.tr(
-                      'لا توجد تقييمات نصية منشورة لـ ${widget.sellerName} حالياً',
-                      'Aucun avis publié pour ${widget.sellerName} pour le moment',
-                      'No written reviews for ${widget.sellerName} yet',
-                    ),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      color: _muted,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            for (int idx = 0; idx < items.length; idx++) ...[
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _ink.withValues(alpha: 0.025),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEFF6FF),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            CupertinoIcons.person_fill,
-                            color: _fbBlue,
-                            size: 19,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                (items[idx]['author'] ??
-                                        items[idx]['name'] ??
-                                        '')
-                                    .toString(),
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: _ink,
-                                ),
-                              ),
-                              if ((items[idx]['date'] ?? '')
-                                  .toString()
-                                  .isNotEmpty)
-                                Text(
-                                  items[idx]['date'].toString(),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: _muted,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFFBEB),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: const Color(0xFFFDE68A)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                size: 13.5,
-                                color: _starOrange,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${int.tryParse((items[idx]['rating'] ?? 5).toString()) ?? 5}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFB45309),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: List.generate(5, (i) {
-                        final st = int.tryParse(
-                                (items[idx]['rating'] ?? 5).toString()) ??
-                            5;
-                        return Icon(
-                          i < st
-                              ? Icons.star_rounded
-                              : Icons.star_outline_rounded,
-                          size: 15.5,
-                          color: _starOrange,
-                        );
-                      }),
-                    ),
-                    if ((items[idx]['comment'] ?? '').toString().isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        items[idx]['comment'].toString(),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          color: Color(0xFF334155),
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          if (_helpfulIndices.contains(idx)) {
-                            _helpfulIndices.remove(idx);
-                          } else {
-                            _helpfulIndices.add(idx);
-                          }
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _helpfulIndices.contains(idx)
-                              ? _fbBlueSoft
-                              : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _helpfulIndices.contains(idx)
-                                  ? CupertinoIcons.hand_thumbsup_fill
-                                  : CupertinoIcons.hand_thumbsup,
-                              size: 13,
-                              color: _helpfulIndices.contains(idx)
-                                  ? _fbBlue
-                                  : _muted,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              s.tr('مفيد', 'Utile', 'Helpful'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: _helpfulIndices.contains(idx)
-                                    ? _fbBlue
-                                    : _muted,
-                              ),
-                            ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-            ],
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
