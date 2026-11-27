@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/state/app_state.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/dl_settings_kit.dart';
 import '../ad_detail_screen.dart';
 import '../auth_screen.dart';
 import 'app_image.dart';
@@ -11,26 +12,21 @@ import 'kinetic_widgets.dart';
 import 'price_text.dart';
 
 /// Dynamic Layer v5.1 Compact Product/Listing Card (`AdCard`):
-/// - Flat `#F6F6F6` / `#FFFFFF` card with `1px` `#EEEEEE` border and zero drop shadows
-/// - `#000000` bold `PriceText`, `#EEEEEE` `Negotiable` capsule, `#000000` `VIP` pill,
-///   and `#FFFFFF` circular favorite heart (`#FF3B30` active / `#000000` inactive).
+/// - Flat `#F6F6F6` / `#161618` card with `1px` `#EEEEEE` / `#242429` border and zero drop shadows
+/// - `#000000` / `#FFFFFF` bold `PriceText`, `#EEEEEE` / `#222226` `Negotiable` capsule,
+///   `VIP` pill, and circular favorite heart (`#FF3B30` active).
 class AdCard extends StatelessWidget {
   final Map<String, dynamic> ad;
   final bool horizontal;
 
   const AdCard({super.key, required this.ad, this.horizontal = false});
 
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
   static const Color _dlHeartRed = Color(0xFFFF3B30);
 
   @override
   Widget build(BuildContext context) {
     final state = AppState();
+    final palette = ApoloDlPalette.of(context);
     final int id = int.tryParse(ad['id'].toString()) ?? 0;
     final String title = (ad['title'] ?? '').toString();
     final String priceFormatted = (ad['price_formatted'] ??
@@ -82,10 +78,10 @@ class AdCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: _dlSurface,
+          color: palette.surfaceSubtle,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isFeatured ? _dlInk : _dlSeparator,
+            color: isFeatured ? palette.ink : palette.separator,
             width: 1.0,
           ),
         ),
@@ -93,6 +89,7 @@ class AdCard extends StatelessWidget {
         child: horizontal
             ? _buildHorizontal(
                 context,
+                palette,
                 state,
                 id,
                 title,
@@ -107,6 +104,7 @@ class AdCard extends StatelessWidget {
               )
             : _buildVertical(
                 context,
+                palette,
                 state,
                 id,
                 title,
@@ -124,6 +122,7 @@ class AdCard extends StatelessWidget {
   }
 
   Widget _buildImage(
+    ApoloDlPalette palette,
     String? url,
     bool isFeatured,
     bool isFav,
@@ -140,7 +139,7 @@ class AdCard extends StatelessWidget {
         Container(
           height: height ?? double.infinity,
           width: width ?? double.infinity,
-          color: _dlPill,
+          color: palette.pill,
           child: url != null && url.isNotEmpty
               ? AppImage(
                   url: url,
@@ -169,16 +168,16 @@ class AdCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
               decoration: BoxDecoration(
-                color: _dlBg,
+                color: palette.bg,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     CupertinoIcons.location_solid,
                     size: 10,
-                    color: _dlInk,
+                    color: palette.ink,
                   ),
                   const SizedBox(width: 3),
                   ConstrainedBox(
@@ -187,8 +186,8 @@ class AdCard extends StatelessWidget {
                       cityName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _dlInk,
+                      style: TextStyle(
+                        color: palette.ink,
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                       ),
@@ -205,22 +204,22 @@ class AdCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _dlInk,
+                color: palette.ink,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     CupertinoIcons.bolt_fill,
                     size: 10,
-                    color: Colors.white,
+                    color: palette.onInk,
                   ),
                   const SizedBox(width: 3),
                   Text(
                     state.s.tr('مميز', 'VIP', 'VIP'),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: palette.onInk,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                     ),
@@ -258,8 +257,8 @@ class AdCard extends StatelessWidget {
                   child: Container(
                     width: 30,
                     height: 30,
-                    decoration: const BoxDecoration(
-                      color: _dlBg,
+                    decoration: BoxDecoration(
+                      color: palette.bg,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -267,7 +266,7 @@ class AdCard extends StatelessWidget {
                           ? CupertinoIcons.heart_fill
                           : CupertinoIcons.heart,
                       size: 15,
-                      color: currentFav ? _dlHeartRed : _dlInk,
+                      color: currentFav ? _dlHeartRed : palette.ink,
                     ),
                   ),
                 ),
@@ -281,6 +280,7 @@ class AdCard extends StatelessWidget {
 
   Widget _buildVertical(
     BuildContext context,
+    ApoloDlPalette palette,
     AppState state,
     int id,
     String title,
@@ -302,6 +302,7 @@ class AdCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(15),
               child: _buildImage(
+                palette,
                 image,
                 isFeatured,
                 isFav,
@@ -326,7 +327,7 @@ class AdCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: _dlInk,
+                        color: palette.ink,
                         fontWeight: FontWeight.w800,
                         fontSize: 15.5,
                         letterSpacing:
@@ -342,13 +343,13 @@ class AdCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: _dlBg,
+                        color: palette.bg,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         state.s.tr('تفاوض', 'Négo', 'Negotiable'),
-                        style: const TextStyle(
-                          color: _dlInk,
+                        style: TextStyle(
+                          color: palette.ink,
                           fontSize: 9.5,
                           fontWeight: FontWeight.w700,
                         ),
@@ -362,7 +363,7 @@ class AdCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: _dlInk,
+                  color: palette.ink,
                   fontWeight: FontWeight.w600,
                   fontSize: 13.5,
                   letterSpacing:
@@ -377,7 +378,7 @@ class AdCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _dlBg,
+                    color: palette.bg,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
@@ -397,8 +398,8 @@ class AdCard extends StatelessWidget {
                           category,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: _dlMuted,
+                          style: TextStyle(
+                            color: palette.muted,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
                           ),
@@ -416,6 +417,7 @@ class AdCard extends StatelessWidget {
 
   Widget _buildHorizontal(
     BuildContext context,
+    ApoloDlPalette palette,
     AppState state,
     int id,
     String title,
@@ -440,6 +442,7 @@ class AdCard extends StatelessWidget {
                 width: 128,
                 height: 114,
                 child: _buildImage(
+                  palette,
                   image,
                   isFeatured,
                   isFav,
@@ -463,7 +466,7 @@ class AdCard extends StatelessWidget {
                   PriceText(
                     price,
                     style: TextStyle(
-                      color: _dlInk,
+                      color: palette.ink,
                       fontWeight: FontWeight.w800,
                       fontSize: 16.5,
                       letterSpacing:
@@ -478,7 +481,7 @@ class AdCard extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: _dlInk,
+                      color: palette.ink,
                       letterSpacing:
                           AppTypography.trackingForContext(context, -0.2),
                     ),
@@ -493,7 +496,7 @@ class AdCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: _dlBg,
+                              color: palette.bg,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Row(
@@ -513,8 +516,8 @@ class AdCard extends StatelessWidget {
                                     category,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: _dlMuted,
+                                    style: TextStyle(
+                                      color: palette.muted,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -530,7 +533,7 @@ class AdCard extends StatelessWidget {
                             ? CupertinoIcons.chevron_left
                             : CupertinoIcons.chevron_right,
                         size: 15,
-                        color: _dlMuted,
+                        color: palette.muted,
                       ),
                     ],
                   ),

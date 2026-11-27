@@ -631,8 +631,12 @@ class _ChatMessageState extends State<ChatMessage>
                     ? const Color(0xFF15324B)
                     : const Color(0xFFD9F0FF))
                 : (isMine
-                    ? Ios26IMessageTokens.bubbleMine
-                    : Ios26IMessageTokens.bubbleOther));
+                    ? (isDark
+                        ? const Color(0xFFFFFFFF)
+                        : Ios26IMessageTokens.bubbleMine)
+                    : (isDark
+                        ? const Color(0xFF1E1E22)
+                        : Ios26IMessageTokens.bubbleOther)));
 
     final textColor = isDeleted
         ? Ios26IMessageTokens.dateGray
@@ -643,8 +647,12 @@ class _ChatMessageState extends State<ChatMessage>
                     ? const Color(0xFF7CC4FA)
                     : const Color(0xFF0A78E6))
                 : (isMine
-                    ? Ios26IMessageTokens.bubbleMineText
-                    : Ios26IMessageTokens.bubbleOtherText));
+                    ? (isDark
+                        ? const Color(0xFF0A0A0A)
+                        : Ios26IMessageTokens.bubbleMineText)
+                    : (isDark
+                        ? const Color(0xFFFFFFFF)
+                        : Ios26IMessageTokens.bubbleOtherText)));
 
     final trimmedImageUrl = widget.imageUrl?.trim() ?? '';
     final bool hasImage =

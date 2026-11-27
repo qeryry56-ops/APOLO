@@ -2,11 +2,15 @@ import 'dart:typed_data';
 
 import 'package:apolo_mobile/core/state/app_state.dart';
 import 'package:apolo_mobile/screens/account_security_screen.dart';
+import 'package:apolo_mobile/screens/home_screen.dart';
+import 'package:apolo_mobile/screens/profile_screen.dart';
 import 'package:apolo_mobile/screens/pro_plus_screen.dart';
 import 'package:apolo_mobile/screens/settings/apolo_account_center_screen.dart';
+import 'package:apolo_mobile/screens/settings/settings_appearance_screen.dart';
 import 'package:apolo_mobile/screens/settings/settings_saved_ads_screen.dart';
 import 'package:apolo_mobile/screens/settings_screen.dart';
 import 'package:apolo_mobile/screens/support_screen.dart';
+import 'package:apolo_mobile/theme/app_theme.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,16 +44,24 @@ void main() {
     originalAdapter = AppState().api.dio.httpClientAdapter;
     AppState().api.dio.httpClientAdapter = _OfflineAdapter();
     await AppState().logout();
+    await AppState().setThemeMode(ThemeMode.light);
     await AppState().setLocale(const Locale('en'));
   });
 
-  tearDown(() {
+  tearDown(() async {
+    await AppState().setThemeMode(ThemeMode.light);
     AppState().api.dio.httpClientAdapter = originalAdapter;
   });
 
   Widget buildApp(Widget child) {
-    return MaterialApp(
-      home: child,
+    return AnimatedBuilder(
+      animation: AppState(),
+      builder: (context, _) => MaterialApp(
+        theme: AppTheme.light(AppState().locale),
+        darkTheme: AppTheme.dark(AppState().locale),
+        themeMode: AppState().themeMode,
+        home: child,
+      ),
     );
   }
 
@@ -203,6 +215,13 @@ void main() {
     await tester.pumpWidget(buildApp(const SettingsScreen()));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-row-pro-plus')),
+      140,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('settings-row-pro-plus')));
     await tester.pumpAndSettle();
 
@@ -290,5 +309,73 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('الإعدادات والنشاط'), findsOneWidget);
     expect(find.text('مركز حساب أبولو'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Appearance settings & Profile quick toggle switch live between Light Mode and Dark Mode',
+      (tester) async {
+    expect(AppState().themeMode, ThemeMode.light);
+
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settings-row-appearance')), findsOneWidget);
+    expect(find.text('Light'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings-row-appearance')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SettingsAppearanceScreen), findsOneWidget);
+    expect(find.byKey(const Key('theme-card-light')), findsOneWidget);
+    expect(find.byKey(const Key('theme-card-dark')), findsOneWidget);
+    expect(find.byKey(const Key('theme-option-dark')), findsOneWidget);
+    expect(find.byKey(const Key('theme-option-system')), findsOneWidget);
+
+    // Switch to Dark Mode
+    await tester.tap(find.byKey(const Key('theme-option-dark')));
+    await tester.pumpAndSettle();
+
+    expect(AppState().themeMode, ThemeMode.dark);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('apolo_theme_mode_v1'), 'dark');
+
+    final darkScaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
+    expect(darkScaffold.backgroundColor, const Color(0xFF0A0A0A));
+
+    // Pop SettingsAppearanceScreen so root home slot is visible
+    Navigator.of(tester.element(find.byType(SettingsAppearanceScreen))).pop();
+    await tester.pumpAndSettle();
+
+    // Verify HomeScreen and ProfileScreen render cleanly in Dark Mode + 1-tap toggle works
+    await tester.pumpWidget(buildApp(const HomeScreen()));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    final homeScaffold =
+        tester.widget<Scaffold>(find.byKey(const Key('dl-home-screen')));
+    expect(homeScaffold.backgroundColor, const Color(0xFF0A0A0A));
+
+    await tester.runAsync(() async {
+      await AppState().setAuthSession('test_token', {
+        'id': 55,
+        'name': 'Youssef Dark',
+        'username': 'youssef_dark',
+        'email': 'youssef@apolo.ma',
+      });
+    });
+
+    await tester.pumpWidget(buildApp(const ProfileScreen()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final profDark =
+        tester.widget<Scaffold>(find.byKey(const Key('dl-profile-screen')));
+    expect(profDark.backgroundColor, const Color(0xFF0A0A0A));
+
+    // 1-tap sun/moon button switches back to Light Mode immediately
+    await tester.tap(find.byKey(const Key('profile-theme-toggle-btn')));
+    await tester.pumpAndSettle();
+    expect(AppState().themeMode, ThemeMode.light);
+    final profLight =
+        tester.widget<Scaffold>(find.byKey(const Key('dl-profile-screen')));
+    expect(profLight.backgroundColor, const Color(0xFFFFFFFF));
   });
 }

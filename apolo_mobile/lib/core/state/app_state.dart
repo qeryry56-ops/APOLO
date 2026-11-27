@@ -16,6 +16,7 @@ class AppState extends ChangeNotifier {
   final ApiClient api = ApiClient();
 
   Locale _locale = const Locale('en');
+  ThemeMode _themeMode = ThemeMode.light;
   Map<String, dynamic>? currentUser;
   List<dynamic> categories = [];
   List<dynamic> cities = [];
@@ -145,7 +146,42 @@ class AppState extends ChangeNotifier {
       zoneRadiusKm > 0;
 
   Locale get locale => _locale;
+  ThemeMode get themeMode => _themeMode;
+  bool get isDarkMode => _themeMode == ThemeMode.dark;
   AppStrings get s => AppStrings(_locale.languageCode);
+
+  String themeModeLabel(AppStrings strings) {
+    switch (_themeMode) {
+      case ThemeMode.dark:
+        return strings.tr('داكن', 'Sombre', 'Dark');
+      case ThemeMode.system:
+        return strings.tr('تلقائي', 'Système', 'System');
+      case ThemeMode.light:
+        return strings.tr('فاتح', 'Clair', 'Light');
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (_themeMode == mode) return;
+    _themeMode = mode;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = switch (mode) {
+        ThemeMode.dark => 'dark',
+        ThemeMode.system => 'system',
+        ThemeMode.light => 'light',
+      };
+      await prefs.setString(_themeModePrefsKey, raw);
+    } catch (_) {}
+  }
+
+  Future<void> toggleDarkMode([BuildContext? context]) async {
+    final currentlyDark = context != null
+        ? Theme.of(context).brightness == Brightness.dark
+        : _themeMode == ThemeMode.dark;
+    await setThemeMode(currentlyDark ? ThemeMode.light : ThemeMode.dark);
+  }
   bool get isLoggedIn => currentUser != null && api.isAuthenticated;
 
   bool get hasPersonalizedInterests => categoryInterestWeights.isNotEmpty;
@@ -156,6 +192,7 @@ class AppState extends ChangeNotifier {
       supportedLanguageCodes.contains(code) ? code : 'en';
 
   static const String _cachedUserPrefsKey = 'apolo_cached_user_v1';
+  static const String _themeModePrefsKey = 'apolo_theme_mode_v1';
   static const String _followedSellersPrefsKey = 'apolo_followed_sellers_v1';
   static const String _sellerReviewsPrefsKey = 'apolo_seller_reviews_v1';
   static const String _userIntentsPrefsKey = 'apolo_user_intents_v1';
@@ -531,6 +568,12 @@ class AppState extends ChangeNotifier {
   Future<void> _loadPersonalizationPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final savedTheme = prefs.getString(_themeModePrefsKey);
+      _themeMode = switch (savedTheme) {
+        'dark' => ThemeMode.dark,
+        'system' => ThemeMode.system,
+        _ => ThemeMode.light,
+      };
       preferredCityId = prefs.getInt('apolo_preferred_city_id');
       accountType = prefs.getString('apolo_account_type') ?? 'individual';
       userLat = prefs.getDouble('apolo_zone_lat');

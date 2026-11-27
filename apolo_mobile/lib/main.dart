@@ -78,27 +78,42 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
       debugShowCheckedModeBanner: false,
       locale: _state.locale,
       builder: (context, child) {
-        return CallbackShortcuts(
-          bindings: <ShortcutActivator, VoidCallback>{
-            const SingleActivator(
-              LogicalKeyboardKey.keyB,
-              control: true,
-              shift: true,
-            ): () => BugReportController.instance.openBugReporter(),
-            const SingleActivator(
-              LogicalKeyboardKey.keyB,
-              meta: true,
-              shift: true,
-            ): () => BugReportController.instance.openBugReporter(),
-          },
-          child: RepaintBoundary(
-            key: BugReportScreenshotService.instance.boundaryKey,
-            child: DefaultTextStyle.merge(
-              style: TextStyle(
-                fontFamily: fontFamily,
-                fontFamilyFallback: fontFallback,
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final overlayStyle = SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness:
+              isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness:
+              isDark ? Brightness.dark : Brightness.light,
+          systemNavigationBarColor:
+              isDark ? const Color(0xFF0A0A0A) : Colors.white,
+          systemNavigationBarIconBrightness:
+              isDark ? Brightness.light : Brightness.dark,
+        );
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: overlayStyle,
+          child: CallbackShortcuts(
+            bindings: <ShortcutActivator, VoidCallback>{
+              const SingleActivator(
+                LogicalKeyboardKey.keyB,
+                control: true,
+                shift: true,
+              ): () => BugReportController.instance.openBugReporter(),
+              const SingleActivator(
+                LogicalKeyboardKey.keyB,
+                meta: true,
+                shift: true,
+              ): () => BugReportController.instance.openBugReporter(),
+            },
+            child: RepaintBoundary(
+              key: BugReportScreenshotService.instance.boundaryKey,
+              child: DefaultTextStyle.merge(
+                style: TextStyle(
+                  fontFamily: fontFamily,
+                  fontFamilyFallback: fontFallback,
+                ),
+                child: child ?? const SizedBox.shrink(),
               ),
-              child: child ?? const SizedBox.shrink(),
             ),
           ),
         );
@@ -115,7 +130,7 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
       ],
       theme: AppTheme.light(_state.locale),
       darkTheme: AppTheme.dark(_state.locale),
-      themeMode: ThemeMode.light,
+      themeMode: _state.themeMode,
       home: const SplashScreen(),
     );
   }

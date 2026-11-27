@@ -9,6 +9,7 @@ import '../../widgets/perceived_performance.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
+import '../../widgets/dl_settings_kit.dart';
 
 /// Dynamic Layer v5.1 Explore Screen full-width listing card:
 /// - Full width inside 20px screen margins (~350px on 390px mobile), ~370px height
@@ -49,12 +50,13 @@ class _ExploreListingCardState extends State<ExploreListingCard>
   late final Animation<double> _heartBounceScale;
 
   // Dynamic Layer v5.1 Palette
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlHeartRed = Color(0xFFFF3B30);
   static const Color _dlStarAmber = Color(0xFFFFB800);
 
@@ -458,14 +460,14 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       return Container(
         width: 34,
         height: 34,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _dlPill,
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
         child: Text(
           initial,
-          style: const TextStyle(
+          style: TextStyle(
             color: _dlInk,
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
@@ -481,7 +483,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     return Container(
       width: 34,
       height: 34,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: _dlPill,
       ),
@@ -593,7 +595,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
         fit: BoxFit.contain,
         width: 132,
         height: 132,
-        errorBuilder: (_, __, ___) => const Icon(
+        errorBuilder: (_, __, ___) => Icon(
           CupertinoIcons.photo,
           color: _dlMuted,
           size: 42,
@@ -640,7 +642,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           color: _dlInk,
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -864,7 +866,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: _dlInk,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -885,7 +887,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                           const SizedBox(width: 4),
                           Text(
                             rating,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: _dlInk,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -894,7 +896,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                           const SizedBox(width: 3),
                           Text(
                             reviewsCount,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: _dlMuted,
                               fontSize: 13,
                               fontWeight: FontWeight.w400,
@@ -911,7 +913,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                     specsLine,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _dlMuted,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w400,
@@ -921,7 +923,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
 
                   // 1px Dynamic Layer Hairline Separator
                   const SizedBox(height: 12),
-                  const Divider(
+                  Divider(
                     height: 1,
                     thickness: 1,
                     color: _dlSeparator,
@@ -946,7 +948,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                     sellerName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: _dlInk,
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w600,
@@ -984,7 +986,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                       children: [
                                         TextSpan(
                                           text: pricing.mainAmount,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             color: _dlInk,
                                             fontSize: 16,
                                             fontWeight: FontWeight.w800,
@@ -997,7 +999,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                         if (pricing.unitSuffix.isNotEmpty)
                                           TextSpan(
                                             text: ' ${pricing.unitSuffix}',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               color: _dlMuted,
                                               fontSize: 12.5,
                                               fontWeight: FontWeight.w500,
@@ -1012,7 +1014,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                                   pricing.subLine,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: _dlMuted,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w400,

@@ -7,6 +7,7 @@ import '../../core/state/app_state.dart';
 import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
+import '../../widgets/dl_settings_kit.dart';
 
 /// Dynamic Layer v5.1 Exclusive Deals / Accommodation Showcase Card:
 /// - 0.84:1 portrait aspect ratio (width : height)
@@ -36,11 +37,12 @@ class _AccommodationCardState extends State<AccommodationCard> {
   final AppState _state = AppState();
   bool? _localFavoriteOverride;
 
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlHeartRed = Color(0xFFFF3B30);
   static const Color _dlStarAmber = Color(0xFFFFB800);
 
@@ -338,7 +340,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
         fit: BoxFit.contain,
         width: 152,
         height: 152,
-        errorBuilder: (_, __, ___) => const Icon(
+        errorBuilder: (_, __, ___) => Icon(
           CupertinoIcons.photo,
           color: _dlMuted,
           size: 46,
@@ -436,8 +438,8 @@ class _AccommodationCardState extends State<AccommodationCard> {
                                 badgeLabel,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: _dlOnInk,
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
                                   height: 1.1,
@@ -458,8 +460,8 @@ class _AccommodationCardState extends State<AccommodationCard> {
                                 const SizedBox(width: 4),
                                 Text(
                                   rating,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: _dlOnInk,
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w600,
                                     height: 1.1,
@@ -536,7 +538,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
                               title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: _dlInk,
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800,
@@ -553,7 +555,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
                                 children: [
                                   TextSpan(
                                     text: nightlyPrice,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: _dlInk,
                                       fontSize: 17,
                                       fontWeight: FontWeight.w800,
@@ -566,7 +568,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
                                   if (priceUnit.isNotEmpty)
                                     TextSpan(
                                       text: ' $priceUnit',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: _dlMuted,
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w500,
@@ -581,7 +583,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on_rounded,
                             size: 14.5,
                             color: _dlMuted,
@@ -592,7 +594,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
                               location,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: _dlMuted,
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w500,
@@ -613,7 +615,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
                               totalSummary,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: _dlMuted,
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w500,

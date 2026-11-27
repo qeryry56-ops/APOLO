@@ -64,14 +64,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<Map<String, dynamic>> _items = [];
 
   // Strict Dynamic Layer v5.1 Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlBodyInk = Color(0xFF525252);
-  static const Color _dlMuted = Color(0xFF757575);
-  static const Color _dlTimeMuted = Color(0xFF9E9E9E);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlBodyInk => (Theme.of(context).brightness == Brightness.dark ? const Color(0xFFD4D4D8) : const Color(0xFF525252));
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
+  Color get _dlTimeMuted => ApoloDlPalette.of(context).subtle;
   static const Color _dlFollowBlue = Color(0xFF2997FF);
 
   @override
@@ -154,11 +155,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       media: Container(
         width: 56,
         height: 56,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _dlPill,
           shape: BoxShape.circle,
         ),
-        child: const Icon(
+        child: Icon(
           CupertinoIcons.bell_slash_fill,
           size: 25,
           color: _dlInk,
@@ -227,12 +228,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         Container(
                           width: 40,
                           height: 40,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: _dlPill,
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
-                          child: const Icon(
+                          child: Icon(
                             CupertinoIcons.bell_fill,
                             size: 18,
                             color: _dlInk,
@@ -249,7 +250,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   'Préférences d’alertes',
                                   'Notification preferences',
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: _dlInk,
                                   fontSize: 17,
                                   fontWeight: FontWeight.w700,
@@ -262,7 +263,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   'Choisissez les alertes à recevoir sur Apolo',
                                   'Choose which Apolo alerts you want to receive',
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: _dlMuted,
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w400,
@@ -310,7 +311,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               _saveAlertPref(_prefMessagesKey, val);
                             },
                           ),
-                          const Padding(
+                          Padding(
                             padding: EdgeInsetsDirectional.only(start: 56),
                             child: SizedBox(
                               height: 1,
@@ -341,7 +342,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               _saveAlertPref(_prefSavedKey, val);
                             },
                           ),
-                          const Padding(
+                          Padding(
                             padding: EdgeInsetsDirectional.only(start: 56),
                             child: SizedBox(
                               height: 1,
@@ -433,7 +434,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Container(
               width: 34,
               height: 34,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _dlBg,
                 shape: BoxShape.circle,
               ),
@@ -447,7 +448,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _dlInk,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
@@ -456,7 +457,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _dlMuted,
                       fontSize: 12,
                       height: 1.3,
@@ -962,7 +963,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               textAlign: TextAlign.center,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: _dlInk,
                                 fontSize: 16.0,
                                 fontWeight: FontWeight.w700,
@@ -1105,7 +1106,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                           alignment: Alignment.center,
-                          child: const Icon(
+                          child: Icon(
                             CupertinoIcons.bell_fill,
                             size: 20,
                             color: _dlInk,
@@ -1124,7 +1125,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       previewTitle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: _dlInk,
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700,
@@ -1138,7 +1139,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   const SizedBox(width: 6),
                                   Text(
                                     nowLabel,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: _dlMuted,
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w400,
@@ -1152,7 +1153,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 previewBody,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: _dlMuted,
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w400,
@@ -1215,7 +1216,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           s.tr('الإشعارات', 'Notifications', 'Notification'),
                           key: const Key('dl-notification-title'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: _dlInk,
                             fontSize: 24.0,
                             fontWeight: FontWeight.w700,
@@ -1234,7 +1235,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             ),
                             key: const Key('dl-notification-subtitle'),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: _dlMuted,
                               fontSize: 15.5,
                               fontWeight: FontWeight.w400,
@@ -1268,8 +1269,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               child: Center(
                                 child: Text(
                                   s.tr('متابعة', 'Continuer', 'Continue'),
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: _dlOnInk,
                                     fontSize: 16.0,
                                     fontWeight: FontWeight.w600,
                                     height: 24.0 / 16.0,
@@ -1314,7 +1315,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Container(
       width: 44.0,
       height: 44.0,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _dlPill,
         shape: BoxShape.circle,
       ),
@@ -1323,7 +1324,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ? Icon(iconData, size: 19, color: _dlInk)
           : Text(
               initial,
-              style: const TextStyle(
+              style: TextStyle(
                 color: _dlInk,
                 fontSize: 16.0,
                 fontWeight: FontWeight.w700,
@@ -1456,7 +1457,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         textSpans.add(
           TextSpan(
             text: '  $time',
-            style: const TextStyle(
+            style: TextStyle(
               color: _dlTimeMuted,
               fontSize: 13.0,
               fontWeight: FontWeight.w400,
@@ -1482,7 +1483,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _dlInk,
                       fontSize: 14.0,
                       fontWeight: FontWeight.w700,
@@ -1504,7 +1505,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   if (body.isNotEmpty)
                     TextSpan(
                       text: body,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _dlBodyInk,
                         fontSize: 14.0,
                         fontWeight: FontWeight.w400,
@@ -1514,7 +1515,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   if (time.isNotEmpty)
                     TextSpan(
                       text: body.isNotEmpty ? '  $time' : time,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _dlTimeMuted,
                         fontSize: 13.0,
                         fontWeight: FontWeight.w400,
@@ -1587,7 +1588,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: _dlPill,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Icon(
+        child: Icon(
           CupertinoIcons.trash_fill,
           color: _dlInk,
           size: 19,
@@ -1609,7 +1610,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       children: [
         Text(
           heading,
-          style: const TextStyle(
+          style: TextStyle(
             color: _dlInk,
             fontSize: 18.0,
             fontWeight: FontWeight.w700,
@@ -1684,7 +1685,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         CupertinoIcons.checkmark_alt,
                         size: 14,
                         color: _dlInk,
@@ -1692,7 +1693,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       const SizedBox(width: 5),
                       Text(
                         s.tr('قراءة الكل', 'Tout lire', 'Mark all read'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: _dlInk,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -1753,12 +1754,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Container(
             width: 48,
             height: 48,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _dlBg,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: const Icon(
+            child: Icon(
               CupertinoIcons.bell,
               size: 22,
               color: _dlInk,
@@ -1772,7 +1773,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               'No notifications in this category',
             ),
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: _dlInk,
               fontSize: 15.5,
               fontWeight: FontWeight.w700,
@@ -1786,7 +1787,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               'Buyer messages, offers, and listing updates will appear here.',
             ),
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: _dlMuted,
               fontSize: 13,
               height: 1.4,
@@ -1825,12 +1826,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: _dlBg,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
+                  child: Icon(
                     CupertinoIcons.wifi_slash,
                     size: 24,
                     color: _dlInk,
@@ -1844,7 +1845,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     'No Internet connection',
                   ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _dlInk,
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
@@ -1858,7 +1859,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     'Check your Wi-Fi or mobile data to refresh your notifications.',
                   ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _dlMuted,
                     fontSize: 13.5,
                     height: 1.45,

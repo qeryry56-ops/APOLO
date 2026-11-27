@@ -39,12 +39,13 @@ class _StoresScreenState extends State<StoresScreen> {
   int _filterIndex = 0; // 0: All, 1: Most products, 2: Top rated
 
   // Strict Dynamic Layer v5.1 Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlStarAmber = Color(0xFFFFB800);
 
   @override
@@ -230,7 +231,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                 '$_totalStores boutiques officielles vérifiées',
                                 '$_totalStores verified official stores',
                               ),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                                 color: _dlMuted,
@@ -248,7 +249,7 @@ class _StoresScreenState extends State<StoresScreen> {
                         color: _dlInk,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ApoloVerifiedBadge(size: 14),
@@ -257,7 +258,7 @@ class _StoresScreenState extends State<StoresScreen> {
                             'PRO',
                             textDirection: TextDirection.ltr,
                             style: TextStyle(
-                              color: Colors.white,
+                              color: _dlOnInk,
                               fontWeight: FontWeight.w800,
                               fontSize: 11.5,
                             ),
@@ -300,7 +301,7 @@ class _StoresScreenState extends State<StoresScreen> {
                           cursorColor: _dlInk,
                           textInputAction: TextInputAction.search,
                           onSubmitted: (_) => _fetchStores(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: _dlInk,
                             fontSize: 14.5,
                             fontWeight: FontWeight.w500,
@@ -311,7 +312,7 @@ class _StoresScreenState extends State<StoresScreen> {
                               'Rechercher une boutique officielle...',
                               'Search official stores...',
                             ),
-                            hintStyle: const TextStyle(
+                            hintStyle: TextStyle(
                               color: _dlMuted,
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
@@ -334,7 +335,7 @@ class _StoresScreenState extends State<StoresScreen> {
                             _searchCtrl.clear();
                             _fetchStores();
                           },
-                          child: const Padding(
+                          child: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 6),
                             child: Icon(
                               CupertinoIcons.xmark,
@@ -474,7 +475,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                           children: [
                                             Container(
                                               padding: const EdgeInsets.all(2),
-                                              decoration: const BoxDecoration(
+                                              decoration: BoxDecoration(
                                                 color: _dlBg,
                                                 shape: BoxShape.circle,
                                               ),
@@ -549,7 +550,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                             BorderRadius
                                                                 .circular(999),
                                                       ),
-                                                      child: const Text(
+                                                      child: Text(
                                                         'PRO+',
                                                         textDirection:
                                                             TextDirection.ltr,
@@ -557,7 +558,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                           fontSize: 10,
                                                           fontWeight:
                                                               FontWeight.w800,
-                                                          color: Colors.white,
+                                                          color: _dlOnInk,
                                                         ),
                                                       ),
                                                     ),
@@ -578,7 +579,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                         rating,
                                                         textDirection:
                                                             TextDirection.ltr,
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                           fontSize: 12,
                                                           fontWeight:
                                                               FontWeight.w700,
@@ -605,7 +606,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.w500,
                                                     color: _dlMuted,
@@ -616,7 +617,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                 const SizedBox(height: 3),
                                                 Row(
                                                   children: [
-                                                    const Icon(
+                                                    Icon(
                                                       CupertinoIcons
                                                           .location_solid,
                                                       size: 11.5,
@@ -629,7 +630,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                         maxLines: 1,
                                                         overflow: TextOverflow
                                                             .ellipsis,
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                           fontSize: 11.5,
                                                           color: _dlMuted,
                                                           fontWeight:
@@ -651,7 +652,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                   maxLines: 2,
                                                   overflow:
                                                       TextOverflow.ellipsis,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     color: _dlMuted,
                                                     fontSize: 12.5,
                                                     height: 1.35,
@@ -681,7 +682,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                         mainAxisSize:
                                                             MainAxisSize.min,
                                                         children: [
-                                                          const Icon(
+                                                          Icon(
                                                             CupertinoIcons
                                                                 .cube_box,
                                                             size: 12.5,
@@ -698,7 +699,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                                   TextOverflow
                                                                       .ellipsis,
                                                               style:
-                                                                  const TextStyle(
+                                                                  TextStyle(
                                                                 color: _dlInk,
                                                                 fontSize: 11.5,
                                                                 fontWeight:
@@ -739,8 +740,8 @@ class _StoresScreenState extends State<StoresScreen> {
                                                           overflow: TextOverflow
                                                               .ellipsis,
                                                           style:
-                                                              const TextStyle(
-                                                            color: Colors.white,
+                                                              TextStyle(
+                                                            color: _dlOnInk,
                                                             fontSize: 11.5,
                                                             fontWeight:
                                                                 FontWeight.w700,
@@ -756,7 +757,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                               : CupertinoIcons
                                                                   .chevron_right,
                                                           size: 11.5,
-                                                          color: Colors.white,
+                                                          color: _dlOnInk,
                                                         ),
                                                       ],
                                                     ),

@@ -2560,8 +2560,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final double composerBottomClearance =
         restingComposerBottom + Ios26IMessageTokens.composerMinHeight + 14.0 + drawerHeightOffset;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Ios26IMessageTokens.canvasWhite,
+      backgroundColor:
+          isDark ? const Color(0xFF0A0A0A) : Ios26IMessageTokens.canvasWhite,
       body: Stack(
         children: [
           // Layer 0: Full-bleed message stream scrolling naturally beneath the clipped frosted header
@@ -3071,6 +3074,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   Widget _buildEmptyChatState({bool includeAdCard = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -3087,16 +3091,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               height: 68,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _chatBlueSoft,
+                color: isDark ? const Color(0xFF222226) : _chatBlueSoft,
                 border: Border.all(
-                  color: _chatBlue.withValues(alpha: 0.18),
+                  color: (isDark ? Colors.white : _chatBlue)
+                      .withValues(alpha: 0.18),
                   width: 2,
                 ),
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(
                   CupertinoIcons.chat_bubble_2_fill,
-                  color: _chatBlue,
+                  color: isDark ? Colors.white : _chatBlue,
                   size: 32,
                 ),
               ),
@@ -3104,10 +3109,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             const SizedBox(height: 14),
             Text(
               widget.peerName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
-                color: _textBlack,
+                color: isDark ? Colors.white : _textBlack,
               ),
             ),
             const SizedBox(height: 6),

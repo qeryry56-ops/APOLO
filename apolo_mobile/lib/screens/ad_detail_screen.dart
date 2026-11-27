@@ -63,13 +63,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   bool _hiddenListing = false;
 
   // Dynamic Layer v5.1 Strict Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
-  static const Color _dlSubtle = Color(0xFF9E9E9E);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
+  Color get _dlSubtle => ApoloDlPalette.of(context).subtle;
   static const Color _dlFollowBlue = Color(0xFF2997FF);
   static const Color _dlHeartRed = Color(0xFFFF3B30);
   static const Color _dlStarAmber = Color(0xFFFFB800);
@@ -218,11 +219,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: _dlPill,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     CupertinoIcons.phone_fill,
                     color: _dlInk,
                     size: 24,
@@ -231,7 +232,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 const SizedBox(height: 14),
                 Text(
                   sellerName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                     color: _dlInk,
@@ -284,7 +285,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
+                              Icon(
                                 CupertinoIcons.doc_on_doc,
                                 size: 16,
                                 color: _dlInk,
@@ -292,7 +293,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 s.tr('نسخ الرقم', 'Copier', 'Copy'),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w700,
                                   color: _dlInk,
@@ -325,18 +326,18 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
+                              Icon(
                                 CupertinoIcons.phone_fill,
                                 size: 16,
-                                color: Colors.white,
+                                color: _dlOnInk,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 s.tr('اتصال الآن', 'Appeler', 'Call'),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: _dlOnInk,
                                 ),
                               ),
                             ],
@@ -823,7 +824,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     final s = _state.s;
     final ad = _ad;
     if (ad == null && _loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: _dlBg,
         body: AdDetailSkeleton(),
       );
@@ -1201,7 +1202,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: _dlInk,
@@ -1635,7 +1636,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 textDirection: TextDirection.ltr,
                 child: PriceText(
                   priceFormatted,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.w800,
                     color: _dlInk,
@@ -1657,7 +1658,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     priceFrequency,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
                       color: _dlInk,
@@ -1674,14 +1675,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             children: [
               Text(
                 listedLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                   color: _dlMuted,
                 ),
               ),
               if (locationSubtitle.isNotEmpty) ...[
-                const Text(
+                Text(
                   '·',
                   style: TextStyle(
                     fontSize: 13,
@@ -1692,7 +1693,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   locationSubtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: _dlMuted,
@@ -1739,14 +1740,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 Container(
                   width: 32,
                   height: 32,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: _dlInk,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
+                  child: Icon(
                     CupertinoIcons.bolt_fill,
-                    color: Colors.white,
+                    color: _dlOnInk,
                     size: 16,
                   ),
                 ),
@@ -1758,7 +1759,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       'Booster cette annonce ⚡',
                       'Boost this listing ⚡',
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: _dlInk,
@@ -1795,15 +1796,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: _dlInk,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
+                  child: Icon(
                     CupertinoIcons.chat_bubble_fill,
                     size: 13.5,
-                    color: Colors.white,
+                    color: _dlOnInk,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1816,7 +1817,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: _dlInk,
@@ -1834,7 +1835,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   ),
                   child: Text(
                     s.tr('رد سريع', 'Réponse rapide', 'Fast reply'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: _dlInk,
@@ -1879,7 +1880,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         minLines: 1,
                         maxLines: 2,
                         cursorColor: _dlInk,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           color: _dlInk,
                           height: 1.3,
@@ -1900,7 +1901,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                             'Écrivez votre message...',
                             'Write a message...',
                           ),
-                          hintStyle: const TextStyle(
+                          hintStyle: TextStyle(
                             fontSize: 13.5,
                             color: _dlSubtle,
                           ),
@@ -1930,8 +1931,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     alignment: Alignment.center,
                     child: Text(
                       s.tr('إرسال', 'Envoyer', 'Send'),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: _dlOnInk,
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                       ),
@@ -2136,7 +2137,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               children: [
                 Text(
                   s.tr('الوصف', 'Description', 'Description'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: _dlInk,
@@ -2149,7 +2150,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   overflow: _descExpanded
                       ? TextOverflow.visible
                       : TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14.5,
                     height: 1.48,
                     color: _dlInk,
@@ -2208,7 +2209,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 e.key,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   color: _dlMuted,
                                   fontWeight: FontWeight.w400,
@@ -2222,7 +2223,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.end,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
                                   color: _dlInk,
@@ -2259,15 +2260,15 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     Container(
                       width: 34,
                       height: 34,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: _dlInk,
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(
+                      child: Icon(
                         CupertinoIcons.phone_fill,
                         size: 15,
-                        color: Colors.white,
+                        color: _dlOnInk,
                       ),
                     ),
                     const SizedBox(width: 11),
@@ -2280,7 +2281,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: _dlInk,
@@ -2301,7 +2302,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         ),
                         child: Text(
                           phone,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
                             color: _dlInk,
@@ -2466,7 +2467,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   children: [
                     Text(
                       s.tr('البائع', 'Vendeur', 'Seller'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: _dlInk,
@@ -2517,7 +2518,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.star_rounded,
                         size: 14,
                         color: _dlInk,
@@ -2525,7 +2526,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       const SizedBox(width: 4),
                       Text(
                         s.tr('عرض التقييمات', 'Voir les avis', 'See reviews'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: _dlInk,
@@ -2564,7 +2565,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         Container(
                           width: 52,
                           height: 52,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: _dlPill,
                             shape: BoxShape.circle,
                           ),
@@ -2594,7 +2595,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                       hostTitle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 15.5,
                                         fontWeight: FontWeight.w700,
                                         color: _dlInk,
@@ -2644,7 +2645,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                     const SizedBox(width: 4),
                                     Text(
                                       ratingVal.toStringAsFixed(1),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
                                         color: _dlInk,
@@ -2653,7 +2654,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                     if (reviewsCountVal != null)
                                       Text(
                                         ' ($reviewsCountVal)',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12,
                                           color: _dlMuted,
                                         ),
@@ -2666,7 +2667,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 hostSubtitle,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w400,
                                   color: _dlMuted,
@@ -2701,7 +2702,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isFollowing ? _dlInk : Colors.white,
+                          color: isFollowing ? _dlInk : _dlOnInk,
                         ),
                       ),
                     ),
@@ -2741,7 +2742,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: _dlInk,
@@ -2837,10 +2838,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                       ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: _dlOnInk,
                                 ),
                               ),
                             ),
@@ -2883,7 +2884,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             children: [
               Text(
                 s.tr('موقع الإعلان', 'Localisation', 'Location'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: _dlInk,
@@ -2915,7 +2916,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.96),
+                      color: _dlOnInk.withValues(alpha: 0.96),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
@@ -2944,7 +2945,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                   'À ${distKm.round()} km',
                                   '${distKm.round()} km away',
                                 ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: _dlInk,
@@ -2990,7 +2991,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       cityName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
                         color: _dlInk,
@@ -3003,7 +3004,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         'La localisation est approximative',
                         'Location is approximate',
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w400,
                         color: _dlMuted,
@@ -3034,7 +3035,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   ),
                   child: Text(
                     s.tr('عرض الخريطة', 'Voir la carte', 'Full map'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
                       color: _dlInk,
@@ -3099,7 +3100,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               'Recherches similaires',
               'Related searches',
             ),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: _dlInk,
@@ -3132,7 +3133,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         CupertinoIcons.search,
                         size: 14.5,
                         color: _dlInk,
@@ -3143,7 +3144,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           term,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                             color: _dlInk,
@@ -3181,7 +3182,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           children: [
             Text.rich(
               TextSpan(
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   color: _dlMuted,
                   height: 1.42,
@@ -3200,7 +3201,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       'masquer cette annonce',
                       'hide this listing',
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: _dlInk,
                     ),
@@ -3270,7 +3271,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               'Masquer l’annonce',
                               'Hide listing',
                             ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                         color: _dlInk,
@@ -3291,7 +3292,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         CupertinoIcons.shield_lefthalf_fill,
                         size: 13.5,
                         color: _dlMuted,
@@ -3303,7 +3304,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           'Signaler / Sécurité',
                           'Report & Safety',
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: _dlMuted,
@@ -3342,7 +3343,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               'Annonces similaires',
               'Similar listings',
             ),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: _dlInk,
@@ -3782,11 +3783,12 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
   bool _highestFirst = false;
   final Set<int> _helpfulIndices = {};
 
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlStarAmber = Color(0xFFFFB800);
 
   List<Map<String, dynamic>> get _combinedRawReviews {
@@ -3876,7 +3878,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
                                       color: _dlInk,
@@ -3890,7 +3892,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.end,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w500,
                                       color: _dlMuted,
@@ -3910,7 +3912,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                       ratingValue > 0
                                           ? ratingValue.toStringAsFixed(1)
                                           : '—',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 36,
                                         fontWeight: FontWeight.w800,
                                         color: _dlInk,
@@ -3942,7 +3944,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       '($totalCount)',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w600,
                                         color: _dlMuted,
@@ -4009,7 +4011,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                                   minHeight: 6,
                                                   backgroundColor: _dlPill,
                                                   valueColor:
-                                                      const AlwaysStoppedAnimation<
+                                                      AlwaysStoppedAnimation<
                                                           Color>(_dlInk),
                                                 ),
                                               ),
@@ -4020,7 +4022,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                               child: Text(
                                                 '${counts[star] ?? 0}',
                                                 textAlign: TextAlign.end,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                   color: _dlMuted,
@@ -4086,7 +4088,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                             'Avis sur le vendeur ($totalCount)',
                             'Seller reviews ($totalCount)',
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: _dlInk,
@@ -4098,7 +4100,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                           onTap: () => setState(() => _minStarsFilter = 0),
                           child: Text(
                             s.tr('عرض الكل', 'Tout afficher', 'Show all'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: _dlInk,
@@ -4134,8 +4136,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                 Icons.tune_rounded,
                                 size: 16,
                                 color: _minStarsFilter != 0
-                                    ? Colors.white
-                                    : _dlInk,
+                                    ? _dlOnInk : _dlInk,
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -4150,8 +4151,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
                                   color: _minStarsFilter != 0
-                                      ? Colors.white
-                                      : _dlInk,
+                                      ? _dlOnInk : _dlInk,
                                 ),
                               ),
                             ],
@@ -4178,7 +4178,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                               Icon(
                                 Icons.swap_vert_rounded,
                                 size: 16,
-                                color: _highestFirst ? Colors.white : _dlInk,
+                                color: _highestFirst ? _dlOnInk : _dlInk,
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -4192,7 +4192,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                 style: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
-                                  color: _highestFirst ? Colors.white : _dlInk,
+                                  color: _highestFirst ? _dlOnInk : _dlInk,
                                 ),
                               ),
                             ],
@@ -4212,7 +4212,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                       ),
                       child: Column(
                         children: [
-                          const Icon(
+                          Icon(
                             CupertinoIcons.star_circle,
                             size: 36,
                             color: _dlMuted,
@@ -4225,7 +4225,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                               'No written reviews for ${widget.sellerName} yet',
                             ),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
                               color: _dlMuted,
                             ),
@@ -4250,12 +4250,12 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                 Container(
                                   width: 40,
                                   height: 40,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: _dlPill,
                                     shape: BoxShape.circle,
                                   ),
                                   alignment: Alignment.center,
-                                  child: const Icon(
+                                  child: Icon(
                                     CupertinoIcons.person_fill,
                                     color: _dlInk,
                                     size: 18,
@@ -4272,7 +4272,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                                 items[idx]['name'] ??
                                                 '')
                                             .toString(),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 14.5,
                                           fontWeight: FontWeight.w700,
                                           color: _dlInk,
@@ -4283,7 +4283,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                           .isNotEmpty)
                                         Text(
                                           items[idx]['date'].toString(),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 12,
                                             color: _dlMuted,
                                           ),
@@ -4311,7 +4311,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                       const SizedBox(width: 3),
                                       Text(
                                         '${int.tryParse((items[idx]['rating'] ?? 5).toString()) ?? 5}',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
                                           color: _dlInk,
@@ -4344,7 +4344,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                               const SizedBox(height: 6),
                               Text(
                                 items[idx]['comment'].toString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13.5,
                                   color: _dlInk,
                                   height: 1.45,

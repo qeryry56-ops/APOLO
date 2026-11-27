@@ -63,12 +63,13 @@ class _SearchScreenState extends State<SearchScreen>
   bool _loadingMore = false;
 
   // Dynamic Layer v5.1 Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
-  static const Color _dlSubtle = Color(0xFF9E9E9E);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
+  Color get _dlSubtle => ApoloDlPalette.of(context).subtle;
 
   @override
   void initState() {
@@ -608,7 +609,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 'Filtrer et trier',
                                 'Filter & Sort',
                               ),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
                                 color: _dlInk,
@@ -639,7 +640,7 @@ class _SearchScreenState extends State<SearchScreen>
                               ),
                               child: Text(
                                 s.tr('إعادة ضبط', 'Réinitialiser', 'Reset'),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
                                   color: _dlInk,
                                   fontWeight: FontWeight.w700,
@@ -661,7 +662,7 @@ class _SearchScreenState extends State<SearchScreen>
                       // 1. Sort By Pills
                       Text(
                         s.tr('الترتيب حسب', 'Trier par', 'Sort by'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: _dlMuted,
@@ -686,7 +687,7 @@ class _SearchScreenState extends State<SearchScreen>
                       // 2. City Pills
                       Text(
                         s.tr('المدينة', 'Ville', 'City'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: _dlMuted,
@@ -730,7 +731,7 @@ class _SearchScreenState extends State<SearchScreen>
                       // 3. Category Pills
                       Text(
                         s.tr('القسم', 'Catégorie', 'Category'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: _dlMuted,
@@ -767,7 +768,7 @@ class _SearchScreenState extends State<SearchScreen>
                           'Fourchette de prix (DH)',
                           'Price range (MAD)',
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: _dlMuted,
@@ -796,14 +797,14 @@ class _SearchScreenState extends State<SearchScreen>
                                 textDirection: TextDirection.ltr,
                                 textAlign:
                                     s.isAr ? TextAlign.end : TextAlign.start,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: _dlInk,
                                 ),
                                 decoration: InputDecoration(
                                   hintText:
                                       s.tr('أقل ثمن', 'Prix min', 'Min price'),
-                                  hintStyle: const TextStyle(
+                                  hintStyle: TextStyle(
                                     color: _dlSubtle,
                                     fontWeight: FontWeight.w400,
                                   ),
@@ -839,14 +840,14 @@ class _SearchScreenState extends State<SearchScreen>
                                 textDirection: TextDirection.ltr,
                                 textAlign:
                                     s.isAr ? TextAlign.end : TextAlign.start,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: _dlInk,
                                 ),
                                 decoration: InputDecoration(
                                   hintText:
                                       s.tr('أقصى ثمن', 'Prix max', 'Max price'),
-                                  hintStyle: const TextStyle(
+                                  hintStyle: TextStyle(
                                     color: _dlSubtle,
                                     fontWeight: FontWeight.w400,
                                   ),
@@ -883,12 +884,12 @@ class _SearchScreenState extends State<SearchScreen>
                               Container(
                                 width: 34,
                                 height: 34,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: _dlBg,
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
-                                child: const Icon(
+                                child: Icon(
                                   CupertinoIcons.tag_fill,
                                   color: _dlInk,
                                   size: 16,
@@ -902,7 +903,7 @@ class _SearchScreenState extends State<SearchScreen>
                                     'Annonces négociables uniquement',
                                     'Negotiable listings only',
                                   ),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: _dlInk,
@@ -1088,7 +1089,7 @@ class _SearchScreenState extends State<SearchScreen>
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(ctx).size.height * 0.72,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _dlBg,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
@@ -1118,12 +1119,12 @@ class _SearchScreenState extends State<SearchScreen>
                         Container(
                           width: 36,
                           height: 36,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: _dlPill,
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
-                          child: const Icon(
+                          child: Icon(
                             CupertinoIcons.bookmark_fill,
                             size: 16,
                             color: _dlInk,
@@ -1133,7 +1134,7 @@ class _SearchScreenState extends State<SearchScreen>
                         Expanded(
                           child: Text(
                             s.tr('الإعلانات المحفوظة', 'Enregistrés', 'Saved'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: _dlInk,
@@ -1161,7 +1162,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   'Sauver recherche',
                                   'Save search',
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
                                   color: _dlInk,
@@ -1194,12 +1195,12 @@ class _SearchScreenState extends State<SearchScreen>
                               Container(
                                 width: 56,
                                 height: 56,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: _dlSurface,
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
-                                child: const Icon(
+                                child: Icon(
                                   CupertinoIcons.bookmark,
                                   size: 26,
                                   color: _dlMuted,
@@ -1212,7 +1213,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   'Aucune annonce enregistrée',
                                   'No saved listings yet',
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                   color: _dlInk,
@@ -1226,7 +1227,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   'Tap the heart on any listing to save it here',
                                 ),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   color: _dlMuted,
                                 ),
@@ -1314,7 +1315,7 @@ class _SearchScreenState extends State<SearchScreen>
                                               )
                                             : Container(
                                                 color: _dlPill,
-                                                child: const Icon(
+                                                child: Icon(
                                                   CupertinoIcons.photo,
                                                   color: _dlMuted,
                                                 ),
@@ -1331,7 +1332,7 @@ class _SearchScreenState extends State<SearchScreen>
                                             title,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w700,
                                               color: _dlInk,
@@ -1342,7 +1343,7 @@ class _SearchScreenState extends State<SearchScreen>
                                               city,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12,
                                                 color: _dlMuted,
                                               ),
@@ -1354,7 +1355,7 @@ class _SearchScreenState extends State<SearchScreen>
                                       const SizedBox(width: 8),
                                       PriceText(
                                         priceLabel,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w800,
                                           color: _dlInk,
@@ -1416,7 +1417,7 @@ class _SearchScreenState extends State<SearchScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           CupertinoIcons.search,
                           size: 20,
                           color: _dlMuted,
@@ -1438,14 +1439,14 @@ class _SearchScreenState extends State<SearchScreen>
                               _exitSearchMode();
                               _searchAds();
                             },
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               color: _dlInk,
                               fontWeight: FontWeight.w400,
                             ),
                             decoration: InputDecoration(
                               hintText: s.tr('بحث...', 'Rechercher...', 'Search'),
-                              hintStyle: const TextStyle(
+                              hintStyle: TextStyle(
                                 color: _dlSubtle,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w400,
@@ -1466,7 +1467,7 @@ class _SearchScreenState extends State<SearchScreen>
                               _queryCtrl.clear();
                               _searchAds();
                             },
-                            child: const SizedBox(
+                            child: SizedBox(
                               width: 28,
                               height: 28,
                               child: Center(
@@ -1486,7 +1487,7 @@ class _SearchScreenState extends State<SearchScreen>
                             HapticFeedback.selectionClick();
                             _searchFocus.requestFocus();
                           },
-                          child: const SizedBox(
+                          child: SizedBox(
                             width: 32,
                             height: 32,
                             child: Center(
@@ -1509,7 +1510,7 @@ class _SearchScreenState extends State<SearchScreen>
                   child: Semantics(
                     button: true,
                     label: s.tr('المحفوظات', 'Enregistrés', 'Saved'),
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 38,
                       height: 44,
                       child: Center(
@@ -1561,14 +1562,14 @@ class _SearchScreenState extends State<SearchScreen>
                             Icon(
                               CupertinoIcons.slider_horizontal_3,
                               size: 19,
-                              color: filterCount > 0 ? Colors.white : _dlInk,
+                              color: filterCount > 0 ? _dlOnInk : _dlInk,
                             ),
                             if (filterCount > 0) ...[
                               const SizedBox(width: 6),
                               Text(
                                 '$filterCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: _dlOnInk,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1607,7 +1608,7 @@ class _SearchScreenState extends State<SearchScreen>
                           child: Icon(
                             CupertinoIcons.square_grid_2x2_fill,
                             size: 20,
-                            color: active ? Colors.white : _dlInk,
+                            color: active ? _dlOnInk : _dlInk,
                           ),
                         ),
                       ),
@@ -1750,7 +1751,7 @@ class _SearchScreenState extends State<SearchScreen>
                                           'Tout voir',
                                           'All areas',
                                         ),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w700,
                                           color: _dlInk,
@@ -1767,7 +1768,7 @@ class _SearchScreenState extends State<SearchScreen>
                                           'Choisir zone',
                                           'Set area',
                                         ),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
                                           color: _dlMuted,

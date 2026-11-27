@@ -58,11 +58,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   List<Map<String, dynamic>> _sellerAds = [];
 
   // Strict Dynamic Layer v5.1 Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlDanger = Color(0xFFE31B23);
   static const Color _dlStarAmber = Color(0xFFFFB800);
 
@@ -274,7 +275,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     required Color iconColor,
     required String title,
     required VoidCallback onTap,
-    Color titleColor = _dlInk,
+    Color? titleColor,
   }) {
     return PressableScale(
       key: rowKey,
@@ -290,7 +291,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             Container(
               width: 38,
               height: 38,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _dlBg,
                 shape: BoxShape.circle,
               ),
@@ -304,7 +305,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,
-                  color: titleColor,
+                  color: titleColor ?? _dlInk,
                 ),
               ),
             ),
@@ -460,7 +461,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                                       .first
                                                       .toUpperCase()
                                                   : 'S',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 28,
                                                 fontWeight: FontWeight.w700,
                                                 color: _dlInk,
@@ -477,7 +478,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                                     .first
                                                     .toUpperCase()
                                                 : 'S',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 28,
                                               fontWeight: FontWeight.w700,
                                               color: _dlInk,
@@ -671,7 +672,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-              color: active ? Colors.white : _dlInk,
+              color: active ? _dlOnInk : _dlInk,
             ),
           ),
         ),
@@ -709,7 +710,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 'Aucune annonce disponible',
                 'No listings available right now',
               ),
-              style: const TextStyle(color: _dlMuted, fontSize: 14),
+              style: TextStyle(color: _dlMuted, fontSize: 14),
             ),
           ),
         ),
@@ -770,7 +771,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                             fallback: Container(
                               color: _dlPill,
                               alignment: Alignment.center,
-                              child: const Icon(
+                              child: Icon(
                                 CupertinoIcons.photo,
                                 color: _dlMuted,
                                 size: 30,
@@ -796,7 +797,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                     'Négociable',
                                     'Negotiable',
                                   ),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: _dlInk,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
@@ -819,7 +820,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               title,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: _dlInk,
@@ -831,7 +832,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               children: [
                                 PriceText(
                                   price,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w800,
                                     color: _dlInk,
@@ -840,7 +841,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       CupertinoIcons.location_solid,
                                       size: 10.5,
                                       color: _dlMuted,
@@ -851,7 +852,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                         city,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
                                           color: _dlMuted,
@@ -988,7 +989,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                   '${ratingStats.count} avis réels',
                                   '${ratingStats.count} verified reviews',
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: _dlMuted,
@@ -1066,7 +1067,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         children: [
           Text(
             stars,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
               color: _dlInk,
@@ -1079,7 +1080,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               child: LinearProgressIndicator(
                 value: pct,
                 backgroundColor: _dlPill,
-                valueColor: const AlwaysStoppedAnimation<Color>(_dlInk),
+                valueColor: AlwaysStoppedAnimation<Color>(_dlInk),
                 minHeight: 6,
               ),
             ),
@@ -1108,7 +1109,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               Container(
                 width: 38,
                 height: 38,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _dlPill,
                   shape: BoxShape.circle,
                 ),
@@ -1117,7 +1118,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   author.trim().isNotEmpty
                       ? author.trim().characters.first
                       : 'A',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _dlInk,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -1136,7 +1137,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                             author,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w700,
                               color: _dlInk,
@@ -1151,7 +1152,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                     ),
                     Text(
                       (r['date'] ?? '').toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         color: _dlMuted,
                         fontWeight: FontWeight.w400,
@@ -1175,7 +1176,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           const SizedBox(height: 10),
           Text(
             (r['comment'] ?? '').toString(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13.5,
               color: _dlInk,
               height: 1.45,
@@ -1193,7 +1194,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               ),
               child: Text(
                 itemLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: _dlMuted,
                   fontWeight: FontWeight.w600,
@@ -1294,7 +1295,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _dlBg,
               shape: BoxShape.circle,
             ),
@@ -1308,7 +1309,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: _dlInk,
@@ -1317,7 +1318,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 const SizedBox(height: 3),
                 Text(
                   desc,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     color: _dlMuted,
                     height: 1.42,

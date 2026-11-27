@@ -398,9 +398,20 @@ class _MainShellState extends State<MainShell>
     final isPostAdSelected = _currentIndex == 1;
     final safeBottom = MediaQuery.of(context).padding.bottom;
     final double dockBottomOffset = math.max(40.0, safeBottom + 14.0);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color shellBg = isDark ? const Color(0xFF0A0A0A) : Colors.white;
+    final Color dockGlassBg =
+        (isDark ? const Color(0xFF161618) : Colors.white).withValues(alpha: 0.92);
+    final Color dockBorder =
+        isDark ? const Color(0xFF2E2E34) : const Color(0xFFEEEEEE);
+    final Color dockInk = isDark ? Colors.white : _ink;
+    final Color dockOnInk = isDark ? const Color(0xFF0A0A0A) : Colors.white;
+    final Color dockInactive = isDark ? const Color(0xFF8E8E93) : _inactive;
+    final Color dockActivePill =
+        isDark ? const Color(0xFF28282E) : _activePill;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: shellBg,
       extendBody: true,
       body: Stack(
         children: [
@@ -442,7 +453,7 @@ class _MainShellState extends State<MainShell>
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(999),
                                   border: Border.all(
-                                    color: const Color(0xFFEEEEEE),
+                                    color: dockBorder,
                                     width: 1.5,
                                   ),
                                 ),
@@ -454,8 +465,7 @@ class _MainShellState extends State<MainShell>
                                     child: Container(
                                       padding: const EdgeInsets.all(4.5),
                                       decoration: BoxDecoration(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.92),
+                                        color: dockGlassBg,
                                         borderRadius:
                                             BorderRadius.circular(999),
                                       ),
@@ -502,7 +512,7 @@ class _MainShellState extends State<MainShell>
                                                         milliseconds: 180),
                                                     decoration: BoxDecoration(
                                                       color: activePillSlot >= 0
-                                                          ? _activePill
+                                                          ? dockActivePill
                                                               .withValues(
                                                                   alpha: 0.90)
                                                           : Colors.transparent,
@@ -583,8 +593,8 @@ class _MainShellState extends State<MainShell>
                                                                           : item.icon,
                                                                       size: 22.5,
                                                                       color: selected
-                                                                          ? _ink
-                                                                          : _inactive,
+                                                                          ? dockInk
+                                                                          : dockInactive,
                                                                     ),
                                                                   ),
                                                                 ),
@@ -646,8 +656,8 @@ class _MainShellState extends State<MainShell>
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: isPostAdSelected
-                                            ? _ink
-                                            : const Color(0xFFEEEEEE),
+                                            ? dockInk
+                                            : dockBorder,
                                         width: 1.5,
                                       ),
                                     ),
@@ -661,9 +671,8 @@ class _MainShellState extends State<MainShell>
                                           curve: Curves.easeOutCubic,
                                           decoration: BoxDecoration(
                                             color: isPostAdSelected
-                                                ? _ink
-                                                : Colors.white
-                                                    .withValues(alpha: 0.92),
+                                                ? dockInk
+                                                : dockGlassBg,
                                             shape: BoxShape.circle,
                                           ),
                                           alignment: Alignment.center,
@@ -671,8 +680,8 @@ class _MainShellState extends State<MainShell>
                                             CupertinoIcons.add,
                                             size: 24,
                                             color: isPostAdSelected
-                                                ? Colors.white
-                                                : _ink,
+                                                ? dockOnInk
+                                                : dockInk,
                                           ),
                                         ),
                                       ),

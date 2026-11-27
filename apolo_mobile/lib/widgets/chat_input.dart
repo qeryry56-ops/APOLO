@@ -396,21 +396,13 @@ class _ChatInputState extends State<ChatInput> {
                                   widget.replySenderName!.trim(),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12.0,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF525252),
-                                  ),
+                                  style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w600, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFE4E4E7) : const Color(0xFF525252)),
                                 ),
                               Text(
                                 widget.replyBody!.trim(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 13.0,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF525252),
-                                ),
+                                style: TextStyle(fontSize: 13.0, fontWeight: FontWeight.w400, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFA1A1AA) : const Color(0xFF525252)),
                               ),
                             ],
                           ),
@@ -588,11 +580,19 @@ class _ChatInputState extends State<ChatInput> {
                                           TextCapitalization.sentences,
                                       textInputAction: TextInputAction.newline,
                                       onSubmitted: (_) => _triggerSend(),
-                                      style: const TextStyle(
+                                      cursorColor:
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.white
+                                              : Colors.black,
+                                      style: TextStyle(
                                         fontSize:
                                             Ios26IMessageTokens.composerFontSize,
                                         height: 20.0 / 15.0,
-                                        color: Ios26IMessageTokens.labelPrimary,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white
+                                            : Ios26IMessageTokens.labelPrimary,
                                         fontWeight: FontWeight.w400,
                                         letterSpacing: -0.15,
                                       ),

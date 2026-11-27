@@ -57,12 +57,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _autoSlideTimer;
 
   // Dynamic Layer v5.1 Strict Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
-  static const Color _dlSubtle = Color(0xFF9E9E9E);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
+  Color get _dlSubtle => ApoloDlPalette.of(context).subtle;
 
   @override
   void initState() {
@@ -356,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Container(
                                         width: 44,
                                         height: 44,
-                                        decoration: const BoxDecoration(
+                                        decoration: BoxDecoration(
                                           color: _dlPill,
                                           shape: BoxShape.circle,
                                         ),
@@ -372,14 +373,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                             : (_userName.isNotEmpty
                                                 ? Text(
                                                     _userInitials,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 14.5,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       color: _dlInk,
                                                     ),
                                                   )
-                                                : const Icon(
+                                                : Icon(
                                                     CupertinoIcons.person_fill,
                                                     size: 20,
                                                     color: _dlInk,
@@ -438,7 +439,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                const Icon(
+                                                Icon(
                                                   CupertinoIcons.location_solid,
                                                   size: 12.5,
                                                   color: _dlInk,
@@ -458,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     maxLines: 1,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 12.5,
                                                       fontWeight:
                                                           FontWeight.w500,
@@ -468,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 3),
-                                                const Icon(
+                                                Icon(
                                                   CupertinoIcons.chevron_down,
                                                   size: 11,
                                                   color: _dlMuted,
@@ -499,7 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Container(
                                         width: 40,
                                         height: 40,
-                                        decoration: const BoxDecoration(
+                                        decoration: BoxDecoration(
                                           color: _dlPill,
                                           shape: BoxShape.circle,
                                         ),
@@ -511,7 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           variant: NotificationBadgeVariant.red,
                                           top: -7,
                                           right: -9,
-                                          child: const Icon(
+                                          child: Icon(
                                             CupertinoIcons.bell_fill,
                                             size: 19,
                                             color: _dlInk,
@@ -543,7 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(
+                                        Icon(
                                           CupertinoIcons.search,
                                           size: 19,
                                           color: _dlMuted,
@@ -558,7 +559,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 14.5,
                                               fontWeight: FontWeight.w400,
                                               color: _dlSubtle,
@@ -654,7 +655,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               'Tout voir',
                                               'See all',
                                             ),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               color: _dlInk,
                                               fontWeight: FontWeight.w600,
                                               fontSize: 12.5,
@@ -691,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km autour de ${_state.activeZoneCityLabel(s)}',
                                               'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)} yet',
                                             ),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13.5,
                                               fontWeight: FontWeight.w700,
                                               color: _dlInk,
@@ -724,8 +725,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       'Tout le Maroc',
                                                       'Show all Morocco',
                                                     ),
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
+                                                    style: TextStyle(
+                                                      color: _dlOnInk,
                                                       fontSize: 12.5,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -757,7 +758,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       'Changer de zone',
                                                       'Change zone',
                                                     ),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       color: _dlInk,
                                                       fontSize: 12.5,
                                                       fontWeight:
@@ -909,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: _dlInk,
@@ -940,7 +941,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Voitures, smartphones, immobilier près de chez vous.',
                     'Cars, phones, real estate. Discover listings near you.',
                   ),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     height: 1.38,
                     fontWeight: FontWeight.w400,
@@ -971,10 +972,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: _dlOnInk,
                             ),
                           ),
                         ),
@@ -984,7 +985,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? CupertinoIcons.arrow_left
                               : CupertinoIcons.arrow_right,
                           size: 13,
-                          color: Colors.white,
+                          color: _dlOnInk,
                         ),
                       ],
                     ),
@@ -1064,7 +1065,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Text(
                         _state.s.tr('عرض الكل', 'Tout voir', 'See all'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: _dlInk,
                           fontWeight: FontWeight.w600,
                           fontSize: 12.5,
@@ -1110,7 +1111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 48,
                             height: 48,
                             padding: const EdgeInsets.all(7),
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               color: _dlBg,
                               shape: BoxShape.circle,
                             ),
@@ -1118,7 +1119,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               assetPath,
                               fit: BoxFit.contain,
                               filterQuality: FilterQuality.high,
-                              errorBuilder: (_, __, ___) => const Icon(
+                              errorBuilder: (_, __, ___) => Icon(
                                 CupertinoIcons.cube_box,
                                 size: 22,
                                 color: _dlMuted,
@@ -1358,7 +1359,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Container(
           width: 40,
           height: 40,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: _dlBg,
             shape: BoxShape.circle,
           ),
@@ -1372,7 +1373,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,
                   color: _dlInk,
@@ -1381,7 +1382,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w400,
                   color: _dlMuted,
@@ -1413,13 +1414,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
+                  color: _dlOnInk.withValues(alpha: 0.14),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: const Icon(
+                child: Icon(
                   CupertinoIcons.plus,
-                  color: Colors.white,
+                  color: _dlOnInk,
                   size: 22,
                 ),
               ),
@@ -1434,8 +1435,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         'Un article à vendre ? Publiez maintenant',
                         'Got something to sell? Post now',
                       ),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: _dlOnInk,
                         fontWeight: FontWeight.w700,
                         fontSize: 14.5,
                       ),
@@ -1448,7 +1449,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         'Publish free in 30 seconds and get buyer inquiries fast',
                       ),
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.72),
+                        color: _dlOnInk.withValues(alpha: 0.72),
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                       ),
@@ -1468,7 +1469,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Text(
                   _state.s.tr('نشر +', 'Publier +', 'Post +'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _dlInk,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -1502,12 +1503,12 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _dlBg,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: const Icon(
+                child: Icon(
                   CupertinoIcons.bag_fill,
                   color: _dlInk,
                   size: 20,
@@ -1553,7 +1554,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _dlMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
@@ -1566,7 +1567,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 width: 32,
                 height: 32,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _dlBg,
                   shape: BoxShape.circle,
                 ),

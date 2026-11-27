@@ -65,12 +65,13 @@ class _PostAdScreenState extends State<PostAdScreen> {
   final Map<String, dynamic> _dynamicValues = {};
 
   // Strict Dynamic Layer v5.1 Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlDanger = Color(0xFFE31B23);
 
   List<dynamic> get _effectiveCategories => _state.categories;
@@ -714,7 +715,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
   }) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(
+      hintStyle: TextStyle(
         color: _dlMuted,
         fontSize: 14.5,
         fontWeight: FontWeight.w400,
@@ -735,7 +736,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: _dlInk, width: 1.5),
+        borderSide: BorderSide(color: _dlInk, width: 1.5),
       ),
     );
   }
@@ -779,7 +780,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               CupertinoIcons.refresh,
                               size: 14,
                               color: _dlInk,
@@ -792,7 +793,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                   'Catégories et villes indisponibles. Réessayer',
                                   'Categories and cities unavailable. Retry',
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: _dlInk,
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
@@ -851,7 +852,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           '${_currentStep + 1}/4',
                           textAlign: TextAlign.end,
                           textDirection: TextDirection.ltr,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: _dlMuted,
@@ -979,7 +980,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           width: 88,
           height: 88,
           padding: const EdgeInsets.all(14),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: _dlSurface,
             shape: BoxShape.circle,
           ),
@@ -987,7 +988,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             _step3DAsset(),
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,
-            errorBuilder: (_, __, ___) => const Icon(
+            errorBuilder: (_, __, ___) => Icon(
               CupertinoIcons.cube_box_fill,
               size: 32,
               color: _dlInk,
@@ -1011,7 +1012,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           child: Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13.5,
               height: 1.45,
               color: _dlMuted,
@@ -1042,7 +1043,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
       children: [
         Text(
           s.tr('المدينة', 'Ville', 'City'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: _dlInk,
@@ -1155,7 +1156,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             if (_detectingGps)
-                              const SizedBox(
+                              SizedBox(
                                 width: 15,
                                 height: 15,
                                 child: CircularProgressIndicator(
@@ -1164,7 +1165,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                 ),
                               )
                             else
-                              const Icon(
+                              Icon(
                                 CupertinoIcons.location_fill,
                                 size: 15,
                                 color: _dlInk,
@@ -1182,7 +1183,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                       'Détecter la position (GPS)',
                                       'Detect ad location (GPS)',
                                     ),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
                                 color: _dlInk,
@@ -1201,7 +1202,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         const SizedBox(height: 22),
         Text(
           s.tr('اختر القسم', 'Catégorie', 'Category'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: _dlInk,
@@ -1256,7 +1257,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                       width: 40,
                       height: 40,
                       padding: const EdgeInsets.all(5),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: _dlBg,
                         shape: BoxShape.circle,
                       ),
@@ -1310,7 +1311,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                 Container(
                   width: 60,
                   height: 60,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: _dlBg,
                     shape: BoxShape.circle,
                   ),
@@ -1336,7 +1337,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           'Ajouter plus de photos ($totalPhotos/8)',
                           'Add more photos ($totalPhotos/8)',
                         ),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: _dlInk,
@@ -1350,7 +1351,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                     'The first photo will be used as the main cover',
                   ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12.5, color: _dlMuted),
+                  style: TextStyle(fontSize: 12.5, color: _dlMuted),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -1385,7 +1386,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   'Photos sélectionnées',
                   'Selected photos',
                 ),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: _dlInk,
@@ -1394,7 +1395,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
               Text(
                 '$totalPhotos / 8',
                 textDirection: TextDirection.ltr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: _dlInk,
@@ -1442,7 +1443,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                         snap.data!,
                                         fit: BoxFit.cover,
                                       )
-                                    : const Center(
+                                    : Center(
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                           color: _dlInk,
@@ -1469,10 +1470,10 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         ),
                         child: Text(
                           s.tr('الغلاف', 'Principale', 'Cover'),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: _dlOnInk,
                           ),
                         ),
                       ),
@@ -1487,12 +1488,12 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         child: Container(
                           width: 28,
                           height: 28,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: _dlBg,
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
-                          child: const Icon(
+                          child: Icon(
                             CupertinoIcons.xmark,
                             size: 13,
                             color: _dlInk,
@@ -1530,7 +1531,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: _dlInk,
@@ -1555,7 +1556,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           children: [
             Text(
               s.tr('عنوان الإعلان', 'Titre de l\'annonce', 'Listing title'),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: _dlInk,
@@ -1578,7 +1579,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           key: const Key('post-ad-title-field'),
           controller: _titleCtrl,
           cursorColor: _dlInk,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15.5,
             fontWeight: FontWeight.w600,
             color: _dlInk,
@@ -1599,7 +1600,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             'Description détaillée',
             'Detailed description',
           ),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: _dlInk,
@@ -1611,7 +1612,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           controller: _descCtrl,
           maxLines: 4,
           cursorColor: _dlInk,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14.5,
             fontWeight: FontWeight.w500,
             color: _dlInk,
@@ -1632,7 +1633,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
               'Caractéristiques spécifiques',
               'Specifications',
             ),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: _dlInk,
@@ -1697,7 +1698,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         if (!_free) ...[
           Text(
             s.tr('الثمن (بالدرهم)', 'Prix (en MAD)', 'Price (MAD)'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: _dlInk,
@@ -1710,7 +1711,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             cursorColor: _dlInk,
             textDirection: TextDirection.ltr,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: _dlInk,
@@ -1732,7 +1733,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         color: _dlBg,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Text(
+                      child: Text(
                         'MAD',
                         style: TextStyle(
                           fontSize: 12,
@@ -1784,7 +1785,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
               'Téléphone & WhatsApp',
               'Phone & WhatsApp',
             ),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: _dlInk,
@@ -1796,7 +1797,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             cursorColor: _dlInk,
             textDirection: TextDirection.ltr,
             keyboardType: TextInputType.phone,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15.5,
               fontWeight: FontWeight.w600,
               color: _dlInk,
@@ -1814,7 +1815,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             'Aperçu de votre annonce',
             'Listing preview',
           ),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: _dlInk,
@@ -1847,7 +1848,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                             future: _pickedImages.first.readAsBytes(),
                             builder: (_, snap) => snap.hasData
                                 ? Image.memory(snap.data!, fit: BoxFit.cover)
-                                : const Icon(
+                                : Icon(
                                     CupertinoIcons.photo,
                                     color: _dlMuted,
                                   ),
@@ -1880,7 +1881,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           : _titleCtrl.text.trim(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w700,
                         color: _dlInk,
@@ -1890,7 +1891,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                     Text(
                       previewPrice,
                       textDirection: _free ? null : TextDirection.ltr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: _dlInk,
@@ -1899,7 +1900,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           CupertinoIcons.location_solid,
                           size: 13,
                           color: _dlMuted,
@@ -1910,7 +1911,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                             '${_selectedCategoryName()} • ${_selectedCityName()}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w500,
                               color: _dlMuted,
@@ -2007,14 +2008,14 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           width: 124,
                           height: 124,
                           padding: const EdgeInsets.all(22),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: _dlSurface,
                             shape: BoxShape.circle,
                           ),
                           child: Image.asset(
                             _assetForCategory(_selectedCategoryName()),
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (_, __, ___) => Icon(
                               CupertinoIcons.checkmark_seal_fill,
                               size: 44,
                               color: _dlInk,
@@ -2032,20 +2033,20 @@ class _PostAdScreenState extends State<PostAdScreen> {
                               color: _dlInk,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   CupertinoIcons.checkmark_alt,
                                   size: 13,
-                                  color: Colors.white,
+                                  color: _dlOnInk,
                                 ),
                                 SizedBox(width: 4),
                                 Text(
                                   'LIVE',
                                   textDirection: TextDirection.ltr,
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: _dlOnInk,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -2086,7 +2087,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                         'Your listing is now visible to buyers across Apolo.ma.',
                       ),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         height: 1.45,
                         color: _dlMuted,
@@ -2129,7 +2130,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                       : _titleCtrl.text.trim(),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 15.5,
                                     fontWeight: FontWeight.w700,
                                     color: _dlInk,
@@ -2138,7 +2139,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                 const SizedBox(height: 3),
                                 Text(
                                   '${_selectedCategoryName()} • ${_selectedCityName()}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w500,
                                     color: _dlMuted,

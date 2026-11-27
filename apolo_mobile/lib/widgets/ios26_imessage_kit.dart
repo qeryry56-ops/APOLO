@@ -254,14 +254,23 @@ class _LiquidGlassSurfaceState extends State<LiquidGlassSurface>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: topHighlightAlpha),
-                  Colors.white.withValues(alpha: effectiveBaseAlpha),
-                ],
+                colors: Theme.of(context).brightness == Brightness.dark
+                    ? [
+                        const Color(0xFF222226)
+                            .withValues(alpha: topHighlightAlpha),
+                        const Color(0xFF161618)
+                            .withValues(alpha: effectiveBaseAlpha),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: topHighlightAlpha),
+                        Colors.white.withValues(alpha: effectiveBaseAlpha),
+                      ],
               ),
               borderRadius: widget.borderRadius,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.88),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.14)
+                    : Colors.white.withValues(alpha: 0.88),
                 width: 0.5,
               ),
             ),
@@ -532,6 +541,7 @@ class Ios26HeaderGradientOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return IgnorePointer(
       child: SizedBox(
         key: const Key('ios26-header-gradient-overlay'),
@@ -539,11 +549,18 @@ class Ios26HeaderGradientOverlay extends StatelessWidget {
         width: double.infinity,
         child: DecoratedBox(
           key: const Key('ios26-header-gradient-box'),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: Ios26IMessageTokens.headerGradientColors,
+              colors: isDark
+                  ? const <Color>[
+                      Color(0xFF0A0A0A),
+                      Color(0xE60A0A0A),
+                      Color(0xB30A0A0A),
+                      Color(0x050A0A0A),
+                    ]
+                  : Ios26IMessageTokens.headerGradientColors,
               stops: Ios26IMessageTokens.headerGradientStops,
             ),
           ),
@@ -620,21 +637,29 @@ class Ios26BottomEdgeFade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return IgnorePointer(
       child: SizedBox(
         height: height,
-        child: const DecoratedBox(
+        child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0x00FFFFFF),
-                Color(0xB3FFFFFF),
-                Color(0xF2FFFFFF),
-                Color(0xFFFFFFFF),
-              ],
-              stops: [0.0, 0.42, 0.76, 1.0],
+              colors: isDark
+                  ? const [
+                      Color(0x000A0A0A),
+                      Color(0xB30A0A0A),
+                      Color(0xF20A0A0A),
+                      Color(0xFF0A0A0A),
+                    ]
+                  : const [
+                      Color(0x00FFFFFF),
+                      Color(0xB3FFFFFF),
+                      Color(0xF2FFFFFF),
+                      Color(0xFFFFFFFF),
+                    ],
+              stops: const [0.0, 0.42, 0.76, 1.0],
             ),
           ),
         ),

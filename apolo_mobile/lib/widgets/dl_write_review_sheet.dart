@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../screens/widgets/kinetic_widgets.dart';
+import 'dl_settings_kit.dart';
 
 /// Opens a strict Dynamic Layer v5.1 modal bottom sheet allowing a user
 /// to rate (1–5 stars) and write a review for a seller/listing.
@@ -71,14 +72,15 @@ class _ApoloWriteReviewSheetBody extends StatefulWidget {
 
 class _ApoloWriteReviewSheetBodyState
     extends State<_ApoloWriteReviewSheetBody> {
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
-  static const Color _dlSubtle = Color(0xFF9E9E9E);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
+  Color get _dlSubtle => ApoloDlPalette.of(context).subtle;
   static const Color _dlStarAmber = Color(0xFFFFB800);
-  static const Color _dlStarIdle = Color(0xFFDADADA);
+  Color get _dlStarIdle => (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF3F3F46) : const Color(0xFFD4D4D8));
 
   late int _rating;
   late final TextEditingController _commentCtrl;
@@ -209,7 +211,7 @@ class _ApoloWriteReviewSheetBodyState
                                   'Donner votre avis',
                                   'Write a review',
                                 ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
                             color: _dlInk,
@@ -220,7 +222,7 @@ class _ApoloWriteReviewSheetBodyState
                           widget.sellerName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: _dlMuted,
@@ -234,12 +236,12 @@ class _ApoloWriteReviewSheetBodyState
                     child: Container(
                       width: 38,
                       height: 38,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: _dlPill,
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(
+                      child: Icon(
                         CupertinoIcons.xmark,
                         size: 16,
                         color: _dlInk,
@@ -297,7 +299,7 @@ class _ApoloWriteReviewSheetBodyState
                       ),
                       child: Text(
                         '$_rating/5 · ${_ratingSentiment(s, _rating)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: _dlInk,
@@ -341,7 +343,7 @@ class _ApoloWriteReviewSheetBodyState
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: selected ? Colors.white : _dlInk,
+                          color: selected ? _dlOnInk : _dlInk,
                         ),
                       ),
                     ),
@@ -377,7 +379,7 @@ class _ApoloWriteReviewSheetBodyState
                     minLines: 3,
                     maxLines: 4,
                     cursorColor: _dlInk,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       color: _dlInk,
                       height: 1.4,
@@ -392,7 +394,7 @@ class _ApoloWriteReviewSheetBodyState
                         'Partagez votre expérience avec ce vendeur...',
                         'Share your experience with this seller...',
                       ),
-                      hintStyle: const TextStyle(
+                      hintStyle: TextStyle(
                         fontSize: 13.5,
                         color: _dlSubtle,
                       ),
@@ -425,10 +427,10 @@ class _ApoloWriteReviewSheetBodyState
                             'Publier l’avis',
                             'Submit review',
                           ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: _dlOnInk,
                     ),
                   ),
                 ),

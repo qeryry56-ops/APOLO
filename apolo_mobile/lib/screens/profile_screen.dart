@@ -53,12 +53,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : null;
 
   // Dynamic Layer v5.1 Strict Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlDanger = Color(0xFFE31B23);
 
   @override
@@ -411,7 +412,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
+                      ApoloDlIconCircleButton(
+                        key: const Key('profile-theme-toggle-btn'),
+                        tooltip: Theme.of(context).brightness == Brightness.dark
+                            ? s.tr('الوضع الفاتح', 'Mode clair', 'Light mode')
+                            : s.tr('الوضع الداكن', 'Mode sombre', 'Dark mode'),
+                        icon: Theme.of(context).brightness == Brightness.dark
+                            ? CupertinoIcons.sun_max_fill
+                            : CupertinoIcons.moon_fill,
+                        onPressed: () => _state.toggleDarkMode(context),
+                      ),
+                      const SizedBox(width: 8),
                       ApoloDlIconCircleButton(
                         key: const Key('profile-settings-btn'),
                         icon: CupertinoIcons.gear,
@@ -708,15 +720,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: 38,
               height: 38,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _dlInk,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: const Icon(
+              child: Icon(
                 CupertinoIcons.briefcase_fill,
                 size: 16,
-                color: Colors.white,
+                color: _dlOnInk,
               ),
             ),
             const SizedBox(width: 12),
@@ -730,7 +742,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Passer au compte Business',
                       'Switch to Business profile',
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: _dlInk,
@@ -743,7 +755,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Boutique gratuite, réponses rapides et commandes directes.',
                       'Free store, chat quick replies & direct orders.',
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: _dlMuted,
                     ),
@@ -754,7 +766,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: 28,
               height: 28,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _dlBg,
                 shape: BoxShape.circle,
               ),
@@ -810,19 +822,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     if (isProPlus)
                       const ApoloVerifiedBadge(size: 13)
                     else
-                      const Icon(
+                      Icon(
                         CupertinoIcons.briefcase_fill,
                         size: 12,
-                        color: Colors.white,
+                        color: _dlOnInk,
                       ),
                     const SizedBox(width: 5),
                     Text(
                       isProPlus ? 'PRO+' : 'Business',
                       textDirection: TextDirection.ltr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: _dlOnInk,
                       ),
                     ),
                   ],
@@ -834,7 +846,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   categoryLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: _dlInk,
@@ -868,7 +880,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         hours,
                         textDirection: TextDirection.ltr,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: _dlInk,
@@ -974,7 +986,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icon(
               icon,
               size: 13.5,
-              color: highlighted ? Colors.white : _dlInk,
+              color: highlighted ? _dlOnInk : _dlInk,
             ),
             const SizedBox(width: 5),
             Text(
@@ -982,7 +994,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: highlighted ? Colors.white : _dlInk,
+                color: highlighted ? _dlOnInk : _dlInk,
               ),
             ),
           ],
@@ -1017,7 +1029,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icon(
                 icon,
                 size: 14.5,
-                color: selected ? Colors.white : _dlInk,
+                color: selected ? _dlOnInk : _dlInk,
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -1028,7 +1040,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    color: selected ? Colors.white : _dlInk,
+                    color: selected ? _dlOnInk : _dlInk,
                   ),
                 ),
               ),
@@ -1056,7 +1068,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   _adsError!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13.5,
                     color: _dlMuted,
                     fontWeight: FontWeight.w500,
@@ -1155,7 +1167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fallback: Container(
                               color: _dlSurface,
                               alignment: Alignment.center,
-                              child: const Icon(
+                              child: Icon(
                                 CupertinoIcons.photo,
                                 color: _dlMuted,
                                 size: 30,
@@ -1170,12 +1182,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Container(
                                 width: 32,
                                 height: 32,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: _dlBg,
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
-                                child: const Icon(
+                                child: Icon(
                                   CupertinoIcons.ellipsis,
                                   color: _dlInk,
                                   size: 15,
@@ -1198,19 +1210,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   color: _dlInk,
                                   borderRadius: BorderRadius.circular(999),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
                                       CupertinoIcons.bolt_fill,
-                                      color: Colors.white,
+                                      color: _dlOnInk,
                                       size: 11,
                                     ),
                                     SizedBox(width: 3),
                                     Text(
                                       'Boost',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: _dlOnInk,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -1241,7 +1253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (priceStr.isNotEmpty)
                     PriceText(
                       priceStr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: _dlMuted,
@@ -1443,7 +1455,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Container(
                           width: 42,
                           height: 42,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: _dlBg,
                             shape: BoxShape.circle,
                           ),
@@ -1461,10 +1473,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   'Débloquez les stats d’appels & commandes + PRO+',
                                   'Unlock call & order stats + PRO+ Badge',
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                                  color: _dlOnInk,
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -1476,7 +1488,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.76),
+                                  color: _dlOnInk.withValues(alpha: 0.76),
                                 ),
                               ),
                             ],
@@ -1509,7 +1521,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             'Répartition des vues',
                             'Views breakdown',
                           ),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15.5,
                             fontWeight: FontWeight.w700,
                             color: _dlInk,
@@ -1526,7 +1538,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: Text(
                             _state.s.tr('مباشر', 'En direct', 'Live'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: _dlInk,
@@ -1547,7 +1559,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               'Publish your first listing to track views and performance here.',
                             ),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               color: _dlMuted,
                             ),
@@ -1576,7 +1588,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   children: [
                                     Text(
                                       '$v',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         color: _dlInk,
@@ -1600,7 +1612,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     const SizedBox(height: 6),
                                     Text(
                                       '#${i + 1}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         color: _dlMuted,
@@ -1637,7 +1649,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           'Vos meilleures annonces',
                           'Top performing listings',
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15.5,
                           fontWeight: FontWeight.w700,
                           color: _dlInk,
@@ -1680,7 +1692,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700,
                                         color: _dlInk,
@@ -1689,7 +1701,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     const SizedBox(height: 3),
                                     Row(
                                       children: [
-                                        const Icon(
+                                        Icon(
                                           CupertinoIcons.eye_fill,
                                           size: 12,
                                           color: _dlMuted,
@@ -1697,7 +1709,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         const SizedBox(width: 4),
                                         Text(
                                           '$views ${_state.s.tr('مشاهدة', 'vues', 'views')}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                             color: _dlMuted,
@@ -1719,12 +1731,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Container(
                                   width: 34,
                                   height: 34,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: _dlBg,
                                     shape: BoxShape.circle,
                                   ),
                                   alignment: Alignment.center,
-                                  child: const Icon(
+                                  child: Icon(
                                     CupertinoIcons.pencil,
                                     size: 15,
                                     color: _dlInk,
@@ -1744,12 +1756,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     color: _dlInk,
                                     borderRadius: BorderRadius.circular(999),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'Boost',
                                     style: TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w700,
-                                      color: Colors.white,
+                                      color: _dlOnInk,
                                     ),
                                   ),
                                 ),
@@ -1777,14 +1789,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       width: 40,
                       height: 40,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: _dlInk,
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(
+                      child: Icon(
                         CupertinoIcons.sparkles,
-                        color: Colors.white,
+                        color: _dlOnInk,
                         size: 18,
                       ),
                     ),
@@ -1799,7 +1811,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               'Conseil de vente',
                               'Sales tip',
                             ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w700,
                               color: _dlInk,
@@ -1818,7 +1830,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     'Mettre à jour vos photos ou booster votre meilleure annonce accélère la vente.',
                                     'Refreshing photos or boosting your top listing helps it sell faster.',
                                   ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               color: _dlMuted,
                               height: 1.38,
@@ -1854,7 +1866,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             width: 34,
             height: 34,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _dlBg,
               shape: BoxShape.circle,
             ),
@@ -1864,7 +1876,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
               color: _dlInk,
@@ -1876,7 +1888,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: _dlMuted,
@@ -1988,7 +2000,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     'Changer la photo de profil',
                                     'Change profile photo',
                                   ),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w700,
                                     color: _dlInk,
@@ -2019,12 +2031,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Container(
                                     width: 38,
                                     height: 38,
-                                    decoration: const BoxDecoration(
+                                    decoration: BoxDecoration(
                                       color: _dlBg,
                                       shape: BoxShape.circle,
                                     ),
                                     alignment: Alignment.center,
-                                    child: const Icon(
+                                    child: Icon(
                                       CupertinoIcons.photo_on_rectangle,
                                       color: _dlInk,
                                       size: 18,
@@ -2038,7 +2050,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         'Choisir depuis la galerie',
                                         'Choose from gallery',
                                       ),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                         color: _dlInk,
                                         fontSize: 14,
@@ -2067,7 +2079,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Container(
                                       width: 38,
                                       height: 38,
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         color: _dlBg,
                                         shape: BoxShape.circle,
                                       ),
@@ -2105,7 +2117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               'Ou choisir un avatar',
                               'Or choose an avatar',
                             ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               color: _dlMuted,
@@ -2191,7 +2203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       'Edit profile',
                                     ),
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                       color: _dlInk,
@@ -2227,7 +2239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   width: 96,
                                                   height: 96,
                                                   decoration:
-                                                      const BoxDecoration(
+                                                      BoxDecoration(
                                                     color: _dlPill,
                                                     shape: BoxShape.circle,
                                                   ),
@@ -2252,7 +2264,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                                   .toUpperCase()
                                                               : 'A',
                                                           style:
-                                                              const TextStyle(
+                                                              TextStyle(
                                                             fontSize: 34,
                                                             fontWeight:
                                                                 FontWeight.w700,
@@ -2274,10 +2286,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                         width: 2.5,
                                                       ),
                                                     ),
-                                                    child: const Icon(
+                                                    child: Icon(
                                                       CupertinoIcons
                                                           .camera_fill,
-                                                      color: Colors.white,
+                                                      color: _dlOnInk,
                                                       size: 14,
                                                     ),
                                                   ),
@@ -2302,7 +2314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   'Changer la photo',
                                                   'Change photo',
                                                 ),
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.w700,
                                                   color: _dlInk,
@@ -2341,7 +2353,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           LengthLimitingTextInputFormatter(30),
                                         ],
                                         suffixIcon: checkingUsername
-                                            ? const Padding(
+                                            ? Padding(
                                                 padding: EdgeInsets.all(13),
                                                 child: SizedBox(
                                                   width: 16,
@@ -2539,7 +2551,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                     '@$sugg',
                                                     textDirection:
                                                         TextDirection.ltr,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 12,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -2801,7 +2813,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
             color: _dlMuted,
@@ -2820,7 +2832,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
             onChanged: onChanged,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14.5,
               fontWeight: FontWeight.w600,
               color: _dlInk,
@@ -2928,7 +2940,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Color iconColor,
     required String title,
     required VoidCallback onTap,
-    Color titleColor = _dlInk,
+    Color? titleColor,
   }) {
     return PressableScale(
       onTap: onTap,
@@ -2943,7 +2955,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: 38,
               height: 38,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _dlBg,
                 shape: BoxShape.circle,
               ),
@@ -2957,7 +2969,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,
-                  color: titleColor,
+                  color: titleColor ?? _dlInk,
                 ),
               ),
             ),
@@ -3058,7 +3070,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Container(
                                   width: 56,
                                   height: 56,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: _dlPill,
                                     shape: BoxShape.circle,
                                   ),
@@ -3077,7 +3089,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     'Delete this listing?',
                                   ),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 19,
                                     fontWeight: FontWeight.w800,
                                     color: _dlInk,
@@ -3092,7 +3104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     'This listing will be permanently removed from your profile and search results.',
                                   ),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w400,
                                     color: _dlMuted,
@@ -3124,7 +3136,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   width: 44,
                                                   height: 44,
                                                   color: _dlPill,
-                                                  child: const Icon(
+                                                  child: Icon(
                                                     CupertinoIcons.photo,
                                                     size: 18,
                                                     color: _dlMuted,
@@ -3141,7 +3153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 adTitle,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 13.5,
                                                   fontWeight: FontWeight.w700,
                                                   color: _dlInk,
@@ -3154,7 +3166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 12.5,
                                                     fontWeight: FontWeight.w700,
                                                     color: _dlMuted,
@@ -3196,12 +3208,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       shape: const StadiumBorder(),
                                     ),
                                     child: deleting
-                                        ? const SizedBox(
+                                        ? SizedBox(
                                             width: 18,
                                             height: 18,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              color: Colors.white,
+                                              color: _dlOnInk,
                                             ),
                                           )
                                         : Text(

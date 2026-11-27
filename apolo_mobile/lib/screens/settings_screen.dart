@@ -14,6 +14,7 @@ import 'privacy_compliance_screen.dart';
 import 'pro_plus_screen.dart';
 import 'settings/apolo_account_center_screen.dart';
 import 'settings/settings_app_data_screen.dart';
+import 'settings/settings_appearance_screen.dart';
 import 'settings/settings_blocked_accounts_screen.dart';
 import 'settings/settings_bug_report_screen.dart';
 import 'settings/settings_language_screen.dart';
@@ -271,6 +272,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const SettingsLanguageScreen(),
+                ),
+              ),
+            ),
+          if (_matchesQuery([
+            'Appearance',
+            'Dark mode',
+            'Light mode',
+            'Theme',
+            'Night mode',
+            'المظهر',
+            'الوضع الداكن',
+            'الوضع الليلي',
+            'الوضع الفاتح',
+            'Apparence',
+            'Mode sombre',
+            'Mode clair',
+            'Thème',
+          ]))
+            ApoloDlGroupedItem(
+              key: const Key('settings-row-appearance'),
+              icon: Theme.of(context).brightness == Brightness.dark
+                  ? CupertinoIcons.moon_fill
+                  : CupertinoIcons.sun_max,
+              title: s.tr('المظهر', 'Apparence', 'Appearance'),
+              trailingText: _state.themeModeLabel(s),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SettingsAppearanceScreen(),
                 ),
               ),
             ),

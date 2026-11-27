@@ -48,10 +48,11 @@ class _ShimmerBoxState extends State<ShimmerBox>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = widget.dark || Theme.of(context).brightness == Brightness.dark;
     final base = widget.baseColor ??
-        (widget.dark ? const Color(0xFF1E293B) : const Color(0xFFEEF1F6));
+        (isDark ? const Color(0xFF1C1C20) : const Color(0xFFEEF1F6));
     final highlight = widget.highlightColor ??
-        (widget.dark ? const Color(0xFF334155) : const Color(0xFFF8FAFC));
+        (isDark ? const Color(0xFF28282E) : const Color(0xFFF8FAFC));
 
     if (MediaQuery.disableAnimationsOf(context)) {
       return Container(
@@ -98,7 +99,8 @@ class HomeFeedSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,12 +134,15 @@ class AdGridCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF161618) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEDEFF3)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2E2E34) : const Color(0xFFEDEFF3),
+        ),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,12 +172,15 @@ class SearchListCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF161618) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEDEFF3)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2E2E34) : const Color(0xFFEDEFF3),
+        ),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,

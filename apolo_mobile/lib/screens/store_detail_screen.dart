@@ -35,12 +35,13 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   bool _loading = true;
 
   // Strict Dynamic Layer v5.1 Palette Tokens
-  static const Color _dlBg = Color(0xFFFFFFFF);
-  static const Color _dlSurface = Color(0xFFF6F6F6);
-  static const Color _dlPill = Color(0xFFEEEEEE);
-  static const Color _dlSeparator = Color(0xFFEEEEEE);
-  static const Color _dlInk = Color(0xFF000000);
-  static const Color _dlMuted = Color(0xFF757575);
+  Color get _dlBg => ApoloDlPalette.of(context).bg;
+  Color get _dlSurface => ApoloDlPalette.of(context).surfaceSubtle;
+  Color get _dlPill => ApoloDlPalette.of(context).pill;
+  Color get _dlSeparator => ApoloDlPalette.of(context).separator;
+  Color get _dlInk => ApoloDlPalette.of(context).ink;
+  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
+  Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlDanger = Color(0xFFE31B23);
 
   @override
@@ -130,12 +131,12 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               Container(
                                 width: 34,
                                 height: 34,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: _dlBg,
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
-                                child: const Icon(
+                                child: Icon(
                                   CupertinoIcons.flag,
                                   size: 16,
                                   color: _dlInk,
@@ -149,7 +150,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                     'Signaler cette boutique',
                                     'Report store',
                                   ),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14.5,
                                     fontWeight: FontWeight.w600,
                                     color: _dlInk,
@@ -160,7 +161,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           ),
                         ),
                       ),
-                      const Padding(
+                      Padding(
                         padding: EdgeInsetsDirectional.only(start: 60),
                         child: SizedBox(
                           height: 1,
@@ -218,7 +219,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               Container(
                                 width: 34,
                                 height: 34,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: _dlBg,
                                   shape: BoxShape.circle,
                                 ),
@@ -262,7 +263,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   InputDecoration _sheetInputDec(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: _dlMuted, fontSize: 13.5),
+      labelStyle: TextStyle(color: _dlMuted, fontSize: 13.5),
       filled: true,
       fillColor: _dlSurface,
       hoverColor: Colors.transparent,
@@ -277,7 +278,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _dlInk, width: 1.5),
+        borderSide: BorderSide(color: _dlInk, width: 1.5),
       ),
     );
   }
@@ -333,12 +334,12 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     Container(
                       width: 40,
                       height: 40,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: _dlPill,
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(
+                      child: Icon(
                         CupertinoIcons.bag_fill,
                         color: _dlInk,
                         size: 18,
@@ -352,7 +353,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           'Commande directe',
                           'Direct Store Order',
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: _dlInk,
@@ -502,7 +503,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   Widget build(BuildContext context) {
     final s = _state.s;
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: _dlBg,
         body: StoreDetailSkeleton(),
       );
@@ -593,7 +594,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16.5,
                               fontWeight: FontWeight.w700,
                               color: _dlInk,
@@ -663,7 +664,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.all(3),
-                                        decoration: const BoxDecoration(
+                                        decoration: BoxDecoration(
                                           color: _dlBg,
                                           shape: BoxShape.circle,
                                         ),
@@ -740,7 +741,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         ),
                                         child: Text(
                                           businessCategory,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 11.8,
                                             fontWeight: FontWeight.w700,
                                             color: _dlInk,
@@ -788,7 +789,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                             'Closed · $workingHours',
                                                           )
                                                         : workingHours),
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 11.5,
                                                   fontWeight: FontWeight.w700,
                                                   color: _dlInk,
@@ -820,7 +821,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             CupertinoIcons.location_solid,
                                             size: 13,
                                             color: _dlInk,
@@ -837,7 +838,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                     ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12.5,
                                                 fontWeight: FontWeight.w600,
                                                 color: _dlInk,
@@ -858,7 +859,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                     Text(
                                       (store['description'] ?? '').toString(),
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: _dlMuted,
                                         fontSize: 13.5,
                                         height: 1.4,
@@ -947,7 +948,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                     TextDirection.ltr,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 17,
                                                   fontWeight: FontWeight.w800,
                                                   color: _dlInk,
@@ -965,7 +966,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 11.5,
                                                   color: _dlMuted,
                                                   fontWeight: FontWeight.w500,
@@ -982,7 +983,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         Expanded(
                                           child: Column(
                                             children: [
-                                              const Text(
+                                              Text(
                                                 '100%',
                                                 textDirection:
                                                     TextDirection.ltr,
@@ -1006,7 +1007,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 11.5,
                                                   color: _dlMuted,
                                                   fontWeight: FontWeight.w500,
@@ -1023,7 +1024,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         Expanded(
                                           child: Column(
                                             children: [
-                                              const Text(
+                                              Text(
                                                 '24/48h',
                                                 textDirection:
                                                     TextDirection.ltr,
@@ -1047,7 +1048,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 11.5,
                                                   color: _dlMuted,
                                                   fontWeight: FontWeight.w500,
