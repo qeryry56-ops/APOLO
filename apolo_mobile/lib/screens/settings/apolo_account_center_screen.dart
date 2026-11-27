@@ -537,7 +537,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: palette.groupCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -551,10 +551,11 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                   color: palette.bg,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                alignment: Alignment.center,
+                child: Icon(
                   CupertinoIcons.person_crop_circle,
-                  color: AppConfig.primary,
-                  size: 26,
+                  color: palette.ink,
+                  size: 25,
                 ),
               ),
               const SizedBox(width: 14),
@@ -596,6 +597,8 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
           ApoloDlButton(
             key: const Key('account-center-login'),
             label: s.tr('تسجيل الدخول', 'Se connecter', 'Log in'),
+            borderRadius: 999,
+            height: 50,
             fullWidth: true,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -608,6 +611,8 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
             key: const Key('account-center-register'),
             label: s.tr('إنشاء حساب', 'Créer un compte', 'Create account'),
             variant: ApoloDlButtonVariant.secondary,
+            borderRadius: 999,
+            height: 50,
             fullWidth: true,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(

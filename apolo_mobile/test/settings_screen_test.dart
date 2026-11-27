@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:apolo_mobile/core/state/app_state.dart';
+import 'package:apolo_mobile/screens/account_security_screen.dart';
 import 'package:apolo_mobile/screens/pro_plus_screen.dart';
 import 'package:apolo_mobile/screens/settings/apolo_account_center_screen.dart';
 import 'package:apolo_mobile/screens/settings/settings_saved_ads_screen.dart';
 import 'package:apolo_mobile/screens/settings_screen.dart';
+import 'package:apolo_mobile/screens/support_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -252,5 +254,41 @@ void main() {
     expect(find.byType(SettingsScreen), findsNothing);
     expect(find.text('Open Settings'), findsOneWidget);
     expect(editTriggered, 1);
+  });
+
+  testWidgets(
+      'Dynamic Layer v5.1 AccountSecurityScreen, SupportScreen, and Arabic RTL Settings render cleanly',
+      (tester) async {
+    await tester.runAsync(() async {
+      await AppState().setAuthSession('test_token', {
+        'id': 12,
+        'name': 'Karim Casa',
+        'username': 'karim_casa',
+        'email': 'karim@apolo.ma',
+        'is_verified': true,
+      });
+    });
+
+    await tester.pumpWidget(buildApp(const AccountSecurityScreen()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Account security'), findsOneWidget);
+    expect(find.byKey(const Key('security-email')), findsOneWidget);
+    expect(find.byKey(const Key('security-save-profile')), findsOneWidget);
+    expect(find.byKey(const Key('security-save-password')), findsOneWidget);
+
+    await tester.pumpWidget(buildApp(const SupportScreen()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Help & Support'), findsOneWidget);
+    expect(find.byKey(const Key('support-report-bug-cta')), findsOneWidget);
+    expect(find.text('support@apolo.ma'), findsOneWidget);
+
+    await tester.runAsync(() => AppState().setLocale(const Locale('ar')));
+    await tester.pumpWidget(buildApp(const SettingsScreen()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('الإعدادات والنشاط'), findsOneWidget);
+    expect(find.text('مركز حساب أبولو'), findsOneWidget);
   });
 }

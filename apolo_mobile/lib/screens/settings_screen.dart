@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
+import '../widgets/apolo_badges_kit.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../widgets/notification_badge.dart';
 import 'add_friends_screen.dart';
 import 'auth_screen.dart';
 import 'notifications_screen.dart';
@@ -20,7 +22,14 @@ import 'settings/settings_share_app_screen.dart';
 import 'settings/settings_suggestion_screen.dart';
 import 'settings/settings_zone_screen.dart';
 import 'support_screen.dart';
+import 'widgets/app_image.dart';
 
+/// Dynamic Layer v5.1 `Settings and activity` Screen:
+/// - Pure `#FFFFFF` canvas, `#EEEEEE` stadium search pill (`1.5px` `#000000` active border),
+/// - `#F6F6F6` flat grouped cards with `34×34` `#FFFFFF` icon circles & `1px` `#EEEEEE` dividers,
+/// - Live user avatar + `ApoloVerifiedBadge` / `ApoloRankBadge` in the `Apolo Account` hero card,
+/// - Live capped red unread `NotificationBadge` on `Notifications` with optimistic clear on tap,
+/// - Full-capsule `#000000` / `#EEEEEE` session CTAs + version footer.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
@@ -98,13 +107,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: palette.dangerSoft,
+          color: palette.pill,
           shape: BoxShape.circle,
         ),
         child: Icon(
           CupertinoIcons.square_arrow_right,
-          color: palette.danger,
-          size: 26,
+          color: palette.ink,
+          size: 25,
         ),
       ),
       contentTitle: s.tr(
@@ -122,13 +131,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           key: const Key('settings-confirm-logout'),
           label: s.tr('تسجيل الخروج', 'Se déconnecter', 'Log out'),
           variant: ApoloDlButtonVariant.danger,
+          borderRadius: 999,
           fullWidth: true,
           onPressed: () => Navigator.of(context).pop(true),
         ),
-        const SizedBox(height: 10),
         ApoloDlButton(
           label: s.tr('إلغاء', 'Annuler', 'Cancel'),
           variant: ApoloDlButtonVariant.secondary,
+          borderRadius: 999,
           fullWidth: true,
           onPressed: () => Navigator.of(context).pop(false),
         ),
@@ -151,6 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final isAr = s.isAr;
         final palette = ApoloDlPalette.of(context);
         final isLoggedIn = _state.isLoggedIn;
+        final unreadNotifs = _state.unreadNotificationsCount;
 
         final showAccountCenter = _matchesQuery([
           'Apolo Account',
@@ -225,11 +236,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               key: const Key('settings-row-notifications'),
               icon: CupertinoIcons.bell,
               title: s.tr('الإشعارات', 'Notifications', 'Notifications'),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const NotificationsScreen(),
-                ),
-              ),
+              trailingBadge: isLoggedIn && unreadNotifs > 0
+                  ? NotificationBadge(
+                      count: unreadNotifs,
+                      type: NotificationBadgeType.number,
+                      variant: NotificationBadgeVariant.red,
+                    )
+                  : null,
+              onTap: () {
+                _state.clearUnreadNotificationsOptimistically(
+                  syncRemote: false,
+                );
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
+                );
+              },
             ),
           if (_matchesQuery([
             'App language',
@@ -517,7 +540,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
                         child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 36),
                           children: [
                             _buildSearchField(palette, s),
                             if (!hasAnyResult)
@@ -595,6 +618,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       'Log out',
                                     ),
                                     variant: ApoloDlButtonVariant.dangerSoft,
+                                    borderRadius: 999,
+                                    height: 52,
                                     fullWidth: true,
                                     leadingIcon:
                                         CupertinoIcons.square_arrow_right,
@@ -608,6 +633,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       'Se connecter',
                                       'Log in',
                                     ),
+                                    variant: ApoloDlButtonVariant.primary,
+                                    borderRadius: 999,
+                                    height: 52,
                                     fullWidth: true,
                                     onPressed: () =>
                                         Navigator.of(context).push(
@@ -627,6 +655,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       'Create account',
                                     ),
                                     variant: ApoloDlButtonVariant.secondary,
+                                    borderRadius: 999,
+                                    height: 52,
                                     fullWidth: true,
                                     onPressed: () =>
                                         Navigator.of(context).push(
@@ -639,6 +669,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ],
                               ],
+                              const SizedBox(height: 24),
+                              Center(
+                                child: Text(
+                                  'Apolo.ma · v${AppConfig.appVersion}',
+                                  textDirection: TextDirection.ltr,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: palette.muted,
+                                  ),
+                                ),
+                              ),
                             ],
                           ],
                         ),
@@ -655,6 +697,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildSearchField(ApoloDlPalette palette, AppStrings s) {
+    final showClear = _searchFocused || _query.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 14),
       child: AnimatedContainer(
@@ -682,6 +725,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 key: const Key('settings-search-field'),
                 controller: _searchCtrl,
                 focusNode: _searchFocus,
+                cursorColor: palette.ink,
                 textInputAction: TextInputAction.search,
                 style: TextStyle(
                   fontSize: 15,
@@ -694,6 +738,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontSize: 15,
                     color: palette.muted,
                   ),
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
                   isDense: true,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -702,20 +749,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
-            if (_query.isNotEmpty)
+            if (showClear)
               GestureDetector(
                 key: const Key('settings-search-clear'),
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  _searchCtrl.clear();
+                  if (_searchCtrl.text.isNotEmpty) {
+                    _searchCtrl.clear();
+                  } else {
+                    _searchFocus.unfocus();
+                  }
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Icon(
-                    CupertinoIcons.xmark_circle_fill,
-                    size: 18,
-                    color: palette.muted,
+                    CupertinoIcons.xmark,
+                    size: 16,
+                    color: _searchFocused ? palette.ink : palette.muted,
                   ),
                 ),
               ),
@@ -726,12 +777,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAccountHeroCard(ApoloDlPalette palette, AppStrings s) {
+    final user = _state.currentUser;
+    final isLoggedIn = _state.isLoggedIn && user != null;
+    final name = (user?['name'] ?? '').toString().trim();
+    final avatarUrl =
+        (user?['avatar_url'] ?? user?['avatar'] ?? '').toString().trim();
+    final initial =
+        name.isNotEmpty ? name.characters.first.toUpperCase() : 'A';
+    final isVerified = isLoggedIn &&
+        (user['is_verified'] == true ||
+            user['phone_verified_at'] != null ||
+            _state.isBusinessAccount ||
+            _state.isProPlusAccount);
+    final rank = isLoggedIn
+        ? ApoloSellerRank.resolve(
+            user: user,
+            isProPlus: _state.isProPlusAccount,
+            isBusiness: _state.isBusinessAccount,
+            isVerified: isVerified,
+          )
+        : ApoloSellerRank.bronze;
+
     return Material(
       color: palette.groupCard,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: const Key('settings-row-apolo-account'),
+        borderRadius: BorderRadius.circular(20),
         onTap: () async {
           final result = await Navigator.of(context).push<String>(
             MaterialPageRoute<String>(
@@ -754,35 +827,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: palette.bg,
-                  borderRadius: BorderRadius.circular(12),
+                  shape: BoxShape.circle,
                 ),
+                clipBehavior: Clip.antiAlias,
                 alignment: Alignment.center,
-                child: const Icon(
-                  CupertinoIcons.person_crop_circle_fill,
-                  color: AppConfig.primary,
-                  size: 24,
-                ),
+                child: isLoggedIn
+                    ? (avatarUrl.isNotEmpty
+                        ? AppImage(
+                            url: avatarUrl,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                          )
+                        : Text(
+                            initial,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: palette.ink,
+                            ),
+                          ))
+                    : Icon(
+                        CupertinoIcons.person_crop_circle,
+                        color: palette.ink,
+                        size: 25,
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      s.tr(
-                        'مركز حساب أبولو',
-                        'Espace Compte Apolo',
-                        'Apolo Account',
-                      ),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: palette.ink,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            s.tr(
+                              'مركز حساب أبولو',
+                              'Espace Compte Apolo',
+                              'Apolo Account',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: palette.ink,
+                            ),
+                          ),
+                        ),
+                        if (isLoggedIn) ...[
+                          const SizedBox(width: 6),
+                          ApoloIdentityBadgesRow(
+                            isVerified: isVerified,
+                            rank: rank,
+                            isProPlus: _state.isProPlusAccount,
+                            isBusiness: _state.isBusinessAccount,
+                            showProPill: false,
+                            badgeSize: 15,
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -805,8 +914,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 s.isAr
                     ? CupertinoIcons.chevron_left
                     : CupertinoIcons.chevron_right,
-                size: 16,
-                color: palette.iconMuted,
+                size: 15,
+                color: palette.muted,
               ),
             ],
           ),

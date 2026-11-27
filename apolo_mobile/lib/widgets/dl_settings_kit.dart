@@ -46,21 +46,21 @@ class ApoloDlPalette {
   static const ApoloDlPalette light = ApoloDlPalette(
     bg: Color(0xFFFFFFFF),
     surfaceSubtle: Color(0xFFF6F6F6),
-    groupCard: Color(0xFFEEEEEE),
+    groupCard: Color(0xFFF6F6F6),
     pill: Color(0xFFEEEEEE),
     border: Color(0xFFE2E2E2),
     separator: Color(0xFFEEEEEE),
     ink: Color(0xFF000000),
     onInk: Color(0xFFFFFFFF),
     muted: Color(0xFF757575),
-    iconMuted: Color(0xFF9E9E9E),
+    iconMuted: Color(0xFF757575),
     subtle: Color(0xFFAFAFAF),
     danger: Color(0xFFE31B23),
-    dangerSoft: Color(0xFFFEF2F2),
+    dangerSoft: Color(0xFFF6F6F6),
     success: Color(0xFF15803D),
-    successSoft: Color(0xFFECFDF5),
-    info: Color(0xFF0866FF),
-    infoSoft: Color(0xFFEFF6FF),
+    successSoft: Color(0xFFF6F6F6),
+    info: Color(0xFF2997FF),
+    infoSoft: Color(0xFFF6F6F6),
   );
 
   static const ApoloDlPalette dark = ApoloDlPalette(
@@ -1068,7 +1068,7 @@ Future<T?> showApoloDlBottomSheet<T>(
 }
 
 /// Dynamic Layer v5.1 Settings section group: crisp dark label above a rounded
-/// #EEEEEE container with zero shadows, zero borders, and zero inner dividers.
+/// #F6F6F6 flat container with hairline #EEEEEE row separators and zero shadows.
 class ApoloDlSettingsGroup extends StatelessWidget {
   const ApoloDlSettingsGroup({
     required this.title,
@@ -1085,28 +1085,49 @@ class ApoloDlSettingsGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = ApoloDlPalette.of(context);
     return Padding(
-      padding: EdgeInsets.only(top: isFirst ? 0 : 28),
+      padding: EdgeInsets.only(top: isFirst ? 0 : 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: palette.ink,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: palette.ink,
+              ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
               color: palette.groupCard,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: children,
+              children: [
+                for (int i = 0; i < children.length; i++) ...[
+                  children[i],
+                  if (i < children.length - 1)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 54,
+                        end: 10,
+                      ),
+                      child: SizedBox(
+                        height: 1,
+                        width: double.infinity,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(color: palette.separator),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
             ),
           ),
         ],
@@ -1116,7 +1137,7 @@ class ApoloDlSettingsGroup extends StatelessWidget {
 }
 
 /// Individual row inside an [ApoloDlSettingsGroup] matching Dynamic Layer v5.1's
-/// grey-icon + crisp-label + dark-chevron minimalism.
+/// 32x32 #FFFFFF icon circle + crisp #000000 label + chevron minimalism.
 class ApoloDlGroupedItem extends StatelessWidget {
   const ApoloDlGroupedItem({
     required this.icon,
@@ -1151,7 +1172,7 @@ class ApoloDlGroupedItem extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         onTap: disabled || onTap == null
             ? null
             : () {
@@ -1159,13 +1180,22 @@ class ApoloDlGroupedItem extends StatelessWidget {
                 onTap!();
               },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7.5),
           child: Row(
             children: [
-              Icon(
-                icon,
-                size: 20,
-                color: disabled ? palette.subtle : palette.iconMuted,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: palette.bg,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  icon,
+                  size: 16.5,
+                  color: disabled ? palette.subtle : palette.ink,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1207,8 +1237,8 @@ class ApoloDlGroupedItem extends StatelessWidget {
                   isRtl
                       ? CupertinoIcons.chevron_left
                       : CupertinoIcons.chevron_right,
-                  size: 15,
-                  color: disabled ? palette.subtle : palette.ink,
+                  size: 14,
+                  color: disabled ? palette.subtle : palette.muted,
                 ),
               ],
             ],

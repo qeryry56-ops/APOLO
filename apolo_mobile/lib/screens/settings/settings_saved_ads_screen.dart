@@ -254,116 +254,122 @@ class _SettingsSavedAdsScreenState extends State<SettingsSavedAdsScreen> {
           final price = _resolvePrice(ad, s);
           final busy = _pendingIds.contains(adId);
 
-          return Material(
-            color: palette.groupCard,
-            borderRadius: BorderRadius.circular(16),
+          return Container(
+            decoration: BoxDecoration(
+              color: palette.groupCard,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: palette.separator),
+            ),
             clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: adId <= 0
-                  ? null
-                  : () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => AdDetailScreen(
-                            adId: adId,
-                            initialAd: ad,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: adId <= 0
+                    ? null
+                    : () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => AdDetailScreen(
+                              adId: adId,
+                              initialAd: ad,
+                            ),
                           ),
-                        ),
-                      );
-                      if (mounted && _state.isLoggedIn) {
-                        await _fetchSavedAds();
-                      }
-                    },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Container(
-                          color: palette.surfaceSubtle,
-                          child: AppImage(
-                            url: imageUrl,
-                            fit: BoxFit.cover,
+                        );
+                        if (mounted && _state.isLoggedIn) {
+                          await _fetchSavedAds();
+                        }
+                      },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Container(
+                            color: palette.pill,
+                            child: AppImage(
+                              url: imageUrl,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ),
-                        PositionedDirectional(
-                          top: 8,
-                          end: 8,
-                          child: InkWell(
-                            key: Key('saved-unsave-$adId'),
-                            onTap: busy ? null : () => _removeSaved(ad),
-                            borderRadius: BorderRadius.circular(999),
-                            child: Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.94),
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: busy
-                                  ? SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                          PositionedDirectional(
+                            top: 8,
+                            end: 8,
+                            child: InkWell(
+                              key: Key('saved-unsave-$adId'),
+                              onTap: busy ? null : () => _removeSaved(ad),
+                              borderRadius: BorderRadius.circular(999),
+                              child: Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: busy
+                                    ? SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: palette.ink,
+                                        ),
+                                      )
+                                    : Icon(
+                                        CupertinoIcons.bookmark_fill,
+                                        size: 15,
                                         color: palette.ink,
                                       ),
-                                    )
-                                  : const Icon(
-                                      CupertinoIcons.bookmark_fill,
-                                      size: 16,
-                                      color: AppConfig.primary,
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (price.isNotEmpty)
-                          PriceText(
-                            price,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: palette.ink,
-                            ),
-                          ),
-                        const SizedBox(height: 3),
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: palette.ink,
-                          ),
-                        ),
-                        if (city.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            city,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: palette.muted,
+                              ),
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (price.isNotEmpty)
+                            PriceText(
+                              price,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: palette.ink,
+                              ),
+                            ),
+                          const SizedBox(height: 3),
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: palette.ink,
+                            ),
+                          ),
+                          if (city.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: palette.muted,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );

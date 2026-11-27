@@ -4,7 +4,12 @@ import 'package:flutter/services.dart';
 
 import '../account/account_helpers.dart';
 import '../core/state/app_state.dart';
+import '../widgets/dl_settings_kit.dart';
 
+/// Dynamic Layer v5.1 `Account security` Screen:
+/// - Pure `#FFFFFF` canvas + `ApoloDlTopNav`
+/// - Flat `#F6F6F6` rounded `20px` cards with `#FFFFFF` borderless inputs
+/// - `#000000` primary capsule save CTAs (`50px` height)
 class AccountSecurityScreen extends StatefulWidget {
   const AccountSecurityScreen({super.key});
   @override
@@ -27,16 +32,13 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
   String? _error;
   String? _successMessage;
 
-  static const Color _bg = Color(0xFFF2F3F7);
-  static const Color _cardBg = Colors.white;
-  static const Color _ink = Color(0xFF0A0A0A);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _divider = Color(0xFFF1F2F6);
-  static const Color _inputFill = Color(0xFFF8F9FB);
-  static const Color _inputBorder = Color(0xFFE5E7EB);
-  static const Color _blue = Color(0xFF0866FF);
-  static const Color _red = Color(0xFFE31B23);
-  static const Color _green = Color(0xFF15803D);
+  static const Color _dlBg = Color(0xFFFFFFFF);
+  static const Color _dlSurface = Color(0xFFF6F6F6);
+  static const Color _dlSeparator = Color(0xFFEEEEEE);
+  static const Color _dlInk = Color(0xFF000000);
+  static const Color _dlMuted = Color(0xFF757575);
+  static const Color _dlDanger = Color(0xFFE31B23);
+  static const Color _dlSuccess = Color(0xFF15803D);
 
   @override
   void initState() {
@@ -65,8 +67,11 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     final name = (_state.currentUser?['name']?.toString() ?? '').trim();
     if (!AccountValidation.email(email)) {
       setState(() {
-        _error = s.tr('أدخل بريداً إلكترونياً صالحاً.',
-            'Entrez une adresse e-mail valide.', 'Enter a valid email address.');
+        _error = s.tr(
+          'أدخل بريداً إلكترونياً صالحاً.',
+          'Entrez une adresse e-mail valide.',
+          'Enter a valid email address.',
+        );
         _successMessage = null;
       });
       return;
@@ -75,8 +80,11 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         phone.isEmpty ? null : AccountValidation.phone(phone);
     if (phone.isNotEmpty && normalizedPhone == null) {
       setState(() {
-        _error = s.tr('أدخل رقم هاتف مغربي صالح.',
-            'Entrez un numéro marocain valide.', 'Enter a valid phone number.');
+        _error = s.tr(
+          'أدخل رقم هاتف مغربي صالح.',
+          'Entrez un numéro marocain valide.',
+          'Enter a valid phone number.',
+        );
         _successMessage = null;
       });
       return;
@@ -108,9 +116,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       }
       if (mounted) {
         setState(() => _successMessage = s.tr(
-            'تم تحديث بيانات الاتصال بنجاح.',
-            'Coordonnées mises à jour avec succès.',
-            'Contact details updated successfully.'));
+              'تم تحديث بيانات الاتصال بنجاح.',
+              'Coordonnées mises à jour avec succès.',
+              'Contact details updated successfully.',
+            ));
       }
     } catch (e) {
       if (mounted) {
@@ -132,17 +141,21 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         !AccountValidation.password(newPassword)) {
       setState(() {
         _error = s.tr(
-            'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
-            'Le mot de passe doit contenir au moins 8 caractères.',
-            'Password must be at least 8 characters.');
+          'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
+          'Le mot de passe doit contenir au moins 8 caractères.',
+          'Password must be at least 8 characters.',
+        );
         _successMessage = null;
       });
       return;
     }
     if (newPassword != confirmPassword) {
       setState(() {
-        _error = s.tr('كلمتا المرور غير متطابقتين.',
-            'Les mots de passe ne correspondent pas.', 'Passwords do not match.');
+        _error = s.tr(
+          'كلمتا المرور غير متطابقتين.',
+          'Les mots de passe ne correspondent pas.',
+          'Passwords do not match.',
+        );
         _successMessage = null;
       });
       return;
@@ -164,9 +177,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
       _confirmPasswordCtrl.clear();
       if (mounted) {
         setState(() => _successMessage = s.tr(
-            'تم تحديث كلمة المرور بنجاح.',
-            'Mot de passe mis à jour avec succès.',
-            'Password updated successfully.'));
+              'تم تحديث كلمة المرور بنجاح.',
+              'Mot de passe mis à jour avec succès.',
+              'Password updated successfully.',
+            ));
       }
     } catch (e) {
       if (mounted) {
@@ -177,26 +191,58 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     }
   }
 
-  InputDecoration _fieldDecoration({
+  Widget _buildDlInput({
+    required Key fieldKey,
+    required TextEditingController controller,
     required String label,
     required IconData icon,
+    TextInputType? keyboardType,
+    bool obscureText = false,
     Widget? suffixIcon,
   }) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: _muted, fontSize: 14),
-      prefixIcon: Icon(icon, size: 19, color: _ink),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: _inputFill,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _inputBorder, width: 1),
+    return Container(
+      decoration: BoxDecoration(
+        color: _dlBg,
+        borderRadius: BorderRadius.circular(14),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _blue, width: 1.4),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          inputDecorationTheme: const InputDecorationTheme(
+            filled: false,
+            fillColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+          ),
+        ),
+        child: TextField(
+          key: fieldKey,
+          controller: controller,
+          keyboardType: keyboardType,
+          obscureText: obscureText,
+          cursorColor: _dlInk,
+          textDirection: TextDirection.ltr,
+          style: const TextStyle(
+            color: _dlInk,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: _dlMuted, fontSize: 13.5),
+            prefixIcon: Icon(icon, size: 18, color: _dlInk),
+            suffixIcon: suffixIcon,
+            filled: false,
+            fillColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          ),
+        ),
       ),
     );
   }
@@ -210,421 +256,414 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: _bg,
-        appBar: AppBar(
-          backgroundColor: _bg,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          toolbarHeight: 48,
-          centerTitle: true,
-          leading: IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: Icon(
-              isAr ? CupertinoIcons.chevron_right : CupertinoIcons.chevron_left,
-              color: _ink,
-              size: 22,
-            ),
-          ),
-          title: Text(
-            s.tr('أمان الحساب', 'Sécurité du compte', 'Account security'),
-            style: const TextStyle(
-              color: _ink,
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+        backgroundColor: _dlBg,
         body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                children: [
-                  // Intro Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _cardBg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            children: [
+              ApoloDlTopNav(
+                title: s.tr(
+                  'أمان الحساب',
+                  'Sécurité du compte',
+                  'Account security',
+                ),
+                showSeparator: false,
+              ),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 36),
                       children: [
+                        // Intro Card
                         Container(
-                          width: 42,
-                          height: 42,
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: _blue.withValues(alpha: 0.10),
-                            shape: BoxShape.circle,
+                            color: _dlSurface,
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Icon(
-                            Icons.lock_outline,
-                            size: 21,
-                            color: _blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                s.tr(
-                                  'بيانات الدخول تبقى تحت سيطرتك',
-                                  'Gardez la main sur vos accès',
-                                  'Stay in control of your login',
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: const BoxDecoration(
+                                  color: _dlBg,
+                                  shape: BoxShape.circle,
                                 ),
-                                style: const TextStyle(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: _ink,
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  CupertinoIcons.lock_shield_fill,
+                                  size: 20,
+                                  color: _dlInk,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                s.tr(
-                                  'يمكنك تحديث كلمة المرور أو البريد الإلكتروني أو رقم الهاتف مباشرة من التطبيق، أو عبر موقع Apolo الرسمي.',
-                                  'Vous pouvez mettre à jour votre mot de passe, votre adresse e-mail ou votre numéro directement dans l’application ou sur le site officiel Apolo.',
-                                  'Update your password, email, or phone directly in the app or on the official Apolo website.',
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: _muted,
-                                  height: 1.45,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      s.tr(
+                                        'بيانات الدخول تبقى تحت سيطرتك',
+                                        'Gardez la main sur vos accès',
+                                        'Stay in control of your login',
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: _dlInk,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      s.tr(
+                                        'يمكنك تحديث كلمة المرور أو البريد الإلكتروني أو رقم الهاتف مباشرة من التطبيق.',
+                                        'Mettez à jour votre mot de passe, votre adresse e-mail ou votre numéro directement ici.',
+                                        'Update your password, email, or phone directly in the app.',
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: _dlMuted,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
+
+                        if (_successMessage != null)
+                          Container(
+                            margin: const EdgeInsets.only(top: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _dlSurface,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    CupertinoIcons.check_mark_circled_solid,
+                                    size: 18,
+                                    color: _dlSuccess,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _successMessage!,
+                                      style: const TextStyle(
+                                        color: _dlInk,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        if (_error != null)
+                          Container(
+                            margin: const EdgeInsets.only(top: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _dlSurface,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    CupertinoIcons.exclamationmark_circle_fill,
+                                    size: 18,
+                                    color: _dlDanger,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _error!,
+                                      style: const TextStyle(
+                                        color: _dlDanger,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        if (loggedIn) ...[
+                          ApoloDlSectionHeader(
+                            title: s.tr(
+                              'بيانات الاتصال',
+                              'Coordonnées',
+                              'Contact details',
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: _dlSurface,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildDlInput(
+                                  fieldKey: const Key('security-email'),
+                                  controller: _emailCtrl,
+                                  keyboardType: TextInputType.emailAddress,
+                                  label: s.tr(
+                                    'البريد الإلكتروني',
+                                    'Adresse e-mail',
+                                    'Email address',
+                                  ),
+                                  icon: CupertinoIcons.at,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildDlInput(
+                                  fieldKey: const Key('security-phone'),
+                                  controller: _phoneCtrl,
+                                  keyboardType: TextInputType.phone,
+                                  label: s.tr(
+                                    'رقم الهاتف',
+                                    'Numéro de téléphone',
+                                    'Phone number',
+                                  ),
+                                  icon: CupertinoIcons.phone,
+                                ),
+                                const SizedBox(height: 14),
+                                ApoloDlButton(
+                                  key: const Key('security-save-profile'),
+                                  label: s.tr(
+                                    'حفظ بيانات الاتصال',
+                                    'Enregistrer les coordonnées',
+                                    'Save contact details',
+                                  ),
+                                  variant: ApoloDlButtonVariant.primary,
+                                  borderRadius: 999,
+                                  height: 50,
+                                  fullWidth: true,
+                                  isLoading: _savingProfile,
+                                  onPressed: _savingProfile
+                                      ? null
+                                      : _saveContactInfo,
+                                ),
+                              ],
+                            ),
+                          ),
+                          ApoloDlSectionHeader(
+                            title: s.tr(
+                              'تغيير كلمة المرور',
+                              'Modifier le mot de passe',
+                              'Change password',
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: _dlSurface,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildDlInput(
+                                  fieldKey:
+                                      const Key('security-current-password'),
+                                  controller: _currentPasswordCtrl,
+                                  obscureText: _obscureCurrent,
+                                  label: s.tr(
+                                    'كلمة المرور الحالية',
+                                    'Mot de passe actuel',
+                                    'Current password',
+                                  ),
+                                  icon: CupertinoIcons.lock,
+                                  suffixIcon: IconButton(
+                                    onPressed: () => setState(
+                                      () => _obscureCurrent = !_obscureCurrent,
+                                    ),
+                                    icon: Icon(
+                                      _obscureCurrent
+                                          ? CupertinoIcons.eye
+                                          : CupertinoIcons.eye_slash,
+                                      size: 18,
+                                      color: _dlMuted,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                _buildDlInput(
+                                  fieldKey: const Key('security-new-password'),
+                                  controller: _newPasswordCtrl,
+                                  obscureText: _obscureNew,
+                                  label: s.tr(
+                                    'كلمة المرور الجديدة',
+                                    'Nouveau mot de passe',
+                                    'New password',
+                                  ),
+                                  icon: CupertinoIcons.lock_rotation,
+                                  suffixIcon: IconButton(
+                                    onPressed: () => setState(
+                                      () => _obscureNew = !_obscureNew,
+                                    ),
+                                    icon: Icon(
+                                      _obscureNew
+                                          ? CupertinoIcons.eye
+                                          : CupertinoIcons.eye_slash,
+                                      size: 18,
+                                      color: _dlMuted,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                _buildDlInput(
+                                  fieldKey:
+                                      const Key('security-confirm-password'),
+                                  controller: _confirmPasswordCtrl,
+                                  obscureText: _obscureConfirm,
+                                  label: s.tr(
+                                    'تأكيد كلمة المرور الجديدة',
+                                    'Confirmer le nouveau mot de passe',
+                                    'Confirm new password',
+                                  ),
+                                  icon: CupertinoIcons.checkmark_shield,
+                                  suffixIcon: IconButton(
+                                    onPressed: () => setState(
+                                      () => _obscureConfirm = !_obscureConfirm,
+                                    ),
+                                    icon: Icon(
+                                      _obscureConfirm
+                                          ? CupertinoIcons.eye
+                                          : CupertinoIcons.eye_slash,
+                                      size: 18,
+                                      color: _dlMuted,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                ApoloDlButton(
+                                  key: const Key('security-save-password'),
+                                  label: s.tr(
+                                    'تحديث كلمة المرور',
+                                    'Mettre à jour le mot de passe',
+                                    'Update password',
+                                  ),
+                                  variant: ApoloDlButtonVariant.primary,
+                                  borderRadius: 999,
+                                  height: 50,
+                                  fullWidth: true,
+                                  isLoading: _savingPassword,
+                                  onPressed:
+                                      _savingPassword ? null : _changePassword,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else ...[
+                          ApoloDlSectionHeader(
+                            title: s.tr(
+                              'إعدادات الأمان',
+                              'Options de sécurité',
+                              'Security options',
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: _dlSurface,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              children: [
+                                _buildInfoRow(
+                                  icon: CupertinoIcons.lock,
+                                  title: s.tr(
+                                    'كلمة المرور',
+                                    'Mot de passe',
+                                    'Password',
+                                  ),
+                                  subtitle: s.tr(
+                                    'سجّل الدخول في التطبيق لتعديل هذه البيانات',
+                                    'Connectez-vous dans l’application pour modifier ces informations',
+                                    'Sign in to update this information',
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsetsDirectional.only(
+                                    start: 60,
+                                    end: 14,
+                                  ),
+                                  child: Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: _dlSeparator,
+                                  ),
+                                ),
+                                _buildInfoRow(
+                                  icon: CupertinoIcons.at,
+                                  title: s.tr(
+                                    'البريد الإلكتروني',
+                                    'Adresse e-mail',
+                                    'Email address',
+                                  ),
+                                  subtitle: s.tr(
+                                    'سجّل الدخول في التطبيق لتعديل هذه البيانات',
+                                    'Connectez-vous dans l’application pour modifier ces informations',
+                                    'Sign in to update this information',
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsetsDirectional.only(
+                                    start: 60,
+                                    end: 14,
+                                  ),
+                                  child: Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: _dlSeparator,
+                                  ),
+                                ),
+                                _buildInfoRow(
+                                  icon: CupertinoIcons.phone,
+                                  title: s.tr(
+                                    'رقم الهاتف',
+                                    'Numéro de téléphone',
+                                    'Phone number',
+                                  ),
+                                  subtitle: s.tr(
+                                    'سجّل الدخول في التطبيق لتعديل هذه البيانات',
+                                    'Connectez-vous dans l’application pour modifier ces informations',
+                                    'Sign in to update this information',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-
-                  if (_successMessage != null)
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          _successMessage!,
-                          style: const TextStyle(
-                            color: _green,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  if (_error != null)
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          _error!,
-                          style: const TextStyle(
-                            color: _red,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  if (loggedIn) ...[
-                    _buildSectionHeader(
-                      s.tr(
-                        'بيانات الاتصال',
-                        'Coordonnées',
-                        'Contact details',
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: _cardBg,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextField(
-                            key: const Key('security-email'),
-                            controller: _emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            textDirection: TextDirection.ltr,
-                            decoration: _fieldDecoration(
-                              label: s.tr('البريد الإلكتروني', 'Adresse e-mail',
-                                  'Email address'),
-                              icon: CupertinoIcons.at,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            key: const Key('security-phone'),
-                            controller: _phoneCtrl,
-                            keyboardType: TextInputType.phone,
-                            textDirection: TextDirection.ltr,
-                            decoration: _fieldDecoration(
-                              label: s.tr('رقم الهاتف', 'Numéro de téléphone',
-                                  'Phone number'),
-                              icon: CupertinoIcons.phone,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          SizedBox(
-                            height: 46,
-                            child: FilledButton(
-                              key: const Key('security-save-profile'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: _ink,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              onPressed:
-                                  _savingProfile ? null : _saveContactInfo,
-                              child: _savingProfile
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      s.tr(
-                                          'حفظ بيانات الاتصال',
-                                          'Enregistrer les coordonnées',
-                                          'Save contact details'),
-                                      style: const TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildSectionHeader(
-                      s.tr(
-                        'تغيير كلمة المرور',
-                        'Modifier le mot de passe',
-                        'Change password',
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: _cardBg,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextField(
-                            key: const Key('security-current-password'),
-                            controller: _currentPasswordCtrl,
-                            obscureText: _obscureCurrent,
-                            textDirection: TextDirection.ltr,
-                            decoration: _fieldDecoration(
-                              label: s.tr('كلمة المرور الحالية',
-                                  'Mot de passe actuel', 'Current password'),
-                              icon: Icons.lock_outline,
-                              suffixIcon: IconButton(
-                                onPressed: () => setState(
-                                    () => _obscureCurrent = !_obscureCurrent),
-                                icon: Icon(
-                                  _obscureCurrent
-                                      ? CupertinoIcons.eye
-                                      : CupertinoIcons.eye_slash,
-                                  size: 18,
-                                  color: _muted,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            key: const Key('security-new-password'),
-                            controller: _newPasswordCtrl,
-                            obscureText: _obscureNew,
-                            textDirection: TextDirection.ltr,
-                            decoration: _fieldDecoration(
-                              label: s.tr('كلمة المرور الجديدة',
-                                  'Nouveau mot de passe', 'New password'),
-                              icon: Icons.password,
-                              suffixIcon: IconButton(
-                                onPressed: () =>
-                                    setState(() => _obscureNew = !_obscureNew),
-                                icon: Icon(
-                                  _obscureNew
-                                      ? CupertinoIcons.eye
-                                      : CupertinoIcons.eye_slash,
-                                  size: 18,
-                                  color: _muted,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            key: const Key('security-confirm-password'),
-                            controller: _confirmPasswordCtrl,
-                            obscureText: _obscureConfirm,
-                            textDirection: TextDirection.ltr,
-                            decoration: _fieldDecoration(
-                              label: s.tr(
-                                  'تأكيد كلمة المرور الجديدة',
-                                  'Confirmer le nouveau mot de passe',
-                                  'Confirm new password'),
-                              icon: Icons.password,
-                              suffixIcon: IconButton(
-                                onPressed: () => setState(
-                                    () => _obscureConfirm = !_obscureConfirm),
-                                icon: Icon(
-                                  _obscureConfirm
-                                      ? CupertinoIcons.eye
-                                      : CupertinoIcons.eye_slash,
-                                  size: 18,
-                                  color: _muted,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          SizedBox(
-                            height: 46,
-                            child: FilledButton(
-                              key: const Key('security-save-password'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: _ink,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              onPressed:
-                                  _savingPassword ? null : _changePassword,
-                              child: _savingPassword
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      s.tr(
-                                          'تحديث كلمة المرور',
-                                          'Mettre à jour le mot de passe',
-                                          'Update password'),
-                                      style: const TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    _buildSectionHeader(
-                      s.tr('إعدادات الأمان', 'Options de sécurité',
-                          'Security options'),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: _cardBg,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          _buildInfoRow(
-                            icon: Icons.password,
-                            title: s.tr('كلمة المرور', 'Mot de passe', 'Password'),
-                            subtitle: s.tr(
-                                'سجّل الدخول في التطبيق لتعديل هذه البيانات',
-                                'Connectez-vous dans l’application pour modifier ces informations',
-                                'Sign in to update this information'),
-                          ),
-                          const Padding(
-                            padding:
-                                EdgeInsetsDirectional.only(start: 48, end: 14),
-                            child: Divider(
-                                height: 1, thickness: 1, color: _divider),
-                          ),
-                          _buildInfoRow(
-                            icon: CupertinoIcons.at,
-                            title: s.tr('البريد الإلكتروني', 'Adresse e-mail',
-                                'Email address'),
-                            subtitle: s.tr(
-                                'سجّل الدخول في التطبيق لتعديل هذه البيانات',
-                                'Connectez-vous dans l’application pour modifier ces informations',
-                                'Sign in to update this information'),
-                          ),
-                          const Padding(
-                            padding:
-                                EdgeInsetsDirectional.only(start: 48, end: 14),
-                            child: Divider(
-                                height: 1, thickness: 1, color: _divider),
-                          ),
-                          _buildInfoRow(
-                            icon: CupertinoIcons.phone,
-                            title: s.tr('رقم الهاتف', 'Numéro de téléphone',
-                                'Phone number'),
-                            subtitle: s.tr(
-                                'سجّل الدخول في التطبيق لتعديل هذه البيانات',
-                                'Connectez-vous dans l’application pour modifier ces informations',
-                                'Sign in to update this information'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(
-        start: 4,
-        end: 4,
-        top: 14,
-        bottom: 6,
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: _muted,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -636,11 +675,20 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
     required String subtitle,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: _ink),
-          const SizedBox(width: 14),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: _dlBg,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 17, color: _dlInk),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,16 +696,16 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: _ink,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
+                    color: _dlInk,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    color: _muted,
+                    color: _dlMuted,
                     fontSize: 12.5,
                   ),
                 ),
