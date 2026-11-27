@@ -421,12 +421,30 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             backendConvId = int.tryParse('${conv['id'] ?? 0}') ?? 0;
             final otherUser = conv['other_user'] is Map
                 ? conv['other_user'] as Map
-                : (conv['peer'] is Map ? conv['peer'] as Map : null);
-            final backendPeerId =
-                int.tryParse('${otherUser?['id'] ?? conv['peer_id'] ?? ''}') ??
-                    0;
-            if (backendPeerId > 0 && backendPeerId != myUserId) {
-              rawPeerId = backendPeerId;
+                : (conv['peer'] is Map
+                    ? conv['peer'] as Map
+                    : (conv['seller'] is Map &&
+                            '${conv['seller']['id'] ?? ''}' != '$myUserId'
+                        ? conv['seller'] as Map
+                        : (conv['buyer'] is Map &&
+                                '${conv['buyer']['id'] ?? ''}' != '$myUserId'
+                            ? conv['buyer'] as Map
+                            : null)));
+            final candidateIds = <dynamic>[
+              otherUser?['id'],
+              conv['peer_id'],
+              conv['receiver_id'],
+              conv['seller_id'],
+              conv['buyer_id'],
+              conv['user_two_id'],
+              conv['user_one_id'],
+            ];
+            for (final cid in candidateIds) {
+              final parsedCid = int.tryParse('${cid ?? ''}') ?? 0;
+              if (parsedCid > 0 && parsedCid != myUserId) {
+                rawPeerId = parsedCid;
+                break;
+              }
             }
             final backendPeerName =
                 (otherUser?['name'] ?? '').toString().trim();

@@ -353,5 +353,96 @@ void main() {
       expect(replyText.style?.color, const Color(0xFF0A78E6));
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+        'ChatRoomScreen & ChatListScreen receive new incoming messages live without refreshing',
+        (WidgetTester tester) async {
+      var roomMessages = <Map<String, dynamic>>[
+        {
+          'id': 201,
+          'sender_id': 24,
+          'is_mine': false,
+          'body': 'واش نقدر نشوف السلعة اليوم؟',
+          'created_at_time': '6:10 PM',
+          'type': 'text',
+        },
+      ];
+      var inboxPreview = 'واش نقدر نشوف السلعة اليوم؟';
+
+      final liveAdapter = _ChatStubAdapter((request) {
+        if (request.path == '/chat/conversations/88/messages' &&
+            request.method == 'GET') {
+          return _jsonBody({
+            'status': 'success',
+            'messages': roomMessages,
+          });
+        }
+        if (request.path == '/chat/conversations' && request.method == 'GET') {
+          return _jsonBody({
+            'status': 'success',
+            'conversations': [
+              {
+                'id': 88,
+                'peer_id': 24,
+                'peer_name': 'Yassine',
+                'peer_avatar': '',
+                'last_message': inboxPreview,
+                'last_message_time': '6:11 PM',
+                'unread_count': 1,
+              },
+            ],
+          });
+        }
+        return _jsonBody({'status': 'success', 'data': []});
+      });
+
+      state.api.dio = Dio(BaseOptions(baseUrl: 'https://tests.invalid'))
+        ..httpClientAdapter = liveAdapter;
+
+      // Open ChatRoomScreen with synthetic hash conversationId + firestoreDocId + backendConversationId
+      await pumpPhone(
+        tester,
+        const ChatRoomScreen(
+          conversationId: 99887766,
+          backendConversationId: 88,
+          firestoreDocId: 'ad_50_u_9_24',
+          peerId: 24,
+          peerName: 'Yassine',
+        ),
+        dir: TextDirection.rtl,
+      );
+
+      expect(find.text('واش نقدر نشوف السلعة اليوم؟'), findsOneWidget);
+      expect(find.text('أنا جاي دابا فـ الطريق!'), findsNothing);
+
+      // Simulate peer sending a new message while room is open (no refresh)
+      roomMessages = [
+        ...roomMessages,
+        {
+          'id': 202,
+          'sender_id': 24,
+          'body': 'أنا جاي دابا فـ الطريق!',
+          'created_at': '2026-11-27T18:11:00Z',
+          'type': 'text',
+        },
+      ];
+
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+
+      expect(find.text('أنا جاي دابا فـ الطريق!'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Verify ChatListScreen also updates live without manual refresh
+      await pumpPhone(tester, const ChatListScreen());
+      expect(find.text('واش نقدر نشوف السلعة اليوم؟'), findsOneWidget);
+
+      inboxPreview = 'وصلت حدا الباب!';
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expect(find.text('وصلت حدا الباب!'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

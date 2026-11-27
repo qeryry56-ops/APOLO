@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/config/app_config.dart';
+import '../core/services/chat_realtime_client.dart';
 import '../core/services/firebase_chat_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
@@ -61,6 +62,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Map<String, dynamic>? _activeWebConversation;
   StreamSubscription<List<Map<String, dynamic>>>? _convSub;
   StreamSubscription<Map<String, dynamic>?>? _incomingCallSub;
+  StreamSubscription<Map<String, dynamic>>? _wsMsgSub;
+  Timer? _inboxSyncTimer;
   String? _lastHandledCallId;
   int? _subscribedUserId;
   String? _loadedAuthKey;
@@ -74,6 +77,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _loadedAuthKey = _currentAuthKey;
     _state.addListener(_onStateChanged);
     _searchFocusNode.addListener(_onSearchFocusChanged);
+    _wsMsgSub = ChatRealtimeClient.instance.incomingMessages.listen((_) {
+      if (mounted && _state.isLoggedIn) {
+        unawaited(_fetchBackendConversationsInBackground());
+      }
+    });
+    _inboxSyncTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted ||
+          !_state.isLoggedIn ||
+          ChatRealtimeClient.instance.isConnected) {
+        return;
+      }
+      unawaited(_fetchBackendConversationsInBackground());
+    });
     _loadConversations();
   }
 
@@ -109,6 +125,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   void dispose() {
+    _inboxSyncTimer?.cancel();
+    _wsMsgSub?.cancel();
     _convSub?.cancel();
     _incomingCallSub?.cancel();
     _state.removeListener(_onStateChanged);
@@ -116,6 +134,38 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Map<String, dynamic>? _findMatchingActiveWebConversation(
+    List<Map<String, dynamic>> list,
+    Map<String, dynamic>? current,
+  ) {
+    if (list.isEmpty) return null;
+    if (current == null) return list.first;
+    final activeDocId = current['firestore_doc_id']?.toString();
+    final activeBackendId = int.tryParse('${current['backend_id'] ?? 0}') ?? 0;
+    final activeId = int.tryParse('${current['id'] ?? 0}') ?? 0;
+    final activePeerId = int.tryParse('${current['peer_id'] ?? 0}') ?? 0;
+
+    for (final c in list) {
+      final cDoc = c['firestore_doc_id']?.toString();
+      if (activeDocId != null && activeDocId.isNotEmpty && cDoc == activeDocId) {
+        return c;
+      }
+      final cBackendId = int.tryParse('${c['backend_id'] ?? 0}') ?? 0;
+      if (activeBackendId > 0 && cBackendId == activeBackendId) {
+        return c;
+      }
+      final cId = int.tryParse('${c['id'] ?? 0}') ?? 0;
+      if (activeId > 0 && (cId == activeId || cBackendId == activeId)) {
+        return c;
+      }
+      final cPeerId = int.tryParse('${c['peer_id'] ?? 0}') ?? 0;
+      if (activePeerId > 0 && cPeerId == activePeerId) {
+        return c;
+      }
+    }
+    return list.first;
   }
 
   List<Map<String, dynamic>> _mergeFirestoreAndBackendConversations(
@@ -183,8 +233,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
             _firestoreConversations,
             _backendConversations,
           );
-          _activeWebConversation ??=
-              _conversations.isNotEmpty ? _conversations.first : null;
+          _activeWebConversation = _findMatchingActiveWebConversation(
+            _conversations,
+            _activeWebConversation,
+          );
           _isLoading = false;
         });
       }
@@ -231,22 +283,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
             _firestoreConversations,
             _backendConversations,
           );
-          if (_activeWebConversation != null) {
-            final activeDocId =
-                _activeWebConversation!['firestore_doc_id']?.toString();
-            final updated = _conversations.where(
-              (c) => c['firestore_doc_id']?.toString() == activeDocId,
-            );
-            _activeWebConversation = updated.isNotEmpty
-                ? updated.first
-                : (_conversations.isNotEmpty ? _conversations.first : null);
-          } else {
-            _activeWebConversation =
-                _conversations.isNotEmpty ? _conversations.first : null;
-          }
+          _activeWebConversation = _findMatchingActiveWebConversation(
+            _conversations,
+            _activeWebConversation,
+          );
           _isLoading = false;
         });
       }, onError: (_) {
+        unawaited(_fetchBackendConversationsInBackground());
         if (mounted) {
           setState(() => _isLoading = false);
         }
@@ -324,9 +368,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     final rawId = raw['id'] ?? raw['conversation_id'];
     final int convId = int.tryParse('$rawId') ?? 0;
+    final int myUserId = int.tryParse('${_state.currentUser?['id'] ?? 0}') ?? 0;
+
+    int resolvedPeerId = int.tryParse('${raw['peer_id'] ?? peer['id'] ?? 0}') ?? 0;
+    if (resolvedPeerId <= 0 || resolvedPeerId == myUserId) {
+      for (final candidate in [
+        raw['other_user_id'],
+        raw['receiver_id'],
+        raw['seller_id'],
+        raw['buyer_id'],
+        raw['user_two_id'],
+        raw['user_one_id'],
+      ]) {
+        final cid = int.tryParse('${candidate ?? 0}') ?? 0;
+        if (cid > 0 && cid != myUserId) {
+          resolvedPeerId = cid;
+          break;
+        }
+      }
+    }
 
     return {
       'id': convId,
+      if (convId > 0) 'backend_id': convId,
       'ad_id': raw['ad_id'] ?? ad['id'] ?? 0,
       'ad_title': (raw['ad_title'] ?? ad['title'] ?? '').toString(),
       'ad_price':
@@ -334,7 +398,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               .toString(),
       'ad_image': (raw['ad_image'] ?? ad['primary_image'] ?? ad['image'] ?? '')
           .toString(),
-      'peer_id': raw['peer_id'] ?? peer['id'] ?? 0,
+      'peer_id': resolvedPeerId,
       'peer_name':
           (raw['peer_name'] ?? peer['name'] ?? 'Jenny Wilson').toString(),
       'peer_avatar':

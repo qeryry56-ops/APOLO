@@ -110,32 +110,53 @@ class FirebaseChatService {
     if (!_isReady || myUserId <= 0 || peerUserId <= 0) {
       return defaultDocId;
     }
-    if (adId > 0) {
-      return defaultDocId;
-    }
     try {
+      if (adId > 0) {
+        final directSnap = await _conversations
+            .doc(defaultDocId)
+            .get()
+            .timeout(const Duration(seconds: 4));
+        if (directSnap.exists) {
+          return defaultDocId;
+        }
+      }
       final myKey = '$myUserId';
       final peerKey = '$peerUserId';
       final snap = await _conversations
           .where('participants', arrayContains: myKey)
-          .get();
-      String? bestDocId;
-      int bestUpdatedMs = -1;
+          .get()
+          .timeout(const Duration(seconds: 4));
+      String? bestSameAdDocId;
+      int bestSameAdMs = -1;
+      String? bestAnyDocId;
+      int bestAnyMs = -1;
       for (final doc in snap.docs) {
         final data = doc.data();
         final parts = (data['participants'] is List)
             ? (data['participants'] as List).map((e) => '$e').toList()
             : const <String>[];
-        if (parts.contains(peerKey) && (myKey != peerKey || parts.where((p) => p == myKey).length >= 2)) {
+        if (parts.contains(peerKey) &&
+            (myKey != peerKey || parts.where((p) => p == myKey).length >= 2)) {
           final updatedMs =
               int.tryParse('${data['updated_at_ms'] ?? 0}') ?? 0;
-          if (updatedMs > bestUpdatedMs) {
-            bestUpdatedMs = updatedMs;
-            bestDocId = doc.id;
+          final docAdId = int.tryParse('${data['ad_id'] ?? 0}') ?? 0;
+          if (adId > 0 &&
+              (docAdId == adId || doc.id.startsWith('ad_${adId}_'))) {
+            if (updatedMs > bestSameAdMs) {
+              bestSameAdMs = updatedMs;
+              bestSameAdDocId = doc.id;
+            }
+          }
+          if (updatedMs > bestAnyMs) {
+            bestAnyMs = updatedMs;
+            bestAnyDocId = doc.id;
           }
         }
       }
-      return bestDocId ?? defaultDocId;
+      if (adId > 0) {
+        return bestSameAdDocId ?? defaultDocId;
+      }
+      return bestAnyDocId ?? defaultDocId;
     } catch (_) {
       return defaultDocId;
     }
