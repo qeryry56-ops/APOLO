@@ -607,14 +607,17 @@ class _ApoloDlButtonState extends State<ApoloDlButton> {
                             const SizedBox(width: 8),
                           ],
                           Flexible(
-                            child: Text(
-                              widget.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: _fontSize,
-                                fontWeight: FontWeight.w700,
-                                color: effectiveFg,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                widget.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: _fontSize,
+                                  fontWeight: FontWeight.w700,
+                                  color: effectiveFg,
+                                ),
                               ),
                             ),
                           ),

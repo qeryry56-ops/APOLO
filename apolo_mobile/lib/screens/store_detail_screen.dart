@@ -41,7 +41,6 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   Color get _dlPill => ApoloDlPalette.of(context).pill;
   Color get _dlSeparator => ApoloDlPalette.of(context).separator;
   Color get _dlInk => ApoloDlPalette.of(context).ink;
-  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
   Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlDanger = Color(0xFFE31B23);
 

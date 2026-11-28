@@ -57,7 +57,6 @@ class _ExploreListingCardState extends State<ExploreListingCard>
   Color get _dlPill => ApoloDlPalette.of(context).pill;
   Color get _dlSeparator => ApoloDlPalette.of(context).separator;
   Color get _dlInk => ApoloDlPalette.of(context).ink;
-  Color get _dlOnInk => ApoloDlPalette.of(context).onInk;
   Color get _dlMuted => ApoloDlPalette.of(context).muted;
   static const Color _dlHeartRed = Color(0xFFFF3B30);
   static const Color _dlStarAmber = Color(0xFFFFB800);
@@ -286,12 +285,12 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       final city = ad['city'] as Map;
       final name = (_state.s.isAr
               ? (city['name_ar'] ?? city['name'] ?? city['name_fr'])
-              : (_state.s.isEn
-                  ? (city['name_en'] ??
+              : (_state.s.isFr
+                  ? (city['name_fr'] ?? city['name'] ?? city['name_ar'])
+                  : (city['name_en'] ??
                       city['name_fr'] ??
                       city['name'] ??
-                      city['name_ar'])
-                  : (city['name_fr'] ?? city['name'] ?? city['name_ar'])))
+                      city['name_ar'])))
           .toString()
           .trim();
       if (name.isNotEmpty) return name;
@@ -299,12 +298,12 @@ class _ExploreListingCardState extends State<ExploreListingCard>
 
     final flat = (_state.s.isAr
             ? (ad['city_ar'] ?? ad['city_name'] ?? ad['city_fr'])
-            : (_state.s.isEn
-                ? (ad['city_en'] ??
+            : (_state.s.isFr
+                ? (ad['city_fr'] ?? ad['city_name'] ?? ad['city_ar'])
+                : (ad['city_en'] ??
                     ad['city_fr'] ??
                     ad['city_name'] ??
-                    ad['city_ar'])
-                : (ad['city_fr'] ?? ad['city_name'] ?? ad['city_ar'])))
+                    ad['city_ar'])))
         .toString()
         .trim();
     return flat;
@@ -660,7 +659,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: _dlSeparator, width: 1),
         ),
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 15),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,12 +839,12 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                 children: [
                   // Row 1: Title + Star Rating
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
                           title,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: _dlInk,
@@ -971,35 +970,39 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Directionality(
-                                  textDirection: TextDirection.ltr,
-                                  child: RichText(
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: pricing.mainAmount,
-                                          style: TextStyle(
-                                            color: _dlInk,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: -0.2,
-                                            fontFeatures: [
-                                              FontFeature.tabularFigures(),
-                                            ],
-                                          ),
-                                        ),
-                                        if (pricing.unitSuffix.isNotEmpty)
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: AlignmentDirectional.centerEnd,
+                                  child: Directionality(
+                                    textDirection: TextDirection.ltr,
+                                    child: RichText(
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      text: TextSpan(
+                                        children: [
                                           TextSpan(
-                                            text: ' ${pricing.unitSuffix}',
+                                            text: pricing.mainAmount,
                                             style: TextStyle(
-                                              color: _dlMuted,
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w500,
+                                              color: _dlInk,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: -0.2,
+                                              fontFeatures: [
+                                                FontFeature.tabularFigures(),
+                                              ],
                                             ),
                                           ),
-                                      ],
+                                          if (pricing.unitSuffix.isNotEmpty)
+                                            TextSpan(
+                                              text: ' ${pricing.unitSuffix}',
+                                              style: TextStyle(
+                                                color: _dlMuted,
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),

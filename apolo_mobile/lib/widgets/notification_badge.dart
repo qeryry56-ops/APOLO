@@ -336,10 +336,10 @@ class _NotificationBadgeState extends State<NotificationBadge>
       children: [
         widget.child!,
         if (shouldShow)
-          Positioned(
+          PositionedDirectional(
             top: effectiveTop,
             bottom: effectiveBottom,
-            right: effectiveRight,
+            end: effectiveRight,
             child: IgnorePointer(
               child: _buildAnimatedBadge(reduceMotion),
             ),

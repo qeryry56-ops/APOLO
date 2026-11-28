@@ -178,14 +178,14 @@ void main() {
 
       // Curve is Cubic(0.22, 1.0, 0.36, 1.0), never Curves.linear
       expect(ApoloMotion.easeOutCurve, isA<Cubic>());
-      final cubic = ApoloMotion.easeOutCurve as Cubic;
+      const cubic = ApoloMotion.easeOutCurve as Cubic;
       expect(cubic.a, closeTo(0.22, 0.001));
       expect(cubic.b, closeTo(1.0, 0.001));
       expect(cubic.c, closeTo(0.36, 0.001));
       expect(cubic.d, closeTo(1.0, 0.001));
 
       // Spring damping ratio zeta = damping / (2 * sqrt(mass * stiffness)) == 0.80
-      final s = ApoloMotion.springDamping08;
+      const s = ApoloMotion.springDamping08;
       final zeta = s.damping / (2 * math.sqrt(s.mass * s.stiffness));
       expect(zeta, closeTo(0.80, 0.01));
     });

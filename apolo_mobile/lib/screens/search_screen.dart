@@ -51,6 +51,7 @@ class _SearchScreenState extends State<SearchScreen>
   int? _cityId;
   double? _minPrice;
   double? _maxPrice;
+  String? _condition; // null | 'new' | 'like_new' | 'used'
   bool _onlyNegotiable = false;
   String _sellerType = 'all'; // 'all' | 'personal' | 'business'
   String _sortBy = 'smart';
@@ -341,10 +342,41 @@ class _SearchScreenState extends State<SearchScreen>
     int count = 0;
     if (_cityId != null) count++;
     if (_minPrice != null || _maxPrice != null) count++;
+    if (_condition != null) count++;
     if (_onlyNegotiable) count++;
     if (_sellerType != 'all') count++;
     if (_sortBy != 'smart') count++;
     return count;
+  }
+
+  static String? _normalizeAdCondition(Map<String, dynamic> ad) {
+    final raw = (ad['condition'] ?? ad['item_condition'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    if (raw.isEmpty) return null;
+    if (raw == 'new' || raw == 'neuf' || raw == 'جديد') return 'new';
+    if (raw == 'like_new' ||
+        raw == 'like new' ||
+        raw == 'comme neuf' ||
+        raw == 'بحال الجديد') {
+      return 'like_new';
+    }
+    if (raw == 'used' || raw == 'occasion' || raw == 'مستعمل') return 'used';
+    return raw;
+  }
+
+  String _conditionOptionLabel(String code) {
+    switch (code) {
+      case 'new':
+        return appL10n.conditionNew;
+      case 'like_new':
+        return appL10n.conditionLikeNew;
+      case 'used':
+        return appL10n.conditionUsed;
+      default:
+        return appL10n.conditionLabel;
+    }
   }
 
   List<Map<String, dynamic>> _filterAndSortAds(List<dynamic> rawList) {
@@ -369,6 +401,10 @@ class _SearchScreenState extends State<SearchScreen>
       final priceVal = double.tryParse((ad['price'] ?? 0).toString()) ?? 0.0;
       if (_minPrice != null && priceVal < _minPrice!) return false;
       if (_maxPrice != null && priceVal > _maxPrice!) return false;
+      if (_condition != null) {
+        final adCond = _normalizeAdCondition(ad);
+        if (adCond != null && adCond != _condition) return false;
+      }
       if (_onlyNegotiable) {
         final neg = ad['negotiable'] == true || ad['is_negotiable'] == true;
         if (!neg) return false;
@@ -684,6 +720,7 @@ class _SearchScreenState extends State<SearchScreen>
 
     int? tempCatId = _categoryId;
     int? tempCityId = _cityId;
+    String? tempCondition = _condition;
     bool tempNeg = _onlyNegotiable;
     String tempSort = _sortBy;
 
@@ -768,6 +805,7 @@ class _SearchScreenState extends State<SearchScreen>
                               setModalState(() {
                                 tempCatId = null;
                                 tempCityId = null;
+                                tempCondition = null;
                                 tempNeg = false;
                                 tempSort = 'smart';
                                 minCtrl.clear();
@@ -856,11 +894,11 @@ class _SearchScreenState extends State<SearchScreen>
                             final id = int.tryParse(c['id'].toString());
                             final lbl = (s.isAr
                                     ? (c['name_ar'] ?? c['name'])
-                                    : (s.isEn
-                                        ? (c['name_en'] ??
+                                    : (s.isFr
+                                        ? (c['name_fr'] ?? c['name'])
+                                        : (c['name_en'] ??
                                             c['name_fr'] ??
-                                            c['name'])
-                                        : (c['name_fr'] ?? c['name'])))
+                                            c['name'])))
                                 .toString();
                             return _ModalFilterChip(
                               label: lbl,
@@ -901,6 +939,49 @@ class _SearchScreenState extends State<SearchScreen>
                               onTap: () => setModalState(() => tempCatId = id),
                             );
                           }),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 3.5 Condition Pills (`New` / `Like New` / `Used`)
+                      Text(
+                        appL10n.conditionLabel,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: _dlMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _ModalFilterChip(
+                            label: appL10n.chatListAll,
+                            active: tempCondition == null,
+                            onTap: () =>
+                                setModalState(() => tempCondition = null),
+                          ),
+                          _ModalFilterChip(
+                            label: appL10n.conditionNew,
+                            active: tempCondition == 'new',
+                            onTap: () =>
+                                setModalState(() => tempCondition = 'new'),
+                          ),
+                          _ModalFilterChip(
+                            label: appL10n.conditionLikeNew,
+                            active: tempCondition == 'like_new',
+                            onTap: () =>
+                                setModalState(() => tempCondition = 'like_new'),
+                          ),
+                          _ModalFilterChip(
+                            label: appL10n.conditionUsed,
+                            active: tempCondition == 'used',
+                            onTap: () =>
+                                setModalState(() => tempCondition = 'used'),
+                          ),
                         ],
                       ),
 
@@ -1084,6 +1165,7 @@ class _SearchScreenState extends State<SearchScreen>
                           setState(() {
                             _categoryId = tempCatId;
                             _cityId = tempCityId;
+                            _condition = tempCondition;
                             _onlyNegotiable = tempNeg;
                             _sortBy = tempSort;
                             _minPrice = double.tryParse(minCtrl.text.trim());
@@ -1830,13 +1912,81 @@ class _SearchScreenState extends State<SearchScreen>
       if (int.tryParse('${c['id']}') == _cityId) {
         return (s.isAr
                 ? (c['name_ar'] ?? c['name'])
-                : (s.isEn
-                    ? (c['name_en'] ?? c['name_fr'] ?? c['name'])
-                    : (c['name_fr'] ?? c['name'])))
+                : (s.isFr
+                    ? (c['name_fr'] ?? c['name'])
+                    : (c['name_en'] ?? c['name_fr'] ?? c['name'])))
             .toString();
       }
     }
     return null;
+  }
+
+  String? _selectedCategoryLabel() {
+    if (_categoryId == null) return null;
+    for (final c in _effectiveCategories) {
+      if (int.tryParse('${c['id']}') == _categoryId) {
+        return _state.formatCategoryLabel(c);
+      }
+    }
+    return null;
+  }
+
+  Widget _buildQuickFilterChip({
+    required Key chipKey,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+    IconData? icon,
+  }) {
+    return GestureDetector(
+      key: chipKey,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 184, minHeight: 32),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? _dlInk : _dlPill,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 12.5,
+                  color: active ? _dlOnInk : _dlInk,
+                ),
+                const SizedBox(width: 5),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                    color: active ? _dlOnInk : _dlInk,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                CupertinoIcons.chevron_down,
+                size: 10.5,
+                color: active ? _dlOnInk : _dlMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSellerTypePill({
@@ -1901,35 +2051,38 @@ class _SearchScreenState extends State<SearchScreen>
         HapticFeedback.selectionClick();
         onRemove();
       },
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 11),
-        decoration: BoxDecoration(
-          color: _dlPill,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _dlInk,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 210),
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          decoration: BoxDecoration(
+            color: _dlPill,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _dlInk,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 5),
-            Icon(
-              CupertinoIcons.xmark,
-              size: 11,
-              color: _dlMuted,
-            ),
-          ],
+              const SizedBox(width: 5),
+              Icon(
+                CupertinoIcons.xmark,
+                size: 11,
+                color: _dlMuted,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1941,7 +2094,47 @@ class _SearchScreenState extends State<SearchScreen>
     final canPop = Navigator.of(context).canPop();
     final filterCount = _activeFilterCount;
     final cityChipLabel = _selectedCityLabel(s);
+    final categoryChipLabel = _selectedCategoryLabel();
     final hasPriceRange = _minPrice != null || _maxPrice != null;
+    final priceRangeText = _minPrice != null && _maxPrice != null
+        ? '${_minPrice!.toInt()}–${_maxPrice!.toInt()} DH'
+        : (_minPrice != null
+            ? '≥ ${_minPrice!.toInt()} DH'
+            : (_maxPrice != null ? '≤ ${_maxPrice!.toInt()} DH' : null));
+    final quickChips = <Widget>[
+      _buildQuickFilterChip(
+        chipKey: const Key('explore-quick-chip-category'),
+        icon: CupertinoIcons.layers_alt,
+        label: categoryChipLabel ??
+            s.tr('القسم', 'Catégorie', appL10n.adDetailCategory),
+        active: _categoryId != null,
+        onTap: _openFilterModal,
+      ),
+      _buildQuickFilterChip(
+        chipKey: const Key('explore-quick-chip-price'),
+        icon: CupertinoIcons.tag,
+        label: priceRangeText ?? appL10n.priceLabel,
+        active: hasPriceRange,
+        onTap: _openFilterModal,
+      ),
+      _buildQuickFilterChip(
+        chipKey: const Key('explore-quick-chip-condition'),
+        icon: CupertinoIcons.sparkles,
+        label: _condition != null
+            ? _conditionOptionLabel(_condition!)
+            : appL10n.conditionLabel,
+        active: _condition != null,
+        onTap: _openFilterModal,
+      ),
+      _buildQuickFilterChip(
+        chipKey: const Key('explore-quick-chip-location'),
+        icon: CupertinoIcons.location,
+        label: cityChipLabel ??
+            s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity),
+        active: _cityId != null,
+        onTap: _openFilterModal,
+      ),
+    ];
     final activeChips = <Widget>[
       if (_queryCtrl.text.trim().isNotEmpty)
         _buildActiveFilterChip(
@@ -1961,19 +2154,24 @@ class _SearchScreenState extends State<SearchScreen>
             _searchAds();
           },
         ),
-      if (hasPriceRange)
+      if (hasPriceRange && priceRangeText != null)
         _buildActiveFilterChip(
           chipKey: const Key('explore-chip-price'),
-          label: _minPrice != null && _maxPrice != null
-              ? '${_minPrice!.toInt()}–${_maxPrice!.toInt()} DH'
-              : (_minPrice != null
-                  ? '≥ ${_minPrice!.toInt()} DH'
-                  : '≤ ${_maxPrice!.toInt()} DH'),
+          label: priceRangeText,
           onRemove: () {
             setState(() {
               _minPrice = null;
               _maxPrice = null;
             });
+            _searchAds();
+          },
+        ),
+      if (_condition != null)
+        _buildActiveFilterChip(
+          chipKey: const Key('explore-chip-condition'),
+          label: _conditionOptionLabel(_condition!),
+          onRemove: () {
+            setState(() => _condition = null);
             _searchAds();
           },
         ),
@@ -1997,8 +2195,12 @@ class _SearchScreenState extends State<SearchScreen>
         ),
     ];
     const double headerExtent = 64.0 + 54.0;
+    final effectiveDir =
+        s.isAr ? TextDirection.rtl : Directionality.of(context);
 
-    return Scaffold(
+    return Directionality(
+      textDirection: effectiveDir,
+      child: Scaffold(
       key: const Key('dl-explore-screen'),
       backgroundColor: _dlBg,
       body: SafeArea(
@@ -2071,45 +2273,72 @@ class _SearchScreenState extends State<SearchScreen>
                                 children: [
                                   Row(
                                     children: [
-                                      Flexible(
-                                        child: MarketplaceZonePill(
-                                          state: _state,
-                                          compact: true,
-                                          onTap: () =>
-                                              showMarketplaceZoneSheet(context),
+                                      Expanded(
+                                        child: Align(
+                                          alignment:
+                                              AlignmentDirectional.centerStart,
+                                          child: MarketplaceZonePill(
+                                            state: _state,
+                                            compact: true,
+                                            onTap: () =>
+                                                showMarketplaceZoneSheet(
+                                                    context),
+                                          ),
                                         ),
                                       ),
-                                      const Spacer(),
+                                      const SizedBox(width: 8),
                                       if (_state.hasActiveZone)
-                                        GestureDetector(
-                                          onTap: () => _state.clearZoneFilter(),
-                                          child: Text(
-                                            s.tr(
-                                              'كل المغرب',
-                                              'Tout voir',
-                                              appL10n.searchAllAreas,
+                                        Flexible(
+                                          flex: 0,
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 132,
                                             ),
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: _dlInk,
+                                            child: GestureDetector(
+                                              onTap: () =>
+                                                  _state.clearZoneFilter(),
+                                              child: Text(
+                                                s.tr(
+                                                  'كل المغرب',
+                                                  'Tout voir',
+                                                  appL10n.searchAllAreas,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: _dlInk,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         )
                                       else
-                                        GestureDetector(
-                                          onTap: () =>
-                                              showMarketplaceZoneSheet(context),
-                                          child: Text(
-                                            s.tr(
-                                              'حدد منطقتك',
-                                              'Choisir zone',
-                                              appL10n.searchSetArea,
+                                        Flexible(
+                                          flex: 0,
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 132,
                                             ),
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: _dlMuted,
+                                            child: GestureDetector(
+                                              onTap: () =>
+                                                  showMarketplaceZoneSheet(
+                                                      context),
+                                              child: Text(
+                                                s.tr(
+                                                  'حدد منطقتك',
+                                                  'Choisir zone',
+                                                  appL10n.searchSetArea,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _dlMuted,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -2211,6 +2440,24 @@ class _SearchScreenState extends State<SearchScreen>
                                       ),
                                     ),
                                   ],
+                                  const SizedBox(height: 8),
+                                  SingleChildScrollView(
+                                    key: const Key(
+                                      'dl-explore-quick-filter-chips',
+                                    ),
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const BouncingScrollPhysics(),
+                                    child: Row(
+                                      children: [
+                                        for (var i = 0;
+                                            i < quickChips.length;
+                                            i++) ...[
+                                          if (i > 0) const SizedBox(width: 8),
+                                          quickChips[i],
+                                        ],
+                                      ],
+                                    ),
+                                  ),
                                   if (activeChips.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     SizedBox(
@@ -2276,6 +2523,7 @@ class _SearchScreenState extends State<SearchScreen>
                                     _cityId = null;
                                     _minPrice = null;
                                     _maxPrice = null;
+                                    _condition = null;
                                     _onlyNegotiable = false;
                                     _sellerType = 'all';
                                     _sortBy = 'smart';
@@ -2293,7 +2541,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 gridDelegate:
                                     const SliverGridDelegateWithMaxCrossAxisExtent(
                                   maxCrossAxisExtent: 400,
-                                  mainAxisExtent: 374,
+                                  mainAxisExtent: 396,
                                   mainAxisSpacing: 18,
                                   crossAxisSpacing: 18,
                                 ),
@@ -2330,7 +2578,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   crossAxisCount: 2,
                                   mainAxisSpacing: 12,
                                   crossAxisSpacing: 12,
-                                  childAspectRatio: 0.72,
+                                  childAspectRatio: 0.66,
                                 ),
                                 itemCount: _ads.length + (_loadingMore ? 2 : 0),
                                 itemBuilder: (context, idx) {
@@ -2407,6 +2655,7 @@ class _SearchScreenState extends State<SearchScreen>
                   ),
                 ),
               ),
+      ),
       ),
     );
   }
@@ -2486,13 +2735,18 @@ class _ModalFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = ApoloDlPalette.of(context);
+    final maxW = (MediaQuery.sizeOf(context).width - 48).clamp(100.0, 460.0);
     return PressableScale(
       onTap: () {
         HapticFeedback.selectionClick();
         onTap();
       },
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 40, minWidth: 44),
+        constraints: BoxConstraints(
+          minHeight: 40,
+          minWidth: 44,
+          maxWidth: maxW,
+        ),
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
@@ -2505,6 +2759,8 @@ class _ModalFilterChip extends StatelessWidget {
             ),
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w600,

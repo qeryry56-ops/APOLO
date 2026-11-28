@@ -1569,17 +1569,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String chatRoomMyLocationResolvedcity(Object resolvedCity) {
-    return '📍 موقعي الحالي: ⁨$resolvedCity⁩';
+    return '📍 موقعي الحالي: $resolvedCity';
   }
 
   @override
   String chatRoomPriceOfferTitleDhCleaned(Object title, Object cleaned) {
-    return '💰 عرض ثمن على \"⁨$title⁩\": ⁦$cleaned DH⁩';
+    return '💰 عرض ثمن على \"$title\": $cleaned DH';
   }
 
   @override
   String chatRoomPriceOfferDhCleaned(Object cleaned) {
-    return '💰 عرض ثمن: ⁦$cleaned DH⁩';
+    return '💰 عرض ثمن: $cleaned DH';
   }
 
   @override
@@ -1601,7 +1601,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String chatRoomLastSeenClock(Object clock) {
-    return 'آخر ظهور ⁦$clock⁩';
+    return 'آخر ظهور $clock';
   }
 
   @override
@@ -1801,7 +1801,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeWhyChooseApolo => 'علاش تختار Apolo؟';
 
   @override
-  String get home0CommissionFree => '⁦0%⁩ عمولة وبالمجان';
+  String get home0CommissionFree => '0% عمولة وبالمجان';
 
   @override
   String get homeBuySellFreeZeroMiddlemen =>

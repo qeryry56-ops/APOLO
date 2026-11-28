@@ -511,9 +511,9 @@ class _AccommodationCardState extends State<AccommodationCard> {
               ),
 
               // 3. Bottom Dynamic Layer Pure #FFFFFF Floating Info Panel
-              Positioned(
-                left: 10,
-                right: 10,
+              PositionedDirectional(
+                start: 10,
+                end: 10,
                 bottom: 10,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -531,13 +531,12 @@ class _AccommodationCardState extends State<AccommodationCard> {
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
                               title,
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: _dlInk,
@@ -549,33 +548,42 @@ class _AccommodationCardState extends State<AccommodationCard> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: RichText(
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: nightlyPrice,
-                                    style: TextStyle(
-                                      color: _dlInk,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.3,
-                                      fontFeatures: [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                  if (priceUnit.isNotEmpty)
-                                    TextSpan(
-                                      text: ' $priceUnit',
-                                      style: TextStyle(
-                                        color: _dlMuted,
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w500,
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 132),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: RichText(
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: nightlyPrice,
+                                        style: TextStyle(
+                                          color: _dlInk,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.3,
+                                          fontFeatures: [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                ],
+                                      if (priceUnit.isNotEmpty)
+                                        TextSpan(
+                                          text: ' $priceUnit',
+                                          style: TextStyle(
+                                            color: _dlMuted,
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),

@@ -2674,8 +2674,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         restingComposerBottom + Ios26IMessageTokens.composerMinHeight + 14.0 + drawerHeightOffset;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveDir = _state.s.isAr
+        ? TextDirection.rtl
+        : Directionality.of(context);
 
-    return Scaffold(
+    return Directionality(
+      textDirection: effectiveDir,
+      child: Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF0A0A0A) : Ios26IMessageTokens.canvasWhite,
       body: Stack(
@@ -2867,7 +2872,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                           children: [
                             Flexible(
                               child: Text(
-                                '$_unreadIncomingCount new ${_unreadIncomingCount == 1 ? 'message' : 'messages'}',
+                                _state.s.isEn
+                                    ? '$_unreadIncomingCount new ${_unreadIncomingCount == 1 ? 'message' : 'messages'}'
+                                    : context.l10n
+                                        .chatNewMessagesJumpToLatest(
+                                          _unreadIncomingCount,
+                                          _unreadIncomingCount == 1
+                                              ? context.l10n.chatMessageSingular
+                                              : context.l10n.chatMessagePlural,
+                                        )
+                                        .split('.')
+                                        .first
+                                        .trim(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -2969,6 +2985,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               child: _buildCallDropdownCard(),
             ),
         ],
+      ),
       ),
     );
   }
@@ -3226,6 +3243,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             const SizedBox(height: 14),
             Text(
               widget.peerName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
@@ -3235,9 +3255,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             const SizedBox(height: 6),
             Text(
               widget.adTitle.isNotEmpty
-                  ? 'محادثة بخصوص: "\u2068${widget.adTitle}\u2069"'
-                  : 'ابدأ المحادثة الآن واطرح استفساراتك مباشرة',
+                  ? '\u2068${widget.adTitle}\u2069'
+                  : _state.s.tr(
+                      'ابدأ المحادثة الآن واطرح استفساراتك مباشرة',
+                      'Envoyez un message au vendeur',
+                      appL10n.chatPlaceholder,
+                    ),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 13,
                 color: _textMuted,
@@ -3332,7 +3358,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                         children: [
                           Text(
                             title,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             textDirection: ChatMessage.detectTextDirection(
                               title,

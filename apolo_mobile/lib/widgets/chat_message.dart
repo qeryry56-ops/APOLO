@@ -723,7 +723,7 @@ class _ChatMessageState extends State<ChatMessage>
     } else if (isPureImageBubble) {
       // Exact Figma `1:2` photo message bubble (`(25, -58, 170, 222)`):
       // `170 × 216` rounded `16px` image body.
-      final double photoHeight =
+      const double photoHeight =
           Ios26IMessageTokens.photoBubbleBodyHeight + tailDrop;
       bubbleCore = GestureDetector(
         key: Key('chat-bubble-${widget.messageKey}'),
@@ -902,7 +902,7 @@ class _ChatMessageState extends State<ChatMessage>
                       ],
                       if (widget.isEdited && !isDeleted)
                         Text(
-                          'Edited',
+                          context.l10n.chatEditedLabel,
                           style: TextStyle(
                             fontSize: 10.5,
                             color: isMine

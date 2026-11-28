@@ -1020,110 +1020,120 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktopWeb = screenWidth >= 800;
 
+    final effectiveDir = _state.s.isAr
+        ? TextDirection.rtl
+        : Directionality.of(context);
+
     if (isDesktopWeb) {
-      return Scaffold(
-        backgroundColor: bgColor,
-        body: Row(
-          children: [
-            SizedBox(
-              width: 380,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  border: Border(
-                    right: BorderSide(color: borderColor, width: 1),
+      return Directionality(
+        textDirection: effectiveDir,
+        child: Scaffold(
+          backgroundColor: bgColor,
+          body: Row(
+            children: [
+              SizedBox(
+                width: 380,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    border: BorderDirectional(
+                      end: BorderSide(color: borderColor, width: 1),
+                    ),
                   ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: _buildChatsListPane(
-                    isDesktop: true,
-                    isDark: isDark,
+                  child: SafeArea(
+                    bottom: false,
+                    child: _buildChatsListPane(
+                      isDesktop: true,
+                      isDark: isDark,
+                    ),
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: _activeWebConversation != null
-                  ? ChatRoomScreen(
-                      key: ValueKey(
-                          'active_web_${_activeWebConversation!['firestore_doc_id'] ?? _activeWebConversation!['id']}'),
-                      conversationId:
-                          int.tryParse('${_activeWebConversation!['id']}') ??
-                              101,
-                      backendConversationId: int.tryParse(
-                          '${_activeWebConversation!['backend_id'] ?? ''}'),
-                      adId: int.tryParse(
-                          '${_activeWebConversation!['ad_id'] ?? ''}'),
-                      firestoreDocId:
-                          _activeWebConversation!['firestore_doc_id']
-                              ?.toString(),
-                      peerId: int.tryParse(
-                          '${_activeWebConversation!['peer_id'] ?? ''}'),
-                      peerName: (_activeWebConversation!['peer_name'] ??
-                              'Apolo User')
-                          .toString(),
-                      adTitle:
-                          _activeWebConversation!['ad_title']?.toString() ?? '',
-                      peerAvatar:
-                          _activeWebConversation!['peer_avatar']?.toString(),
-                      adImage:
-                          _activeWebConversation!['ad_image']?.toString(),
-                      adPrice: _activeWebConversation!['ad_price']?.toString(),
-                      isPeerVerified:
-                          _activeWebConversation!['peer_verified'] == true,
-                    )
-                  : Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: surfaceSubtle,
-                                shape: BoxShape.circle,
+              Expanded(
+                child: _activeWebConversation != null
+                    ? ChatRoomScreen(
+                        key: ValueKey(
+                            'active_web_${_activeWebConversation!['firestore_doc_id'] ?? _activeWebConversation!['id']}'),
+                        conversationId:
+                            int.tryParse('${_activeWebConversation!['id']}') ??
+                                101,
+                        backendConversationId: int.tryParse(
+                            '${_activeWebConversation!['backend_id'] ?? ''}'),
+                        adId: int.tryParse(
+                            '${_activeWebConversation!['ad_id'] ?? ''}'),
+                        firestoreDocId:
+                            _activeWebConversation!['firestore_doc_id']
+                                ?.toString(),
+                        peerId: int.tryParse(
+                            '${_activeWebConversation!['peer_id'] ?? ''}'),
+                        peerName: (_activeWebConversation!['peer_name'] ??
+                                'Apolo User')
+                            .toString(),
+                        adTitle:
+                            _activeWebConversation!['ad_title']?.toString() ?? '',
+                        peerAvatar:
+                            _activeWebConversation!['peer_avatar']?.toString(),
+                        adImage:
+                            _activeWebConversation!['ad_image']?.toString(),
+                        adPrice: _activeWebConversation!['ad_price']?.toString(),
+                        isPeerVerified:
+                            _activeWebConversation!['peer_verified'] == true,
+                      )
+                    : Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: surfaceSubtle,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  CupertinoIcons.chat_bubble_2,
+                                  size: 24,
+                                  color: ink,
+                                ),
                               ),
-                              alignment: Alignment.center,
-                              child: Icon(
-                                CupertinoIcons.chat_bubble_2,
-                                size: 24,
-                                color: ink,
+                              const SizedBox(height: 14),
+                              Text(
+                                _state.s.tr(
+                                  'حدد محادثة لبدء المراسلة',
+                                  'Sélectionnez une discussion',
+                                  appL10n.chatListSelectConversationStartMessaging,
+                                ),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: mutedText,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              _state.s.tr(
-                                'حدد محادثة لبدء المراسلة',
-                                'Sélectionnez une discussion',
-                                appL10n.chatListSelectConversationStartMessaging,
-                              ),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: mutedText,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        bottom: false,
-        child: _buildChatsListPane(
-          isDesktop: false,
-          isDark: isDark,
+    return Directionality(
+      textDirection: effectiveDir,
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: SafeArea(
+          bottom: false,
+          child: _buildChatsListPane(
+            isDesktop: false,
+            isDark: isDark,
+          ),
         ),
       ),
     );

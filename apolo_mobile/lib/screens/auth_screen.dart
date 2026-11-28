@@ -86,7 +86,6 @@ class _AuthScreenState extends State<AuthScreen>
   bool _switchedFromLogin = false;
 
   final int _cityId = 1;
-  final String _accountType = 'individual';
 
   late final AccountAuth _auth;
   late bool _login;

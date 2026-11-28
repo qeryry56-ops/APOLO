@@ -44,17 +44,17 @@ class AdCard extends StatelessWidget {
     final String cityName = ad['city'] is Map
         ? (state.s.isAr
                 ? (ad['city']['name_ar'] ?? ad['city']['name'])
-                : (state.s.isEn
-                    ? (ad['city']['name_en'] ??
+                : (state.s.isFr
+                    ? (ad['city']['name_fr'] ?? ad['city']['name'])
+                    : (ad['city']['name_en'] ??
                         ad['city']['name_fr'] ??
-                        ad['city']['name'])
-                    : (ad['city']['name_fr'] ?? ad['city']['name'])))
+                        ad['city']['name'])))
             .toString()
         : (state.s.isAr
                 ? (ad['city_ar'] ?? ad['city_name'] ?? '')
-                : (state.s.isEn
-                    ? (ad['city_en'] ?? ad['city_fr'] ?? ad['city_name'] ?? '')
-                    : (ad['city_fr'] ?? ad['city_name'] ?? '')))
+                : (state.s.isFr
+                    ? (ad['city_fr'] ?? ad['city_name'] ?? '')
+                    : (ad['city_en'] ?? ad['city_fr'] ?? ad['city_name'] ?? '')))
             .toString();
 
     final Map<String, dynamic> catMap = ad['category'] is Map
@@ -166,35 +166,44 @@ class AdCard extends StatelessWidget {
           PositionedDirectional(
             bottom: 8,
             start: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-              decoration: BoxDecoration(
-                color: palette.bg,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    CupertinoIcons.location_solid,
-                    size: 10,
-                    color: palette.ink,
+            end: 8,
+            child: Align(
+              alignment: AlignmentDirectional.bottomStart,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 112),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3.5,
                   ),
-                  const SizedBox(width: 3),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 92),
-                    child: Text(
-                      cityName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                  decoration: BoxDecoration(
+                    color: palette.bg,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.location_solid,
+                        size: 10,
                         color: palette.ink,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
                       ),
-                    ),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          cityName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: palette.ink,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -323,50 +332,72 @@ class AdCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: PriceText(
-                      price,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: palette.ink,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15.5,
-                        letterSpacing:
-                            AppTypography.trackingForContext(context, -0.3),
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ),
-                  if (isNegotiable)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: palette.bg,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        state.s.tr('تفاوض', 'Négo', appL10n.negotiableBadge),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: PriceText(
+                        price,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: palette.ink,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15.5,
+                          letterSpacing:
+                              AppTypography.trackingForContext(context, -0.3),
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),
+                  ),
+                  if (isNegotiable) ...[
+                    const SizedBox(width: 6),
+                    Flexible(
+                      flex: 0,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 78),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.bg,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              state.s.tr(
+                                'تفاوض',
+                                'Négo',
+                                appL10n.negotiableBadge,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: palette.ink,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 4),
               Text(
                 title,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: palette.ink,
                   fontWeight: FontWeight.w600,
                   fontSize: 13.5,
+                  height: 1.2,
                   letterSpacing:
                       AppTypography.trackingForContext(context, -0.2),
                 ),
@@ -459,32 +490,41 @@ class AdCard extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(8, 12, 14, 12),
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 10, 14, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  PriceText(
-                    price,
-                    style: TextStyle(
-                      color: palette.ink,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16.5,
-                      letterSpacing:
-                          AppTypography.trackingForContext(context, -0.3),
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: PriceText(
+                      price,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.ink,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16.5,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.3),
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: palette.ink,
-                      letterSpacing:
-                          AppTypography.trackingForContext(context, -0.2),
+                  Flexible(
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                        height: 1.2,
+                        color: palette.ink,
+                        letterSpacing:
+                            AppTypography.trackingForContext(context, -0.2),
+                      ),
                     ),
                   ),
                   Row(

@@ -141,7 +141,7 @@ void main() {
 
   group('Rule 5 & Rule 6: Overshoot Bounce (10-15px, Spring Damping 0.7) & Scroll Alive During Reload', () {
     test('springDamping07 has exact damping ratio 0.70 and bounceOvershootPx is within 10-15px', () {
-      final s = PullToRefresh.springDamping07;
+      const s = PullToRefresh.springDamping07;
       final zeta = s.damping / (2 * math.sqrt(s.mass * s.stiffness));
       expect(zeta, closeTo(0.70, 0.01));
       expect(

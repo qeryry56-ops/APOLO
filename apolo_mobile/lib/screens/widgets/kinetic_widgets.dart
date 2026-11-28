@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/app_typography.dart';
 import '../../widgets/dl_settings_kit.dart';
 import '../../widgets/perceived_performance.dart';
 

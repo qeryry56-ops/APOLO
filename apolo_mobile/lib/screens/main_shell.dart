@@ -411,191 +411,212 @@ class _MainShellState extends State<MainShell>
     final Color dockActivePill =
         isDark ? const Color(0xFF28282E) : _activePill;
 
-    return Scaffold(
-      backgroundColor: shellBg,
-      extendBody: true,
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: [
-              for (var i = 0; i < pages.length; i++)
-                TickerMode(enabled: _currentIndex == i, child: pages[i])
-            ],
-          ),
-          // Responsive Floating Translucent Pill Dock + Borderless "+" Button with Squash & Stretch
-          Positioned(
-            key: const Key('main-shell-bottom-dock'),
-            left: 20,
-            right: 20,
-            bottom: dockBottomOffset,
-            child: IgnorePointer(
-              ignoring: !showBottomBar,
-              child: AnimatedSlide(
-                duration: const Duration(milliseconds: 300),
-                curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-                offset: showBottomBar ? Offset.zero : const Offset(0, 1.8),
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOut,
-                  opacity: showBottomBar ? 1.0 : 0.0,
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 380),
-                      child: SizedBox(
-                        height: 58,
-                        child: Row(
-                          textDirection: TextDirection.ltr,
-                          children: [
-                            // Left Expanded Dynamic Layer Capsule Pill (4 main tabs)
-                            Expanded(
-                              child: Container(
-                                height: 58,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: dockBorder,
-                                    width: 1.5,
+    return Directionality(
+      textDirection:
+          s.isAr ? TextDirection.rtl : Directionality.of(context),
+      child: Scaffold(
+        backgroundColor: shellBg,
+        extendBody: true,
+        body: Stack(
+          children: [
+            IndexedStack(
+              index: _currentIndex,
+              children: [
+                for (var i = 0; i < pages.length; i++)
+                  TickerMode(enabled: _currentIndex == i, child: pages[i])
+              ],
+            ),
+            // Responsive Floating Translucent Pill Dock + Borderless "+" Button with Squash & Stretch
+            PositionedDirectional(
+              key: const Key('main-shell-bottom-dock'),
+              start: 20,
+              end: 20,
+              bottom: dockBottomOffset,
+              child: IgnorePointer(
+                ignoring: !showBottomBar,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 300),
+                  curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+                  offset: showBottomBar ? Offset.zero : const Offset(0, 1.8),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut,
+                    opacity: showBottomBar ? 1.0 : 0.0,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 380),
+                        child: SizedBox(
+                          height: 58,
+                          child: Row(
+                            children: [
+                              // Start-aligned Expanded Dynamic Layer Capsule Pill (4 main tabs)
+                              Expanded(
+                                child: Container(
+                                  height: 58,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: dockBorder,
+                                      width: 1.5,
+                                    ),
                                   ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                        sigmaX: 20, sigmaY: 20),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4.5),
-                                      decoration: BoxDecoration(
-                                        color: dockGlassBg,
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                      ),
-                                      child: LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          final slotWidth =
-                                              constraints.maxWidth /
-                                                  pillItems.length;
-                                          final slotHeight =
-                                              constraints.maxHeight;
-                                          return Stack(
-                                            children: [
-                                              AnimatedPositioned(
-                                                duration: const Duration(
-                                                    milliseconds: 320),
-                                                curve: const Cubic(
-                                                    0.22, 1.0, 0.36, 1.0),
-                                                left: slotWidth * displaySlot,
-                                                top: 0,
-                                                width: slotWidth,
-                                                height: slotHeight,
-                                                child: AnimatedBuilder(
-                                                  animation: _squashCtrl,
-                                                  builder: (context, child) {
-                                                    final sx =
-                                                        _squashCtrl.isAnimating
-                                                            ? _pillScaleX.value
-                                                            : 1.0;
-                                                    final sy =
-                                                        _squashCtrl.isAnimating
-                                                            ? _pillScaleY.value
-                                                            : 1.0;
-                                                    return Transform(
-                                                      alignment:
-                                                          Alignment.center,
-                                                      transform: Matrix4
-                                                          .diagonal3Values(
-                                                              sx, sy, 1.0),
-                                                      child: child,
-                                                    );
-                                                  },
-                                                  child: AnimatedContainer(
-                                                    duration: const Duration(
-                                                        milliseconds: 180),
-                                                    decoration: BoxDecoration(
-                                                      color: activePillSlot >= 0
-                                                          ? dockActivePill
-                                                              .withValues(
-                                                                  alpha: 0.90)
-                                                          : Colors.transparent,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              999),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(999),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                          sigmaX: 20, sigmaY: 20),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4.5),
+                                        decoration: BoxDecoration(
+                                          color: dockGlassBg,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            final slotWidth =
+                                                constraints.maxWidth /
+                                                    pillItems.length;
+                                            final slotHeight =
+                                                constraints.maxHeight;
+                                            return Stack(
+                                              children: [
+                                                AnimatedPositionedDirectional(
+                                                  duration: const Duration(
+                                                      milliseconds: 320),
+                                                  curve: const Cubic(
+                                                      0.22, 1.0, 0.36, 1.0),
+                                                  start:
+                                                      slotWidth * displaySlot,
+                                                  top: 0,
+                                                  width: slotWidth,
+                                                  height: slotHeight,
+                                                  child: AnimatedBuilder(
+                                                    animation: _squashCtrl,
+                                                    builder: (context, child) {
+                                                      final sx =
+                                                          _squashCtrl.isAnimating
+                                                              ? _pillScaleX
+                                                                  .value
+                                                              : 1.0;
+                                                      final sy =
+                                                          _squashCtrl.isAnimating
+                                                              ? _pillScaleY
+                                                                  .value
+                                                              : 1.0;
+                                                      return Transform(
+                                                        alignment:
+                                                            Alignment.center,
+                                                        transform: Matrix4
+                                                            .diagonal3Values(
+                                                                sx, sy, 1.0),
+                                                        child: child,
+                                                      );
+                                                    },
+                                                    child: AnimatedContainer(
+                                                      duration: const Duration(
+                                                          milliseconds: 180),
+                                                      decoration: BoxDecoration(
+                                                        color: activePillSlot >=
+                                                                0
+                                                            ? dockActivePill
+                                                                .withValues(
+                                                                    alpha: 0.90)
+                                                            : Colors
+                                                                .transparent,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(999),
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                              Row(
-                                                textDirection:
-                                                    TextDirection.ltr,
-                                                children: List.generate(
-                                                  pillItems.length,
-                                                  (idx) {
-                                                    final item = pillItems[idx];
-                                                    final selected =
-                                                        _currentIndex ==
-                                                            item.pageIndex;
-                                                    return Expanded(
-                                                      child: PressableScale(
-                                                        pressedScale: 0.90,
-                                                        onTap: () {
-                                                          HapticFeedback
-                                                              .selectionClick();
-                                                          _triggerSquashStretch();
-                                                          if (_currentIndex ==
-                                                              item.pageIndex) {
-                                                            _state
-                                                                .notifyTabReselected();
-                                                          } else {
-                                                            _switchTab(
-                                                              item.pageIndex,
-                                                              pillSlot: idx,
-                                                            );
-                                                          }
-                                                        },
-                                                        child: ConstrainedBox(
-                                                          constraints:
-                                                              const BoxConstraints(
-                                                            minWidth: 44,
-                                                            minHeight: 44,
-                                                          ),
-                                                          child: Semantics(
-                                                            button: true,
-                                                            selected: selected,
-                                                            label: item.label,
-                                                            child: SizedBox(
-                                                              height:
-                                                                  slotHeight,
-                                                              child: Center(
-                                                                child:
-                                                                    AnimatedScale(
-                                                                  scale: selected
-                                                                      ? 1.06
-                                                                      : 1.0,
-                                                                  duration:
-                                                                      const Duration(
-                                                                          milliseconds:
-                                                                              220),
-                                                                  curve: const Cubic(
-                                                                      0.22,
-                                                                      1.0,
-                                                                      0.36,
-                                                                      1.0),
-                                                                  child: NotificationBadge(
-                                                                    count: item.pageIndex == 3
-                                                                        ? _state.unreadChatCount
-                                                                        : 0,
-                                                                    type: NotificationBadgeType.number,
-                                                                    variant: NotificationBadgeVariant.red,
-                                                                    top: -6,
-                                                                    right: -9,
-                                                                    child: Icon(
-                                                                      selected
-                                                                          ? item.activeIcon
-                                                                          : item.icon,
-                                                                      size: 22.5,
-                                                                      color: selected
-                                                                          ? dockInk
-                                                                          : dockInactive,
+                                                Row(
+                                                  children: List.generate(
+                                                    pillItems.length,
+                                                    (idx) {
+                                                      final item =
+                                                          pillItems[idx];
+                                                      final selected =
+                                                          _currentIndex ==
+                                                              item.pageIndex;
+                                                      return Expanded(
+                                                        child: PressableScale(
+                                                          key: Key(
+                                                              'main-shell-tab-${item.pageIndex}'),
+                                                          pressedScale: 0.90,
+                                                          onTap: () {
+                                                            HapticFeedback
+                                                                .selectionClick();
+                                                            _triggerSquashStretch();
+                                                            if (_currentIndex ==
+                                                                item
+                                                                    .pageIndex) {
+                                                              _state
+                                                                  .notifyTabReselected();
+                                                            } else {
+                                                              _switchTab(
+                                                                item.pageIndex,
+                                                                pillSlot: idx,
+                                                              );
+                                                            }
+                                                          },
+                                                          child: ConstrainedBox(
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                              minWidth: 44,
+                                                              minHeight: 44,
+                                                            ),
+                                                            child: Semantics(
+                                                              button: true,
+                                                              selected:
+                                                                  selected,
+                                                              label: item.label,
+                                                              child: SizedBox(
+                                                                height:
+                                                                    slotHeight,
+                                                                child: Center(
+                                                                  child:
+                                                                      AnimatedScale(
+                                                                    scale: selected
+                                                                        ? 1.06
+                                                                        : 1.0,
+                                                                    duration:
+                                                                        const Duration(
+                                                                            milliseconds:
+                                                                                220),
+                                                                    curve: const Cubic(
+                                                                        0.22,
+                                                                        1.0,
+                                                                        0.36,
+                                                                        1.0),
+                                                                    child:
+                                                                        NotificationBadge(
+                                                                      count: item.pageIndex ==
+                                                                              3
+                                                                          ? _state
+                                                                              .unreadChatCount
+                                                                          : 0,
+                                                                      type: NotificationBadgeType
+                                                                          .number,
+                                                                      variant:
+                                                                          NotificationBadgeVariant
+                                                                              .red,
+                                                                      top: -6,
+                                                                      right: -9,
+                                                                      child:
+                                                                          Icon(
+                                                                        selected
+                                                                            ? item
+                                                                                .activeIcon
+                                                                            : item
+                                                                                .icon,
+                                                                        size:
+                                                                            22.5,
+                                                                        color: selected
+                                                                            ? dockInk
+                                                                            : dockInactive,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
@@ -603,86 +624,88 @@ class _MainShellState extends State<MainShell>
                                                             ),
                                                           ),
                                                         ),
-                                                      ),
-                                                    );
-                                                  },
+                                                      );
+                                                    },
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          );
-                                        },
+                                              ],
+                                            );
+                                          },
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            // Right Detached Borderless Circular Glass "+" Button (Post Ad)
-                            PressableScale(
-                              pressedScale: 0.88,
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                _triggerSquashStretch();
-                                if (_currentIndex == 1) {
-                                  _state.notifyTabReselected();
-                                } else {
-                                  _switchTab(1);
-                                }
-                              },
-                              child: Semantics(
-                                button: true,
-                                selected: isPostAdSelected,
-                                label: s.tr('نشر إعلان', 'Publier', appL10n.sellItemButton),
-                                child: AnimatedBuilder(
-                                  animation: _squashCtrl,
-                                  builder: (context, child) {
-                                    final active = isPostAdSelected &&
-                                        _squashCtrl.isAnimating;
-                                    final sx =
-                                        active ? _pillScaleX.value : 1.0;
-                                    final sy =
-                                        active ? _pillScaleY.value : 1.0;
-                                    return Transform(
-                                      alignment: Alignment.center,
-                                      transform:
-                                          Matrix4.diagonal3Values(sx, sy, 1.0),
-                                      child: child,
-                                    );
-                                  },
-                                  child: Container(
-                                    width: 58,
-                                    height: 58,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isPostAdSelected
-                                            ? dockInk
-                                            : dockBorder,
-                                        width: 1.5,
+                              const SizedBox(width: 10),
+                              // End-aligned Detached Borderless Circular Glass "+" Button (Post Ad)
+                              PressableScale(
+                                key: const Key('main-shell-post-ad-btn'),
+                                pressedScale: 0.88,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  _triggerSquashStretch();
+                                  if (_currentIndex == 1) {
+                                    _state.notifyTabReselected();
+                                  } else {
+                                    _switchTab(1);
+                                  }
+                                },
+                                child: Semantics(
+                                  button: true,
+                                  selected: isPostAdSelected,
+                                  label: s.tr('نشر إعلان', 'Publier',
+                                      appL10n.sellItemButton),
+                                  child: AnimatedBuilder(
+                                    animation: _squashCtrl,
+                                    builder: (context, child) {
+                                      final active = isPostAdSelected &&
+                                          _squashCtrl.isAnimating;
+                                      final sx =
+                                          active ? _pillScaleX.value : 1.0;
+                                      final sy =
+                                          active ? _pillScaleY.value : 1.0;
+                                      return Transform(
+                                        alignment: Alignment.center,
+                                        transform: Matrix4.diagonal3Values(
+                                            sx, sy, 1.0),
+                                        child: child,
+                                      );
+                                    },
+                                    child: Container(
+                                      width: 58,
+                                      height: 58,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isPostAdSelected
+                                              ? dockInk
+                                              : dockBorder,
+                                          width: 1.5,
+                                        ),
                                       ),
-                                    ),
-                                    child: ClipOval(
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(
-                                            sigmaX: 20, sigmaY: 20),
-                                        child: AnimatedContainer(
-                                          duration:
-                                              const Duration(milliseconds: 220),
-                                          curve: Curves.easeOutCubic,
-                                          decoration: BoxDecoration(
-                                            color: isPostAdSelected
-                                                ? dockInk
-                                                : dockGlassBg,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: Icon(
-                                            CupertinoIcons.add,
-                                            size: 24,
-                                            color: isPostAdSelected
-                                                ? dockOnInk
-                                                : dockInk,
+                                      child: ClipOval(
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                              sigmaX: 20, sigmaY: 20),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 220),
+                                            curve: Curves.easeOutCubic,
+                                            decoration: BoxDecoration(
+                                              color: isPostAdSelected
+                                                  ? dockInk
+                                                  : dockGlassBg,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Icon(
+                                              CupertinoIcons.add,
+                                              size: 24,
+                                              color: isPostAdSelected
+                                                  ? dockOnInk
+                                                  : dockInk,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -690,8 +713,8 @@ class _MainShellState extends State<MainShell>
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -699,8 +722,8 @@ class _MainShellState extends State<MainShell>
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

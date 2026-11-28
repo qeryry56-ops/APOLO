@@ -800,9 +800,11 @@ class _PostAdScreenState extends State<PostAdScreen> {
     String hint, {
     IconData? icon,
     Widget? suffix,
+    TextDirection? hintTextDirection,
   }) {
     return InputDecoration(
       hintText: hint,
+      hintTextDirection: hintTextDirection,
       hintStyle: TextStyle(
         color: _dlMuted,
         fontSize: 14.5,
@@ -1234,9 +1236,9 @@ class _PostAdScreenState extends State<PostAdScreen> {
               final selected = id == _cityId;
               final name = (s.isAr
                       ? (city['name_ar'] ?? city['name'])
-                      : (s.isEn
-                          ? (city['name_en'] ?? city['name_fr'] ?? city['name'])
-                          : (city['name_fr'] ?? city['name'])))
+                      : (s.isFr
+                          ? (city['name_fr'] ?? city['name'])
+                          : (city['name_en'] ?? city['name_fr'] ?? city['name'])))
                   .toString();
 
               return Material(
@@ -1323,44 +1325,51 @@ class _PostAdScreenState extends State<PostAdScreen> {
                       onTap: _detectingGps ? null : () => _detectAdGps(s),
                       child: SizedBox(
                         height: 40,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (_detectingGps)
-                              SizedBox(
-                                width: 15,
-                                height: 15,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_detectingGps)
+                                SizedBox(
+                                  width: 15,
+                                  height: 15,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _dlInk,
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  CupertinoIcons.location_fill,
+                                  size: 15,
                                   color: _dlInk,
                                 ),
-                              )
-                            else
-                              Icon(
-                                CupertinoIcons.location_fill,
-                                size: 15,
-                                color: _dlInk,
+                              const SizedBox(width: 7),
+                              Flexible(
+                                child: Text(
+                                  _adLat != null
+                                      ? s.tr(
+                                          'تم تحديد موقع الإعلان (GPS)',
+                                          'Position GPS enregistrée',
+                                          appL10n.postAdGpsLocationSet,
+                                        )
+                                      : s.tr(
+                                          'تحديد موقع الإعلان بـ GPS',
+                                          'Détecter la position (GPS)',
+                                          appL10n.postAdDetectAdLocationGps,
+                                        ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _dlInk,
+                                  ),
+                                ),
                               ),
-                            const SizedBox(width: 7),
-                            Text(
-                              _adLat != null
-                                  ? s.tr(
-                                      'تم تحديد موقع الإعلان (GPS)',
-                                      'Position GPS enregistrée',
-                                      appL10n.postAdGpsLocationSet,
-                                    )
-                                  : s.tr(
-                                      'تحديد موقع الإعلان بـ GPS',
-                                      'Détecter la position (GPS)',
-                                      appL10n.postAdDetectAdLocationGps,
-                                    ),
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: _dlInk,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -1387,7 +1396,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             crossAxisCount: 2,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 2.35,
+            childAspectRatio: 2.1,
           ),
           itemCount: _effectiveCategories.length,
           itemBuilder: (context, index) {
@@ -1396,9 +1405,9 @@ class _PostAdScreenState extends State<PostAdScreen> {
             final bool active = _categoryId == id;
             final String label = (s.isAr
                     ? (c['name_ar'] ?? c['name'])
-                    : (s.isEn
-                        ? (c['name_en'] ?? c['name'] ?? c['name_fr'])
-                        : (c['name_fr'] ?? c['name'])))
+                    : (s.isFr
+                        ? (c['name_fr'] ?? c['name'])
+                        : (c['name_en'] ?? c['name'] ?? c['name_fr'])))
                 .toString();
             final String asset = _assetForCategory(label, c is Map ? c : null);
 
@@ -1508,6 +1517,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           'Ajouter plus de photos ($totalPhotos/8)',
                           appL10n.postAdAddMorePhotosTotalphotos8(totalPhotos),
                         ),
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -1525,15 +1535,16 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   style: TextStyle(fontSize: 12.5, color: _dlMuted),
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 8,
                   children: [
                     _miniActionChip(
                       icon: CupertinoIcons.photo_fill,
                       label: s.tr('المعرض', 'Galerie', appL10n.postAdGallery),
                       onTap: () => _pickImages(),
                     ),
-                    const SizedBox(width: 10),
                     _miniActionChip(
                       icon: CupertinoIcons.camera_fill,
                       label: s.tr('الكاميرا', 'Caméra', appL10n.callCamera),
@@ -1549,20 +1560,24 @@ class _PostAdScreenState extends State<PostAdScreen> {
         if (totalPhotos > 0) ...[
           const SizedBox(height: 22),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                s.tr(
-                  'الصور المختارة',
-                  'Photos sélectionnées',
-                  appL10n.postAdSelectedPhotos,
-                ),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: _dlInk,
+              Expanded(
+                child: Text(
+                  s.tr(
+                    'الصور المختارة',
+                    'Photos sélectionnées',
+                    appL10n.postAdSelectedPhotos,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: _dlInk,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '$totalPhotos / 8',
                 textDirection: TextDirection.ltr,
@@ -1723,16 +1738,20 @@ class _PostAdScreenState extends State<PostAdScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              s.tr('عنوان الإعلان', 'Titre de l\'annonce', appL10n.postAdListingTitle),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: _dlInk,
+            Expanded(
+              child: Text(
+                s.tr('عنوان الإعلان', 'Titre de l\'annonce', appL10n.postAdListingTitle),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: _dlInk,
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               titleLen >= 3
                   ? s.tr('ممتاز ✓', 'Parfait ✓', appL10n.postAdGreat)
@@ -1881,6 +1900,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             controller: _priceCtrl,
             cursorColor: _dlInk,
             textDirection: TextDirection.ltr,
+            textAlign: s.isAr ? TextAlign.end : TextAlign.start,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: TextStyle(
               fontSize: 18,
@@ -1890,6 +1910,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             decoration: _dlInputDecoration(
               s.tr('أدخل الثمن بالدرهم', 'Ex: 2500', appL10n.postAdEG2500),
               icon: CupertinoIcons.tag_solid,
+              hintTextDirection: s.isAr ? TextDirection.rtl : TextDirection.ltr,
               suffix: Padding(
                 padding: const EdgeInsetsDirectional.only(end: 14),
                 child: Column(
@@ -2050,7 +2071,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                               appL10n.postAdListingTitle,
                             )
                           : _titleCtrl.text.trim(),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 15.5,
@@ -2118,12 +2139,18 @@ class _PostAdScreenState extends State<PostAdScreen> {
           child: Row(
             children: [
               if (_currentStep > 0) ...[
-                ApoloDlButton(
-                  label: s.tr('السابق', 'Retour', appL10n.backButton),
-                  variant: ApoloDlButtonVariant.secondary,
-                  borderRadius: 999,
-                  height: 54,
-                  onPressed: _prevStep,
+                Flexible(
+                  flex: 0,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 132),
+                    child: ApoloDlButton(
+                      label: s.tr('السابق', 'Retour', appL10n.backButton),
+                      variant: ApoloDlButtonVariant.secondary,
+                      borderRadius: 999,
+                      height: 54,
+                      onPressed: _prevStep,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
               ],
@@ -2299,7 +2326,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                           appL10n.postAdNewListing,
                                         )
                                       : _titleCtrl.text.trim(),
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 15.5,
@@ -2310,6 +2337,8 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                 const SizedBox(height: 3),
                                 Text(
                                   '${_selectedCategoryName()} • ${_selectedCityName()}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w500,
@@ -2385,36 +2414,45 @@ class _DlOptionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: active ? const Color(0xFF000000) : const Color(0xFFEEEEEE),
-      shape: const StadiumBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 14.5,
-                color: active ? Colors.white : const Color(0xFF757575),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: active ? Colors.white : const Color(0xFF000000),
+    final palette = ApoloDlPalette.of(context);
+    final maxW = (MediaQuery.sizeOf(context).width - 48).clamp(120.0, 480.0);
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxW),
+      child: Material(
+        color: active ? palette.ink : palette.pill,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 14.5,
+                  color: active ? palette.onInk : palette.muted,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: active ? palette.onInk : palette.ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
