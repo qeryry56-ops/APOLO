@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated screen for choosing the Apolo app interface & catalog language.
 class SettingsLanguageScreen extends StatefulWidget {
@@ -30,7 +31,7 @@ class _SettingsLanguageScreenState extends State<SettingsLanguageScreen> {
           _error = _state.s.tr(
             'تعذر حفظ اللغة. أعد المحاولة.',
             'Impossible d’enregistrer la langue. Réessayez.',
-            'Could not save language. Please try again.',
+            appL10n.settingsLanguageCouldNotSaveLanguagePlease,
           );
         });
       }
@@ -62,7 +63,7 @@ class _SettingsLanguageScreenState extends State<SettingsLanguageScreen> {
                     title: s.tr(
                       'لغة التطبيق',
                       'Langue de l’app',
-                      'App language',
+                      appL10n.settingsLanguageAppLanguage,
                     ),
                     size: ApoloDlTopNavSize.md,
                   ),
@@ -83,7 +84,7 @@ class _SettingsLanguageScreenState extends State<SettingsLanguageScreen> {
                               s.tr(
                                 'اختر لغة واجهة التطبيق والإعلانات. سيتم تطبيق التغيير فوراً على كامل التطبيق.',
                                 'Choisissez la langue de l’application et du catalogue. Le changement est appliqué immédiatement.',
-                                'Choose the language for the app interface and listings. Changes apply immediately across the app.',
+                                appL10n.settingsLanguageChooseLanguageAppInterfaceListings,
                               ),
                               style: TextStyle(
                                 fontSize: 14,

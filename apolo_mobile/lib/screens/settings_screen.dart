@@ -24,6 +24,7 @@ import 'settings/settings_suggestion_screen.dart';
 import 'settings/settings_zone_screen.dart';
 import 'support_screen.dart';
 import 'widgets/app_image.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 `Settings and activity` Screen:
 /// - Pure `#FFFFFF` canvas, `#EEEEEE` stadium search pill (`1.5px` `#000000` active border),
@@ -103,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final palette = ApoloDlPalette.of(context);
     final confirmed = await showApoloDlBottomSheet<bool>(
       context,
-      headerTitle: s.tr('تسجيل الخروج', 'Déconnexion', 'Log out'),
+      headerTitle: s.tr('تسجيل الخروج', 'Déconnexion', appL10n.logOutButton),
       media: Container(
         width: 56,
         height: 56,
@@ -120,24 +121,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       contentTitle: s.tr(
         'هل تريد تسجيل الخروج؟',
         'Se déconnecter de votre compte ?',
-        'Log out of your account?',
+        appL10n.settingsLogOutAccount,
       ),
       contentDescription: s.tr(
         'يمكنك إعادة تسجيل الدخول في أي وقت للوصول إلى إعلاناتك ومحادثاتك.',
         'Vous pourrez vous reconnecter à tout moment pour retrouver vos annonces.',
-        'You can sign back in anytime to access your listings and messages.',
+        appL10n.settingsYouCanSignBackAnytime,
       ),
       actions: [
         ApoloDlButton(
           key: const Key('settings-confirm-logout'),
-          label: s.tr('تسجيل الخروج', 'Se déconnecter', 'Log out'),
+          label: s.tr('تسجيل الخروج', 'Se déconnecter', appL10n.logOutButton),
           variant: ApoloDlButtonVariant.danger,
           borderRadius: 999,
           fullWidth: true,
           onPressed: () => Navigator.of(context).pop(true),
         ),
         ApoloDlButton(
-          label: s.tr('إلغاء', 'Annuler', 'Cancel'),
+          label: s.tr('إلغاء', 'Annuler', appL10n.cancelButton),
           variant: ApoloDlButtonVariant.secondary,
           borderRadius: 999,
           fullWidth: true,
@@ -192,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ApoloDlGroupedItem(
               key: const Key('settings-row-saved'),
               icon: CupertinoIcons.bookmark,
-              title: s.tr('المحفوظات', 'Enregistrés', 'Saved'),
+              title: s.tr('المحفوظات', 'Enregistrés', appL10n.profileSaved),
               trailingText: isLoggedIn && _state.favoriteAdIds.isNotEmpty
                   ? '${_state.favoriteAdIds.length}'
                   : null,
@@ -218,7 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'نطاق السوق',
                 'Zone Marketplace',
-                'Marketplace Zone',
+                appL10n.settingsZoneMarketplaceZone,
               ),
               trailingText: _state.activeZoneBadgeLabel(s),
               onTap: () => Navigator.of(context).push(
@@ -236,7 +237,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ApoloDlGroupedItem(
               key: const Key('settings-row-notifications'),
               icon: CupertinoIcons.bell,
-              title: s.tr('الإشعارات', 'Notifications', 'Notifications'),
+              title: s.tr('الإشعارات', 'Notifications', appL10n.notificationsNotifications),
               trailingBadge: isLoggedIn && unreadNotifs > 0
                   ? NotificationBadge(
                       count: unreadNotifs,
@@ -267,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ApoloDlGroupedItem(
               key: const Key('settings-row-language'),
               icon: CupertinoIcons.globe,
-              title: s.tr('لغة التطبيق', 'Langue', 'App language'),
+              title: s.tr('لغة التطبيق', 'Langue', appL10n.settingsLanguageAppLanguage),
               trailingText: _languageDisplayLabel(s.lang),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -295,7 +296,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Theme.of(context).brightness == Brightness.dark
                   ? CupertinoIcons.moon_fill
                   : CupertinoIcons.sun_max,
-              title: s.tr('المظهر', 'Apparence', 'Appearance'),
+              title: s.tr('المظهر', 'Apparence', appL10n.settingsAppearanceAppearance),
               trailingText: _state.themeModeLabel(s),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -320,8 +321,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: CupertinoIcons.sparkles,
               title: 'Apolo Pro+',
               trailingText: _state.isProPlusAccount
-                  ? s.tr('مفعل PRO+', 'PRO+ Actif', 'PRO+ Active')
-                  : s.tr('غير مشترك', 'Non abonné', 'Not subscribed'),
+                  ? s.tr('مفعل PRO+', 'PRO+ Actif', appL10n.settingsProActive)
+                  : s.tr('غير مشترك', 'Non abonné', appL10n.settingsNotSubscribed),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const SubscriptionScreen(),
@@ -342,7 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'رصيد التمويل VIP',
                 'Crédits Boost VIP',
-                'VIP Boost Credits',
+                appL10n.settingsVipBoostCredits,
               ),
               trailingText: '${_state.vipBoostCredits}',
               onTap: () => Navigator.of(context).push(
@@ -367,7 +368,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'إضافة الأصدقاء',
                 'Ajouter des amis',
-                'Add your friends',
+                appL10n.addFriendsAddFriends,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -387,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'مشاركة التطبيق',
                 'Partager l’application',
-                'Share App',
+                appL10n.settingsShareAppShareApp,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -407,7 +408,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'الحسابات المحظورة',
                 'Comptes bloqués',
-                'Blocked accounts',
+                appL10n.settingsBlockedAccountsBlockedAccounts,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -428,7 +429,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'الخصوصية والشروط',
                 'Confidentialité et conditions',
-                'Privacy & Terms',
+                appL10n.settingsPrivacyTerms,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -452,7 +453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'المساعدة والدعم',
                 'Aide et support',
-                'Help & Support',
+                appL10n.settingsBugReportHelpSupport,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const SupportScreen()),
@@ -471,7 +472,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'الإبلاغ عن مشكلة',
                 'Signaler un problème',
-                'Report a problem',
+                appL10n.bugReportReportProblem,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -492,7 +493,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'تقديم اقتراح',
                 'Faire une suggestion',
-                'Make a suggestion',
+                appL10n.settingsSuggestionMakeSuggestion,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -513,7 +514,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: s.tr(
                 'بيانات التطبيق والتراخيص',
                 'Données et licences',
-                'App data & licenses',
+                appL10n.settingsAppDataLicenses,
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -560,7 +561,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: s.tr(
                       'الإعدادات والنشاط',
                       'Paramètres et activité',
-                      'Settings and activity',
+                      appL10n.settingsActivity,
                     ),
                     showSeparator: false,
                   ),
@@ -580,12 +581,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   headline: s.tr(
                                     'لا توجد نتائج',
                                     'Aucun résultat',
-                                    'No matching settings',
+                                    appL10n.settingsNoMatchingSettings,
                                   ),
                                   description: s.tr(
                                     'جرّب البحث بكلمة أخرى مثل: المحفوظات، اللغة، أو Pro+.',
                                     'Essayez un autre mot-clé comme : langue, favoris ou Pro+.',
-                                    'Try another keyword such as Saved, Language, or Pro+.',
+                                    appL10n.settingsTryAnotherKeywordSuchAs,
                                   ),
                                 ),
                               )
@@ -596,7 +597,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   title: s.tr(
                                     'حسابك',
                                     'Votre compte',
-                                    'Your account',
+                                    appL10n.settingsYourAccount,
                                   ),
                                 ),
                                 _buildAccountHeroCard(palette, s),
@@ -607,7 +608,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   title: s.tr(
                                     'كيف تستخدم Apolo',
                                     'Comment vous utilisez Apolo',
-                                    'How you use Apolo',
+                                    appL10n.settingsHowYouUseApolo,
                                   ),
                                   children: howYouUseItems,
                                 ),
@@ -616,7 +617,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   title: s.tr(
                                     'الاشتراكات',
                                     'Abonnements',
-                                    'Subscriptions',
+                                    appL10n.settingsSubscriptions,
                                   ),
                                   children: subscriptionItems,
                                 ),
@@ -625,18 +626,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   title: s.tr(
                                     'المجتمع والخصوصية',
                                     'Communauté et confidentialité',
-                                    'Community & Privacy',
+                                    appL10n.settingsCommunityPrivacy,
                                   ),
                                   children: communityItems,
                                 ),
                               if (supportItems.isNotEmpty)
                                 ApoloDlSettingsGroup(
-                                  title: s.tr('الدعم', 'Support', 'Support'),
+                                  title: s.tr('الدعم', 'Support', appL10n.settingsSupport),
                                   children: supportItems,
                                 ),
                               if (showSessionSection) ...[
                                 ApoloDlSectionHeader(
-                                  title: s.tr('الحساب', 'Compte', 'Account'),
+                                  title: s.tr('الحساب', 'Compte', appL10n.settingsAccount),
                                 ),
                                 if (isLoggedIn)
                                   ApoloDlButton(
@@ -644,7 +645,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     label: s.tr(
                                       'تسجيل الخروج',
                                       'Se déconnecter',
-                                      'Log out',
+                                      appL10n.logOutButton,
                                     ),
                                     variant: ApoloDlButtonVariant.dangerSoft,
                                     borderRadius: 999,
@@ -660,7 +661,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     label: s.tr(
                                       'تسجيل الدخول',
                                       'Se connecter',
-                                      'Log in',
+                                      appL10n.logInButton,
                                     ),
                                     variant: ApoloDlButtonVariant.primary,
                                     borderRadius: 999,
@@ -681,7 +682,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     label: s.tr(
                                       'إنشاء حساب',
                                       'Créer un compte',
-                                      'Create account',
+                                      appL10n.accountSetupCreateAccount,
                                     ),
                                     variant: ApoloDlButtonVariant.secondary,
                                     borderRadius: 999,
@@ -762,7 +763,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: palette.ink,
                 ),
                 decoration: InputDecoration(
-                  hintText: s.tr('بحث', 'Rechercher', 'Search'),
+                  hintText: s.tr('بحث', 'Rechercher', appL10n.searchTitle),
                   hintStyle: TextStyle(
                     fontSize: 15,
                     color: palette.muted,
@@ -894,7 +895,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             s.tr(
                               'مركز حساب أبولو',
                               'Espace Compte Apolo',
-                              'Apolo Account',
+                              appL10n.accountCenterApoloAccount,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -923,7 +924,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       s.tr(
                         'كلمة المرور، الأمان، البيانات الشخصية، المتجر والأعمال',
                         'Mot de passe, sécurité, infos personnelles, boutique & pro',
-                        'Password, security, personal details, store & business',
+                        appL10n.settingsPasswordSecurityPersonalDetailsStore,
                       ),
                       style: TextStyle(
                         fontSize: 13,

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
+
 /// Premium Pull-to-Refresh component for Apolo (`apolo_mobile`) implementing all 6 UX Rules:
 ///
 /// 1. **THRESHOLD (`85px`)**:
@@ -320,10 +322,10 @@ class PullToRefreshState extends State<PullToRefresh>
     return Semantics(
       container: true,
       label: _isRefreshing
-          ? 'Refreshing list'
+          ? context.l10n.pullToRefreshRefreshing
           : (_hasCrossedThreshold
-              ? 'Release to refresh'
-              : 'Pull down to refresh'),
+              ? context.l10n.pullToRefreshRelease
+              : context.l10n.pullToRefreshPullDown),
       child: NotificationListener<ScrollNotification>(
         onNotification: _handleScrollNotification,
         child: Listener(

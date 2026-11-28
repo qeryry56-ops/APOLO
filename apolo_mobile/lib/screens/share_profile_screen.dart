@@ -8,6 +8,7 @@ import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_qr_code.dart';
 import '../widgets/dl_share_top_nav.dart';
 import 'scan_profile_code_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 `Share profile / Default` screen.
 /// Uses [DlShareProfileTokens] and [DlShareProfileLayout] to preserve exact
@@ -66,7 +67,7 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
       s.tr(
         'تم نسخ رابط الملف الشخصي',
         'Lien du profil copié',
-        'Profile link copied',
+        appL10n.shareProfileProfileLinkCopied,
       ),
     );
   }
@@ -80,7 +81,7 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
     final shareText = s.tr(
       'شوف حساب $name ($handle) على Apolo.ma:\n$url',
       'Découvrez le profil de $name ($handle) sur Apolo.ma :\n$url',
-      'Check out $name ($handle) on Apolo.ma:\n$url',
+      appL10n.shareProfileCheckOutNameHandleApolo(name, handle, url),
     );
     try {
       final result = await Share.share(shareText, subject: name);
@@ -144,7 +145,7 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                         message: s.tr(
                           'مشاركة الرابط',
                           'Partager le lien',
-                          'Share link',
+                          appL10n.shareProfileShareLink,
                         ),
                         child: SizedBox(
                           width: DlShareProfileLayout.topNavActionSize,
@@ -400,7 +401,7 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                                                   s.tr(
                                                     'رمز QR الخاص بك خاص. إذا شاركته مع شخص ما، يمكنه مسحه بالكاميرا لإضافتك كجهة اتصال.',
                                                     'Votre code QR est privé. Si vous le partagez, la personne pourra le scanner avec sa caméra pour vous ajouter comme contact.',
-                                                    'Your QR code is private. If you share it with someone, that person can scan it with their camera to add you as a contact.',
+                                                    appL10n.shareProfileQrCodeIsPrivateIf,
                                                   ),
                                                   key: const Key(
                                                       'share-profile-privacy-text'),
@@ -435,7 +436,7 @@ class _ShareProfileScreenState extends State<ShareProfileScreen> {
                                   label: s.tr(
                                     'مسح الرمز',
                                     'Scanner le code',
-                                    'Scan code',
+                                    appL10n.shareProfileScanCode,
                                   ),
                                   tokens: tokens,
                                   onPressed: _openScanner,

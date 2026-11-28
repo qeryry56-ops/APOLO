@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/state/app_state.dart';
+import '../../../l10n/l10n.dart';
 import '../models/bug_report_models.dart';
 import 'bug_report_log_service.dart';
 
@@ -39,8 +40,8 @@ class BugReportApiService {
   Future<BugReportResult> submitReport(BugReportSubmission submission) async {
     final trimmedDesc = submission.description.trim();
     if (trimmedDesc.length < 5) {
-      throw const BugReportApiException(
-        message: 'Description must be at least 5 characters.',
+      throw BugReportApiException(
+        message: appL10n.bugReportDescMinLengthError,
         statusCode: 422,
       );
     }
@@ -125,7 +126,7 @@ class BugReportApiService {
       retryAfter = int.tryParse(retryHeader.trim());
     }
 
-    String message = 'Network request failed.';
+    String message = appL10n.bugReportNetworkFailedError;
     Map<String, List<String>>? validationErrors;
 
     if (data is Map) {
@@ -150,9 +151,9 @@ class BugReportApiService {
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.sendTimeout) {
-      message = 'Request timed out. Please check your connection and retry.';
+      message = appL10n.bugReportTimeoutError;
     } else if (e.type == DioExceptionType.connectionError) {
-      message = 'Unable to reach Apolo.ma servers right now.';
+      message = appL10n.bugReportServerUnreachableError;
     }
 
     return BugReportApiException(

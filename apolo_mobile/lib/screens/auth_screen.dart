@@ -16,6 +16,7 @@ import 'account_setup_screen.dart';
 import 'add_friends_screen.dart';
 import 'business_switch_screen.dart';
 import 'forgot_password_screen.dart';
+import '../l10n/l10n.dart';
 
 enum _OtpPhase {
   idle,
@@ -172,7 +173,7 @@ class _AuthScreenState extends State<AuthScreen>
           _notice = _state.s.tr(
             'تعذر فتح صفحة الدخول عبر Google حالياً.',
             'Impossible d’ouvrir Google sign-in pour le moment.',
-            'Unable to open Google sign-in right now.',
+            appL10n.authUnableOpenGoogleSignRight,
           );
         });
       }
@@ -182,7 +183,7 @@ class _AuthScreenState extends State<AuthScreen>
           _notice = _state.s.tr(
             'تعذر بدء تسجيل الدخول عبر Google حالياً.',
             'Impossible de démarrer la connexion Google.',
-            'Unable to start Google sign-in.',
+            appL10n.authUnableStartGoogleSign,
           );
         });
       }
@@ -289,7 +290,7 @@ class _AuthScreenState extends State<AuthScreen>
         _error = _state.s.tr(
           'لا يوجد بريد إلكتروني مسجل في هذا الحساب لاستلام رمز التحقق. يرجى استخدام الموقع أو الدعم.',
           'Aucune adresse e-mail n’est associée à ce compte pour recevoir le code.',
-          'No email address is linked to this account to receive the code.',
+          appL10n.authNoEmailAddressIsLinked,
         );
       });
       return;
@@ -304,7 +305,7 @@ class _AuthScreenState extends State<AuthScreen>
         _notice = _state.s.tr(
           'تم إرسال رمز التحقق إلى بريدك الإلكتروني ($masked).',
           'Un code de vérification a été envoyé à $masked.',
-          'A verification code was sent to $masked.',
+          appL10n.authVerificationCodeWasSentMasked(masked),
         );
       });
       _cooldown();
@@ -360,7 +361,7 @@ class _AuthScreenState extends State<AuthScreen>
         _error = _state.s.tr(
           'يرجى إدخال بريد إلكتروني صحيح',
           'Veuillez saisir une adresse e-mail valide',
-          'Please enter a valid email address',
+          appL10n.authPleaseEnterValidEmailAddress,
         );
       });
       return;
@@ -392,7 +393,7 @@ class _AuthScreenState extends State<AuthScreen>
             _error = s.tr(
               'يرجى إدخال بريد إلكتروني صحيح',
               'Veuillez saisir une adresse e-mail valide',
-              'Please enter a valid email address',
+              appL10n.authPleaseEnterValidEmailAddress,
             );
           });
           return false;
@@ -417,7 +418,7 @@ class _AuthScreenState extends State<AuthScreen>
             _error = s.tr(
               'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل',
               'Votre mot de passe doit contenir au moins 8 caractères',
-              'Your password must be at least 8 characters',
+              appL10n.authPasswordMustBeAtLeast,
             );
           });
           return false;
@@ -442,7 +443,7 @@ class _AuthScreenState extends State<AuthScreen>
             _error = s.tr(
               'يرجى إدخال الاسم (حرفين على الأقل)',
               'Veuillez saisir votre nom (au moins 2 caractères)',
-              'Please enter your name (at least 2 characters)',
+              appL10n.authPleaseEnterNameAtLeast,
             );
           });
           return false;
@@ -467,7 +468,7 @@ class _AuthScreenState extends State<AuthScreen>
             _error = s.tr(
               'يجب أن يتكون اسم المستخدم من 3 أحرف أو أرقام على الأقل',
               'Le nom d’utilisateur doit contenir au moins 3 lettres ou chiffres',
-              'Username must be at least 3 letters or numbers',
+              appL10n.authUsernameMustBeAtLeast,
             );
           });
           return false;
@@ -492,7 +493,7 @@ class _AuthScreenState extends State<AuthScreen>
             _error = s.tr(
               'يرجى إدخال رقم هاتف مغربي صالح (مثال: 650-123456)',
               'Veuillez saisir un numéro marocain valide (ex : 650-123456)',
-              'Please enter a valid Moroccan phone number (e.g. 650-123456)',
+              appL10n.authPleaseEnterValidMoroccanPhone,
             );
           });
           return false;
@@ -515,7 +516,7 @@ class _AuthScreenState extends State<AuthScreen>
           _error = _state.s.tr(
             'أدخل رمز التحقق المكون من 6 أرقام.',
             'Entrez le code de vérification à 6 chiffres.',
-            'Enter the 6-digit verification code.',
+            appL10n.authEnter6DigitVerificationCode,
           );
         });
         _triggerOtpErrorShake();
@@ -532,7 +533,7 @@ class _AuthScreenState extends State<AuthScreen>
           _error = _state.s.tr(
             'يرجى إدخال بريد إلكتروني صحيح',
             'Veuillez saisir une adresse e-mail valide',
-            'Please enter a valid email address',
+            appL10n.authPleaseEnterValidEmailAddress,
           );
         });
         return;
@@ -698,12 +699,12 @@ class _AuthScreenState extends State<AuthScreen>
             ? _state.s.tr(
                 'تم إرسال رمز جديد إلى $masked.',
                 'Un nouveau code a été envoyé à $masked.',
-                'A new verification code was sent to $masked.',
+                appL10n.authNewVerificationCodeWasSent(masked),
               )
             : _state.s.tr(
                 'تم إرسال رمز جديد إلى بريدك الإلكتروني.',
                 'Un nouveau code a été envoyé à votre boîte e-mail.',
-                'A new verification code was sent to your email.',
+                appL10n.authNewVerificationCodeWasSent2,
               );
       });
       _cooldown();
@@ -721,7 +722,7 @@ class _AuthScreenState extends State<AuthScreen>
             ? _state.s.tr(
                 '$base (آخر محاولة: $hh:$mm)',
                 '$base (Dernière tentative : $hh:$mm)',
-                '$base (Tried at $hh:$mm)',
+                appL10n.authBasevalueTriedAtHhMm(base, hh, mm),
               )
             : base;
       });
@@ -912,7 +913,7 @@ class _AuthScreenState extends State<AuthScreen>
                                     vertical: 8.0,
                                   ),
                                   child: Text(
-                                    s.tr('إنشاء حساب', 'S’inscrire', 'Sign up'),
+                                    s.tr('إنشاء حساب', 'S’inscrire', appL10n.signUpButton),
                                     style: TextStyle(
                                       color: ink,
                                       fontSize: 13.5,
@@ -956,12 +957,12 @@ class _AuthScreenState extends State<AuthScreen>
                                     ? s.tr(
                                         'أدخل بريدك الإلكتروني',
                                         'Entrez votre e-mail',
-                                        'Enter your email',
+                                        appL10n.authEnterEmail,
                                       )
                                     : s.tr(
                                         'أدخل كلمة المرور',
                                         'Entrez votre mot de passe',
-                                        'Enter your password',
+                                        appL10n.authEnterPassword,
                                       ),
                                 key: const Key('dl-login-prompt-label'),
                                 textAlign: TextAlign.center,
@@ -1001,7 +1002,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       letterSpacing: -0.4,
                                     ),
                                     decoration: InputDecoration(
-                                      hintText: 'example@gmail.com',
+                                      hintText: context.l10n.authEmailPlaceholder,
                                       hintStyle: TextStyle(
                                         color: placeholderColor,
                                         fontSize: dynamicInputFontSize,
@@ -1053,7 +1054,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       letterSpacing: 1.0,
                                     ),
                                     decoration: InputDecoration(
-                                      hintText: 'Password',
+                                      hintText: context.l10n.authPasswordPlaceholder,
                                       hintStyle: TextStyle(
                                         color: placeholderColor,
                                         fontSize: 28.0,
@@ -1127,7 +1128,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         s.tr(
                                           'نسيت كلمة المرور؟',
                                           'Mot de passe oublié ?',
-                                          'Forgot password?',
+                                          appL10n.authForgotPassword,
                                         ),
                                         style: TextStyle(
                                           color: ink,
@@ -1178,7 +1179,7 @@ class _AuthScreenState extends State<AuthScreen>
                                     ),
                                   )
                                 : Text(
-                                    s.tr('متابعة', 'Continuer', 'Continue'),
+                                    s.tr('متابعة', 'Continuer', appL10n.continueButton),
                                     style: TextStyle(
                                       color: continueFg,
                                       fontSize: 16.0,
@@ -1246,7 +1247,7 @@ class _AuthScreenState extends State<AuthScreen>
         promptLabel = s.tr(
           'ما هو بريدك الإلكتروني؟',
           'Quelle est votre adresse e-mail ?',
-          "What's your email?",
+          appL10n.authWhatSEmail,
         );
         helperText = null;
         break;
@@ -1255,12 +1256,12 @@ class _AuthScreenState extends State<AuthScreen>
         promptLabel = s.tr(
           'اختر كلمة المرور',
           'Choisissez un mot de passe',
-          'Choose a password',
+          appL10n.authChoosePassword,
         );
         helperText = s.tr(
           'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل',
           'Votre mot de passe doit contenir au moins 8 caractères',
-          'Your password must be at least 8 characters',
+          appL10n.authPasswordMustBeAtLeast,
         );
         break;
       case 3:
@@ -1268,7 +1269,7 @@ class _AuthScreenState extends State<AuthScreen>
         promptLabel = s.tr(
           'ما هو اسمك الشخصي؟',
           'Quel est votre prénom ?',
-          "What's your first name?",
+          appL10n.authWhatSFirstName,
         );
         helperText = null;
         break;
@@ -1277,12 +1278,12 @@ class _AuthScreenState extends State<AuthScreen>
         promptLabel = s.tr(
           'اختر اسم مستخدم',
           'Choisissez un nom d’utilisateur',
-          'Pick a username',
+          appL10n.authPickUsername,
         );
         helperText = s.tr(
           'يمكن للآخرين العثور عليك باسم المستخدم الخاص بك!',
           'Les autres peuvent vous trouver grâce à votre nom d’utilisateur !',
-          'Others can find you with your username!',
+          appL10n.authOthersCanFindYouUsername,
         );
         break;
       case 5:
@@ -1291,12 +1292,12 @@ class _AuthScreenState extends State<AuthScreen>
         promptLabel = s.tr(
           'ما هو رقم هاتفك؟',
           'Quel est votre numéro de téléphone ?',
-          "What's your phone number?",
+          appL10n.authWhatSPhoneNumber,
         );
         helperText = s.tr(
           'أدخل رقم هاتف مغربي صالح لتأكيد حسابك',
           'Entrez un numéro marocain valide pour sécuriser votre compte',
-          'Enter a valid Moroccan phone number to secure your account',
+          appL10n.authEnterValidMoroccanPhoneNumber,
         );
         break;
     }
@@ -1399,7 +1400,7 @@ class _AuthScreenState extends State<AuthScreen>
               letterSpacing: -0.4,
             ),
             decoration: buildCleanInputDecoration(
-              hintText: 'example@gmail.com',
+              hintText: context.l10n.authEmailPlaceholder,
               fontSize: emailFontSize,
             ),
             onSubmitted: (_) => _submit(),
@@ -1431,7 +1432,7 @@ class _AuthScreenState extends State<AuthScreen>
               letterSpacing: 1.0,
             ),
             decoration: buildCleanInputDecoration(
-              hintText: 'Password',
+              hintText: context.l10n.authPasswordPlaceholder,
               letterSpacing: -0.4,
             ),
             onSubmitted: (_) => _submit(),
@@ -1460,7 +1461,7 @@ class _AuthScreenState extends State<AuthScreen>
             letterSpacing: -0.4,
           ),
           decoration: buildCleanInputDecoration(
-            hintText: 'Name',
+            hintText: context.l10n.authFullNamePlaceholder,
           ),
           onSubmitted: (_) => _submit(),
         );
@@ -1490,7 +1491,7 @@ class _AuthScreenState extends State<AuthScreen>
               letterSpacing: -0.4,
             ),
             decoration: buildCleanInputDecoration(
-              hintText: '@username',
+              hintText: context.l10n.authUsernameHandlePlaceholder,
             ),
             onSubmitted: (_) => _submit(),
           ),
@@ -1738,7 +1739,7 @@ class _AuthScreenState extends State<AuthScreen>
                                     ),
                                   )
                                 : Text(
-                                    s.tr('متابعة', 'Continuer', 'Continue'),
+                                    s.tr('متابعة', 'Continuer', appL10n.continueButton),
                                     style: TextStyle(
                                       color: continueFg,
                                       fontSize: 16.0,
@@ -1819,12 +1820,12 @@ class _AuthScreenState extends State<AuthScreen>
             ? s.tr(
                 'أرسلنا رمز تحقق مكوناً من 6 أرقام إلى $maskedEmail',
                 'Nous avons envoyé un code à 6 chiffres à $maskedEmail',
-                'We sent a 6-digit verification code to $maskedEmail',
+                appL10n.authWeSent6DigitVerification(maskedEmail),
               )
             : s.tr(
                 'أرسلنا رمز تحقق مكوناً من 6 أرقام إلى بريدك الإلكتروني',
                 'Nous avons envoyé un code à 6 chiffres à votre e-mail',
-                'We sent a 6-digit verification code to your email',
+                appL10n.authWeSent6DigitVerification2,
               ));
 
     return PopScope(
@@ -1896,7 +1897,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 s.tr(
                                   'أدخل رمز التحقق',
                                   'Entrez le code de vérification',
-                                  'Enter verification code',
+                                  appL10n.authEnterVerificationCode,
                                 ),
                                 key: const Key('dl-otp-prompt-label'),
                                 textAlign: TextAlign.center,
@@ -2048,7 +2049,7 @@ class _AuthScreenState extends State<AuthScreen>
                                                 s.tr(
                                                   'جاري الإرسال...',
                                                   'Envoi...',
-                                                  'Sending...',
+                                                  appL10n.authSending,
                                                 ),
                                                 style: TextStyle(
                                                   color: mutedText,
@@ -2063,12 +2064,12 @@ class _AuthScreenState extends State<AuthScreen>
                                                 ? s.tr(
                                                     'إعادة الإرسال ($_remaining ث)',
                                                     'Renvoyer (${_remaining}s)',
-                                                    'Resend code (${_remaining}s)',
+                                                    appL10n.authResendCodeRemainingS(_remaining),
                                                   )
                                                 : s.tr(
                                                     'إعادة إرسال الرمز',
                                                     'Renvoyer le code',
-                                                    'Resend code',
+                                                    appL10n.otpResendCodeButton,
                                                   ),
                                             style: TextStyle(
                                               color: canTapResend
@@ -2126,7 +2127,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         color: continueFg,
                                       )
                                     : Text(
-                                        s.tr('متابعة', 'Continuer', 'Continue'),
+                                        s.tr('متابعة', 'Continuer', appL10n.continueButton),
                                         style: TextStyle(
                                           color: continueFg,
                                           fontSize: 16.0,

@@ -28,6 +28,7 @@ import 'search_screen.dart';
 import 'seller_profile_screen.dart';
 import 'store_detail_screen.dart';
 import 'auth_screen.dart';
+import '../l10n/l10n.dart';
 
 class AdDetailScreen extends StatefulWidget {
   final int adId;
@@ -82,7 +83,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     _quickMsgCtrl.text = _state.s.tr(
       'مرحباً، هل هذا الإعلان ما زال متوفراً؟',
       'Cet article est-il toujours disponible ?',
-      'Hi, is this still available?',
+      appL10n.adDetailHiIsThisStillAvailable,
     );
     if (_ad != null) {
       final catId = _state.extractAdCategoryId(_ad!);
@@ -156,7 +157,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               _state.s.tr(
                 'تعذر تحديث المفضلة. حاول مرة أخرى.',
                 'Impossible de modifier les favoris. Réessayez.',
-                'Could not update favorites. Please try again.',
+                appL10n.adDetailCouldNotUpdateFavoritesPlease,
               ),
             ),
           ),
@@ -270,7 +271,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                 s.tr(
                                   'تم نسخ رقم الهاتف',
                                   'Numéro copié',
-                                  'Phone number copied',
+                                  appL10n.adDetailPhoneNumberCopied,
                                 ),
                               ),
                             ),
@@ -292,7 +293,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                s.tr('نسخ الرقم', 'Copier', 'Copy'),
+                                s.tr('نسخ الرقم', 'Copier', appL10n.adDetailCopy),
                                 style: TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w700,
@@ -333,7 +334,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                s.tr('اتصال الآن', 'Appeler', 'Call'),
+                                s.tr('اتصال الآن', 'Appeler', appL10n.callSellerButton),
                                 style: TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w700,
@@ -589,7 +590,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             _state.s.tr(
               'تعذر فتح المحادثة. حاول مرة أخرى.',
               'Impossible de démarrer la conversation. Réessayez.',
-              'Could not start conversation. Please try again.',
+              appL10n.adDetailCouldNotStartConversationPlease,
             ),
           ),
         ),
@@ -664,7 +665,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             _state.s.tr(
               'تم حظر هذا المستخدم بنجاح',
               'Utilisateur bloqué',
-              'User blocked',
+              appL10n.adDetailUserBlocked,
             ),
           ),
         ),
@@ -708,12 +709,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   title: s.tr(
                     'الإبلاغ عن هذا الإعلان أو محتوى AI',
                     'Signaler cette annonce / contenu IA',
-                    'Report this listing or AI content',
+                    appL10n.adDetailReportThisListingAiContent,
                   ),
                   subtitle: s.tr(
                     'مراجعة فورية من فريق الثقة والأمان',
                     'Vérification rapide par notre équipe',
-                    'Quick review by our Trust & Safety team',
+                    appL10n.adDetailQuickReviewByTrustSafety,
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -735,7 +736,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     subtitle: s.tr(
                       'إخفاء جميع إعلانات هذا البائع',
                       'Masquer les annonces de ce vendeur',
-                      'Hide all listings from this seller',
+                      appL10n.adDetailHideAllListingsFromThis,
                     ),
                     onTap: () {
                       Navigator.pop(ctx);
@@ -836,7 +837,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           child: Column(
             children: [
               ApoloDlTopNav(
-                title: s.tr('تفاصيل الإعلان', 'Détails', 'Details'),
+                title: s.tr('تفاصيل الإعلان', 'Détails', appL10n.adDetailDetails),
               ),
               Expanded(
                 child: IllustratedStateView(
@@ -844,14 +845,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   title: s.tr(
                     'الإعلان غير متوفر',
                     'Annonce introuvable',
-                    'Listing unavailable',
+                    appL10n.adDetailListingUnavailable,
                   ),
                   subtitle: s.tr(
                     'ربما تم بيع هذا المنتج أو حذفه من طرف البائع.',
                     'Cet article a peut-être été vendu ou retiré.',
-                    'This item may have been sold or removed by the seller.',
+                    appL10n.adDetailThisItemMayHaveBeen,
                   ),
-                  actionLabel: s.tr('العودة', 'Retour', 'Go back'),
+                  actionLabel: s.tr('العودة', 'Retour', appL10n.adDetailGoBack),
                   onAction: () => Navigator.pop(context),
                 ),
               ),
@@ -969,17 +970,17 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     );
 
     final List<MapEntry<String, String>> structuredSpecs = [
-      MapEntry(s.tr('القسم', 'Catégorie', 'Category'), categoryName),
-      MapEntry(s.tr('المدينة', 'Ville', 'City'), cityName),
+      MapEntry(s.tr('القسم', 'Catégorie', appL10n.adDetailCategory), categoryName),
+      MapEntry(s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity), cityName),
       MapEntry(
-        s.tr('الحالة', 'État', 'Condition'),
+        s.tr('الحالة', 'État', appL10n.adDetailCondition),
         (ad['condition'] ??
                 metadata['condition'] ??
-                s.tr('غير محددة', 'Non précisé', 'Not specified'))
+                s.tr('غير محددة', 'Non précisé', appL10n.adDetailNotSpecified))
             .toString(),
       ),
       MapEntry(
-        s.tr('رقم الإعلان', 'Référence', 'Reference'),
+        s.tr('رقم الإعلان', 'Référence', appL10n.adDetailReference),
         '#AP-${widget.adId}',
       ),
       ...rawSpecs,
@@ -1192,13 +1193,13 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 ? CupertinoIcons.chevron_forward
                 : CupertinoIcons.chevron_back,
             iconSize: 19,
-            tooltip: s.tr('رجوع', 'Retour', 'Back'),
+            tooltip: s.tr('رجوع', 'Retour', appL10n.backButton),
             onPressed: () => Navigator.maybePop(context),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              s.tr('تفاصيل الإعلان', 'Détails', 'Details'),
+              s.tr('تفاصيل الإعلان', 'Détails', appL10n.adDetailDetails),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1216,7 +1217,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             icon: isFav ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
             iconSize: 19,
             iconColor: isFav ? _dlHeartRed : _dlInk,
-            tooltip: s.tr('المفضلة', 'Favori', 'Favorite'),
+            tooltip: s.tr('المفضلة', 'Favori', appL10n.adDetailFavorite),
             onPressed: _toggleFavorite,
           ),
           const SizedBox(width: 8),
@@ -1224,7 +1225,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             key: const Key('dl-detail-more-btn'),
             icon: CupertinoIcons.ellipsis,
             iconSize: 19,
-            tooltip: s.tr('المزيد', 'Plus', 'More'),
+            tooltip: s.tr('المزيد', 'Plus', appL10n.adDetailMore),
             onPressed: () => _showMoreActionsSheet(s, ad, seller, isOwner),
           ),
         ],
@@ -1247,7 +1248,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     if (formatted.isNotEmpty) return formatted;
 
     if (ad['is_free'] == true) {
-      return s.tr('مجاني', 'Gratuit', 'Free');
+      return s.tr('مجاني', 'Gratuit', appL10n.adDetailFree);
     }
 
     final rawPrice = ad['price'];
@@ -1259,7 +1260,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           .trim();
       return currency == '\$' ? '\$$intVal' : '$intVal $currency';
     }
-    return s.tr('عند الطلب', 'Sur demande', 'On request');
+    return s.tr('عند الطلب', 'Sur demande', appL10n.adDetailOnRequest);
   }
 
   String _resolvePriceFrequency(
@@ -1272,8 +1273,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         (ad['price_frequency'] ?? ad['price_unit'] ?? '').toString().trim();
     if (explicitFreq.isNotEmpty) return explicitFreq;
     if (isStayListing) return 'per night';
-    if (isNegotiable) return s.tr('قابل للتفاوض', 'Négociable', 'Negotiable');
-    return s.tr('السعر المعلن', 'Prix affiché', 'Fixed price');
+    if (isNegotiable) return s.tr('قابل للتفاوض', 'Négociable', appL10n.negotiableBadge);
+    return s.tr('السعر المعلن', 'Prix affiché', appL10n.fixedPriceBadge);
   }
 
   List<({String value, String label})> _buildQuickSpecCards(
@@ -1303,41 +1304,41 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       return [
         (
           value: (ad['guests'] ?? 6).toString(),
-          label: s.tr('ضيوف', 'Voyageurs', 'Guests'),
+          label: s.tr('ضيوف', 'Voyageurs', appL10n.adDetailGuests),
         ),
         (
           value: (ad['bedrooms'] ?? 3).toString(),
-          label: s.tr('غرف', 'Chambres', 'Bedrooms'),
+          label: s.tr('غرف', 'Chambres', appL10n.adDetailBedrooms),
         ),
         (
           value: (ad['beds'] ?? 4).toString(),
-          label: s.tr('أسرّة', 'Lits', 'Beds'),
+          label: s.tr('أسرّة', 'Lits', appL10n.adDetailBeds),
         ),
         (
           value: (ad['baths'] ?? 2).toString(),
-          label: s.tr('حمامات', 'Bains', 'Baths'),
+          label: s.tr('حمامات', 'Bains', appL10n.adDetailBaths),
         ),
       ];
     }
 
     final conditionVal =
-        (ad['condition'] ?? metadata['condition'] ?? s.tr('جيد', 'Bon', 'Good'))
+        (ad['condition'] ?? metadata['condition'] ?? s.tr('جيد', 'Bon', appL10n.adDetailGood))
             .toString()
             .trim();
     final thirdSpec = rawSpecs.isNotEmpty
         ? (value: rawSpecs[0].value, label: rawSpecs[0].key)
-        : (value: cityName, label: s.tr('المدينة', 'Ville', 'City'));
+        : (value: cityName, label: s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity));
     final fourthSpec = rawSpecs.length > 1
         ? (value: rawSpecs[1].value, label: rawSpecs[1].key)
-        : (value: '#${widget.adId}', label: s.tr('المرجع', 'Réf.', 'Ref'));
+        : (value: '#${widget.adId}', label: s.tr('المرجع', 'Réf.', appL10n.adDetailRef));
 
     return [
-      (value: conditionVal, label: s.tr('الحالة', 'État', 'Condition')),
+      (value: conditionVal, label: s.tr('الحالة', 'État', appL10n.adDetailCondition)),
       (
         value: ad['views_count'] == null && ad['views'] == null
             ? '—'
             : '$viewsCount',
-        label: s.tr('مشاهدة', 'Vues', 'Views'),
+        label: s.tr('مشاهدة', 'Vues', appL10n.adDetailViews),
       ),
       thirdSpec,
       fourthSpec,
@@ -1387,9 +1388,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 ad['is_featured'] == true ||
                 ad['is_highlighted'] == true ||
                 viewsCount >= 50)
-            ? s.tr('إعلان مميز', 'En vedette', 'Guest favourite')
+            ? s.tr('إعلان مميز', 'En vedette', appL10n.adDetailGuestFavourite)
             : (isNegotiable
-                ? s.tr('قابل للتفاوض', 'Négociable', 'Negotiable')
+                ? s.tr('قابل للتفاوض', 'Négociable', appL10n.negotiableBadge)
                 : null));
 
     final String totalCountLabel = (ad['photo_count_total'] != null)
@@ -1488,7 +1489,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               if (showVideoTour)
                 Center(
                   child: _VideoTourPill(
-                    label: s.tr('فيديو الإعلان', 'Visite vidéo', 'Video tour'),
+                    label: s.tr('فيديو الإعلان', 'Visite vidéo', appL10n.adDetailVideoTour),
                     duration:
                         videoDuration.isNotEmpty ? videoDuration : '0:45',
                     onTap: () => _openVideoTour(
@@ -1577,7 +1578,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           return s.tr(
             'نُشر للتو · منذ $m د',
             'Publié · il y a $m min',
-            'Just listed · ${m}m ago',
+            appL10n.adDetailJustListedMMAgo(m),
           );
         }
         if (diff.inHours < 24) {
@@ -1585,18 +1586,18 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           return s.tr(
             'نُشر للتو · منذ $h ساعة',
             'Publié · il y a ${h}h',
-            'Just listed · $h hours ago',
+            appL10n.adDetailJustListedHHoursAgo(h),
           );
         }
         final d = diff.inDays;
         return s.tr(
           'منذ $d يوم',
           'Il y a ${d}j',
-          '$d days ago',
+          appL10n.adDetailDDaysAgo(d),
         );
       }
     }
-    return s.tr('نُشر للتو', 'Vient d’être publié', 'Just listed');
+    return s.tr('نُشر للتو', 'Vient d’être publié', appL10n.adDetailJustListed);
   }
 
   Widget _buildMarketplaceHeader({
@@ -1757,7 +1758,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     s.tr(
                       'ترقية الإعلان ومضاعفة المشاهدات (Boost ⚡)',
                       'Booster cette annonce ⚡',
-                      'Boost this listing ⚡',
+                      appL10n.adDetailBoostThisListing,
                     ),
                     style: TextStyle(
                       fontSize: 14.5,
@@ -1813,7 +1814,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     s.tr(
                       'راسل البائع',
                       'Contacter le vendeur',
-                      'Message seller',
+                      appL10n.adDetailMessageSeller,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1834,7 +1835,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    s.tr('رد سريع', 'Réponse rapide', 'Fast reply'),
+                    s.tr('رد سريع', 'Réponse rapide', appL10n.adDetailFastReply),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -1899,7 +1900,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           hintText: s.tr(
                             'اكتب رسالتك هنا...',
                             'Écrivez votre message...',
-                            'Write a message...',
+                            appL10n.adDetailWriteMessage,
                           ),
                           hintStyle: TextStyle(
                             fontSize: 13.5,
@@ -1930,7 +1931,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      s.tr('إرسال', 'Envoyer', 'Send'),
+                      s.tr('إرسال', 'Envoyer', appL10n.sendButton),
                       style: TextStyle(
                         color: _dlOnInk,
                         fontSize: 13.5,
@@ -1969,12 +1970,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               ? s.tr(
                   'تم تفعيل تنبيهات الإعلانات المشابهة',
                   'Alertes activées pour des annonces similaires',
-                  'Alerts enabled for similar listings',
+                  appL10n.adDetailAlertsEnabledSimilarListings,
                 )
               : s.tr(
                   'تم إيقاف التنبيهات لهذا البحث',
                   'Alertes désactivées',
-                  'Alerts paused',
+                  appL10n.adDetailAlertsPaused,
                 ),
         ),
       ),
@@ -1997,7 +1998,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               icon: _alertEnabled
                   ? CupertinoIcons.bell_fill
                   : CupertinoIcons.bell,
-              label: s.tr('تنبيهات', 'Alertes', 'Alerts'),
+              label: s.tr('تنبيهات', 'Alertes', appL10n.adDetailAlerts),
               active: _alertEnabled,
               onTap: () => _handleAlertsTap(s, ad),
             ),
@@ -2005,14 +2006,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
           Expanded(
             child: _DlActionCircle(
               icon: CupertinoIcons.chat_bubble_fill,
-              label: s.tr('رسالة', 'Message', 'Message'),
+              label: s.tr('رسالة', 'Message', appL10n.adDetailMessage),
               onTap: () => _openInAppChat(),
             ),
           ),
           Expanded(
             child: _DlActionCircle(
               icon: CupertinoIcons.share,
-              label: s.tr('مشاركة', 'Partager', 'Share'),
+              label: s.tr('مشاركة', 'Partager', appL10n.shareButton),
               onTap: () {
                 HapticFeedback.selectionClick();
                 final shareUrl = ad['share_url'] ?? 'https://apolo.ma';
@@ -2027,7 +2028,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               icon: isFav
                   ? CupertinoIcons.bookmark_fill
                   : CupertinoIcons.bookmark,
-              label: s.tr('حفظ', 'Enregistrer', 'Save'),
+              label: s.tr('حفظ', 'Enregistrer', appL10n.saveButton),
               active: isFav,
               onTap: _toggleFavorite,
             ),
@@ -2116,7 +2117,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         ? s.tr(
             'لم يضف البائع وصفاً لهذا الإعلان. تواصل معه لمعرفة التفاصيل.',
             'Le vendeur n’a pas ajouté de description. Contactez-le pour en savoir plus.',
-            'No description provided. Message the seller for details.',
+            appL10n.adDetailNoDescriptionProvidedMessageSeller,
           )
         : rawDesc;
 
@@ -2136,7 +2137,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  s.tr('الوصف', 'Description', 'Description'),
+                  s.tr('الوصف', 'Description', appL10n.adDetailDescription),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -2163,8 +2164,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     onTap: () => setState(() => _descExpanded = !_descExpanded),
                     child: Text(
                       _descExpanded
-                          ? s.tr('عرض أقل', 'Voir moins', 'See less')
-                          : s.tr('قراءة المزيد', 'Lire la suite', 'See more'),
+                          ? s.tr('عرض أقل', 'Voir moins', appL10n.adDetailSeeLess)
+                          : s.tr('قراءة المزيد', 'Lire la suite', appL10n.adDetailSeeMore),
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
@@ -2277,7 +2278,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         s.tr(
                           'اتصال هاتفي بالبائع',
                           'Appeler le vendeur',
-                          'Call seller',
+                          appL10n.adDetailCallSeller,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -2399,12 +2400,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                 ? s.tr(
                     'متجر على Apolo · $cityName',
                     'Boutique Apolo · $cityName',
-                    'Apolo Store · $cityName',
+                    appL10n.adDetailApoloStoreCityname(cityName),
                   )
                 : s.tr(
                     'بائع على Apolo · $cityName',
                     'Vendeur Apolo · $cityName',
-                    'Apolo Seller · $cityName',
+                    appL10n.adDetailApoloSellerCityname(cityName),
                   )));
 
     final String hostInitials =
@@ -2479,8 +2480,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                   children: [
                     Text(
                       isBusinessSeller
-                          ? s.tr('المتجر المعلن', 'Boutique', 'Business Store')
-                          : s.tr('البائع', 'Vendeur', 'Seller'),
+                          ? s.tr('المتجر المعلن', 'Boutique', appL10n.adDetailBusinessStore)
+                          : s.tr('البائع', 'Vendeur', appL10n.adDetailSeller),
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
@@ -2539,7 +2540,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        s.tr('عرض التقييمات', 'Voir les avis', 'See reviews'),
+                        s.tr('عرض التقييمات', 'Voir les avis', appL10n.adDetailSeeReviews),
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -2707,8 +2708,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       alignment: Alignment.center,
                       child: Text(
                         isFollowing
-                            ? s.tr('متابَع', 'Suivi', 'Following')
-                            : s.tr('متابعة', 'Suivre', 'Follow'),
+                            ? s.tr('متابَع', 'Suivi', appL10n.followingButton)
+                            : s.tr('متابعة', 'Suivre', appL10n.followButton),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -2743,12 +2744,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               ? s.tr(
                                   'تقييمك لهذا البائع',
                                   'Votre avis publié',
-                                  'Your rating',
+                                  appL10n.adDetailYourRating,
                                 )
                               : s.tr(
                                   'قيّم تجربتك مع البائع',
                                   'Évaluer ce vendeur',
-                                  'Rate this seller',
+                                  appL10n.adDetailRateThisSeller,
                                 ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -2839,12 +2840,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                                     ? s.tr(
                                         'تعديل تقييمك',
                                         'Modifier',
-                                        'Edit review',
+                                        appL10n.adDetailEditReview,
                                       )
                                     : s.tr(
                                         'أضف تقييمك',
                                         'Donner un avis',
-                                        'Write review',
+                                        appL10n.adDetailWriteReview,
                                       ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -2893,7 +2894,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                s.tr('موقع الإعلان', 'Localisation', 'Location'),
+                s.tr('موقع الإعلان', 'Localisation', appL10n.adDetailLocation),
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -2948,12 +2949,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                               ? s.tr(
                                   'في منطقتك · ${distKm.round()} كم',
                                   'Dans votre zone · ${distKm.round()} km',
-                                  'In your zone · ${distKm.round()} km',
+                                  appL10n.adDetailZoneDistkmKm(distKm.round()),
                                 )
                               : s.tr(
                                   'يبعد ${distKm.round()} كم',
                                   'À ${distKm.round()} km',
-                                  '${distKm.round()} km away',
+                                  appL10n.adDetailDistkmKmAway(distKm.round()),
                                 ),
                           style: TextStyle(
                             fontSize: 11.5,
@@ -3012,7 +3013,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                       s.tr(
                         'الموقع تقريبي',
                         'La localisation est approximative',
-                        'Location is approximate',
+                        appL10n.adDetailLocationIsApproximate,
                       ),
                       style: TextStyle(
                         fontSize: 12.5,
@@ -3044,7 +3045,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    s.tr('عرض الخريطة', 'Voir la carte', 'Full map'),
+                    s.tr('عرض الخريطة', 'Voir la carte', appL10n.adDetailFullMap),
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -3108,7 +3109,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             s.tr(
               'عمليات بحث ذات صلة',
               'Recherches similaires',
-              'Related searches',
+              appL10n.adDetailRelatedSearches,
             ),
             style: TextStyle(
               fontSize: 17,
@@ -3202,14 +3203,14 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     text: s.tr(
                       'إذا لم يعجبك هذا الإعلان، يمكنك ',
                       'Si vous n’aimez pas ceci, vous pouvez ',
-                      "If you don't like this, you can ",
+                      appL10n.adDetailIfYouDonTLike,
                     ),
                   ),
                   TextSpan(
                     text: s.tr(
                       'إخفاء هذا الإعلان',
                       'masquer cette annonce',
-                      'hide this listing',
+                      appL10n.adDetailHideThisListing,
                     ),
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
@@ -3220,7 +3221,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     text: s.tr(
                       ' وسنعرض لك إعلانات أقل مشابهة له.',
                       ' et nous vous en montrerons moins de ce type.',
-                      " and we'll show you fewer listings like this.",
+                      appL10n.adDetailWeLlShowYouFewer,
                     ),
                   ),
                 ],
@@ -3241,12 +3242,12 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                           ? s.tr(
                               'تم إخفاء الإعلان من توصياتك',
                               'Annonce masquée de vos recommandations',
-                              'Listing hidden from your feed',
+                              appL10n.adDetailListingHiddenFromFeed,
                             )
                           : s.tr(
                               'تم إلغاء الإخفاء',
                               'Affichage rétabli',
-                              'Listing restored',
+                              appL10n.adDetailListingRestored,
                             ),
                     ),
                   ),
@@ -3275,11 +3276,11 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     const SizedBox(width: 7),
                     Text(
                       _hiddenListing
-                          ? s.tr('تم الإخفاء', 'Masquée', 'Hidden')
+                          ? s.tr('تم الإخفاء', 'Masquée', appL10n.adDetailHidden)
                           : s.tr(
                               'إخفاء الإعلان',
                               'Masquer l’annonce',
-                              'Hide listing',
+                              appL10n.adDetailHideListing,
                             ),
                       style: TextStyle(
                         fontSize: 13.5,
@@ -3312,7 +3313,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                         s.tr(
                           'الإبلاغ أو الأمان',
                           'Signaler / Sécurité',
-                          'Report & Safety',
+                          appL10n.adDetailReportSafety,
                         ),
                         style: TextStyle(
                           fontSize: 12,
@@ -3351,7 +3352,7 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             s.tr(
               'إعلانات مشابهة فـ نفس القسم',
               'Annonces similaires',
-              'Similar listings',
+              appL10n.adDetailSimilarListings,
             ),
             style: TextStyle(
               fontSize: 17,
@@ -3860,7 +3861,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
               children: [
                 ApoloDlTopNav(
                   title:
-                      s.tr('جميع التقييمات', 'Tous les avis', 'All Reviews'),
+                      s.tr('جميع التقييمات', 'Tous les avis', appL10n.adDetailAllReviews),
                 ),
                 Expanded(
                   child: ListView(
@@ -3884,7 +3885,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                     s.tr(
                                       'تقييم البائع',
                                       'Note du vendeur',
-                                      'Seller rating',
+                                      appL10n.adDetailSellerRating,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -4060,12 +4061,12 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                 ? s.tr(
                                     'تعديل تقييمك',
                                     'Modifier votre avis',
-                                    'Edit your review',
+                                    appL10n.adDetailEditReview2,
                                   )
                                 : s.tr(
                                     'أضف تقييمك',
                                     'Donner un avis',
-                                    'Write a review',
+                                    appL10n.adDetailWriteReview2,
                                   ),
                             leadingIcon: CupertinoIcons.star_fill,
                             variant: ApoloDlButtonVariant.primary,
@@ -4096,7 +4097,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                           s.tr(
                             'تقييمات البائع ($totalCount)',
                             'Avis sur le vendeur ($totalCount)',
-                            'Seller reviews ($totalCount)',
+                            appL10n.adDetailSellerReviewsTotalcount(totalCount),
                           ),
                           style: TextStyle(
                             fontSize: 17,
@@ -4109,7 +4110,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                         GestureDetector(
                           onTap: () => setState(() => _minStarsFilter = 0),
                           child: Text(
-                            s.tr('عرض الكل', 'Tout afficher', 'Show all'),
+                            s.tr('عرض الكل', 'Tout afficher', appL10n.adDetailShowAll),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -4154,9 +4155,9 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                     ? s.tr(
                                         '5 نجوم فقط',
                                         '5 étoiles',
-                                        '5 stars',
+                                        appL10n.adDetail5Stars,
                                       )
-                                    : s.tr('تصفية', 'Filtres', 'Filters'),
+                                    : s.tr('تصفية', 'Filtres', appL10n.filtersTitle),
                                 style: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
@@ -4196,9 +4197,9 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                     ? s.tr(
                                         'الأعلى تقييماً',
                                         'Meilleurs',
-                                        'Highest',
+                                        appL10n.adDetailHighest,
                                       )
-                                    : s.tr('ترتيب', 'Trier', 'Sort'),
+                                    : s.tr('ترتيب', 'Trier', appL10n.adDetailSort),
                                 style: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
@@ -4232,7 +4233,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                             s.tr(
                               'لا توجد تقييمات نصية منشورة لـ ${widget.sellerName} حالياً',
                               'Aucun avis publié pour ${widget.sellerName} pour le moment',
-                              'No written reviews for ${widget.sellerName} yet',
+                              appL10n.adDetailNoWrittenReviewsSellernameYet(widget.sellerName),
                             ),
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -4398,7 +4399,7 @@ class _SellerReviewsScreenState extends State<_SellerReviewsScreen> {
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      s.tr('مفيد', 'Utile', 'Helpful'),
+                                      s.tr('مفيد', 'Utile', appL10n.adDetailHelpful),
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,

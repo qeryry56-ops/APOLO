@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Instagram-Style Quick Replies Manager Sheet (إدارة الردود السريعة ورسالة الترحيب).
 class QuickRepliesManagerSheet extends StatefulWidget {
@@ -62,7 +63,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
             _state.s.tr(
               'وصلت للحد الأقصى ($maxAllowed ردود). رقِّ إلى Pro Plus لردود غير محدودة!',
               'Limite atteinte ($maxAllowed). Passez à Pro Plus pour plus !',
-              'Limit reached ($maxAllowed). Upgrade to Pro Plus for more!',
+              appL10n.quickRepliesLimitReachedMaxallowedUpgradePro(maxAllowed),
             ),
           ),
         ),
@@ -103,7 +104,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
             _state.s.tr(
               'تم حفظ الردود السريعة ورسالة الترحيب بنجاح ⚡',
               'Réponses rapides enregistrées ⚡',
-              'Quick replies saved ⚡',
+              appL10n.quickRepliesQuickRepliesSaved,
             ),
           ),
         ),
@@ -156,7 +157,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
                       s.tr(
                         'الردود السريعة للشات (Quick Replies)',
                         'Réponses rapides (Chat)',
-                        'Chat Quick Replies',
+                        appL10n.quickRepliesChatQuickReplies,
                       ),
                       style: TextStyle(
                         fontSize: 18,
@@ -172,7 +173,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
                 s.tr(
                   'تظهر هذه الاختصارات فوق لوحة المفاتيح في محادثاتك للرد على الزبناء بضغطة واحدة.',
                   'Ces raccourcis apparaissent au-dessus du clavier dans vos conversations.',
-                  'Tap any shortcut inside Chat to reply to buyers in one tap.',
+                  appL10n.quickRepliesTapAnyShortcutInsideChat,
                 ),
                 style: TextStyle(fontSize: 12.8, color: palette.muted),
               ),
@@ -249,7 +250,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      s.tr('إضافة رد سريع جديد', 'Nouvelle réponse rapide', 'Add quick reply'),
+                      s.tr('إضافة رد سريع جديد', 'Nouvelle réponse rapide', appL10n.quickRepliesAddQuickReply),
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -265,7 +266,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
                             key: const Key('qr-shortcut-input'),
                             controller: _shortcutCtrl,
                             decoration: InputDecoration(
-                              hintText: s.tr('العنوان (مثال: الثمن)', 'Titre', 'Label'),
+                              hintText: s.tr('العنوان (مثال: الثمن)', 'Titre', appL10n.quickRepliesLabel),
                               isDense: true,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -280,7 +281,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
                             key: const Key('qr-body-input'),
                             controller: _bodyCtrl,
                             decoration: InputDecoration(
-                              hintText: s.tr('نص الرسالة...', 'Message...', 'Reply text...'),
+                              hintText: s.tr('نص الرسالة...', 'Message...', appL10n.quickRepliesReplyText),
                               isDense: true,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -309,7 +310,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
                 s.tr(
                   'رسالة الترحيب التلقائية للزبناء الجدد',
                   'Message d’accueil automatique',
-                  'Auto-greeting message',
+                  appL10n.quickRepliesAutoGreetingMessage,
                 ),
                 style: TextStyle(
                   fontSize: 13,
@@ -331,7 +332,7 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
                     hintText: s.tr(
                       'مرحباً بك في متجرنا! كيف يمكننا مساعدتك؟',
                       'Bienvenue dans notre boutique !',
-                      'Welcome to our store!',
+                      appL10n.quickRepliesWelcomeStore,
                     ),
                     border: InputBorder.none,
                   ),
@@ -342,8 +343,8 @@ class _QuickRepliesManagerSheetState extends State<QuickRepliesManagerSheet> {
               ApoloDlButton(
                 key: const Key('qr-save-btn'),
                 label: _saving
-                    ? s.tr('جاري الحفظ...', 'Enregistrement...', 'Saving...')
-                    : s.tr('حفظ الردود السريعة', 'Enregistrer', 'Save Quick Replies'),
+                    ? s.tr('جاري الحفظ...', 'Enregistrement...', appL10n.savingLabel)
+                    : s.tr('حفظ الردود السريعة', 'Enregistrer', appL10n.quickRepliesSaveQuickReplies),
                 variant: ApoloDlButtonVariant.primary,
                 borderRadius: 999,
                 fullWidth: true,
@@ -414,7 +415,7 @@ class BusinessQuickRepliesBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      AppState().s.tr('تعديل', 'Gérer', 'Manage'),
+                      AppState().s.tr('تعديل', 'Gérer', appL10n.quickRepliesManage),
                       style: const TextStyle(
                         fontSize: 11.8,
                         fontWeight: FontWeight.w700,

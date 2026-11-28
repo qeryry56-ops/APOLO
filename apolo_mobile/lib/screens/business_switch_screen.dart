@@ -7,6 +7,7 @@ import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'pro_plus_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Shared helper for localized Business Category metadata across Profile, Stores & Wizard.
 class ApoloBusinessCategories {
@@ -78,7 +79,7 @@ class ApoloBusinessCategories {
 
   static String labelFor(String? categoryId, AppStrings s) {
     if (categoryId == null || categoryId.trim().isEmpty) {
-      return s.tr('متجر احترافي', 'Boutique Pro', 'Business Store');
+      return s.tr('متجر احترافي', 'Boutique Pro', appL10n.adDetailBusinessStore);
     }
     final match = all.firstWhere(
       (c) => c['id'] == categoryId.trim().toLowerCase(),
@@ -167,7 +168,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           : _state.s.tr(
               'مرحباً بك في متجرنا على Apolo! كيف يمكننا مساعدتك اليوم؟',
               'Bienvenue dans notre boutique sur Apolo ! Comment pouvons-nous vous aider ?',
-              'Welcome to our store on Apolo! How can we help you today?',
+              appL10n.businessSwitchWelcomeStoreApoloHowCan,
             ),
     );
   }
@@ -192,7 +193,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
         _error = _state.s.tr(
           'يرجى إدخال اسم المتجر أو النشاط التجاري (حرفين على الأقل).',
           'Veuillez saisir le nom de votre boutique (au moins 2 caractères).',
-          'Please enter a store name (at least 2 characters).',
+          appL10n.businessSwitchPleaseEnterStoreNameAt,
         );
       });
       return;
@@ -233,7 +234,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
         _error = _state.s.tr(
           'يرجى إدخال اسم المتجر أولاً.',
           'Veuillez saisir le nom de votre boutique.',
-          'Please enter your store name.',
+          appL10n.businessSwitchPleaseEnterStoreName,
         );
       });
       return;
@@ -269,12 +270,12 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                 ? _state.s.tr(
                     'تم حفظ إعدادات متجرك بنجاح!',
                     'Paramètres de la boutique enregistrés !',
-                    'Business profile updated!',
+                    appL10n.businessSwitchBusinessProfileUpdated,
                   )
                 : _state.s.tr(
                     'مبروك! تم تفعيل حساب الأعمال (Business) ومتجرك الموثّق بنجاح',
                     'Félicitations ! Votre boutique Business vérifiée est active',
-                    'Your Verified Business store is now active!',
+                    appL10n.businessSwitchVerifiedBusinessStoreIsNow,
                   ),
           ),
         ),
@@ -286,7 +287,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
         _error = _state.s.tr(
           'تعذر حفظ إعدادات الأعمال حالياً. تحقق من الاتصال وحاول مجدداً.',
           'Impossible d’enregistrer pour le moment. Réessayez.',
-          'Could not save business profile. Please try again.',
+          appL10n.businessSwitchCouldNotSaveBusinessProfile,
         );
       });
     }
@@ -311,12 +312,12 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                     ? s.tr(
                         'إعدادات المتجر والأعمال',
                         'Paramètres Business',
-                        'Business Settings',
+                        appL10n.businessSwitchBusinessSettings,
                       )
                     : s.tr(
                         'التحويل إلى حساب Business',
                         'Passer au compte Business',
-                        'Switch to Business',
+                        appL10n.businessSwitchSwitchBusiness,
                       ),
                 size: ApoloDlTopNavSize.md,
               ),
@@ -371,7 +372,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                                     s.tr(
                                       'وجدنا بيانات متجرك السابق محفوظة! راجعها وفعّل حسابك في ثانية.',
                                       'Vos informations de boutique précédentes ont été restaurées !',
-                                      'Your previous store details are ready to reactivate!',
+                                      appL10n.businessSwitchPreviousStoreDetailsAreReady,
                                     ),
                                     style: TextStyle(
                                       fontSize: 12.8,
@@ -428,7 +429,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                         Expanded(
                           flex: 1,
                           child: ApoloDlButton(
-                            label: s.tr('رجوع', 'Retour', 'Back'),
+                            label: s.tr('رجوع', 'Retour', appL10n.backButton),
                             variant: ApoloDlButtonVariant.secondary,
                             borderRadius: 999,
                             fullWidth: true,
@@ -442,19 +443,19 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                         child: ApoloDlButton(
                           key: const Key('business-wizard-continue'),
                           label: _saving
-                              ? s.tr('جاري الحفظ...', 'Enregistrement...', 'Saving...')
+                              ? s.tr('جاري الحفظ...', 'Enregistrement...', appL10n.savingLabel)
                               : (_step < 3
-                                  ? s.tr('متابعة', 'Continuer', 'Continue')
+                                  ? s.tr('متابعة', 'Continuer', appL10n.continueButton)
                                   : (widget.isEditing
                                       ? s.tr(
                                           'حفظ التعديلات',
                                           'Enregistrer',
-                                          'Save Changes',
+                                          appL10n.businessSwitchSaveChanges,
                                         )
                                       : s.tr(
                                           'تفعيل حساب Business مجاناً',
                                           'Activer Business gratuitement',
-                                          'Activate Free Business',
+                                          appL10n.businessSwitchActivateFreeBusiness,
                                         ))),
                           variant: ApoloDlButtonVariant.primary,
                           borderRadius: 999,
@@ -481,7 +482,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'ما هو مجال نشاطك التجاري؟',
             'Quelle est votre catégorie d’activité ?',
-            'What best describes your business?',
+            appL10n.businessSwitchWhatBestDescribesBusiness,
           ),
           style: TextStyle(
             fontSize: 22,
@@ -495,7 +496,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'ستظهر هذه الفئة تحت اسم متجرك في بروفايلك وفي قسم المتاجر تماماً مثل Instagram.',
             'Cette catégorie s’affichera sur votre profil professionnel et votre boutique.',
-            'This category badge appears under your name on your profile and store.',
+            appL10n.businessSwitchThisCategoryBadgeAppearsUnder,
           ),
           style: TextStyle(fontSize: 13.5, color: palette.muted, height: 1.4),
         ),
@@ -578,7 +579,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'هوية المتجر، أوقات العمل والموقع',
             'Identité, horaires et localisation',
-            'Store identity, hours & location',
+            appL10n.businessSwitchStoreIdentityHoursLocation,
           ),
           style: TextStyle(
             fontSize: 22,
@@ -592,24 +593,24 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'يظهر متجرك تلقائياً في قسم المتاجر بمجرد وجود إعلان واحد نشط على الأقل.',
             'Votre boutique apparaît automatiquement dès que vous avez au moins une annonce active.',
-            'Your store appears in the Stores directory once you have at least 1 active listing.',
+            appL10n.businessSwitchStoreAppearsStoresDirectoryOnce,
           ),
           style: TextStyle(fontSize: 13.5, color: palette.muted, height: 1.4),
         ),
         const SizedBox(height: 18),
         _buildFieldLabel(
-          s.tr('اسم المتجر / النشاط *', 'Nom de la boutique *', 'Store name *'),
+          s.tr('اسم المتجر / النشاط *', 'Nom de la boutique *', appL10n.businessSwitchStoreName),
           palette,
         ),
         _buildInput(
           key: const Key('business-name-input'),
           controller: _nameCtrl,
-          hint: s.tr('مثال: Auto Luxury Casa', 'Ex: Auto Luxury Casa', 'e.g. Auto Casa'),
+          hint: s.tr('مثال: Auto Luxury Casa', 'Ex: Auto Luxury Casa', appL10n.businessSwitchEGAutoCasa),
           palette: palette,
         ),
         const SizedBox(height: 14),
         _buildFieldLabel(
-          s.tr('نبذة قصيرة عن المتجر', 'Description de la boutique', 'Bio / Description'),
+          s.tr('نبذة قصيرة عن المتجر', 'Description de la boutique', appL10n.businessSwitchBioDescription),
           palette,
         ),
         _buildInput(
@@ -619,13 +620,13 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           hint: s.tr(
             'عرّف الزبناء بجودة سلعك، الضمان، والتوصيل...',
             'Présentez vos produits, garanties et livraison...',
-            'Tell customers about your products & service...',
+            appL10n.businessSwitchTellCustomersAboutProductsService,
           ),
           palette: palette,
         ),
         const SizedBox(height: 14),
         _buildFieldLabel(
-          s.tr('المدينة والعنوان التجاري', 'Ville et adresse', 'City & address'),
+          s.tr('المدينة والعنوان التجاري', 'Ville et adresse', appL10n.businessSwitchCityAddress),
           palette,
         ),
         _buildInput(
@@ -634,7 +635,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           hint: s.tr(
             'مثال: المعاريف، الدار البيضاء',
             'Ex: Maarif, Casablanca',
-            'e.g. Maarif, Casablanca',
+            appL10n.businessSwitchEGMaarifCasablanca,
           ),
           palette: palette,
         ),
@@ -643,7 +644,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'رابط المحل على Google Maps (اختياري)',
             'Lien Google Maps (optionnel)',
-            'Google Maps link (optional)',
+            appL10n.businessSwitchGoogleMapsLinkOptional,
           ),
           palette,
         ),
@@ -656,7 +657,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
         ),
         const SizedBox(height: 14),
         _buildFieldLabel(
-          s.tr('أوقات العمل', 'Horaires d’ouverture', 'Working hours'),
+          s.tr('أوقات العمل', 'Horaires d’ouverture', appL10n.businessSwitchWorkingHours),
           palette,
         ),
         _buildInput(
@@ -706,7 +707,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'أدوات التواصل والبيع الفوري',
             'Outils de contact et commande directe',
-            'Contact & direct order tools',
+            appL10n.businessSwitchContactDirectOrderTools,
           ),
           style: TextStyle(
             fontSize: 22,
@@ -720,13 +721,13 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'سهّل على الزبناء الطلب من متجرك والرد عليهم بسرعة في الشات.',
             'Facilitez les commandes directes et les réponses rapides dans le chat.',
-            'Enable 1-tap orders and automatic chat greetings.',
+            appL10n.businessSwitchEnable1TapOrdersAutomatic,
           ),
           style: TextStyle(fontSize: 13.5, color: palette.muted, height: 1.4),
         ),
         const SizedBox(height: 18),
         _buildFieldLabel(
-          s.tr('رقم هاتف المتجر للاتصال المباشر', 'Téléphone professionnel', 'Business phone'),
+          s.tr('رقم هاتف المتجر للاتصال المباشر', 'Téléphone professionnel', appL10n.businessSwitchBusinessPhone),
           palette,
         ),
         _buildInput(
@@ -780,7 +781,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                         s.tr(
                           'تفعيل زر "طلب مباشر" في المتجر',
                           'Activer le bouton « Commande directe »',
-                          'Enable "Direct Order" button on store',
+                          appL10n.businessSwitchEnableDirectOrderButtonStore,
                         ),
                         style: TextStyle(
                           fontSize: 14.5,
@@ -793,7 +794,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
                         s.tr(
                           'يستقبل متجرك طلبيات الزبناء مباشرة مع الاسم والمدينة والهاتف.',
                           'Recevez les commandes clients avec nom, ville et téléphone.',
-                          'Receive instant orders with customer details.',
+                          appL10n.businessSwitchReceiveInstantOrdersCustomerDetails,
                         ),
                         style: TextStyle(fontSize: 12.2, color: palette.muted),
                       ),
@@ -817,7 +818,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           s.tr(
             'رسالة الترحيب التلقائية في الشات',
             'Message d’accueil automatique (Chat)',
-            'Auto-greeting message in Chat',
+            appL10n.businessSwitchAutoGreetingMessageChat,
           ),
           palette,
         ),
@@ -828,7 +829,7 @@ class _BusinessSwitchScreenState extends State<BusinessSwitchScreen> {
           hint: s.tr(
             'مرحباً بك في متجرنا! كيف يمكننا مساعدتك؟',
             'Bienvenue dans notre boutique !',
-            'Welcome to our store! How can we help?',
+            appL10n.businessSwitchWelcomeStoreHowCanWe,
           ),
           palette: palette,
         ),

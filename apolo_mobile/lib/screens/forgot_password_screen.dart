@@ -10,6 +10,7 @@ import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'main_shell.dart';
+import '../l10n/l10n.dart';
 
 enum _RecoveryStep {
   email,
@@ -155,7 +156,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _error = _state.s.tr(
             'يرجى إدخال بريد إلكتروني صحيح',
             'Veuillez saisir une adresse e-mail valide',
-            'Please enter a valid email address',
+            appL10n.authPleaseEnterValidEmailAddress,
           );
         });
         return;
@@ -181,13 +182,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _notice = _state.s.tr(
             'تم إرسال رمز جديد إلى $masked.',
             'Un nouveau code a été envoyé à $masked.',
-            'A new verification code was sent to $masked.',
+            appL10n.authNewVerificationCodeWasSent(masked),
           );
         } else {
           _notice = _state.s.tr(
             'أرسلنا رمز تحقق مكوناً من 6 أرقام إلى $masked.',
             'Nous avons envoyé un code à 6 chiffres à $masked.',
-            'We sent a 6-digit verification code to $masked.',
+            appL10n.forgotPasswordWeSent6DigitVerification(masked),
           );
         }
       });
@@ -221,7 +222,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _error = _state.s.tr(
           'يرجى إدخال رمز التحقق المكون من 6 أرقام.',
           'Veuillez saisir le code à 6 chiffres.',
-          'Please enter the 6-digit verification code.',
+          appL10n.forgotPasswordPleaseEnter6DigitVerification,
         );
       });
       return;
@@ -273,7 +274,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _error = _state.s.tr(
           'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل',
           'Votre mot de passe doit contenir au moins 8 caractères',
-          'Your password must be at least 8 characters',
+          appL10n.authPasswordMustBeAtLeast,
         );
       });
       return;
@@ -310,7 +311,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             _state.s.tr(
               'تم تحديث كلمة المرور وتسجيل الدخول بنجاح!',
               'Mot de passe mis à jour. Bienvenue !',
-              'Password updated and signed in successfully!',
+              appL10n.forgotPasswordPasswordUpdatedSignedSuccessfully,
             ),
           ),
           backgroundColor: const Color(0xFF10B981),
@@ -387,12 +388,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         promptLabel = s.tr(
           'أدخل بريدك الإلكتروني',
           'Entrez votre e-mail',
-          'Enter your email',
+          appL10n.authEnterEmail,
         );
         helperText = s.tr(
           'ستتوصل برسالة في بريدك الإلكتروني لتعيين كلمة مرور جديدة',
           'Vous recevrez un e-mail pour définir un nouveau mot de passe',
-          'You will receive an email to set a new password',
+          appL10n.forgotPasswordYouWillReceiveEmailSet,
         );
         wrapperKey = const Key('dl-forgot-wrapper');
         break;
@@ -401,7 +402,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         promptLabel = s.tr(
           'أدخل رمز التحقق',
           'Entrez le code de vérification',
-          'Enter verification code',
+          appL10n.authEnterVerificationCode,
         );
         final masked = AccountValidation.maskEmail(_email.text.trim()) ??
             _email.text.trim();
@@ -409,7 +410,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             s.tr(
               'أرسلنا رمز تحقق مكوناً من 6 أرقام إلى $masked',
               'Nous avons envoyé un code à 6 chiffres à $masked',
-              'We sent a 6-digit verification code to $masked',
+              appL10n.authWeSent6DigitVerification(masked),
             );
         wrapperKey = const Key('dl-forgot-otp-wrapper');
         break;
@@ -418,12 +419,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         promptLabel = s.tr(
           'اختر كلمة مرور جديدة',
           'Choisissez un nouveau mot de passe',
-          'Choose a new password',
+          appL10n.forgotPasswordChooseNewPassword,
         );
         helperText = s.tr(
           'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل',
           'Votre mot de passe doit contenir au moins 8 caractères',
-          'Your password must be at least 8 characters',
+          appL10n.authPasswordMustBeAtLeast,
         );
         wrapperKey = const Key('dl-forgot-password-wrapper');
         break;
@@ -468,7 +469,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               letterSpacing: -0.4,
             ),
             decoration: InputDecoration(
-              hintText: 'example@gmail.com',
+              hintText: context.l10n.authEmailPlaceholder,
               hintStyle: TextStyle(
                 color: placeholderColor,
                 fontSize: dynamicInputFontSize,
@@ -593,7 +594,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               letterSpacing: 1.0,
             ),
             decoration: InputDecoration(
-              hintText: 'Password',
+              hintText: context.l10n.authPasswordPlaceholder,
               hintStyle: TextStyle(
                 color: placeholderColor,
                 fontSize: 28.0,
@@ -750,12 +751,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                             ? s.tr(
                                                 'إعادة الإرسال ($_cooldownRemaining ث)',
                                                 'Renvoyer (${_cooldownRemaining}s)',
-                                                'Resend code (${_cooldownRemaining}s)',
+                                                appL10n.authResendCodeRemainingS(_cooldownRemaining),
                                               )
                                             : s.tr(
                                                 'إعادة إرسال الرمز',
                                                 'Renvoyer le code',
-                                                'Resend code',
+                                                appL10n.otpResendCodeButton,
                                               ),
                                         style: TextStyle(
                                           color: _cooldownRemaining > 0
@@ -808,7 +809,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     ),
                                   )
                                 : Text(
-                                    s.tr('متابعة', 'Continuer', 'Continue'),
+                                    s.tr('متابعة', 'Continuer', appL10n.continueButton),
                                     style: TextStyle(
                                       color: continueFg,
                                       fontSize: 16.0,

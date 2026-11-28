@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../screens/widgets/kinetic_widgets.dart';
 import 'dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Opens a strict Dynamic Layer v5.1 modal bottom sheet allowing a user
 /// to rate (1–5 stars) and write a review for a seller/listing.
@@ -104,24 +105,24 @@ class _ApoloWriteReviewSheetBodyState
   String _ratingSentiment(AppStrings s, int stars) {
     switch (stars) {
       case 5:
-        return s.tr('ممتاز', 'Excellent', 'Excellent');
+        return s.tr('ممتاز', 'Excellent', appL10n.writeReviewExcellent);
       case 4:
-        return s.tr('جيد جداً', 'Très bien', 'Very good');
+        return s.tr('جيد جداً', 'Très bien', appL10n.writeReviewVeryGood);
       case 3:
-        return s.tr('جيد', 'Bien', 'Good');
+        return s.tr('جيد', 'Bien', appL10n.adDetailGood);
       case 2:
-        return s.tr('مقبول', 'Moyen', 'Fair');
+        return s.tr('مقبول', 'Moyen', appL10n.settingsRateAppFair);
       default:
-        return s.tr('ضعيف', 'Insuffisant', 'Poor');
+        return s.tr('ضعيف', 'Insuffisant', appL10n.writeReviewPoor);
     }
   }
 
   List<String> _quickTagOptions(AppStrings s) {
     return [
-      s.tr('معاملة محترمة', 'Bonne communication', 'Great communication'),
-      s.tr('سلعة مطابقة للوصف', 'Conforme à l’annonce', 'As described'),
-      s.tr('استجابة سريعة', 'Réponse rapide', 'Fast response'),
-      s.tr('ثمن مناسب', 'Prix correct', 'Fair price'),
+      s.tr('معاملة محترمة', 'Bonne communication', appL10n.writeReviewGreatCommunication),
+      s.tr('سلعة مطابقة للوصف', 'Conforme à l’annonce', appL10n.writeReviewAsDescribed),
+      s.tr('استجابة سريعة', 'Réponse rapide', appL10n.writeReviewFastResponse),
+      s.tr('ثمن مناسب', 'Prix correct', appL10n.writeReviewFairPrice),
     ];
   }
 
@@ -158,7 +159,7 @@ class _ApoloWriteReviewSheetBodyState
           s.tr(
             'تم نشر تقييمك بنجاح',
             'Votre avis a été publié',
-            'Your review has been posted',
+            appL10n.writeReviewReviewHasBeenPosted,
           ),
         ),
       ),
@@ -204,12 +205,12 @@ class _ApoloWriteReviewSheetBodyState
                               ? s.tr(
                                   'تعديل تقييمك',
                                   'Modifier votre avis',
-                                  'Edit your review',
+                                  appL10n.adDetailEditReview2,
                                 )
                               : s.tr(
                                   'أضف تقييمك',
                                   'Donner votre avis',
-                                  'Write a review',
+                                  appL10n.adDetailWriteReview2,
                                 ),
                           style: TextStyle(
                             fontSize: 19,
@@ -392,7 +393,7 @@ class _ApoloWriteReviewSheetBodyState
                       hintText: s.tr(
                         'شارك تجربتك مع هذا البائع (الجودة، التعامل، الموعد...)',
                         'Partagez votre expérience avec ce vendeur...',
-                        'Share your experience with this seller...',
+                        appL10n.writeReviewShareExperienceThisSeller,
                       ),
                       hintStyle: TextStyle(
                         fontSize: 13.5,
@@ -420,12 +421,12 @@ class _ApoloWriteReviewSheetBodyState
                         ? s.tr(
                             'حفظ التقييم',
                             'Mettre à jour l’avis',
-                            'Update review',
+                            appL10n.writeReviewUpdateReview,
                           )
                         : s.tr(
                             'نشر التقييم',
                             'Publier l’avis',
-                            'Submit review',
+                            appL10n.writeReviewSubmitReview,
                           ),
                     style: TextStyle(
                       fontSize: 15,

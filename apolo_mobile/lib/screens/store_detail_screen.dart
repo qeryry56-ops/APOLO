@@ -14,6 +14,7 @@ import 'widgets/ad_card.dart';
 import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Verified Official Storefront (`StoreDetailScreen`):
 /// - Pure `#FFFFFF` canvas + `56px` Dynamic Layer Top Nav (`40×40` `#EEEEEE` back & `•••` menu)
@@ -148,7 +149,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                   s.tr(
                                     'الإبلاغ عن هذا المتجر',
                                     'Signaler cette boutique',
-                                    'Report store',
+                                    appL10n.storeDetailReportStore,
                                   ),
                                   style: TextStyle(
                                     fontSize: 14.5,
@@ -201,7 +202,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                   s.tr(
                                     'تم حظر المتجر بنجاح',
                                     'Boutique bloquée',
-                                    'Store blocked',
+                                    appL10n.storeDetailStoreBlocked,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -236,7 +237,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                   s.tr(
                                     'حظر هذا المتجر',
                                     'Bloquer cette boutique',
-                                    'Block store',
+                                    appL10n.storeDetailBlockStore,
                                   ),
                                   style: const TextStyle(
                                     fontSize: 14.5,
@@ -351,7 +352,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         s.tr(
                           'طلب سريع من المتجر',
                           'Commande directe',
-                          'Direct Store Order',
+                          appL10n.storeDetailDirectStoreOrder,
                         ),
                         style: TextStyle(
                           fontSize: 18,
@@ -375,7 +376,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     initialValue: selectedAdId,
                     dropdownColor: _dlBg,
                     decoration: _sheetInputDec(
-                      s.tr('اختر المنتج', 'Choisir le produit', 'Select item'),
+                      s.tr('اختر المنتج', 'Choisir le produit', appL10n.storeDetailSelectItem),
                     ),
                     items: _ads
                         .map(
@@ -395,7 +396,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   controller: nameCtrl,
                   cursorColor: _dlInk,
                   decoration: _sheetInputDec(
-                    s.tr('الاسم الكامل', 'Nom complet', 'Full name'),
+                    s.tr('الاسم الكامل', 'Nom complet', appL10n.storeDetailFullName),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -404,7 +405,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   cursorColor: _dlInk,
                   keyboardType: TextInputType.phone,
                   decoration: _sheetInputDec(
-                    s.tr('رقم الهاتف', 'Téléphone', 'Phone'),
+                    s.tr('رقم الهاتف', 'Téléphone', appL10n.editProfilePhone),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -412,7 +413,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   controller: cityCtrl,
                   cursorColor: _dlInk,
                   decoration: _sheetInputDec(
-                    s.tr('المدينة', 'Ville', 'City'),
+                    s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -420,7 +421,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   controller: locCtrl,
                   cursorColor: _dlInk,
                   decoration: _sheetInputDec(
-                    s.tr('العنوان', 'Adresse de livraison', 'Delivery address'),
+                    s.tr('العنوان', 'Adresse de livraison', appL10n.storeDetailDeliveryAddress),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -428,7 +429,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   controller: msgCtrl,
                   cursorColor: _dlInk,
                   decoration: _sheetInputDec(
-                    s.tr('ملاحظات الطلب', 'Notes', 'Order notes'),
+                    s.tr('ملاحظات الطلب', 'Notes', appL10n.storeDetailOrderNotes),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -436,7 +437,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   label: s.tr(
                     'تأكيد الطلب الآن',
                     'Confirmer la commande',
-                    'Confirm order',
+                    appL10n.storeDetailConfirmOrder,
                   ),
                   variant: ApoloDlButtonVariant.primary,
                   borderRadius: 999,
@@ -481,7 +482,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                 s.tr(
                                   'تم إرسال طلبك للمتجر بنجاح',
                                   'Commande envoyée avec succès',
-                                  'Order submitted successfully',
+                                  appL10n.storeDetailOrderSubmittedSuccessfully,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -527,12 +528,12 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     headline: s.tr(
                       'المتجر غير موجود',
                       'Boutique introuvable',
-                      'Store not found',
+                      appL10n.storeDetailStoreNotFound,
                     ),
                     description: s.tr(
                       'تحقق من الرابط أو عد إلى قائمة المتاجر الرسمية.',
                       'Vérifiez le lien ou retournez aux boutiques.',
-                      'Check the link or browse verified stores.',
+                      appL10n.storeDetailCheckLinkBrowseVerifiedStores,
                     ),
                   ),
                 ),
@@ -559,7 +560,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     shape: const StadiumBorder(),
                     icon: const Icon(CupertinoIcons.bag_fill, size: 17),
                     label: Text(
-                      s.tr('اطلب الآن', 'Commander', 'Order now'),
+                      s.tr('اطلب الآن', 'Commander', appL10n.storeDetailOrderNow),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
@@ -791,13 +792,13 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                     ? s.tr(
                                                         'مفتوح · $workingHours',
                                                         'Ouvert · $workingHours',
-                                                        'Open · $workingHours',
+                                                        appL10n.storeDetailOpenWorkinghours(workingHours),
                                                       )
                                                     : (isOpenNow == false
                                                         ? s.tr(
                                                             'مغلق · $workingHours',
                                                             'Fermé · $workingHours',
-                                                            'Closed · $workingHours',
+                                                            appL10n.storeDetailClosedWorkinghours(workingHours),
                                                           )
                                                         : workingHours),
                                                 style: TextStyle(
@@ -845,7 +846,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                   : s.tr(
                                                       'عرض الموقع على Google Maps',
                                                       'Voir sur Google Maps',
-                                                      'Open in Google Maps',
+                                                      appL10n.storeDetailOpenGoogleMaps,
                                                     ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -887,7 +888,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                               label: s.tr(
                                                 'اتصال',
                                                 'Appeler',
-                                                'Call',
+                                                appL10n.callSellerButton,
                                               ),
                                               leadingIcon:
                                                   CupertinoIcons.phone_fill,
@@ -923,7 +924,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                               label: s.tr(
                                                 'طلب مباشر',
                                                 'Commander',
-                                                'Order',
+                                                appL10n.storeDetailOrder,
                                               ),
                                               leadingIcon:
                                                   CupertinoIcons.bag_fill,
@@ -973,7 +974,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                 s.tr(
                                                   'المنتجات',
                                                   'Produits',
-                                                  'Products',
+                                                  appL10n.storeDetailProducts,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -1014,7 +1015,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                 s.tr(
                                                   'موثوق',
                                                   'Vérifié',
-                                                  'Verified',
+                                                  appL10n.verifiedBadgeLabel,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -1055,7 +1056,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                 s.tr(
                                                   'التوصيل',
                                                   'Livraison',
-                                                  'Delivery',
+                                                  appL10n.storeDetailDelivery,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -1090,7 +1091,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     s.tr(
                       'منتجات المتجر',
                       'Catalogue de la boutique',
-                      'Store Catalog',
+                      appL10n.storeDetailStoreCatalog,
                     ),
                     style: TextStyle(
                       fontSize: 18,

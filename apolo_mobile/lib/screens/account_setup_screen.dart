@@ -9,6 +9,7 @@ import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Descriptor for a selectable profile type chip on [AccountSetupScreen].
 class ApoloAccountTypeOption {
@@ -231,7 +232,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                 const SizedBox(width: 16.0),
                 Expanded(
                   child: Text(
-                    s.tr('إنشاء حساب', 'Créer un compte', 'Create account'),
+                    s.tr('إنشاء حساب', 'Créer un compte', appL10n.accountSetupCreateAccount),
                     key: const Key('dl-account-setup-header-title'),
                     textAlign: TextAlign.center,
                     maxLines: 1,
@@ -343,7 +344,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                                 s.tr(
                                   'نوع الحساب',
                                   'Type de compte',
-                                  'Account type',
+                                  appL10n.accountSetupAccountType,
                                 ),
                                 key: const Key('dl-account-setup-title'),
                                 style: TextStyle(
@@ -359,7 +360,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                                 s.tr(
                                   'اختر نوع ملف شخصي واحد على الأقل لتخصيص إعداداتك.',
                                   'Choisissez au moins un type de profil pour personnaliser votre configuration.',
-                                  'Choose at least one profile type to personalize your setup.',
+                                  appL10n.accountSetupChooseAtLeastOneProfile,
                                 ),
                                 key: const Key('dl-account-setup-subtitle'),
                                 style: TextStyle(
@@ -412,7 +413,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                                   color: palette.onInk,
                                 )
                               : Text(
-                                  s.tr('متابعة', 'Continuer', 'Continue'),
+                                  s.tr('متابعة', 'Continuer', appL10n.continueButton),
                                   style: TextStyle(
                                     color: canContinue
                                         ? palette.onInk

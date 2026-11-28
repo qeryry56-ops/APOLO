@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/app_config.dart';
 import '../../core/location/marketplace_location.dart';
 import 'kinetic_widgets.dart';
+import '../../l10n/l10n.dart';
 
 /// Real interactive Web-Mercator Slippy Map backed by CARTO Voyager / OSM tiles
 /// with mathematical circle scaling, pan/zoom gestures, and silent offline fallback.
@@ -650,7 +651,7 @@ class _FullMarketplaceMapPage extends StatelessWidget {
               s.tr(
                 'الموقع التقريبي على الخريطة',
                 'Localisation approximative',
-                'Approximate map area',
+                appL10n.realMarketplaceMapApproximateMapArea,
               ),
               style: const TextStyle(
                 fontSize: 12,
@@ -693,7 +694,7 @@ class _FullMarketplaceMapPage extends StatelessWidget {
                           s.tr(
                             'على بعد ${distKm.round()} كم من موقعك',
                             'À ${distKm.round()} km de votre zone',
-                            '${distKm.round()} km from you',
+                            appL10n.realMarketplaceMapDistkmKmFromYou(distKm.round()),
                           ),
                           style: const TextStyle(
                             fontSize: 12,
@@ -729,7 +730,7 @@ class _FullMarketplaceMapPage extends StatelessWidget {
                             s.tr(
                               'اعتماده كمنطقتي',
                               'Définir comme ma zone',
-                              'Set as my zone',
+                              appL10n.realMarketplaceMapSetAsMyZone,
                             ),
                             style: const TextStyle(
                               fontSize: 13.5,
@@ -767,7 +768,7 @@ class _FullMarketplaceMapPage extends StatelessWidget {
                           s.tr(
                             'فتح في Google Maps',
                             'Ouvrir dans Maps',
-                            'Open in Google Maps',
+                            appL10n.storeDetailOpenGoogleMaps,
                           ),
                           style: const TextStyle(
                             fontSize: 13.5,

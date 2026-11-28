@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated full-screen view for app diagnostics and remote taxonomy/profile sync.
 class SettingsAppDataScreen extends StatefulWidget {
@@ -35,7 +36,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
         _statusMessage = s.tr(
           'تم تحديث بيانات التطبيق بنجاح.',
           'Données synchronisées avec succès.',
-          'App data refreshed successfully.',
+          appL10n.settingsAppDataAppDataRefreshedSuccessfully,
         );
       });
     } catch (_) {
@@ -45,7 +46,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
         _statusMessage = s.tr(
           'تعذر تحديث البيانات. تحقق من الاتصال وأعد المحاولة.',
           'Impossible de synchroniser les données. Vérifiez votre connexion.',
-          'Could not refresh data. Check your connection and try again.',
+          appL10n.settingsAppDataCouldNotRefreshDataCheck,
         );
       });
     } finally {
@@ -74,7 +75,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                     title: s.tr(
                       'بيانات التطبيق والتحديث',
                       'Données et synchronisation',
-                      'App data & sync',
+                      appL10n.settingsAppDataAppDataSync,
                     ),
                     size: ApoloDlTopNavSize.md,
                   ),
@@ -89,7 +90,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               s.tr(
                                 'معلومات النظام وحالة المزامنة المحلية مع خادم Apolo.ma.',
                                 'Informations système et état de synchronisation avec Apolo.ma.',
-                                'System information and local sync status with Apolo.ma.',
+                                appL10n.settingsAppDataSystemInformationLocalSyncStatus,
                               ),
                               style: TextStyle(
                                 fontSize: 14,
@@ -110,7 +111,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               title: s.tr(
                                 'حالة التطبيق',
                                 'État de l’application',
-                                'Application status',
+                                appL10n.settingsAppDataApplicationStatus,
                               ),
                               isFirst: true,
                             ),
@@ -118,7 +119,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               title: s.tr(
                                 'إصدار التطبيق',
                                 'Version de l’app',
-                                'App version',
+                                appL10n.settingsAppDataAppVersion,
                               ),
                               leadingIcon: CupertinoIcons.app_badge,
                               trailingText:
@@ -129,7 +130,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               title: s.tr(
                                 'الخادم',
                                 'Serveur',
-                                'Server',
+                                appL10n.settingsAppDataServer,
                               ),
                               leadingIcon: CupertinoIcons.cloud,
                               trailingText: 'apolo.ma',
@@ -139,7 +140,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               title: s.tr(
                                 'الأقسام المتزامنة',
                                 'Catégories synchronisées',
-                                'Synced categories',
+                                appL10n.settingsAppDataSyncedCategories,
                               ),
                               leadingIcon: CupertinoIcons.square_grid_2x2,
                               trailingText: '${_state.categories.length}',
@@ -149,7 +150,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               title: s.tr(
                                 'المدن المتاحة',
                                 'Villes disponibles',
-                                'Synced cities',
+                                appL10n.settingsAppDataSyncedCities,
                               ),
                               leadingIcon: CupertinoIcons.map,
                               trailingText: '${_state.cities.length}',
@@ -159,7 +160,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               title: s.tr(
                                 'المنطقة النشطة',
                                 'Zone active',
-                                'Active zone',
+                                appL10n.settingsAppDataActiveZone,
                               ),
                               leadingIcon: CupertinoIcons.location,
                               trailingText: _state.hasActiveZone
@@ -172,7 +173,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               title: s.tr(
                                 'التراخيص مفتوحة المصدر',
                                 'Licences open source',
-                                'Open-source licenses',
+                                appL10n.settingsAppDataOpenSourceLicenses,
                               ),
                               leadingIcon: CupertinoIcons.doc_checkmark,
                               type: ApoloDlLineItemType.chevron,
@@ -189,7 +190,7 @@ class _SettingsAppDataScreenState extends State<SettingsAppDataScreen> {
                               label: s.tr(
                                 'تحديث البيانات الآن',
                                 'Synchroniser maintenant',
-                                'Refresh data now',
+                                appL10n.settingsAppDataRefreshDataNow,
                               ),
                               leadingIcon: CupertinoIcons.refresh,
                               variant: ApoloDlButtonVariant.primary,

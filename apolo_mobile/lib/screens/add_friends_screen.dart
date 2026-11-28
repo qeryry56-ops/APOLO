@@ -10,6 +10,7 @@ import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'widgets/app_image.dart';
+import '../l10n/l10n.dart';
 
 /// Descriptor for a single contact / friend row on [AddFriendsScreen].
 class ApoloContactCandidate {
@@ -149,7 +150,7 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
       final inviteMsg = s.tr(
         'انضم إليّ على Apolo.ma — سوق الإعلانات والمتاجر فالمغرب: https://apolo.ma',
         'Rejoins-moi sur Apolo.ma — la marketplace au Maroc : https://apolo.ma',
-        'Join me on Apolo.ma — Morocco’s marketplace: https://apolo.ma',
+        appL10n.addFriendsJoinMeApoloMaMorocco,
       );
       try {
         await Clipboard.setData(ClipboardData(text: inviteMsg));
@@ -203,7 +204,7 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
                     s.tr(
                       'أضف أصدقاءك',
                       'Ajouter des amis',
-                      'Add your friends',
+                      appL10n.addFriendsAddFriends,
                     ),
                     key: const Key('dl-add-friends-title'),
                     textAlign: TextAlign.center,
@@ -335,8 +336,8 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
                       child: Center(
                         child: Text(
                           isInvited
-                              ? s.tr('تمت الدعوة', 'Invité', 'Invited')
-                              : s.tr('دعوة', 'Inviter', 'Invite'),
+                              ? s.tr('تمت الدعوة', 'Invité', appL10n.addFriendsInvited)
+                              : s.tr('دعوة', 'Inviter', appL10n.addFriendsInvite),
                           style: TextStyle(
                             color: isInvited ? palette.onInk : palette.ink,
                             fontSize: 13.0,
@@ -388,7 +389,7 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
                     padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 24.0),
                     children: [
                       Text(
-                        s.tr('جهات الاتصال', 'Contacts', 'Contacts'),
+                        s.tr('جهات الاتصال', 'Contacts', appL10n.addFriendsContacts),
                         key: const Key('dl-add-friends-section-label'),
                         style: TextStyle(
                           color: palette.muted,
@@ -448,7 +449,7 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
                         onTap: _handleContinue,
                         child: Center(
                           child: Text(
-                            s.tr('متابعة', 'Continuer', 'Continue'),
+                            s.tr('متابعة', 'Continuer', appL10n.continueButton),
                             style: TextStyle(
                               color: palette.onInk,
                               fontSize: 16.0,

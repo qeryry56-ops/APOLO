@@ -32,6 +32,7 @@ import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 /// Clean, low-noise Real-time Chat Room powered by Firebase Firestore (with REST fallback),
 /// implementing all 6 Chat UX rules:
@@ -1194,7 +1195,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             _loadError = _state.s.tr(
               'تعذر تحميل الرسائل. حاول مجدداً.',
               'Chargement impossible. Réessayez.',
-              'Failed to load messages. Please try again.',
+              appL10n.chatRoomFailedLoadMessagesPleaseTry,
             );
           });
         } else if (_loading) {
@@ -1239,7 +1240,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         );
       } catch (_) {}
       _notice(
-          _state.s.tr('تم تعديل الرسالة', 'Message modifié', 'Message edited'));
+          _state.s.tr('تم تعديل الرسالة', 'Message modifié', appL10n.chatRoomMessageEdited));
       return;
     }
 
@@ -1256,7 +1257,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       } catch (_) {}
     }
     _notice(
-        _state.s.tr('تم تعديل الرسالة', 'Message modifié', 'Message edited'));
+        _state.s.tr('تم تعديل الرسالة', 'Message modifié', appL10n.chatRoomMessageEdited));
   }
 
   Future<void> _deleteMessageForEveryone(
@@ -1281,7 +1282,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _notice(_state.s.tr(
         'تم حذف الرسالة لدى الجميع',
         'Message supprimé pour tout le monde',
-        'Deleted for everyone',
+        appL10n.chatRoomDeletedEveryone,
       ));
       return;
     }
@@ -1300,7 +1301,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     _notice(_state.s.tr(
       'تم حذف الرسالة لدى الجميع',
       'Message supprimé pour tout le monde',
-      'Deleted for everyone',
+      appL10n.chatRoomDeletedEveryone,
     ));
   }
 
@@ -1361,8 +1362,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       );
     }
     _notice(nextPinned
-        ? _state.s.tr('تم تثبيت الرسالة', 'Message épinglé', 'Message pinned')
-        : _state.s.tr('تم إلغاء التثبيت', 'Désépinglé', 'Message unpinned'));
+        ? _state.s.tr('تم تثبيت الرسالة', 'Message épinglé', appL10n.chatRoomMessagePinned)
+        : _state.s.tr('تم إلغاء التثبيت', 'Désépinglé', appL10n.chatRoomMessageUnpinned));
   }
 
   void _toggleStar(Map<String, dynamic> m, String key) {
@@ -1391,8 +1392,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
     _notice(nextStarred
         ? _state.s.tr('تم تمييز الرسالة بنجمة ⭐', 'Message suivi ⭐',
-            'Message starred ⭐')
-        : _state.s.tr('تمت إزالة النجمة', 'Étoile retirée', 'Star removed'));
+            appL10n.chatRoomMessageStarred)
+        : _state.s.tr('تمت إزالة النجمة', 'Étoile retirée', appL10n.chatRoomStarRemoved));
   }
 
   void _showChatSafetyMenu() {
@@ -1474,7 +1475,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                   s.tr(
                                     'الإبلاغ عن المحادثة',
                                     'Signaler la conversation',
-                                    'Report conversation',
+                                    appL10n.chatRoomReportConversation,
                                   ),
                                   style: const TextStyle(
                                     fontSize: 14.5,
@@ -1514,7 +1515,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             _notice(s.tr(
                               'تم إلغاء الحظر',
                               'Utilisateur débloqué',
-                              'User unblocked',
+                              appL10n.chatRoomUserUnblocked,
                             ));
                           } else {
                             await FirebaseChatService.instance.blockTarget(
@@ -1527,7 +1528,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                             _notice(s.tr(
                               'تم حظر ${widget.peerName}',
                               '${widget.peerName} a été bloqué',
-                              'User blocked',
+                              appL10n.adDetailUserBlocked,
                             ));
                           }
                         },
@@ -1563,12 +1564,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                       ? s.tr(
                                           'إلغاء حظر ${widget.peerName}',
                                           'Débloquer ${widget.peerName}',
-                                          'Unblock ${widget.peerName}',
+                                          appL10n.chatRoomUnblockPeername(widget.peerName),
                                         )
                                       : s.tr(
                                           'حظر ${widget.peerName}',
                                           'Bloquer ${widget.peerName}',
-                                          'Block ${widget.peerName}',
+                                          appL10n.chatListBlockPeername(widget.peerName),
                                         ),
                                   style: TextStyle(
                                     fontSize: 14.5,
@@ -1672,7 +1673,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'Dismiss Message Menu',
+      barrierLabel: context.l10n.chatDismissMessageMenu,
       barrierColor: Colors.white.withValues(alpha: 0.30),
       transitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (dialogCtx, _, __) {
@@ -1824,7 +1825,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                         children: [
                                           Expanded(
                                             child: Text(
-                                              s.tr('رد', 'Répondre', 'Reply'),
+                                              s.tr('رد', 'Répondre', appL10n.chatRoomReply),
                                               style: const TextStyle(
                                                 color: Ios26IMessageTokens
                                                     .labelPrimary,
@@ -1852,8 +1853,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                   buildMenuRow(
                                     label: isPinned
                                         ? s.tr('إلغاء التثبيت', 'Désépingler',
-                                          'Unpin')
-                                      : s.tr('تثبيت', 'Épingler', 'Pin'),
+                                          appL10n.chatRoomUnpin)
+                                      : s.tr('تثبيت', 'Épingler', appL10n.chatRoomPin),
                                   icon: isPinned
                                       ? CupertinoIcons.pin_slash
                                       : CupertinoIcons.pin,
@@ -1865,9 +1866,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 buildMenuRow(
                                   label: isStarred
                                       ? s.tr('إزالة النجمة',
-                                          'Retirer l\'étoile', 'Unstar')
+                                          'Retirer l\'étoile', appL10n.chatRoomUnstar)
                                       : s.tr('تمييز بنجمة',
-                                          'Marquer d\'une étoile', 'Star'),
+                                          'Marquer d\'une étoile', appL10n.chatRoomStar),
                                   icon: isStarred
                                       ? CupertinoIcons.star_fill
                                       : CupertinoIcons.star,
@@ -1879,20 +1880,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 if (!isAudio && body.isNotEmpty)
                                   buildMenuRow(
                                     label: s.tr(
-                                        'نسخ النص', 'Copier le texte', 'Copy'),
+                                        'نسخ النص', 'Copier le texte', appL10n.adDetailCopy),
                                     icon: CupertinoIcons.doc_on_doc,
                                     onTap: () {
                                       Navigator.pop(dialogCtx);
                                       Clipboard.setData(
                                           ClipboardData(text: body));
                                       _notice(
-                                          s.tr('تم النسخ', 'Copié', 'Copied'));
+                                          s.tr('تم النسخ', 'Copié', appL10n.chatRoomCopied));
                                     },
                                   ),
                                 if (isMine && !isAudio)
                                   buildMenuRow(
                                     label: s.tr(
-                                        'تعديل الرسالة', 'Modifier', 'Edit'),
+                                        'تعديل الرسالة', 'Modifier', appL10n.editButton),
                                     icon: CupertinoIcons.pencil,
                                     onTap: () {
                                       Navigator.pop(dialogCtx);
@@ -1909,7 +1910,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                   ),
                                 buildMenuRow(
                                   label:
-                                      s.tr('إبلاغ', 'Signaler', 'Report'),
+                                      s.tr('إبلاغ', 'Signaler', appL10n.reportButton),
                                   icon:
                                       CupertinoIcons.exclamationmark_triangle,
                                   onTap: () {
@@ -1928,7 +1929,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                 ),
                                 buildMenuRow(
                                   label: s.tr('حذف لدي فقط',
-                                      'Supprimer pour moi', 'Delete'),
+                                      'Supprimer pour moi', appL10n.deleteButton),
                                   icon: CupertinoIcons.trash,
                                   isDestructive: true,
                                   showDivider: isMine,
@@ -1953,7 +1954,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                     label: s.tr(
                                       'حذف لدى الجميع',
                                       'Supprimer pour tous',
-                                      'Delete for everyone',
+                                      appL10n.chatRoomDeleteEveryone,
                                     ),
                                     icon: CupertinoIcons.trash_fill,
                                     isDestructive: true,
@@ -2369,11 +2370,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         ? city
         : (userCity.isNotEmpty
             ? userCity
-            : _state.s.tr('المغرب', 'Maroc', 'Morocco'));
+            : _state.s.tr('المغرب', 'Maroc', appL10n.chatRoomMorocco));
     final msg = _state.s.tr(
       '📍 موقعي الحالي: \u2068$resolvedCity\u2069',
       '📍 Ma position : $resolvedCity',
-      '📍 My location: $resolvedCity',
+      appL10n.chatRoomMyLocationResolvedcity(resolvedCity),
     );
     await _sendText(msg);
   }
@@ -2387,12 +2388,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         ? _state.s.tr(
             '💰 عرض ثمن على "\u2068$title\u2069": \u2066$cleaned DH\u2069',
             '💰 Offre pour "$title" : $cleaned DH',
-            '💰 Price offer for "$title": DH $cleaned',
+            appL10n.chatRoomPriceOfferTitleDhCleaned(title, cleaned),
           )
         : _state.s.tr(
             '💰 عرض ثمن: \u2066$cleaned DH\u2069',
             '💰 Offre de prix : $cleaned DH',
-            '💰 Price offer: DH $cleaned',
+            appL10n.chatRoomPriceOfferDhCleaned(cleaned),
           );
     await _sendText(msg);
   }
@@ -2491,7 +2492,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _notice(_state.s.tr(
         'تعذر حفظ التسجيل الصوتي. تأكد من السماح للميكروفون وجرب مرة أخرى.',
         'Impossible d\'enregistrer l\'audio. Autorisez le microphone et réessayez.',
-        'Could not capture audio. Please allow microphone access and try again.',
+        appL10n.chatRoomCouldNotCaptureAudioPlease,
       ));
       return;
     }
@@ -2499,7 +2500,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _notice(_state.s.tr(
         'الرسالة الصوتية طويلة جداً. حاول تسجيل رسالة أقصر.',
         'Message vocal trop long. Essayez un enregistrement plus court.',
-        'Voice message is too long. Please record a shorter message.',
+        appL10n.chatRoomVoiceMessageIsTooLong,
       ));
       return;
     }
@@ -2840,8 +2841,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 child: Semantics(
                   liveRegion: true,
                   button: true,
-                  label:
-                      '$_unreadIncomingCount new ${_unreadIncomingCount == 1 ? "message" : "messages"}. Jump to latest',
+                  label: context.l10n.chatNewMessagesJumpToLatest(
+                    _unreadIncomingCount,
+                    _unreadIncomingCount == 1
+                        ? context.l10n.chatMessageSingular
+                        : context.l10n.chatMessagePlural,
+                  ),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -2884,23 +2889,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                                   color: Colors.white.withValues(alpha: 0.22),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Flexible(
                                       child: Text(
-                                        'Jump to latest',
+                                        context.l10n.chatJumpToLatest,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ),
-                                    SizedBox(width: 3),
-                                    Icon(
+                                    const SizedBox(width: 3),
+                                    const Icon(
                                       CupertinoIcons.arrow_down,
                                       size: 11,
                                       color: Colors.white,
@@ -2984,7 +2989,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         ? _state.s.tr(
             'تم حذف هذه الرسالة',
             'Ce message a été supprimé',
-            'This message was deleted',
+            appL10n.chatRoomThisMessageWasDeleted,
           )
         : (_editedMessageBodies[msgKey] ?? m['body'] ?? '').toString();
     final String timeStr = (m['created_at_time'] ?? '').toString();
@@ -3025,7 +3030,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         : (isImage
             ? ChatMessage.sanitizeCaption(rawBody, hasImage: true)
             : (looksLikeRawImageFilename
-                ? _state.s.tr('📷 صورة', '📷 Photo', '📷 Photo')
+                ? _state.s.tr('📷 صورة', '📷 Photo', appL10n.chatPhotoPreviewLabel)
                 : rawBody));
 
     final bool isPinned = !isDeletedAll &&
@@ -3085,10 +3090,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     String? deliveryLabel;
     if (isMine && (isLastOutgoing || isImage) && !isDeletedAll) {
       if (status == ChatMessageStatus.read) {
-        deliveryLabel = _state.s.tr('تمت القراءة', 'Lu', 'Read');
+        deliveryLabel = _state.s.tr('تمت القراءة', 'Lu', appL10n.chatRoomRead);
       } else if (status == ChatMessageStatus.delivered ||
           status == ChatMessageStatus.sent) {
-        deliveryLabel = _state.s.tr('تم التسليم', 'Distribué', 'Delivered');
+        deliveryLabel = _state.s.tr('تم التسليم', 'Distribué', appL10n.chatRoomDelivered);
       }
     }
 
@@ -3392,7 +3397,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final presence = _peerPresence;
     if (presence != null) {
       if (presence.isOnline) {
-        return _state.s.tr('متصل الآن', 'En ligne', 'Online');
+        return _state.s.tr('متصل الآن', 'En ligne', appL10n.badgeOnlineSemantic);
       }
       final last = presence.lastActiveAt;
       if (last != null) {
@@ -3400,11 +3405,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         return _state.s.tr(
           'آخر ظهور \u2066$clock\u2069',
           'Vu à $clock',
-          'Last seen $clock',
+          appL10n.chatRoomLastSeenClock(clock),
         );
       }
     }
-    return _state.s.tr('غير متصل', 'Hors ligne', 'Offline');
+    return _state.s.tr('غير متصل', 'Hors ligne', appL10n.chatRoomOffline);
   }
 
   /// Combined Dynamic Layer v5.1 Chat Header:
@@ -3436,7 +3441,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               // Start: `40 × 40` `#EEEEEE` circular `<` back button
               Semantics(
                 button: true,
-                label: 'Back',
+                label: context.l10n.backButton,
                 child: Material(
                   key: const Key('chat-ios26-back-button'),
                   color: pillBg,
@@ -3599,7 +3604,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               // End: `40 × 40` `#EEEEEE` circular `•••` menu button (Video / Voice Call / Safety)
               Semantics(
                 button: true,
-                label: 'Call and chat options',
+                label: context.l10n.chatCallAndOptionsTooltip,
                 child: Material(
                   key: const Key('chat-ios26-call-button'),
                   color: pillBg,
@@ -3714,11 +3719,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               ),
               title: Text(
                 liveCalls
-                    ? _state.s.tr('مكالمة فيديو', 'Appel vidéo', 'Video Call')
+                    ? _state.s.tr('مكالمة فيديو', 'Appel vidéo', appL10n.callVideoCall)
                     : _state.s.tr(
                         'مكالمة فيديو — غير متاحة',
                         'Appel vidéo — indisponible',
-                        'Video Call — unavailable',
+                        appL10n.chatRoomVideoCallUnavailable,
                       ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -3754,11 +3759,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               ),
               title: Text(
                 liveCalls
-                    ? _state.s.tr('مكالمة صوتية', 'Appel vocal', 'Voice Call')
+                    ? _state.s.tr('مكالمة صوتية', 'Appel vocal', appL10n.callVoiceCall)
                     : _state.s.tr(
                         'مكالمة صوتية — غير متاحة',
                         'Appel vocal — indisponible',
-                        'Voice Call — unavailable',
+                        appL10n.chatRoomVoiceCallUnavailable,
                       ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -3796,7 +3801,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 _state.s.tr(
                   'الأمان والتبليغ',
                   'Sécurité et signalement',
-                  'Safety & Report',
+                  appL10n.chatRoomSafetyReport,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -3855,7 +3860,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 _state.s.tr(
                   'لقد قمت بحظر هذا المستخدم',
                   'Vous avez bloqué cet utilisateur',
-                  'You blocked this user',
+                  appL10n.chatRoomYouBlockedThisUser,
                 ),
                 style: const TextStyle(
                   fontSize: 13.5,
@@ -3880,7 +3885,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
                 if (mounted) setState(() {});
               },
               child: Text(
-                _state.s.tr('إلغاء الحظر', 'Débloquer', 'Unblock'),
+                _state.s.tr('إلغاء الحظر', 'Débloquer', appL10n.chatRoomUnblock),
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -3916,7 +3921,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           ? _state.s.tr(
               'تعديل الرسالة',
               'Modifier le message',
-              'Editing message',
+              appL10n.chatRoomEditingMessage,
             )
           : null,
       onCancelEdit: () {
@@ -3934,12 +3939,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       hintText: _state.s.tr(
         'أكتب رسالة...',
         'Envoyer un message',
-        'Send a message',
+        appL10n.chatRoomSendMessage,
       ),
       recordingText: _state.s.tr(
         'جاري التسجيل...',
         'Enregistrement...',
-        'Recording...',
+        appL10n.chatRecordingPlaceholder,
       ),
     );
   }

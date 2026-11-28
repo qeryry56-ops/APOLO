@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+
 /// Callback signature for emitting `{ 'typing': bool }` to Firebase / backend.
 typedef TypingSignalEmitter = FutureOr<void> Function(Map<String, dynamic> payload);
 
@@ -325,7 +327,7 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble> {
 
     return Semantics(
       liveRegion: true,
-      label: widget.label ?? 'Typing...',
+      label: widget.label ?? context.l10n.chatTypingIndicatorLabel,
       child: Container(
         key: const Key('typing-indicator-bubble'),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),

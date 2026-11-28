@@ -4,6 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
+
 /// Platform-aware native OS Emoji rendering & reaction palettes:
 /// - **iOS / macOS**: Renders native Apple 3D emojis (`Apple Color Emoji`) with
 ///   authentic iOS quick reactions (`❤️ 😂 😮 😢 😡 👍`).
@@ -188,7 +190,7 @@ class _ApoloEmojiReactionBarState extends State<ApoloEmojiReactionBar>
     return Semantics(
       button: true,
       selected: isSelected,
-      label: 'React with $emoji',
+      label: context.l10n.emojiReactWithSemantic(emoji),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -253,7 +255,9 @@ class _ApoloEmojiReactionBarState extends State<ApoloEmojiReactionBar>
                     ],
                     Semantics(
                       button: true,
-                      label: _expanded ? 'Fewer emojis' : 'More emojis',
+                      label: _expanded
+                          ? context.l10n.emojiFewerTooltip
+                          : context.l10n.emojiMoreTooltip,
                       child: Material(
                         color: isDark
                             ? const Color(0xFF3A3A3C)

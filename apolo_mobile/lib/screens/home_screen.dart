@@ -21,6 +21,7 @@ import 'widgets/explore_listing_card.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/marketplace_zone_sheet.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Home Screen:
 /// - Pure #FFFFFF canvas + #F6F6F6 flat cards + #EEEEEE pills + #000000 primary CTAs
@@ -304,15 +305,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: _state.s.tr(
                       'انقطع الاتصال بالإنترنت',
                       'Connexion Internet interrompue',
-                      'Internet connection lost',
+                      appL10n.homeInternetConnectionLost,
                     ),
                     subtitle: _state.s.tr(
                       'تحقق من الشبكة وحاول مرة أخرى لعرض أحدث العروض والإعلانات في المغرب.',
                       'Vérifiez votre connexion réseau et réessayez pour charger les annonces.',
-                      'Check your network connection and try again to load listings.',
+                      appL10n.homeCheckNetworkConnectionTryAgain,
                     ),
                     actionLabel:
-                        _state.s.tr('إعادة المحاولة', 'Réessayer', 'Try again'),
+                        _state.s.tr('إعادة المحاولة', 'Réessayer', appL10n.tryAgainButton),
                     onAction: () {
                       setState(() => _loading = true);
                       _loadData();
@@ -398,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       ? s.tr(
                                                           'مرحباً بك في Apolo',
                                                           'Bienvenue sur Apolo',
-                                                          'Welcome to Apolo',
+                                                          appL10n.homeWelcomeApolo,
                                                         )
                                                       : _userFullName,
                                                   maxLines: 1,
@@ -551,7 +552,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             s.tr(
                                               'ابحث عن سيارات، عقارات، هواتف أو حسابات...',
                                               'Rechercher voitures, immo, téléphones...',
-                                              'Search cars, homes, phones, or accounts...',
+                                              appL10n.homeSearchCarsHomesPhonesAccounts,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -606,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               s.tr(
                                                 'أحدث الإعلانات',
                                                 'Dernières annonces',
-                                                'Latest listings',
+                                                appL10n.homeLatestListings,
                                               ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -649,7 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             s.tr(
                                               'عرض الكل',
                                               'Tout voir',
-                                              'See all',
+                                              appL10n.homeSeeAll,
                                             ),
                                             style: TextStyle(
                                               color: _dlInk,
@@ -686,7 +687,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             s.tr(
                                               'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)} حالياً',
                                               'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km autour de ${_state.activeZoneCityLabel(s)}',
-                                              'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)} yet',
+                                              appL10n.homeNoListingsWithinZoneradiuskmKm(_state.zoneRadiusKm.round(), _state.activeZoneCityLabel(s)),
                                             ),
                                             style: TextStyle(
                                               fontSize: 13.5,
@@ -719,7 +720,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     s.tr(
                                                       'عرض كل المغرب',
                                                       'Tout le Maroc',
-                                                      'Show all Morocco',
+                                                      appL10n.homeShowAllMorocco,
                                                     ),
                                                     style: TextStyle(
                                                       color: _dlOnInk,
@@ -752,7 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     s.tr(
                                                       'تغيير المنطقة',
                                                       'Changer de zone',
-                                                      'Change zone',
+                                                      appL10n.homeChangeZone,
                                                     ),
                                                     style: TextStyle(
                                                       color: _dlInk,
@@ -873,7 +874,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   label: _state.s.tr(
                                     'تصفح الإعلانات في المغرب',
                                     'Explorer toutes les annonces au Maroc',
-                                    'Browse all listings in Morocco',
+                                    appL10n.homeBrowseAllListingsMorocco,
                                   ),
                                   leadingIcon: CupertinoIcons.search,
                                   variant: ApoloDlButtonVariant.primary,
@@ -945,7 +946,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _state.s.tr(
                       'سوقك الأول فالمغرب 🇲🇦',
                       'Marketplace #1 au Maroc 🇲🇦',
-                      '#1 Marketplace in Morocco 🇲🇦',
+                      appL10n.home1MarketplaceMorocco,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -961,7 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _state.s.tr(
                     'بيع واشري بأمان وبلا وسيط',
                     'Achetez et vendez en toute sécurité',
-                    'Buy and sell safely without middlemen',
+                    appL10n.homeBuySellSafelyWithoutMiddlemen,
                   ),
                   maxLines: 2,
                   style: TextStyle(
@@ -978,7 +979,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _state.s.tr(
                     'طوموبيلات، هواتف وعقارات. اكتشف الإعلانات القريبة منك.',
                     'Voitures, smartphones, immobilier près de chez vous.',
-                    'Cars, phones, real estate. Discover listings near you.',
+                    appL10n.homeCarsPhonesRealEstateDiscover,
                   ),
                   style: TextStyle(
                     fontSize: 12.5,
@@ -1007,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             _state.s.tr(
                               'استكشف الإعلانات',
                               'Explorer les annonces',
-                              'Explore listings',
+                              appL10n.chatListExploreListings,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1077,7 +1078,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _state.s.tr(
                         'تصفح حسب الفئات',
                         'Catégories',
-                        'Categories',
+                        appL10n.categoriesTitle,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1103,7 +1104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        _state.s.tr('عرض الكل', 'Tout voir', 'See all'),
+                        _state.s.tr('عرض الكل', 'Tout voir', appL10n.homeSeeAll),
                         style: TextStyle(
                           color: _dlInk,
                           fontWeight: FontWeight.w600,
@@ -1217,7 +1218,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _state.s.tr(
                         'عروض حصرية مميزة',
                         'Offres exclusives',
-                        'Exclusive Deals',
+                        appL10n.homeExclusiveDeals,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1314,7 +1315,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _state.s.tr(
               'علاش تختار Apolo؟',
               'Pourquoi choisir Apolo ?',
-              'Why choose Apolo?',
+              appL10n.homeWhyChooseApolo,
             ),
             style: TextStyle(
               fontSize: 18.5,
@@ -1337,12 +1338,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: _state.s.tr(
                     '\u20660%\u2069 عمولة وبالمجان',
                     '0% Commission',
-                    '0% Commission & Free',
+                    appL10n.home0CommissionFree,
                   ),
                   subtitle: _state.s.tr(
                     'بيع وشري فابور بدون أي اقتطاعات أو وسطاء.',
                     'Vendez et achetez gratuitement sans aucun intermédiaire.',
-                    'Buy and sell for free with zero middlemen.',
+                    appL10n.homeBuySellFreeZeroMiddlemen,
                   ),
                 ),
                 const Padding(
@@ -1354,12 +1355,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: _state.s.tr(
                     'شات واتصال مباشر',
                     'Discussion directe',
-                    'Direct Chat & Call',
+                    appL10n.homeDirectChatCall,
                   ),
                   subtitle: _state.s.tr(
                     'تواصل فالحين مع البائع وقدم عرض سعر بضغطة وحدة.',
                     'Discutez en direct avec le vendeur et négociez le prix.',
-                    'Message the seller directly and make an offer in one tap.',
+                    appL10n.homeMessageSellerDirectlyMakeOffer,
                   ),
                 ),
                 const Padding(
@@ -1371,12 +1372,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: _state.s.tr(
                     'إعلانات مفحوصة وموثقة',
                     'Annonces vérifiées',
-                    'Verified Listings',
+                    appL10n.homeVerifiedListings,
                   ),
                   subtitle: _state.s.tr(
                     'فحص مستمر للإعلانات لحماية جميع المعاملات.',
                     'Contrôle continu pour des transactions en toute sécurité.',
-                    'Continuous review to keep all transactions safe.',
+                    appL10n.homeContinuousReviewKeepAllTransactions,
                   ),
                 ),
               ],
@@ -1472,7 +1473,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _state.s.tr(
                         'عندك ما تبيع؟ انشر إعلانك دابا',
                         'Un article à vendre ? Publiez maintenant',
-                        'Got something to sell? Post now',
+                        appL10n.homeGotSomethingSellPostNow,
                       ),
                       style: TextStyle(
                         color: _dlOnInk,
@@ -1485,7 +1486,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _state.s.tr(
                         'انشر فـ 30 ثانية بالمجان وتوصل باتصالات المشترين',
                         'Publiez gratuitement et recevez des offres rapidement',
-                        'Publish free in 30 seconds and get buyer inquiries fast',
+                        appL10n.homePublishFree30SecondsGet,
                       ),
                       style: TextStyle(
                         color: _dlOnInk.withValues(alpha: 0.72),
@@ -1507,7 +1508,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  _state.s.tr('نشر +', 'Publier +', 'Post +'),
+                  _state.s.tr('نشر +', 'Publier +', appL10n.homePost),
                   style: TextStyle(
                     color: _dlInk,
                     fontSize: 12.5,
@@ -1565,7 +1566,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             _state.s.tr(
                               'المتاجر الرسمية الموثقة',
                               'Boutiques Pro Vérifiées',
-                              'Verified Official Stores',
+                              appL10n.homeVerifiedOfficialStores,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1589,7 +1590,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _state.s.tr(
                         'تصفح عروض الوكالات والمتاجر المعتمدة في المغرب',
                         'Découvrez les offres des professionnels certifiés',
-                        'Browse deals from certified stores and agencies',
+                        appL10n.homeBrowseDealsFromCertifiedStores,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

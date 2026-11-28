@@ -25,6 +25,7 @@ import 'widgets/kinetic_widgets.dart';
 import 'widgets/price_text.dart';
 import 'widgets/quick_replies_sheet.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -151,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _adsError = _state.s.tr(
           'تعذر تحميل الإعلانات. اسحب للمحاولة مجدداً.',
           'Impossible de charger les annonces. Réessayez en actualisant.',
-          'Could not load listings. Pull to retry.',
+          appL10n.profileCouldNotLoadListingsPull,
         );
       });
     }
@@ -171,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _displayName(bool isAr) =>
       _state.currentUser?['name']?.toString().trim() ??
-      _state.s.tr('حسابي', 'Mon compte', 'My account');
+      _state.s.tr('حسابي', 'Mon compte', appL10n.profileMyAccount);
   String get _displayHandle =>
       _state.currentUser?['username']?.toString() ?? 'profil';
   String _displayBio(bool isAr) => _state.currentUser?['bio']?.toString() ?? '';
@@ -225,7 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     tooltip: s.tr(
                       'الإعدادات والدعم',
                       'Paramètres et assistance',
-                      'Settings & support',
+                      appL10n.profileSettingsSupport,
                     ),
                     icon: CupertinoIcons.gear,
                     onPressed: () => Navigator.push(
@@ -262,7 +263,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               s.tr(
                                 'مرحباً بك في Apolo',
                                 'Bienvenue sur Apolo',
-                                'Welcome to Apolo',
+                                appL10n.homeWelcomeApolo,
                               ),
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -276,7 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               s.tr(
                                 'سجّل الدخول لإدارة إعلاناتك، المفضلة، والمحادثات الفورية مع المشترين.',
                                 'Connectez-vous pour gérer vos annonces, vos favoris et vos messages.',
-                                'Sign in to manage your listings, saved items, and instant chats.',
+                                appL10n.profileSignManageListingsSavedItems,
                               ),
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -291,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               label: s.tr(
                                 'سجّل الدخول لعرض حسابك',
                                 'Connectez-vous pour voir votre profil',
-                                'Sign in to view your profile',
+                                appL10n.profileSignViewProfile,
                               ),
                               variant: ApoloDlButtonVariant.primary,
                               borderRadius: 999,
@@ -315,7 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               label: s.tr(
                                 'إنشاء حساب جديد',
                                 'Créer un compte',
-                                'Create an account',
+                                appL10n.welcomeCreateAccountButton,
                               ),
                               variant: ApoloDlButtonVariant.secondary,
                               borderRadius: 999,
@@ -410,8 +411,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ApoloDlIconCircleButton(
                         key: const Key('profile-theme-toggle-btn'),
                         tooltip: Theme.of(context).brightness == Brightness.dark
-                            ? s.tr('الوضع الفاتح', 'Mode clair', 'Light mode')
-                            : s.tr('الوضع الداكن', 'Mode sombre', 'Dark mode'),
+                            ? s.tr('الوضع الفاتح', 'Mode clair', appL10n.profileLightMode)
+                            : s.tr('الوضع الداكن', 'Mode sombre', appL10n.profileDarkMode),
                         icon: Theme.of(context).brightness == Brightness.dark
                             ? CupertinoIcons.sun_max_fill
                             : CupertinoIcons.moon_fill,
@@ -490,7 +491,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         label: s.tr(
                                           'متابَعة',
                                           'Abonnements',
-                                          'Following',
+                                          appL10n.followingButton,
                                         ),
                                       ),
                                       ApoloDlAccountStat(
@@ -498,7 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         label: s.tr(
                                           'إعلاناتي',
                                           'Annonces',
-                                          'Listings',
+                                          appL10n.profileListings,
                                         ),
                                         onTap: () =>
                                             setState(() => _activeTab = 0),
@@ -510,18 +511,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             : '${_state.favoriteAdIds.length}',
                                         label: _state.isBusinessAccount
                                             ? (_baseViews != null
-                                                ? s.tr('مشاهدة', 'Vues', 'Views')
+                                                ? s.tr('مشاهدة', 'Vues', appL10n.adDetailViews)
                                                 : s.tr(
                                                     'المفضلة',
                                                     'Favoris',
-                                                    'Likes',
+                                                    appL10n.profileLikes,
                                                   ))
                                             : (_baseViews != null
-                                                ? s.tr('مشاهدة', 'Vues', 'Views')
+                                                ? s.tr('مشاهدة', 'Vues', appL10n.adDetailViews)
                                                 : s.tr(
                                                     'المحفوظات',
                                                     'Enregistrés',
-                                                    'Saved',
+                                                    appL10n.profileSaved,
                                                   )),
                                         onTap: () {
                                           if (_state.isBusinessAccount) {
@@ -546,7 +547,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       label: s.tr(
                                         'تعديل الملف الشخصي',
                                         'Modifier le profil',
-                                        'Edit profile',
+                                        appL10n.editProfileTitle,
                                       ),
                                       variant: ApoloDlButtonVariant.secondary,
                                       size: ApoloDlButtonSize.sm,
@@ -561,7 +562,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       label: s.tr(
                                         'مشاركة الملف',
                                         'Partager le profil',
-                                        'Share profile',
+                                        appL10n.shareProfileButton,
                                       ),
                                       variant: ApoloDlButtonVariant.secondary,
                                       size: ApoloDlButtonSize.sm,
@@ -597,7 +598,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               label: _state.s.tr(
                                                 'إعلاناتي',
                                                 'Mes annonces',
-                                                'My Listings',
+                                                appL10n.profileMyListings,
                                               ),
                                               icon:
                                                   CupertinoIcons.square_grid_2x2,
@@ -608,7 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               label: _state.s.tr(
                                                 'لوحة الأعمال والإحصائيات',
                                                 'Tableau Pro & Boost',
-                                                'Pro Insights & Boost',
+                                                appL10n.profileProInsightsBoost,
                                               ),
                                               icon: CupertinoIcons.chart_bar,
                                             ),
@@ -735,7 +736,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     s.tr(
                       'ترقية إلى Apolo Premium · ${AppConfig.monthlyPremiumPriceMad} د.م/شهر',
                       'Passer à Apolo Premium · ${AppConfig.monthlyPremiumPriceMad} DH/mois',
-                      'Upgrade to Apolo Premium · ${AppConfig.monthlyPremiumPriceMad} MAD/mo',
+                      appL10n.profileUpgradeApoloPremiumMonthlypremiumpricemadMad(AppConfig.monthlyPremiumPriceMad),
                     ),
                     style: TextStyle(
                       fontSize: 13.5,
@@ -748,7 +749,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     s.tr(
                       'متجر Business + شارة Verified الزرقاء + نشر غير محدود عبر Google Pay.',
                       'Boutique Business + badge Verified + annonces illimitées via Google Pay.',
-                      'Business store + Verified badge + unlimited daily ads via Google Pay.',
+                      appL10n.profileBusinessStoreVerifiedBadgeUnlimited,
                     ),
                     style: TextStyle(
                       fontSize: 12,
@@ -896,7 +897,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildBusinessActionChip(
                     key: const Key('profile-open-my-store-btn'),
                     icon: Icons.storefront_rounded,
-                    label: s.tr('عرض متجري', 'Voir boutique', 'View store'),
+                    label: s.tr('عرض متجري', 'Voir boutique', appL10n.profileViewStore),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => StoreDetailScreen(subdomain: subdomain),
@@ -908,7 +909,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildBusinessActionChip(
                   key: const Key('profile-edit-business-btn'),
                   icon: CupertinoIcons.slider_horizontal_3,
-                  label: s.tr('إعدادات المتجر', 'Gérer boutique', 'Edit store'),
+                  label: s.tr('إعدادات المتجر', 'Gérer boutique', appL10n.profileEditStore),
                   onTap: () async {
                     final updated = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
@@ -928,7 +929,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: s.tr(
                     'الردود السريعة',
                     'Réponses rapides',
-                    'Quick replies',
+                    appL10n.profileQuickReplies,
                   ),
                   onTap: () => QuickRepliesManagerSheet.show(context),
                 ),
@@ -1071,7 +1072,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 ApoloDlButton(
-                  label: _state.s.tr('إعادة المحاولة', 'Réessayer', 'Retry'),
+                  label: _state.s.tr('إعادة المحاولة', 'Réessayer', appL10n.retryButton),
                   variant: ApoloDlButtonVariant.primary,
                   size: ApoloDlButtonSize.sm,
                   borderRadius: 999,
@@ -1091,17 +1092,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           title: _state.s.tr(
             'لا توجد إعلانات منشورة',
             'Aucune annonce publiée',
-            'No listings yet',
+            appL10n.profileNoListingsYet,
           ),
           subtitle: _state.s.tr(
             'انشر إعلانك الأول ليظهر هنا في معرضك الخاص.',
             'Publiez votre première annonce pour l’afficher ici.',
-            'Publish your first listing to showcase it here.',
+            appL10n.profilePublishFirstListingShowcaseIt,
           ),
           actionLabel: _state.s.tr(
             'إضافة إعلان',
             'Publier une annonce',
-            'Post a listing',
+            appL10n.profilePostListing,
           ),
           onAction: () => Navigator.push(
             context,
@@ -1129,7 +1130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 (ad['main_image'] ?? ad['primary_image'] ?? '').toString();
             final priceStr = (ad['price_formatted'] ??
                     (ad['price'] != null
-                        ? '${ad['price']} ${_state.s.tr('د.م', 'DH', 'MAD')}'
+                        ? '${ad['price']} ${_state.s.tr('د.م', 'DH', appL10n.proPlusMad)}'
                         : ''))
                 .toString();
 
@@ -1215,7 +1216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     SizedBox(width: 3),
                                     Text(
-                                      'Boost',
+                                      context.l10n.boostActionLabel,
                                       style: TextStyle(
                                         color: _dlOnInk,
                                         fontSize: 11,
@@ -1315,7 +1316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: _state.s.tr(
                         'إجمالي المشاهدات',
                         'Vues totales',
-                        'Total views',
+                        appL10n.profileTotalViews,
                       ),
                       value: _baseViews?.toString() ?? '0',
                     ),
@@ -1327,7 +1328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: _state.s.tr(
                         'الإعلانات النشطة',
                         'Annonces actives',
-                        'Active listings',
+                        appL10n.profileActiveListings,
                       ),
                       value: '$totalAds',
                     ),
@@ -1343,7 +1344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: _state.s.tr(
                         'متوسط المشاهدات',
                         'Moy. / annonce',
-                        'Avg. / listing',
+                        appL10n.profileAvgListing,
                       ),
                       value: '$avgViews',
                     ),
@@ -1355,7 +1356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: _state.s.tr(
                         'إعلانات ممولة',
                         'Annonces Boost',
-                        'Boosted listings',
+                        appL10n.profileBoostedListings,
                       ),
                       value: '$boostedCount',
                     ),
@@ -1375,7 +1376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         label: _state.s.tr(
                           'نقرات الاتصال',
                           'Appels reçus',
-                          'Call taps',
+                          appL10n.profileCallTaps,
                         ),
                         value: '${_businessInsights?['phone_clicks'] ?? 0}',
                       ),
@@ -1387,7 +1388,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         label: _state.s.tr(
                           'محادثات الزبناء',
                           'Conversations',
-                          'Customer chats',
+                          appL10n.profileCustomerChats,
                         ),
                         value:
                             '${_businessInsights?['chat_conversations_count'] ?? 0}',
@@ -1404,7 +1405,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         label: _state.s.tr(
                           'طلبيات المتجر',
                           'Commandes directes',
-                          'Direct orders',
+                          appL10n.profileDirectOrders,
                         ),
                         value:
                             '${_businessInsights?['direct_orders_count'] ?? 0}',
@@ -1417,7 +1418,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         label: _state.s.tr(
                           'رصيد VIP المجاني',
                           'Crédits VIP offerts',
-                          'Free VIP credits',
+                          appL10n.profileFreeVipCredits,
                         ),
                         value: '${_state.vipBoostCredits}',
                       ),
@@ -1466,7 +1467,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _state.s.tr(
                                   'افتح إحصائيات النقرات والطلبيات + شارة PRO+',
                                   'Débloquez les stats d’appels & commandes + PRO+',
-                                  'Unlock call & order stats + PRO+ Badge',
+                                  appL10n.profileUnlockCallOrderStatsPro,
                                 ),
                                 style: TextStyle(
                                   fontSize: 13.5,
@@ -1479,7 +1480,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _state.s.tr(
                                   'احصل على 3 تمويلات VIP مجانية شهرياً وتصدر المتاجر.',
                                   '3 Boosts VIP gratuits/mois et priorité d’affichage.',
-                                  'Get 3 free VIP boosts/month and priority visibility.',
+                                  appL10n.profileGet3FreeVipBoosts,
                                 ),
                                 style: TextStyle(
                                   fontSize: 12,
@@ -1514,7 +1515,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _state.s.tr(
                             'توزيع المشاهدات',
                             'Répartition des vues',
-                            'Views breakdown',
+                            appL10n.profileViewsBreakdown,
                           ),
                           style: TextStyle(
                             fontSize: 15.5,
@@ -1532,7 +1533,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            _state.s.tr('مباشر', 'En direct', 'Live'),
+                            _state.s.tr('مباشر', 'En direct', appL10n.profileLive),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -1551,7 +1552,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _state.s.tr(
                               'انشر إعلانك الأول لتبدأ متابعة المشاهدات والأداء هنا.',
                               'Publiez votre première annonce pour suivre vos vues ici.',
-                              'Publish your first listing to track views and performance here.',
+                              appL10n.profilePublishFirstListingTrackViews,
                             ),
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -1642,7 +1643,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _state.s.tr(
                           'أفضل إعلاناتك أداءً',
                           'Vos meilleures annonces',
-                          'Top performing listings',
+                          appL10n.profileTopPerformingListings,
                         ),
                         style: TextStyle(
                           fontSize: 15.5,
@@ -1703,7 +1704,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          '$views ${_state.s.tr('مشاهدة', 'vues', 'views')}',
+                                          '$views ${_state.s.tr('مشاهدة', 'vues', appL10n.profileViews)}',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
@@ -1752,7 +1753,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: Text(
-                                    'Boost',
+                                    context.l10n.boostActionLabel,
                                     style: TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w700,
@@ -1804,7 +1805,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _state.s.tr(
                               'نصيحة لزيادة المبيعات',
                               'Conseil de vente',
-                              'Sales tip',
+                              appL10n.profileSalesTip,
                             ),
                             style: TextStyle(
                               fontSize: 13.5,
@@ -1818,12 +1819,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? _state.s.tr(
                                     'أضف صوراً واضحة وثمناً مناسباً في إعلانك الأول لجذب المشترين بسرعة.',
                                     'Ajoutez des photos nettes et un prix clair pour attirer plus d’acheteurs.',
-                                    'Add clear photos and a fair price on your first listing to attract buyers fast.',
+                                    appL10n.profileAddClearPhotosFairPrice,
                                   )
                                 : _state.s.tr(
                                     'تحديث الصور والوصف أو تمويل إعلانك الأكثر مشاهدة يضاعف فرص البيع.',
                                     'Mettre à jour vos photos ou booster votre meilleure annonce accélère la vente.',
-                                    'Refreshing photos or boosting your top listing helps it sell faster.',
+                                    appL10n.profileRefreshingPhotosBoostingTopListing,
                                   ),
                             style: TextStyle(
                               fontSize: 12.5,
@@ -1949,7 +1950,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: _state.s.tr(
                     'تعديل الإعلان',
                     'Modifier l’annonce',
-                    'Edit listing',
+                    appL10n.profileEditListing,
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -1968,7 +1969,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: _state.s.tr(
                     'تمويل الإعلان (Boost)',
                     'Booster cette annonce',
-                    'Boost this listing',
+                    appL10n.profileBoostThisListing,
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -1983,7 +1984,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: _state.s.tr(
                     'حذف الإعلان',
                     'Supprimer l’annonce',
-                    'Delete listing',
+                    appL10n.profileDeleteListing,
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -2067,7 +2068,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final deleted = await showGeneralDialog<bool>(
         context: context,
         barrierDismissible: true,
-        barrierLabel: _state.s.tr('إغلاق', 'Fermer', 'Close'),
+        barrierLabel: _state.s.tr('إغلاق', 'Fermer', appL10n.closeButton),
         barrierColor: Colors.black.withValues(alpha: 0.48),
         transitionDuration: const Duration(milliseconds: 220),
         pageBuilder: (dialogCtx, animation, secondaryAnimation) {
@@ -2104,7 +2105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       dialogError = _state.s.tr(
                         'تعذر حذف الإعلان حالياً. حاول مرة أخرى.',
                         'Impossible de supprimer l’annonce. Réessayez.',
-                        'Could not delete listing. Please try again.',
+                        appL10n.profileCouldNotDeleteListingPlease,
                       );
                     });
                   }
@@ -2149,7 +2150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _state.s.tr(
                                     'حذف هذا الإعلان؟',
                                     'Supprimer cette annonce ?',
-                                    'Delete this listing?',
+                                    appL10n.profileDeleteThisListing,
                                   ),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
@@ -2164,7 +2165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _state.s.tr(
                                     'سيتم حذف الإعلان نهائياً من حسابك ومن نتائج البحث ولا يمكن التراجع عن هذه العملية.',
                                     'Cette annonce sera définitivement retirée de votre profil et des résultats.',
-                                    'This listing will be permanently removed from your profile and search results.',
+                                    appL10n.profileThisListingWillBePermanently,
                                   ),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
@@ -2283,7 +2284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             _state.s.tr(
                                               'نعم، احذف الإعلان',
                                               'Supprimer définitivement',
-                                              'Delete permanently',
+                                              appL10n.privacyComplianceDeletePermanently,
                                             ),
                                             style: const TextStyle(
                                               fontSize: 14.5,
@@ -2306,7 +2307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       shape: const StadiumBorder(),
                                     ),
                                     child: Text(
-                                      _state.s.tr('إلغاء', 'Annuler', 'Cancel'),
+                                      _state.s.tr('إلغاء', 'Annuler', appL10n.cancelButton),
                                       style: const TextStyle(
                                         fontSize: 14.5,
                                         fontWeight: FontWeight.w700,
@@ -2360,7 +2361,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _state.s.tr(
                 'تم حذف الإعلان بنجاح',
                 'Annonce supprimée avec succès',
-                'Listing deleted successfully',
+                appL10n.profileListingDeletedSuccessfully,
               ),
               style: const TextStyle(
                 fontWeight: FontWeight.w600,

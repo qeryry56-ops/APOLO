@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../l10n/l10n.dart';
+
 /// Represents a single WhatsApp-style voice message item in the chat.
 class VoiceWaveformMessage {
   final String id;
@@ -138,7 +140,7 @@ class _WhatsAppVoiceMessagingScreenState
     if (!hasPermission) {
       if (mounted) {
         setState(() {
-          _statusNotice = 'Microphone permission is required to record audio.';
+          _statusNotice = appL10n.voiceMicPermissionRequired;
         });
       }
       return;
@@ -166,7 +168,7 @@ class _WhatsAppVoiceMessagingScreenState
       if (mounted) {
         setState(() {
           _isRecording = false;
-          _statusNotice = 'Could not start recording on this device.';
+          _statusNotice = appL10n.voiceCouldNotStartRecording;
         });
       }
     }
@@ -277,7 +279,7 @@ class _WhatsAppVoiceMessagingScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _gta6Theme ? 'Lucia · Vice City' : 'Voice Chat',
+                  _gta6Theme ? 'Lucia · Vice City' : context.l10n.voiceChatTitle,
                   style: TextStyle(
                     fontSize: 15.5,
                     fontWeight: FontWeight.w700,
@@ -299,7 +301,7 @@ class _WhatsAppVoiceMessagingScreenState
         ),
         actions: [
           IconButton(
-            tooltip: 'Toggle fitWidth / longScroll waveform',
+            tooltip: context.l10n.voiceToggleWaveformTooltip,
             onPressed: () {
               setState(() {
                 _waveformType = _waveformType == WaveformType.fitWidth
@@ -314,7 +316,7 @@ class _WhatsAppVoiceMessagingScreenState
             ),
           ),
           IconButton(
-            tooltip: 'Toggle GTA 6 theme',
+            tooltip: context.l10n.voiceToggleThemeTooltip,
             onPressed: () => setState(() => _gta6Theme = !_gta6Theme),
             icon: Icon(
               _gta6Theme ? CupertinoIcons.sparkles : CupertinoIcons.paintbrush,
@@ -342,7 +344,7 @@ class _WhatsAppVoiceMessagingScreenState
             child: _messages.isEmpty
                 ? Center(
                     child: Text(
-                      'Tap the microphone below to record a voice message',
+                      context.l10n.voiceTapMicEmptyPrompt,
                       style: TextStyle(
                         color: isDark ? Colors.white60 : Colors.black54,
                         fontSize: 14,
@@ -469,7 +471,7 @@ class _WhatsAppVoiceMessagingScreenState
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Text(
-                          'Tap mic to record voice note...',
+                          context.l10n.voiceTapMicInputHint,
                           style: TextStyle(
                             color: isDark ? Colors.white60 : Colors.black54,
                             fontSize: 14,

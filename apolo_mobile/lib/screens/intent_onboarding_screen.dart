@@ -10,6 +10,7 @@ import '../core/state/app_state.dart';
 import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'widgets/kinetic_widgets.dart';
+import '../l10n/l10n.dart';
 
 /// Descriptor for a single tilted intent pill on [ApoloIntentOnboardingScreen].
 class ApoloIntentOption {
@@ -354,7 +355,7 @@ class _ApoloIntentOnboardingScreenState
                             s.tr(
                               'فاش غادي تستعمل\nApolo؟',
                               'Comment allez-vous\nutiliser Apolo ?',
-                              'What will you\nuse Apolo for?',
+                              appL10n.intentOnboardingWhatWillYouUseApolo,
                             ),
                             key: const Key('dl-intent-heading'),
                             textAlign: TextAlign.center,
@@ -405,7 +406,7 @@ class _ApoloIntentOnboardingScreenState
                         onTap: canContinue ? _handleContinue : null,
                         child: Center(
                           child: Text(
-                            s.tr('متابعة', 'Continuer', 'Continue'),
+                            s.tr('متابعة', 'Continuer', appL10n.continueButton),
                             style: TextStyle(
                               color: canContinue
                                   ? Colors.white

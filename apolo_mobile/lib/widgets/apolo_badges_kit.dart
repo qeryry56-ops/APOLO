@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import 'dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Official 6-tier seller trust & activity ranks powered by APOLO's Figma badge kit.
 enum ApoloSellerRank {
@@ -74,17 +75,17 @@ enum ApoloSellerRank {
   String label(AppStrings s) {
     switch (this) {
       case ApoloSellerRank.bronze:
-        return s.tr('عضو برونزي', 'Bronze', 'Bronze');
+        return s.tr('عضو برونزي', 'Bronze', appL10n.badgesKitBronze);
       case ApoloSellerRank.silver:
-        return s.tr('بائع فضي', 'Argent', 'Silver');
+        return s.tr('بائع فضي', 'Argent', appL10n.badgesKitSilver);
       case ApoloSellerRank.gold:
-        return s.tr('بائع ذهبي', 'Or', 'Gold');
+        return s.tr('بائع ذهبي', 'Or', appL10n.badgesKitGold);
       case ApoloSellerRank.platinum:
-        return s.tr('بائع بلاتيني', 'Platine', 'Platinum');
+        return s.tr('بائع بلاتيني', 'Platine', appL10n.badgesKitPlatinum);
       case ApoloSellerRank.diamond:
-        return s.tr('بائع ماسي', 'Diamant', 'Diamond');
+        return s.tr('بائع ماسي', 'Diamant', appL10n.badgesKitDiamond);
       case ApoloSellerRank.champion:
-        return s.tr('بطل أبولو', 'Champion', 'Champion');
+        return s.tr('بطل أبولو', 'Champion', appL10n.badgesKitChampion);
     }
   }
 
@@ -94,37 +95,37 @@ enum ApoloSellerRank {
         return s.tr(
           'بداية الحساب على Apolo',
           'Nouveau membre sur Apolo',
-          'Starter member on Apolo',
+          appL10n.badgesKitStarterMemberApolo,
         );
       case ApoloSellerRank.silver:
         return s.tr(
           'توثيق الحساب أو إعلانان فأكثر',
           'Compte vérifié ou 2+ annonces',
-          'Verified account or 2+ listings',
+          appL10n.badgesKitVerifiedAccount2Listings,
         );
       case ApoloSellerRank.gold:
         return s.tr(
           'متجر أعمال أو +5 إعلانات',
           'Boutique Pro ou 5+ annonces',
-          'Business store or 5+ listings',
+          appL10n.badgesKitBusinessStore5Listings,
         );
       case ApoloSellerRank.platinum:
         return s.tr(
           'اشتراك Pro+ أو متجر نشيط (+8 إعلانات)',
           'Pro+ actif ou boutique active (8+)',
-          'Active Pro+ or active store (8+)',
+          appL10n.badgesKitActiveProActiveStore8,
         );
       case ApoloSellerRank.diamond:
         return s.tr(
           'Pro+ مع +10 إعلانات أو +1500 مشاهدة',
           'Pro+ avec 10+ annonces ou 1500 vues',
-          'Pro+ with 10+ listings or 1,500 views',
+          appL10n.badgesKitPro10Listings1500,
         );
       case ApoloSellerRank.champion:
         return s.tr(
           'أعلى رتبة: Pro+ مع +20 إعلاناً أو +5000 مشاهدة',
           'Rang ultime : Pro+ avec 20+ annonces ou 5000 vues',
-          'Top tier: Pro+ with 20+ listings or 5,000 views',
+          appL10n.badgesKitTopTierPro20Listings,
         );
     }
   }
@@ -247,8 +248,8 @@ class ApoloAccountTypeBadge extends StatelessWidget {
     final IconData icon =
         isBusiness ? Icons.storefront_rounded : CupertinoIcons.person_fill;
     final String label = isBusiness
-        ? s.tr('متجر', 'Boutique', 'Business')
-        : s.tr('فردي', 'Particulier', 'Personal');
+        ? s.tr('متجر', 'Boutique', appL10n.businessAccountBadge)
+        : s.tr('فردي', 'Particulier', appL10n.personalAccountBadge);
 
     return Container(
       key: Key(
@@ -608,7 +609,7 @@ class ApoloRankProgressCard extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            '${s.tr('المستوى:', 'Rang :', 'Seller rank:')} ${rank.label(s)}',
+                            '${s.tr('المستوى:', 'Rang :', appL10n.badgesKitSellerRank)} ${rank.label(s)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -640,9 +641,9 @@ class ApoloRankProgressCard extends StatelessWidget {
                           ? s.tr(
                               'وصلت لأعلى رتبة على Apolo!',
                               'Vous avez atteint le rang maximal !',
-                              'Top rank unlocked on Apolo!',
+                              appL10n.badgesKitTopRankUnlockedApolo,
                             )
-                          : '${s.tr('الرتبة التالية:', 'Prochain rang :', 'Next:')} ${next.label(s)} · ${next.requirementHint(s)}',
+                          : '${s.tr('الرتبة التالية:', 'Prochain rang :', appL10n.badgesKitNext)} ${next.label(s)} · ${next.requirementHint(s)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -722,7 +723,7 @@ Future<void> showApoloTrustAndRankSheet(
                             s.tr(
                               'التوثيق ورتب البائعين',
                               'Vérification & Rangs',
-                              'Trust & Seller Ranks',
+                              appL10n.badgesKitTrustSellerRanks,
                             ),
                             style: TextStyle(
                               fontSize: 17,
@@ -731,7 +732,7 @@ Future<void> showApoloTrustAndRankSheet(
                             ),
                           ),
                           Text(
-                            '${s.tr('المستوى الحالي:', 'Niveau actuel :', 'Current rank:')} ${currentRank.label(s)}',
+                            '${s.tr('المستوى الحالي:', 'Niveau actuel :', appL10n.badgesKitCurrentRank)} ${currentRank.label(s)}',
                             style: TextStyle(
                               fontSize: 13,
                               color: palette.muted,
@@ -772,12 +773,12 @@ Future<void> showApoloTrustAndRankSheet(
                                       ? s.tr(
                                           'حساب موثوق على Apolo',
                                           'Compte vérifié Apolo',
-                                          'Verified Apolo Account',
+                                          appL10n.badgesKitVerifiedApoloAccount,
                                         )
                                       : s.tr(
                                           'شارة التوثيق الزرقاء',
                                           'Badge de vérification',
-                                          'Verified Seal',
+                                          appL10n.badgesKitVerifiedSeal,
                                         ),
                                   style: TextStyle(
                                     fontSize: 14.5,
@@ -791,12 +792,12 @@ Future<void> showApoloTrustAndRankSheet(
                                       ? s.tr(
                                           'تم التحقق من بيانات الحساب ورقم الهاتف لتعزيز الثقة والأمان.',
                                           'Identité ou numéro vérifiés pour plus de sécurité.',
-                                          'Identity and contact details verified for safer transactions.',
+                                          appL10n.badgesKitIdentityContactDetailsVerifiedSafer,
                                         )
                                       : s.tr(
                                           'تظهر الشارة بعد توثيق رقم الهاتف أو تفعيل متجر احترافي.',
                                           'Accordé après vérification du numéro ou boutique Pro.',
-                                          'Earned by verifying your phone number or activating a Pro store.',
+                                          appL10n.badgesKitEarnedByVerifyingPhoneNumber,
                                         ),
                                   style: TextStyle(
                                     fontSize: 12.5,
@@ -815,7 +816,7 @@ Future<void> showApoloTrustAndRankSheet(
                       s.tr(
                         'جميع رتب البائعين',
                         'Tous les rangs vendeur',
-                        'All Seller Ranks',
+                        appL10n.badgesKitAllSellerRanks,
                       ),
                       style: TextStyle(
                         fontSize: 13.5,
@@ -919,7 +920,7 @@ class _RankSheetRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                s.tr('الحالي', 'Actuel', 'Current'),
+                s.tr('الحالي', 'Actuel', appL10n.badgesKitCurrent),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,

@@ -19,6 +19,7 @@ import 'pro_plus_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/real_marketplace_map.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 4-Step Post Ad / Listing Editor Wizard:
 /// - Pure `#FFFFFF` canvas + `#EEEEEE` `40×40` circular back button + `#000000`/`#EEEEEE` 4-step progress pills
@@ -386,7 +387,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           s.tr(
             'تعذر تحديد موقعك تلقائياً — اختر المدينة من القائمة',
             'Détection GPS impossible — choisissez votre ville',
-            'Could not detect GPS location — pick your city',
+            appL10n.postAdCouldNotDetectGpsLocation,
           ),
         );
       }
@@ -513,28 +514,28 @@ class _PostAdScreenState extends State<PostAdScreen> {
         msg = s.tr(
           'يرجى اختيار القسم والمدينة للمتابعة',
           'Veuillez choisir une catégorie et une ville',
-          'Please select a category and city',
+          appL10n.postAdPleaseSelectCategoryCity,
         );
         break;
       case 1:
         msg = s.tr(
           'أضف صورة واحدة على الأقل لإعلانك',
           'Ajoutez au moins une photo de votre article',
-          'Add at least one photo for your listing',
+          appL10n.postAdAddAtLeastOnePhoto,
         );
         break;
       case 2:
         msg = s.tr(
           'أدخل عنواناً واضحاً للإعلان (3 أحرف على الأقل)',
           'Saisissez un titre clair (au moins 3 caractères)',
-          'Enter a clear title (at least 3 characters)',
+          appL10n.postAdEnterClearTitleAtLeast,
         );
         break;
       default:
         msg = s.tr(
           'حدد ثمناً صحيحاً أو اختر مجاني، وتحقق من رقم الهاتف',
           'Indiquez un prix valide ou Gratuit et vérifiez le téléphone',
-          'Enter a valid price or Free and verify your phone number',
+          appL10n.postAdEnterValidPriceFreeVerify,
         );
     }
     HapticFeedback.heavyImpact();
@@ -566,12 +567,12 @@ class _PostAdScreenState extends State<PostAdScreen> {
       contentTitle: s.tr(
         'وصلت للحد اليومي المجاني (${AppConfig.maxDailyFreeAds} إعلانات فـ النهار)',
         'Limite gratuite atteinte (${AppConfig.maxDailyFreeAds} annonces/jour)',
-        'Daily free limit reached (${AppConfig.maxDailyFreeAds} ads/day)',
+        appL10n.postAdDailyFreeLimitReachedMaxdailyfreeads(AppConfig.maxDailyFreeAds),
       ),
       contentDescription: s.tr(
         'الحساب العادي (Personal) يسمح بنشر حتى ${AppConfig.maxDailyFreeAds} إعلانات مجانية كل يوم. اشترك فـ Apolo Premium بـ ${AppConfig.monthlyPremiumPriceMad} د.م/شهر عبر Google Pay للنشر بلا حدود والحصول على متجر Business وشارة Verified.',
         'Le compte Personnel inclut ${AppConfig.maxDailyFreeAds} annonces gratuites par jour. Passez à Apolo Premium (${AppConfig.monthlyPremiumPriceMad} DH/mois via Google Pay) pour publier en illimité avec boutique Business et badge Verified.',
-        'Personal accounts include up to ${AppConfig.maxDailyFreeAds} free ads per day. Upgrade to Apolo Premium (${AppConfig.monthlyPremiumPriceMad} MAD/mo via Google Pay) for unlimited daily ads, Business store, and Verified badge.',
+        appL10n.postAdPersonalAccountsIncludeUpMaxdailyfreeads(AppConfig.maxDailyFreeAds, AppConfig.monthlyPremiumPriceMad),
       ),
       actions: [
         ApoloDlButton(
@@ -579,7 +580,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           label: s.tr(
             'اشترك بـ ${AppConfig.monthlyPremiumPriceMad} د.م/شهر • Google Pay',
             'S’abonner (${AppConfig.monthlyPremiumPriceMad} DH/mois) • Google Pay',
-            'Subscribe (${AppConfig.monthlyPremiumPriceMad} MAD/mo) • Google Pay',
+            appL10n.postAdSubscribeMonthlypremiumpricemadMadMoGoogle(AppConfig.monthlyPremiumPriceMad),
           ),
           variant: ApoloDlButtonVariant.primary,
           borderRadius: 999,
@@ -587,7 +588,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           onPressed: () => Navigator.of(context).pop(true),
         ),
         ApoloDlButton(
-          label: s.tr('حسناً، غداً', 'Plus tard', 'Maybe later'),
+          label: s.tr('حسناً، غداً', 'Plus tard', appL10n.postAdMaybeLater),
           variant: ApoloDlButtonVariant.secondary,
           borderRadius: 999,
           fullWidth: true,
@@ -692,7 +693,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         s.tr(
           'يجب تسجيل الدخول أولاً لتتمكن من نشر إعلانك على المنصة',
           'Veuillez vous connecter pour publier votre annonce',
-          'Please sign in to publish your listing',
+          appL10n.postAdPleaseSignPublishListing,
         ),
         danger: true,
       );
@@ -713,7 +714,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
     try {
       final desc = _descCtrl.text.trim().length >= 20
           ? _descCtrl.text.trim()
-          : '${_titleCtrl.text.trim()} — ${_descCtrl.text.trim().isEmpty ? s.tr('متوفر بحالة ممتازة على أبولو', 'Disponible en très bon état sur Apolo.ma', 'Available in great condition on Apolo') : _descCtrl.text.trim()}';
+          : '${_titleCtrl.text.trim()} — ${_descCtrl.text.trim().isEmpty ? s.tr('متوفر بحالة ممتازة على أبولو', 'Disponible en très bon état sur Apolo.ma', appL10n.postAdAvailableGreatConditionApolo) : _descCtrl.text.trim()}';
 
       final map = <String, dynamic>{
         'title': _titleCtrl.text.trim(),
@@ -781,7 +782,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         String errMsg = _state.s.tr(
           'تعذر نشر الإعلان، يرجى التأكد من البيانات والمحاولة مجدداً',
           'Échec de la publication de votre annonce',
-          'Failed to publish your listing',
+          appL10n.postAdFailedPublishListing,
         );
         try {
           final dynamic dynErr = e;
@@ -878,7 +879,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                 s.tr(
                                   'تعذر تحميل الأقسام والمدن. أعد المحاولة',
                                   'Catégories et villes indisponibles. Réessayer',
-                                  'Categories and cities unavailable. Retry',
+                                  appL10n.postAdCategoriesCitiesUnavailableRetry,
                                 ),
                                 style: TextStyle(
                                   color: _dlInk,
@@ -1003,18 +1004,18 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                       ? s.tr(
                                           'نشر غير محدود يومياً · Apolo Premium',
                                           'Annonces illimitées · Apolo Premium',
-                                          'Unlimited daily ads · Apolo Premium',
+                                          appL10n.postAdUnlimitedDailyAdsApoloPremium,
                                         )
                                       : (_state.hasReachedDailyAdLimit
                                           ? s.tr(
                                               'وصلت لـ ${AppConfig.maxDailyFreeAds}/${AppConfig.maxDailyFreeAds} إعلانات اليوم · ترقية بـ ${AppConfig.monthlyPremiumPriceMad} د.م',
                                               'Limite ${AppConfig.maxDailyFreeAds}/${AppConfig.maxDailyFreeAds} atteinte · Premium ${AppConfig.monthlyPremiumPriceMad} DH',
-                                              '${AppConfig.maxDailyFreeAds}/${AppConfig.maxDailyFreeAds} daily limit reached · Upgrade (${AppConfig.monthlyPremiumPriceMad} MAD)',
+                                              appL10n.postAdMaxdailyfreeadsMaxdailyfreeads2DailyLimitReached(AppConfig.maxDailyFreeAds, AppConfig.maxDailyFreeAds, AppConfig.monthlyPremiumPriceMad),
                                             )
                                           : s.tr(
                                               'الحد المجاني اليوم: ${_state.todayPostedAdsCount}/${AppConfig.maxDailyFreeAds} إعلانات · غير محدود مع Premium',
                                               'Quota gratuit : ${_state.todayPostedAdsCount}/${AppConfig.maxDailyFreeAds} aujourd’hui · Illimité en Premium',
-                                              'Today: ${_state.todayPostedAdsCount}/${AppConfig.maxDailyFreeAds} free ads · Unlimited with Premium',
+                                              appL10n.postAdTodayTodaypostedadscountMaxdailyfreeadsFreeAds(_state.todayPostedAdsCount, AppConfig.maxDailyFreeAds),
                                             )),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1098,48 +1099,48 @@ class _PostAdScreenState extends State<PostAdScreen> {
         title = s.tr(
           'فين بغيتي تحط إعلانك؟',
           'Où souhaitez-vous publier ?',
-          'Where are you listing?',
+          appL10n.postAdWhereAreYouListing,
         );
         subtitle = s.tr(
           'اختر القسم المناسب والمدينة باش المشترين القراب ليك يلقاوه بسهولة',
           'Choisissez la catégorie et votre ville pour cibler les acheteurs',
-          'Choose a category and city so nearby buyers can find it easily',
+          appL10n.postAdChooseCategoryCitySoNearby,
         );
         break;
       case 1:
         title = s.tr(
           'أضف صور واضحة لإعلانك',
           'Ajoutez des photos nettes',
-          'Add clear photos',
+          appL10n.postAdAddClearPhotos,
         );
         subtitle = s.tr(
           'الإعلانات اللي فيها صور حقيقية وواضحة كتتباع أسرع بـ 3 مرات',
           'Les annonces avec photos réelles se vendent 3x plus vite',
-          'Listings with real, clear photos sell up to 3x faster',
+          appL10n.postAdListingsRealClearPhotosSell,
         );
         break;
       case 2:
         title = s.tr(
           'شنو كتبيع؟ عطيه عنوان قوي',
           'Décrivez votre article',
-          'Describe your item',
+          appL10n.postAdDescribeItem,
         );
         subtitle = s.tr(
           'اكتب الماركة، الموديل، والحالة باش تجاوب على أسئلة المشتري',
           'Un titre précis et une description honnête inspirent confiance',
-          'A clear title and honest description build buyer trust',
+          appL10n.postAdClearTitleHonestDescriptionBuild,
         );
         break;
       default:
         title = s.tr(
           'حدد الثمن وطريقة التواصل',
           'Fixez votre prix et contact',
-          'Set price and contact',
+          appL10n.postAdSetPriceContact,
         );
         subtitle = s.tr(
           'حدد ثمن مناسب للسوق وراجع معاينة الإعلان قبل النشر',
           'Indiquez un prix attractif et vérifiez l\'aperçu avant de publier',
-          'Set a fair price and review your listing before publishing',
+          appL10n.postAdSetFairPriceReviewListing,
         );
         break;
     }
@@ -1212,7 +1213,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          s.tr('المدينة', 'Ville', 'City'),
+          s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity),
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -1346,12 +1347,12 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                   ? s.tr(
                                       'تم تحديد موقع الإعلان (GPS)',
                                       'Position GPS enregistrée',
-                                      'GPS location set',
+                                      appL10n.postAdGpsLocationSet,
                                     )
                                   : s.tr(
                                       'تحديد موقع الإعلان بـ GPS',
                                       'Détecter la position (GPS)',
-                                      'Detect ad location (GPS)',
+                                      appL10n.postAdDetectAdLocationGps,
                                     ),
                               style: TextStyle(
                                 fontSize: 12.5,
@@ -1371,7 +1372,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
         ),
         const SizedBox(height: 22),
         Text(
-          s.tr('اختر القسم', 'Catégorie', 'Category'),
+          s.tr('اختر القسم', 'Catégorie', appL10n.adDetailCategory),
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -1500,12 +1501,12 @@ class _PostAdScreenState extends State<PostAdScreen> {
                       ? s.tr(
                           'اضغط لإضافة صور الإعلان',
                           'Appuyez pour ajouter des photos',
-                          'Tap to add photos',
+                          appL10n.postAdTapAddPhotos,
                         )
                       : s.tr(
                           'إضافة المزيد من الصور ($totalPhotos/8)',
                           'Ajouter plus de photos ($totalPhotos/8)',
-                          'Add more photos ($totalPhotos/8)',
+                          appL10n.postAdAddMorePhotosTotalphotos8(totalPhotos),
                         ),
                   style: TextStyle(
                     fontSize: 16,
@@ -1518,7 +1519,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   s.tr(
                     'الصورة الأولى غادي تكون هي صورة الغلاف الرئيسية',
                     'La première photo sera la couverture principale',
-                    'The first photo will be used as the main cover',
+                    appL10n.postAdFirstPhotoWillBeUsed,
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12.5, color: _dlMuted),
@@ -1529,13 +1530,13 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   children: [
                     _miniActionChip(
                       icon: CupertinoIcons.photo_fill,
-                      label: s.tr('المعرض', 'Galerie', 'Gallery'),
+                      label: s.tr('المعرض', 'Galerie', appL10n.postAdGallery),
                       onTap: () => _pickImages(),
                     ),
                     const SizedBox(width: 10),
                     _miniActionChip(
                       icon: CupertinoIcons.camera_fill,
-                      label: s.tr('الكاميرا', 'Caméra', 'Camera'),
+                      label: s.tr('الكاميرا', 'Caméra', appL10n.callCamera),
                       onTap: () =>
                           _pickImages(singleSource: ImageSource.camera),
                     ),
@@ -1554,7 +1555,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                 s.tr(
                   'الصور المختارة',
                   'Photos sélectionnées',
-                  'Selected photos',
+                  appL10n.postAdSelectedPhotos,
                 ),
                 style: TextStyle(
                   fontSize: 14,
@@ -1639,7 +1640,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          s.tr('الغلاف', 'Principale', 'Cover'),
+                          s.tr('الغلاف', 'Principale', appL10n.postAdCover),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -1725,7 +1726,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              s.tr('عنوان الإعلان', 'Titre de l\'annonce', 'Listing title'),
+              s.tr('عنوان الإعلان', 'Titre de l\'annonce', appL10n.postAdListingTitle),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -1734,7 +1735,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             ),
             Text(
               titleLen >= 3
-                  ? s.tr('ممتاز ✓', 'Parfait ✓', 'Great ✓')
+                  ? s.tr('ممتاز ✓', 'Parfait ✓', appL10n.postAdGreat)
                   : '$titleLen / 3+',
               style: TextStyle(
                 fontSize: 12,
@@ -1758,7 +1759,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             s.tr(
               'مثال: iPhone 15 Pro Max 256GB بحالة الجديد',
               'Ex: iPhone 15 Pro Max 256Go comme neuf',
-              'e.g. iPhone 15 Pro Max 256GB like new',
+              appL10n.postAdEGIphone15Pro,
             ),
             icon: CupertinoIcons.textbox,
           ),
@@ -1768,7 +1769,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           s.tr(
             'الوصف التفصيلي',
             'Description détaillée',
-            'Detailed description',
+            appL10n.postAdDetailedDescription,
           ),
           style: TextStyle(
             fontSize: 14,
@@ -1791,7 +1792,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             s.tr(
               'اذكر الحالة، الملحقات، وسبب البيع لزيادة ثقة المشترين...',
               'Précisez l\'état, les accessoires et les détails importants...',
-              'Mention condition, included accessories, and key details...',
+              appL10n.postAdMentionConditionIncludedAccessoriesKey,
             ),
           ),
         ),
@@ -1801,7 +1802,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             s.tr(
               'مواصفات إضافية',
               'Caractéristiques spécifiques',
-              'Specifications',
+              appL10n.postAdSpecifications,
             ),
             style: TextStyle(
               fontSize: 14,
@@ -1857,7 +1858,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
 
   Widget _buildStep4PriceContactAndPreview(AppStrings s) {
     final String previewPrice = _free
-        ? s.tr('مجاني', 'Gratuit', 'Free')
+        ? s.tr('مجاني', 'Gratuit', appL10n.adDetailFree)
         : (_priceCtrl.text.trim().isNotEmpty
             ? '${_priceCtrl.text.trim()} MAD'
             : '— MAD');
@@ -1867,7 +1868,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
       children: [
         if (!_free) ...[
           Text(
-            s.tr('الثمن (بالدرهم)', 'Prix (en MAD)', 'Price (MAD)'),
+            s.tr('الثمن (بالدرهم)', 'Prix (en MAD)', appL10n.postAdPriceMad),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -1887,7 +1888,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
               color: _dlInk,
             ),
             decoration: _dlInputDecoration(
-              s.tr('أدخل الثمن بالدرهم', 'Ex: 2500', 'e.g. 2500'),
+              s.tr('أدخل الثمن بالدرهم', 'Ex: 2500', appL10n.postAdEG2500),
               icon: CupertinoIcons.tag_solid,
               suffix: Padding(
                 padding: const EdgeInsetsDirectional.only(end: 14),
@@ -1924,13 +1925,13 @@ class _PostAdScreenState extends State<PostAdScreen> {
           runSpacing: 8,
           children: [
             _DlOptionPill(
-              label: s.tr('قابل للتفاوض', 'Prix négociable', 'Negotiable'),
+              label: s.tr('قابل للتفاوض', 'Prix négociable', appL10n.negotiableBadge),
               icon: CupertinoIcons.hand_thumbsup_fill,
               active: _negotiable,
               onTap: () => setState(() => _negotiable = !_negotiable),
             ),
             _DlOptionPill(
-              label: s.tr('مجاني', 'Gratuit', 'Free'),
+              label: s.tr('مجاني', 'Gratuit', appL10n.adDetailFree),
               icon: CupertinoIcons.gift_fill,
               active: _free,
               onTap: () => setState(() => _free = !_free),
@@ -1939,7 +1940,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
               label: s.tr(
                 'إخفاء الرقم (شات فقط)',
                 'Masquer le numéro',
-                'Hide number',
+                appL10n.postAdHideNumber,
               ),
               icon: CupertinoIcons.lock_shield_fill,
               active: _hidePhone,
@@ -1953,7 +1954,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             s.tr(
               'رقم الهاتف والواتساب',
               'Téléphone & WhatsApp',
-              'Phone & WhatsApp',
+              appL10n.editProfilePhoneWhatsapp,
             ),
             style: TextStyle(
               fontSize: 14,
@@ -1983,7 +1984,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
           s.tr(
             'معاينة الإعلان قبل النشر',
             'Aperçu de votre annonce',
-            'Listing preview',
+            appL10n.postAdListingPreview,
           ),
           style: TextStyle(
             fontSize: 14,
@@ -2046,7 +2047,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           ? s.tr(
                               'عنوان الإعلان',
                               'Titre de l\'annonce',
-                              'Listing title',
+                              appL10n.postAdListingTitle,
                             )
                           : _titleCtrl.text.trim(),
                       maxLines: 1,
@@ -2118,7 +2119,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
             children: [
               if (_currentStep > 0) ...[
                 ApoloDlButton(
-                  label: s.tr('السابق', 'Retour', 'Back'),
+                  label: s.tr('السابق', 'Retour', appL10n.backButton),
                   variant: ApoloDlButtonVariant.secondary,
                   borderRadius: 999,
                   height: 54,
@@ -2131,13 +2132,13 @@ class _PostAdScreenState extends State<PostAdScreen> {
                   key: const Key('post-ad-continue-btn'),
                   label: isLast
                       ? (_isEditing
-                          ? s.tr('حفظ التعديلات', 'Enregistrer', 'Save changes')
+                          ? s.tr('حفظ التعديلات', 'Enregistrer', appL10n.saveChangesButton)
                           : s.tr(
                               'نشر الإعلان الآن',
                               'Publier mon annonce',
-                              'Publish now',
+                              appL10n.postAdPublishNow,
                             ))
-                      : s.tr('المتابعة', 'Continuer', 'Continue'),
+                      : s.tr('المتابعة', 'Continuer', appL10n.continueButton),
                   leadingIcon: isLast
                       ? CupertinoIcons.checkmark_circle_fill
                       : null,
@@ -2213,7 +2214,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                 ),
                                 SizedBox(width: 4),
                                 Text(
-                                  'LIVE',
+                                  context.l10n.liveBadgeLabel,
                                   textDirection: TextDirection.ltr,
                                   style: TextStyle(
                                     color: _dlOnInk,
@@ -2233,12 +2234,12 @@ class _PostAdScreenState extends State<PostAdScreen> {
                           ? s.tr(
                               'تم تحديث إعلانك بنجاح',
                               'Annonce mise à jour',
-                              'Listing updated',
+                              appL10n.postAdListingUpdated,
                             )
                           : s.tr(
                               'مبروك! تم نشر إعلانك بنجاح',
                               'Félicitations ! Annonce publiée',
-                              'Your listing is live',
+                              appL10n.postAdListingIsLive,
                             ),
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -2254,7 +2255,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                       s.tr(
                         'إعلانك دابا واجد وغادي يبان لآلاف المشترين فـ Apolo.ma.',
                         'Votre annonce est maintenant visible par les acheteurs sur Apolo.ma.',
-                        'Your listing is now visible to buyers across Apolo.ma.',
+                        appL10n.postAdListingIsNowVisibleBuyers,
                       ),
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -2295,7 +2296,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                                       ? s.tr(
                                           'إعلانك الجديد',
                                           'Votre nouvelle annonce',
-                                          'Your new listing',
+                                          appL10n.postAdNewListing,
                                         )
                                       : _titleCtrl.text.trim(),
                                   maxLines: 1,
@@ -2326,7 +2327,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                       label: s.tr(
                         'العودة للرئيسية',
                         'Retour à l\'accueil',
-                        'Back to home',
+                        appL10n.postAdBackHome,
                       ),
                       variant: ApoloDlButtonVariant.primary,
                       borderRadius: 999,
@@ -2349,7 +2350,7 @@ class _PostAdScreenState extends State<PostAdScreen> {
                       label: s.tr(
                         'إضافة إعلان آخر',
                         'Publier une autre annonce',
-                        'Post another listing',
+                        appL10n.postAdPostAnotherListing,
                       ),
                       leadingIcon: CupertinoIcons.add,
                       variant: ApoloDlButtonVariant.secondary,

@@ -14,6 +14,7 @@ import '../theme/dl_share_profile_tokens.dart';
 import 'auth_screen.dart';
 import 'intent_onboarding_screen.dart';
 import 'main_shell.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Welcome Screen (`45786:49327`, `375 × 812` reference):
 /// - Pure `#FFFFFF` canvas with dark status bar icons.
@@ -123,7 +124,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               _state.s.tr(
                 'تعذر فتح تسجيل الدخول عبر Google حالياً.',
                 'Impossible d’ouvrir la connexion Google pour le moment.',
-                'Unable to open Google sign-in right now.',
+                appL10n.authUnableOpenGoogleSignRight,
               ),
             ),
           ),
@@ -137,7 +138,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               _state.s.tr(
                 'تعذر بدء تسجيل الدخول عبر Google حالياً.',
                 'Impossible de démarrer la connexion Google.',
-                'Unable to start Google sign-in right now.',
+                appL10n.welcomeUnableStartGoogleSignRight,
               ),
             ),
           ),
@@ -232,7 +233,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                     text: s.tr(
                                       'المتابعة عبر Google',
                                       'Continuer avec Google',
-                                      'Continue with Google',
+                                      appL10n.welcomeContinueGoogle,
                                     ),
                                     onPressed: _openGoogleAuth,
                                   ),
@@ -258,7 +259,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                           horizontal: 16.0,
                                         ),
                                         child: Text(
-                                          s.tr('أو', 'ou', 'or'),
+                                          s.tr('أو', 'ou', appL10n.welcomeOr),
                                           style: const TextStyle(
                                             color: _muted,
                                             fontSize: 14.0,
@@ -291,7 +292,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                     text: s.tr(
                                       'إنشاء حساب جديد',
                                       'Créer un compte',
-                                      'Create an account',
+                                      appL10n.welcomeCreateAccountButton,
                                     ),
                                     onPressed: () =>
                                         _openAuth(isRegister: true),
@@ -307,7 +308,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                     text: s.tr(
                                       'لدي حساب بالفعل',
                                       'J’ai déjà un compte',
-                                      'I have an account',
+                                      appL10n.welcomeIHaveAccount,
                                     ),
                                     onPressed: () =>
                                         _openAuth(isRegister: false),
@@ -318,7 +319,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                     alignment: Alignment.center,
                                     child: Semantics(
                                       button: true,
-                                      label: 'Continue as guest',
+                                      label: context
+                                          .l10n.welcomeContinueAsGuestLabel,
                                       child: GestureDetector(
                                         key: const ValueKey('welcome-guest'),
                                         onTap: _enterMainApp,
@@ -511,7 +513,7 @@ class _ApoloWelcomeFallingMessagesHeroState
   @override
   Widget build(BuildContext context) {
     final s = widget.strings;
-    final nowLabel = s.tr('الآن', 'maintenant', 'now');
+    final nowLabel = s.tr('الآن', 'maintenant', appL10n.notificationsNow);
     final maxHeroWidth = widget.compact ? 280.0 : 330.0;
 
     return GestureDetector(
@@ -673,7 +675,7 @@ class _ApoloWelcomeFallingMessagesHeroState
                                       s.tr(
                                         'عرض جديد وصل على إعلانك الآن!',
                                         'Nouvelle offre reçue sur votre annonce !',
-                                        'New offer received on your listing!',
+                                        appL10n.welcomeNewOfferReceivedListing,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -745,7 +747,7 @@ class _ApoloWelcomeFallingMessagesHeroState
                                       ),
                                       alignment: Alignment.center,
                                       child: Text(
-                                        s.tr('ي', 'Y', 'Y'),
+                                        s.tr('ي', 'Y', appL10n.welcomeY),
                                         style: const TextStyle(
                                           color: _ink,
                                           fontSize: 16.0,
@@ -791,7 +793,7 @@ class _ApoloWelcomeFallingMessagesHeroState
                                             s.tr(
                                               'ياسين • الدار البيضاء',
                                               'Yassine • Casablanca',
-                                              'Yassine • Casablanca',
+                                              appL10n.welcomeYassineCasablanca,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -829,7 +831,7 @@ class _ApoloWelcomeFallingMessagesHeroState
                                       s.tr(
                                         'السلام عليكم، واش باقي متوفر؟',
                                         'Bonjour, toujours disponible ?',
-                                        'Hi, is this still available?',
+                                        appL10n.adDetailHiIsThisStillAvailable,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -891,7 +893,7 @@ class _ApoloWelcomeFallingMessagesHeroState
                                     s.tr(
                                       'مرحباً! نعم متوفر، تفضل',
                                       'Oui disponible, bienvenue !',
-                                      'Yes available, welcome!',
+                                      appL10n.welcomeYesAvailableWelcome,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,

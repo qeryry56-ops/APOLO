@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../../l10n/l10n.dart';
 
 class AppConfig {
   static const String appName = 'Apolo.ma';
@@ -119,43 +120,43 @@ class AppStrings {
     return fr;
   }
 
-  String get home => tr('الرئيسية', 'Accueil', 'Home');
-  String get search => tr('استكشف', 'Explorer', 'Explore');
-  String get postAd => tr('أضف إعلان', 'Publier', 'Post Ad');
-  String get stores => tr('المتاجر', 'Boutiques', 'Stores');
-  String get messages => tr('الرسائل', 'Messages', 'Messages');
-  String get profile => tr('حسابي', 'Profil', 'Profile');
-  String get categories => tr('تصفح الأقسام', 'Catégories', 'Categories');
+  String get home => tr('الرئيسية', 'Accueil', appL10n.navHome);
+  String get search => tr('استكشف', 'Explorer', appL10n.navExplore);
+  String get postAd => tr('أضف إعلان', 'Publier', appL10n.sellItemButton);
+  String get stores => tr('المتاجر', 'Boutiques', appL10n.navStores);
+  String get messages => tr('الرسائل', 'Messages', appL10n.navMessages);
+  String get profile => tr('حسابي', 'Profil', appL10n.navProfile);
+  String get categories => tr('تصفح الأقسام', 'Catégories', appL10n.categoriesTitle);
   String get featuredAds =>
-      tr('إعلانات VIP المميزة', 'Sélection VIP', 'VIP Ads');
+      tr('إعلانات VIP المميزة', 'Sélection VIP', appL10n.featuredAdsTitle);
   String get latestAds =>
-      tr('أحدث العروض المختارة', 'Dernières annonces', 'Latest Ads');
+      tr('أحدث العروض المختارة', 'Dernières annonces', appL10n.latestAdsTitle);
   String get allCities =>
-      tr('كل مدن المغرب', 'Toutes les villes', 'All Cities');
+      tr('كل مدن المغرب', 'Toutes les villes', appL10n.allCitiesFilter);
   String get allCategories =>
-      tr('جميع الأقسام', 'Toutes les catégories', 'All Categories');
-  String get login => tr('تسجيل الدخول', 'Se connecter', 'Login');
+      tr('جميع الأقسام', 'Toutes les catégories', appL10n.allCategoriesFilter);
+  String get login => tr('تسجيل الدخول', 'Se connecter', appL10n.loginButton);
   String get register =>
-      tr('إنشاء حساب جديد', 'Créer un compte', 'Create Account');
-  String get logout => tr('تسجيل الخروج', 'Déconnexion', 'Logout');
-  String get callSeller => tr('اتصال', 'Appeler', 'Call');
-  String get whatsapp => tr('واتساب', 'WhatsApp', 'WhatsApp');
-  String get chatInApp => tr('دردشة فورية', 'Discuter', 'Chat');
-  String get boostAd => tr('تمييز الإعلان VIP', 'Booster VIP', 'Boost Ad');
+      tr('إنشاء حساب جديد', 'Créer un compte', appL10n.createAccountButton);
+  String get logout => tr('تسجيل الخروج', 'Déconnexion', appL10n.logoutButton);
+  String get callSeller => tr('اتصال', 'Appeler', appL10n.callSellerButton);
+  String get whatsapp => tr('واتساب', 'WhatsApp', appL10n.whatsappButton);
+  String get chatInApp => tr('دردشة فورية', 'Discuter', appL10n.chatInAppButton);
+  String get boostAd => tr('تمييز الإعلان VIP', 'Booster VIP', appL10n.boostAdButton);
   String get deleteAccount =>
-      tr('حذف الحساب نهائياً', 'Supprimer le compte', 'Delete Account');
+      tr('حذف الحساب نهائياً', 'Supprimer le compte', appL10n.deleteAccountButton);
   String get reportAd =>
-      tr('التبليغ عن الإعلان', 'Signaler l\'annonce', 'Report Ad');
+      tr('التبليغ عن الإعلان', 'Signaler l\'annonce', appL10n.reportAdButton);
   String get blockUser =>
-      tr('حظر المستخدم', 'Bloquer l\'utilisateur', 'Block User');
+      tr('حظر المستخدم', 'Bloquer l\'utilisateur', appL10n.blockUserButton);
   String get searchHint => tr(
         'ابحث عن سيارة، شقة، هاتف...',
         'Rechercher une voiture, appartement, téléphone...',
-        'Search for a car, apartment, phone...',
+        appL10n.searchHint,
       );
   String get noAdsFound => tr(
         'لا توجد إعلانات مطابقة لبحثك',
         'Aucune annonce trouvée',
-        'No ads found matching your search',
+        appL10n.noAdsFoundMessage,
       );
 }

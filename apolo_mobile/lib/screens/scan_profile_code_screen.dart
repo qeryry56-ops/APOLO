@@ -17,6 +17,7 @@ import '../widgets/dl_settings_kit.dart';
 import 'ad_detail_screen.dart';
 import 'seller_profile_screen.dart';
 import 'store_detail_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Minimalist Trust Wallet-style full-screen QR Scanner with RTL Arabic support:
 /// - Full-screen camera preview (`#000000` / `#121212` dark canvas)
@@ -89,7 +90,7 @@ class ScanProfileCodeScreen extends StatefulWidget {
             s.tr(
               'هذا هو ملفك الشخصي الحالي',
               'Ceci est déjà votre profil',
-              'This is your own profile',
+              appL10n.scanProfileCodeThisIsOwnProfile,
             ),
           );
           if (replaceCurrentRoute && context.mounted) {
@@ -106,7 +107,7 @@ class ScanProfileCodeScreen extends StatefulWidget {
                 : s.tr(
                     'مستخدم Apolo #$sellerId',
                     'Membre Apolo #$sellerId',
-                    'Apolo Member #$sellerId',
+                    appL10n.scanProfileCodeApoloMemberSellerid(sellerId),
                   ));
         String? handle = target.handle;
         String? avatar;
@@ -182,7 +183,7 @@ class ScanProfileCodeScreen extends StatefulWidget {
             s.tr(
               'هذا هو ملفك الشخصي الحالي',
               'Ceci est déjà votre profil',
-              'This is your own profile',
+              appL10n.scanProfileCodeThisIsOwnProfile,
             ),
           );
           if (replaceCurrentRoute && context.mounted) {
@@ -300,7 +301,7 @@ class ScanProfileCodeScreen extends StatefulWidget {
             : null;
         await showApoloDlBottomSheet<void>(
           context,
-          headerTitle: s.tr('رمز ممسوح', 'Code scanné', 'Scanned Code'),
+          headerTitle: s.tr('رمز ممسوح', 'Code scanné', appL10n.scanProfileCodeScannedCode),
           media: Container(
             width: 56,
             height: 56,
@@ -315,12 +316,12 @@ class ScanProfileCodeScreen extends StatefulWidget {
             ),
           ),
           contentTitle:
-              s.tr('تمت قراءة الرمز', 'Code détecté', 'Code Detected'),
+              s.tr('تمت قراءة الرمز', 'Code détecté', appL10n.scanProfileCodeCodeDetected),
           contentDescription: target.rawValue,
           actions: [
             if (externalUri != null)
               ApoloDlButton(
-                label: s.tr('فتح الرابط', 'Ouvrir le lien', 'Open link'),
+                label: s.tr('فتح الرابط', 'Ouvrir le lien', appL10n.scanProfileCodeOpenLink),
                 variant: ApoloDlButtonVariant.primary,
                 borderRadius: 999,
                 fullWidth: true,
@@ -335,7 +336,7 @@ class ScanProfileCodeScreen extends StatefulWidget {
                 },
               ),
             ApoloDlButton(
-              label: s.tr('نسخ', 'Copier', 'Copy'),
+              label: s.tr('نسخ', 'Copier', appL10n.adDetailCopy),
               variant: externalUri != null
                   ? ApoloDlButtonVariant.secondary
                   : ApoloDlButtonVariant.primary,
@@ -347,12 +348,12 @@ class ScanProfileCodeScreen extends StatefulWidget {
                 } catch (_) {}
                 if (context.mounted) {
                   Navigator.of(context).pop();
-                  showToast(s.tr('تم النسخ', 'Copié', 'Copied'));
+                  showToast(s.tr('تم النسخ', 'Copié', appL10n.chatRoomCopied));
                 }
               },
             ),
             ApoloDlButton(
-              label: s.tr('مسح من جديد', 'Scanner encore', 'Scan again'),
+              label: s.tr('مسح من جديد', 'Scanner encore', appL10n.scanProfileCodeScanAgain),
               variant: ApoloDlButtonVariant.secondary,
               borderRadius: 999,
               fullWidth: true,
@@ -474,7 +475,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
         s.tr(
           'الفلاش غير مدعوم في متصفح هذا الجهاز',
           'Le flash n’est pas pris en charge sur ce navigateur',
-          'Flashlight is unavailable in this browser',
+          appL10n.scanProfileCodeFlashlightIsUnavailableThisBrowser,
         ),
       );
       return;
@@ -489,7 +490,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
         s.tr(
           'الفلاش غير متاح على هذا الجهاز',
           'Le flash est indisponible sur cet appareil',
-          'Flashlight is unavailable on this camera',
+          appL10n.scanProfileCodeFlashlightIsUnavailableThisCamera,
         ),
       );
       return;
@@ -503,7 +504,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
         s.tr(
           'تعذر تشغيل الفلاش حالياً',
           'Impossible d’activer le flash pour le moment',
-          'Could not toggle flashlight right now',
+          appL10n.scanProfileCodeCouldNotToggleFlashlightRight,
         ),
       );
     }
@@ -552,10 +553,10 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
         s.tr(
           'لم يتم العثور على رمز QR في الصورة المختارة',
           'Aucun code QR détecté dans cette image',
-          'No QR code detected in the selected image',
+          appL10n.scanProfileCodeNoQrCodeDetectedSelected,
         ),
         action: SnackBarAction(
-          label: s.tr('أدخل الرمز', 'Saisir', 'Enter code'),
+          label: s.tr('أدخل الرمز', 'Saisir', appL10n.scanProfileCodeEnterCode),
           onPressed: _openManualCodeSheet,
         ),
       );
@@ -564,10 +565,10 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
         s.tr(
           'تعذر فتح معرض الصور',
           'Impossible d’ouvrir la galerie',
-          'Could not open photo library',
+          appL10n.scanProfileCodeCouldNotOpenPhotoLibrary,
         ),
         action: SnackBarAction(
-          label: s.tr('أدخل الرمز', 'Saisir', 'Enter code'),
+          label: s.tr('أدخل الرمز', 'Saisir', appL10n.scanProfileCodeEnterCode),
           onPressed: _openManualCodeSheet,
         ),
       );
@@ -703,7 +704,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
   Widget _buildTopAppBar(AppStrings s, bool isAr, double topInset) {
     final effectiveTitle = (widget.title != null && widget.title!.trim().isNotEmpty)
         ? widget.title!.trim()
-        : s.tr('مسح رمز QR', 'Scanner le code QR', 'Scan QR code');
+        : s.tr('مسح رمز QR', 'Scanner le code QR', appL10n.scanProfileCodeScanQrCode);
 
     return SizedBox(
       key: const Key('scan-code-header'),
@@ -772,7 +773,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
                       message: s.tr(
                         'اختيار صورة من المعرض',
                         'Choisir une image',
-                        'Pick QR image',
+                        appL10n.scanProfileCodePickQrImage,
                       ),
                       child: const SizedBox(
                         width: 44.0,
@@ -945,7 +946,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
                                           s.tr(
                                             'اضغط لتفعيل الكاميرا',
                                             'Appuyez pour activer la caméra',
-                                            'Tap to enable camera',
+                                            appL10n.scanProfileCodeTapEnableCamera,
                                           ),
                                           textAlign: TextAlign.center,
                                           style: const TextStyle(
@@ -1011,7 +1012,7 @@ class _ScanProfileCodeScreenState extends State<ScanProfileCodeScreen>
                                             s.tr(
                                               'إدخال الرمز يدوياً',
                                               'Saisir le code manuellement',
-                                              'Enter code manually',
+                                              appL10n.scanProfileCodeEnterCodeManually,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -1270,7 +1271,7 @@ class _ManualCodeEntrySheetState extends State<_ManualCodeEntrySheet> {
         _errorText = widget.strings.tr(
           'المرجو إدخال رابط أو معرف صالح',
           'Veuillez saisir un lien valide',
-          'Please enter a link or handle',
+          appL10n.scanProfileCodePleaseEnterLinkHandle,
         );
       });
       return;
@@ -1313,7 +1314,7 @@ class _ManualCodeEntrySheetState extends State<_ManualCodeEntrySheet> {
                 s.tr(
                   'إدخال الرمز يدوياً',
                   'Saisir le code manuellement',
-                  'Enter code manually',
+                  appL10n.scanProfileCodeEnterCodeManually,
                 ),
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -1327,7 +1328,7 @@ class _ManualCodeEntrySheetState extends State<_ManualCodeEntrySheet> {
                 s.tr(
                   'الصق رابط الحساب (apolo.ma/users/...) أو اكتب @username',
                   'Collez un lien Apolo ou saisissez @identifiant',
-                  'Paste an Apolo profile link or enter @handle',
+                  appL10n.scanProfileCodePasteApoloProfileLinkEnter,
                 ),
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -1372,7 +1373,7 @@ class _ManualCodeEntrySheetState extends State<_ManualCodeEntrySheet> {
               const SizedBox(height: 16),
               ApoloDlButton(
                 key: const Key('scan-manual-submit'),
-                label: s.tr('فتح الحساب', 'Ouvrir le profil', 'Open profile'),
+                label: s.tr('فتح الحساب', 'Ouvrir le profil', appL10n.scanProfileCodeOpenProfile),
                 variant: ApoloDlButtonVariant.primary,
                 borderRadius: 999,
                 fullWidth: true,

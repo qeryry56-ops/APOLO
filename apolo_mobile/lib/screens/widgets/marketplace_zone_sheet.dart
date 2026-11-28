@@ -10,6 +10,7 @@ import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
 import 'kinetic_widgets.dart';
 import 'real_marketplace_map.dart';
+import '../../l10n/l10n.dart';
 
 /// Compact Dynamic Layer v5.1 Marketplace Zone Pill (shows active city + radius or All Morocco).
 class MarketplaceZonePill extends StatelessWidget {
@@ -31,7 +32,7 @@ class MarketplaceZonePill extends StatelessWidget {
     final active = state.hasActiveZone;
     final label = active
         ? state.activeZoneBadgeLabel(s)
-        : s.tr('كل المغرب', 'Tout le Maroc', 'All Morocco');
+        : s.tr('كل المغرب', 'Tout le Maroc', appL10n.searchAllMorocco);
 
     return PressableScale(
       key: const Key('marketplace-zone-pill'),
@@ -230,7 +231,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
               s.tr(
                 'تعذر تحديد موقعك تلقائياً — اختر مدينتك من القائمة أسفله',
                 'Détection impossible — choisissez votre ville ci-dessous',
-                'Could not auto-detect location — select your city below',
+                appL10n.marketplaceZoneCouldNotAutoDetectLocation,
               ),
             ),
           ),
@@ -280,7 +281,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           s.tr(
                             'تحديد منطقة الإعلانات',
                             'Zone des annonces',
-                            'Marketplace Location',
+                            appL10n.marketplaceZoneMarketplaceLocation,
                           ),
                           style: TextStyle(
                             fontSize: 18.5,
@@ -293,7 +294,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           s.tr(
                             'شاهد الإعلانات القريبة منك في منطقتك الجغرافية',
                             'Affichez uniquement les annonces autour de votre zone',
-                            'Only see listings inside your local area',
+                            appL10n.marketplaceZoneOnlySeeListingsInsideLocal,
                           ),
                           style: TextStyle(
                             fontSize: 12.5,
@@ -329,7 +330,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            s.tr('كل المغرب', 'Tout le Maroc', 'All Morocco'),
+                            s.tr('كل المغرب', 'Tout le Maroc', appL10n.searchAllMorocco),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -406,7 +407,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                 hintText: s.tr(
                                   'ابحث عن حي، مدينة أو عنوان...',
                                   'Rechercher un quartier, une ville...',
-                                  'Search neighborhood, city, address...',
+                                  appL10n.marketplaceZoneSearchNeighborhoodCityAddress,
                                 ),
                                 hintStyle: TextStyle(
                                   fontSize: 13,
@@ -527,7 +528,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                     lat: _lat,
                     lng: _lng,
                     cityLabel: _allMorocco
-                        ? s.tr('المغرب كامل', 'Tout le Maroc', 'All Morocco')
+                        ? s.tr('المغرب كامل', 'Tout le Maroc', appL10n.searchAllMorocco)
                         : activeCityLabel,
                     circleRadiusKm: _allMorocco ? 140 : _radiusKm,
                     height: 172,
@@ -571,8 +572,8 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           const SizedBox(width: 4),
                           Text(
                             _allMorocco
-                                ? s.tr('نطاق مفتوح', 'Sans limite', 'Nationwide')
-                                : '$activeCityLabel · ${_radiusKm.round()} ${s.tr("كم", "km", "km")}',
+                                ? s.tr('نطاق مفتوح', 'Sans limite', appL10n.marketplaceZoneNationwide)
+                                : '$activeCityLabel · ${_radiusKm.round()} ${s.tr("كم", "km", appL10n.appStateKm)}',
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
@@ -611,7 +612,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                               s.tr(
                                 'تحديد منطقتي تلقائياً (GPS)',
                                 'Détecter ma position automatiquement',
-                                'Detect my location automatically',
+                                appL10n.marketplaceZoneDetectMyLocationAutomatically,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -651,7 +652,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                           s.tr(
                             'نطاق المسافة (كم)',
                             'Rayon de recherche (km)',
-                            'Distance radius',
+                            appL10n.marketplaceZoneDistanceRadius,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -668,9 +669,9 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                             ? s.tr(
                                 'كل المغرب',
                                 'Tout le Maroc',
-                                'All of Morocco',
+                                appL10n.marketplaceZoneAllMorocco,
                               )
-                            : '${_radiusKm.round()} ${s.tr("كم", "km", "km")}',
+                            : '${_radiusKm.round()} ${s.tr("كم", "km", appL10n.appStateKm)}',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -707,7 +708,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                '${km.round()} ${s.tr("كم", "km", "km")}',
+                                '${km.round()} ${s.tr("كم", "km", appL10n.appStateKm)}',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -724,7 +725,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                   const ApoloDlSeparator(),
                   const SizedBox(height: 14),
                   Text(
-                    s.tr('اختر المدينة', 'Choisir une ville', 'Select city'),
+                    s.tr('اختر المدينة', 'Choisir une ville', appL10n.marketplaceZoneSelectCity),
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
@@ -824,7 +825,7 @@ class _MarketplaceZoneContentState extends State<MarketplaceZoneContent> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  s.tr('تطبيق المنطقة', 'Appliquer la zone', 'Apply zone'),
+                  s.tr('تطبيق المنطقة', 'Appliquer la zone', appL10n.marketplaceZoneApplyZone),
                   style: TextStyle(
                     fontSize: 15.5,
                     fontWeight: FontWeight.w700,

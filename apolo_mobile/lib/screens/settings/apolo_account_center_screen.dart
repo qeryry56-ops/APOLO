@@ -14,6 +14,7 @@ import '../edit_profile_screen.dart';
 import '../forgot_password_screen.dart';
 import '../privacy_compliance_screen.dart';
 import '../widgets/app_image.dart';
+import '../../l10n/l10n.dart';
 
 class ApoloAccountCenterScreen extends StatefulWidget {
   const ApoloAccountCenterScreen({
@@ -63,7 +64,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
       headerTitle: s.tr(
         'العودة إلى الحساب الشخصي',
         'Passer au compte personnel',
-        'Switch to Personal Account',
+        appL10n.accountCenterSwitchPersonalAccount,
       ),
       media: Container(
         width: 56,
@@ -81,22 +82,22 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
       contentTitle: s.tr(
         'هل تريد العودة للحساب الشخصي؟',
         'Revenir au compte personnel ?',
-        'Return to a personal account?',
+        appL10n.accountCenterReturnPersonalAccount,
       ),
       contentDescription: s.tr(
         'سيتم إيقاف عرض صفحة المتجر الاحترافي مؤقتاً ويمكنك إعادة تفعيله لاحقاً.',
         'Votre page boutique pro sera masquée. Vous pourrez la réactiver plus tard.',
-        'Your business store page will be paused. You can re-enable it anytime.',
+        appL10n.accountCenterBusinessStorePageWillBe,
       ),
       actions: [
         ApoloDlButton(
-          label: s.tr('تأكيد التحويل', 'Confirmer', 'Confirm switch'),
+          label: s.tr('تأكيد التحويل', 'Confirmer', appL10n.accountCenterConfirmSwitch),
           fullWidth: true,
           onPressed: () => Navigator.of(context).pop(true),
         ),
         const SizedBox(height: 10),
         ApoloDlButton(
-          label: s.tr('إلغاء', 'Annuler', 'Cancel'),
+          label: s.tr('إلغاء', 'Annuler', appL10n.cancelButton),
           variant: ApoloDlButtonVariant.secondary,
           fullWidth: true,
           onPressed: () => Navigator.of(context).pop(false),
@@ -117,7 +118,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
             s.tr(
               'تم التحويل إلى الحساب الشخصي بنجاح.',
               'Compte personnel activé.',
-              'Switched to Personal Account.',
+              appL10n.accountCenterSwitchedPersonalAccount,
             ),
           ),
         ),
@@ -131,7 +132,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
             s.tr(
               'تعذر تغيير نوع الحساب. حاول مجدداً.',
               'Impossible de changer le type de compte.',
-              'Could not switch account type. Please try again.',
+              appL10n.accountCenterCouldNotSwitchAccountType,
             ),
           ),
         ),
@@ -151,7 +152,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
         final palette = ApoloDlPalette.of(context);
         final user = _state.currentUser;
         final isLoggedIn = _state.isLoggedIn && user != null;
-        final name = (user?['name'] ?? s.tr('عضو أبولو', 'Membre Apolo', 'Apolo Member'))
+        final name = (user?['name'] ?? s.tr('عضو أبولو', 'Membre Apolo', appL10n.appStateApoloMember))
             .toString()
             .trim();
         final email = (user?['email'] ?? '').toString().trim();
@@ -171,7 +172,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                     title: s.tr(
                       'مركز حساب أبولو',
                       'Espace Compte Apolo',
-                      'Apolo Account',
+                      appL10n.accountCenterApoloAccount,
                     ),
                     showSeparator: false,
                   ),
@@ -197,7 +198,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                     title: s.tr(
                                       'البيانات الشخصية',
                                       'Informations personnelles',
-                                      'Personal details',
+                                      appL10n.accountCenterPersonalDetails,
                                     ),
                                     children: [
                                       ApoloDlGroupedItem(
@@ -208,7 +209,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                         title: s.tr(
                                           'تعديل الملف الشخصي',
                                           'Modifier le profil',
-                                          'Edit profile',
+                                          appL10n.editProfileTitle,
                                         ),
                                         onTap: _handleEditProfile,
                                       ),
@@ -220,7 +221,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                         title: s.tr(
                                           'البريد الإلكتروني والهاتف',
                                           'E-mail et téléphone',
-                                          'Email & phone',
+                                          appL10n.accountCenterEmailPhone,
                                         ),
                                         trailingText: email.isNotEmpty
                                             ? email
@@ -238,7 +239,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                         title: s.tr(
                                           'نوع الحساب والتفضيلات',
                                           'Type de compte et préférences',
-                                          'Account type & preferences',
+                                          appL10n.accountCenterAccountTypePreferences,
                                         ),
                                         onTap: () => Navigator.of(context).push(
                                           MaterialPageRoute<void>(
@@ -253,7 +254,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                     title: s.tr(
                                       'كلمة المرور والأمان',
                                       'Mot de passe et sécurité',
-                                      'Password & security',
+                                      appL10n.accountCenterPasswordSecurity,
                                     ),
                                     children: [
                                       ApoloDlGroupedItem(
@@ -264,7 +265,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                         title: s.tr(
                                           'تغيير كلمة المرور',
                                           'Changer le mot de passe',
-                                          'Change password',
+                                          appL10n.accountSecurityChangePassword,
                                         ),
                                         onTap: () => Navigator.of(context).push(
                                           MaterialPageRoute<void>(
@@ -281,7 +282,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                         title: s.tr(
                                           'إعادة تعيين كلمة المرور',
                                           'Réinitialiser le mot de passe',
-                                          'Reset password',
+                                          appL10n.accountCenterResetPassword,
                                         ),
                                         onTap: () => Navigator.of(context).push(
                                           MaterialPageRoute<void>(
@@ -300,7 +301,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                     title: s.tr(
                                       'الأعمال والمتجر',
                                       'Business & Boutique',
-                                      'Business & Store',
+                                      appL10n.accountCenterBusinessStore,
                                     ),
                                     children: _state.isBusinessAccount
                                         ? [
@@ -312,7 +313,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                               title: s.tr(
                                                 'تعديل ملف المتجر',
                                                 'Modifier la boutique',
-                                                'Edit Store Profile',
+                                                appL10n.accountCenterEditStoreProfile,
                                               ),
                                               onTap: () =>
                                                   Navigator.of(context).push(
@@ -332,7 +333,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                               title: s.tr(
                                                 'التحويل إلى حساب شخصي',
                                                 'Passer en compte personnel',
-                                                'Switch to Personal Account',
+                                                appL10n.accountCenterSwitchPersonalAccount,
                                               ),
                                               disabled: _switchingPersonal,
                                               onTap: () =>
@@ -348,7 +349,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                               title: s.tr(
                                                 'التحويل إلى حساب أعمال',
                                                 'Passer en compte Business',
-                                                'Switch to Business Account',
+                                                appL10n.accountCenterSwitchBusinessAccount,
                                               ),
                                               onTap: () =>
                                                   Navigator.of(context).push(
@@ -366,7 +367,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                     title: s.tr(
                                       'ملكية الحساب',
                                       'Propriété du compte',
-                                      'Account ownership',
+                                      appL10n.accountCenterAccountOwnership,
                                     ),
                                     children: [
                                       ApoloDlGroupedItem(
@@ -375,7 +376,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                                         title: s.tr(
                                           'حذف الحساب والبيانات',
                                           'Supprimer le compte et les données',
-                                          'Delete account & data',
+                                          appL10n.accountCenterDeleteAccountData,
                                         ),
                                         onTap: () => Navigator.of(context).push(
                                           MaterialPageRoute<void>(
@@ -493,7 +494,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                         !_state.isProPlusAccount) ...[
                       const SizedBox(width: 6),
                       _StatusPill(
-                        label: s.tr('أعمال', 'Pro', 'Business'),
+                        label: s.tr('أعمال', 'Pro', appL10n.businessAccountBadge),
                         background: palette.bg,
                         foreground: palette.ink,
                       ),
@@ -571,7 +572,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                       s.tr(
                         'إدارة حساب أبولو',
                         'Gérer votre compte Apolo',
-                        'Manage your Apolo Account',
+                        appL10n.accountCenterManageApoloAccount,
                       ),
                       style: TextStyle(
                         fontSize: 16.5,
@@ -584,7 +585,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
                       s.tr(
                         'سجّل الدخول للوصول إلى الأمان، البيانات الشخصية، ومتجر الأعمال.',
                         'Connectez-vous pour gérer la sécurité, vos infos et votre boutique.',
-                        'Sign in to manage security, personal details, and your store.',
+                        appL10n.accountCenterSignManageSecurityPersonalDetails,
                       ),
                       style: TextStyle(
                         fontSize: 13,
@@ -600,7 +601,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
           const SizedBox(height: 18),
           ApoloDlButton(
             key: const Key('account-center-login'),
-            label: s.tr('تسجيل الدخول', 'Se connecter', 'Log in'),
+            label: s.tr('تسجيل الدخول', 'Se connecter', appL10n.logInButton),
             borderRadius: 999,
             height: 50,
             fullWidth: true,
@@ -613,7 +614,7 @@ class _ApoloAccountCenterScreenState extends State<ApoloAccountCenterScreen> {
           const SizedBox(height: 10),
           ApoloDlButton(
             key: const Key('account-center-register'),
-            label: s.tr('إنشاء حساب', 'Créer un compte', 'Create account'),
+            label: s.tr('إنشاء حساب', 'Créer un compte', appL10n.accountSetupCreateAccount),
             variant: ApoloDlButtonVariant.secondary,
             borderRadius: 999,
             height: 50,

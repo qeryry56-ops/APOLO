@@ -15,6 +15,7 @@ import '../theme/dl_share_profile_tokens.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'auth_screen.dart';
 import 'privacy_compliance_screen.dart';
+import '../l10n/l10n.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Dynamic Layer v5.1 TopNav & Brand Mark for Subscription / Paywall / Trial
@@ -232,26 +233,26 @@ class _DlSubscriptionLegalTextState extends State<_DlSubscriptionLegalText> {
             text: s.tr(
               'فوترة متكررة، يمكنك الإلغاء في أي وقت. يتم خصم الدفعة عبر حساب Google Pay / المتجر عند تأكيد الشراء، ويتجدد الاشتراك تلقائياً ما لم يتم إلغاؤه قبل 24 ساعة على الأقل من نهاية الفترة الحالية.\nتخضع جميع البيانات لـ ',
               'Facturation récurrente, annulable à tout moment. Le paiement est débité via Google Pay / Store à la confirmation et se renouvelle automatiquement sauf résiliation 24h avant l’échéance.\nVos données sont protégées selon nos ',
-              'Recurring billing. Cancel anytime. Payment will be charged to your Google Pay / Store account at confirmation of purchase and automatically renews unless turned off at least 24 hours before the end of the current period.\nAll personal data is handled under the ',
+              appL10n.proPlusRecurringBillingCancelAnytimePayment,
             ),
           ),
           TextSpan(
             text: s.tr(
               'الشروط والأحكام',
               'conditions générales',
-              'terms and conditions',
+              appL10n.proPlusTermsConditions,
             ),
             style: linkStyle,
             recognizer: _termsTap,
           ),
           TextSpan(
-            text: s.tr(' و', ' et la ', ' and '),
+            text: s.tr(' و', ' et la ', appL10n.proPlusAnd),
           ),
           TextSpan(
             text: s.tr(
               'سياسة الخصوصية',
               'politique de confidentialité',
-              'privacy policy',
+              appL10n.proPlusPrivacyPolicy,
             ),
             style: linkStyle,
             recognizer: _privacyTap,
@@ -314,7 +315,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     final confirmed = await showApoloDlBottomSheet<bool>(
       context,
-      headerTitle: s.tr('الاشتراك', 'Abonnement', 'Subscription'),
+      headerTitle: s.tr('الاشتراك', 'Abonnement', appL10n.proPlusSubscription),
       media: Container(
         width: 56,
         height: 56,
@@ -331,12 +332,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       contentTitle: s.tr(
         'إلغاء اشتراك Pro Plus؟',
         'Résilier votre abonnement Pro Plus ?',
-        'Cancel your Premium subscription?',
+        appL10n.proPlusCancelPremiumSubscription,
       ),
       contentDescription: s.tr(
         'سيتوقف التجديد التلقائي لباقة Pro Plus مع الاحتفاظ ببيانات متجرك وإعلاناتك.',
         'Le renouvellement automatique sera désactivé tout en conservant votre boutique.',
-        'Auto-renewal will be turned off while keeping your store and listings safe.',
+        appL10n.proPlusAutoRenewalWillBeTurned,
       ),
       actions: [
         ApoloDlButton(
@@ -344,7 +345,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           label: s.tr(
             'نعم، إلغاء اشتراكي',
             'Confirmer la résiliation',
-            'Cancel my subscription',
+            appL10n.proPlusCancelMySubscription,
           ),
           variant: ApoloDlButtonVariant.primary,
           borderRadius: 999,
@@ -352,7 +353,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           onPressed: () => Navigator.of(context).pop(true),
         ),
         ApoloDlButton(
-          label: s.tr('الاحتفاظ بالاشتراك', 'Garder Pro Plus', 'Keep Premium'),
+          label: s.tr('الاحتفاظ بالاشتراك', 'Garder Pro Plus', appL10n.proPlusKeepPremium),
           variant: ApoloDlButtonVariant.secondary,
           borderRadius: 999,
           fullWidth: true,
@@ -391,7 +392,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               context,
               isAr: isAr,
               palette: palette,
-              title: s.tr('الاشتراك', 'Abonnement', 'Subscription'),
+              title: s.tr('الاشتراك', 'Abonnement', appL10n.proPlusSubscription),
               navKey: const Key('dl-subscription-top-nav'),
               backKey: const Key('dl-subscription-back-button'),
             ),
@@ -435,12 +436,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                             ? s.tr(
                                                 'أنت تستخدم Pro Plus',
                                                 'Vous utilisez Pro Plus',
-                                                'You use Premium',
+                                                appL10n.proPlusYouUsePremium,
                                               )
                                             : s.tr(
                                                 'احصل على Pro Plus',
                                                 'Passez à Pro Plus',
-                                                'Get Premium',
+                                                appL10n.proPlusGetPremium,
                                               ),
                                         key: const Key('dl-subscription-title'),
                                         textAlign: TextAlign.center,
@@ -462,12 +463,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                               ? s.tr(
                                                   'لديك وصول غير محدود لجميع مزايا Pro Plus الحصرية',
                                                   'Vous avez un accès illimité à toutes les fonctionnalités Pro Plus',
-                                                  'You have unlimited access to all premium features',
+                                                  appL10n.proPlusYouHaveUnlimitedAccessAll,
                                                 )
                                               : s.tr(
                                                   'احصل على وصول غير محدود لجميع مزايا Pro Plus الحصرية',
                                                   'Profitez d’un accès illimité à toutes les fonctionnalités Pro Plus',
-                                                  'Get unlimited access to all premium features',
+                                                  appL10n.proPlusGetUnlimitedAccessAllPremium,
                                                 ),
                                           key: const Key(
                                               'dl-subscription-subtitle'),
@@ -512,12 +513,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                                           ? s.tr(
                                                               'إلغاء اشتراكي',
                                                               'Résilier mon abonnement',
-                                                              'Cancel my subscription',
+                                                              appL10n.proPlusCancelMySubscription,
                                                             )
                                                           : s.tr(
                                                               'احصل على Pro Plus',
                                                               'Obtenir Pro Plus',
-                                                              'Get Premium',
+                                                              appL10n.proPlusGetPremium,
                                                             ),
                                                       style: TextStyle(
                                                         color: isPremium
@@ -605,7 +606,7 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
             _state.s.tr(
               'تم التحقق من سجل مشترياتك على المتجر.',
               'Vérification des achats effectuée.',
-              'Checked your account for active purchases.',
+              appL10n.proPlusCheckedAccountActivePurchases,
             ),
           ),
         ),
@@ -764,7 +765,7 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                         s.tr(
                           'كيف تعمل فترتك التجريبية',
                           'Comment fonctionne votre essai',
-                          'How your trial works',
+                          appL10n.proPlusHowTrialWorks,
                         ),
                         key: const Key('dl-trial-title'),
                         textAlign: TextAlign.center,
@@ -784,7 +785,7 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                             s.tr(
                               'وصول مجاني غير محدود لمدة 3 أيام، ثم ${AppConfig.monthlyPremiumPriceMad} د.م فقط في الشهر عبر Google Pay',
                               'Accès gratuit illimité pendant 3 jours, puis ${AppConfig.monthlyPremiumPriceMad} DH/mois via Google Pay',
-                              'Unlimited free access for 3 days, then only ${AppConfig.monthlyPremiumPriceMad} MAD/month via Google Pay',
+                              appL10n.proPlusUnlimitedFreeAccess3Days(AppConfig.monthlyPremiumPriceMad),
                             ),
                             key: const Key('dl-trial-subtitle'),
                             textAlign: TextAlign.center,
@@ -809,11 +810,11 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                             _buildTimelineStep(
                               icon: CupertinoIcons.lock_open_fill,
                               activeIcon: true,
-                              title: s.tr('اليوم', 'Aujourd’hui', 'Today'),
+                              title: s.tr('اليوم', 'Aujourd’hui', appL10n.notificationsToday),
                               description: s.tr(
                                 'احصل على وصول فوري لشارة التوثيق PRO+ وتمويل إعلاناتك واكتشف الفرق.',
                                 'Profitez immédiatement du badge PRO+ et des boosts gratuits.',
-                                'Get instant access and see how Pro Plus transforms your sales.',
+                                appL10n.proPlusGetInstantAccessSeeHow,
                               ),
                               showConnector: true,
                               palette: palette,
@@ -821,11 +822,11 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                             _buildTimelineStep(
                               icon: CupertinoIcons.bell_fill,
                               activeIcon: true,
-                              title: s.tr('اليوم 2', 'Jour 2', 'Day 2'),
+                              title: s.tr('اليوم 2', 'Jour 2', appL10n.proPlusDay2),
                               description: s.tr(
                                 'سنذكّرك عبر إشعار قبل انتهاء فترتك التجريبية المجانية.',
                                 'Nous vous rappellerons par notification la fin proche de l’essai.',
-                                "We'll remind you with a notification that your trial is ending.",
+                                appL10n.proPlusWeLlRemindYouNotification,
                               ),
                               showConnector: true,
                               palette: palette,
@@ -833,11 +834,11 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                             _buildTimelineStep(
                               icon: CupertinoIcons.star_fill,
                               activeIcon: false,
-                              title: s.tr('اليوم 3', 'Jour 3', 'Day 3'),
+                              title: s.tr('اليوم 3', 'Jour 3', appL10n.proPlusDay3),
                               description: s.tr(
                                 'يتم تفعيل الاشتراك في اليوم الثالث، ويمكنك الإلغاء في أي وقت قبله.',
                                 'Facturation le 3e jour, annulable gratuitement à tout moment avant.',
-                                "You'll be charged on Day 3, cancel anytime before.",
+                                appL10n.proPlusYouLlBeChargedDay,
                               ),
                               showConnector: false,
                               palette: palette,
@@ -853,7 +854,7 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                         label: s.tr(
                           'عرض جميع الباقات',
                           'Voir toutes les offres',
-                          'View all plans',
+                          appL10n.proPlusViewAllPlans,
                         ),
                         onTap: () => _openAllPlans(startCheckout: false),
                         palette: palette,
@@ -870,7 +871,7 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                         label: s.tr(
                           'استعادة المشتريات',
                           'Restaurer les achats',
-                          'Restore purchases',
+                          appL10n.proPlusRestorePurchases,
                         ),
                         onTap: _restorePurchases,
                         palette: palette,
@@ -903,7 +904,7 @@ class _FreeTrialScreenState extends State<FreeTrialScreen> {
                             s.tr(
                               'ابدأ تجربة 3 أيام مجاناً',
                               'Essayer 3 jours gratuitement',
-                              'Start free 3-day trial',
+                              appL10n.proPlusStartFree3DayTrial,
                             ),
                             style: TextStyle(
                               color: palette.onInk,
@@ -1110,7 +1111,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
               _error = _state.s.tr(
                 'لم يكتمل تأكيد الدفع مع الخادم. حاول مجدداً.',
                 'Vérification du paiement échouée.',
-                'Payment verification failed.',
+                appL10n.proPlusPaymentVerificationFailed,
               );
             });
           }
@@ -1134,7 +1135,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
           _state.s.tr(
             'مبروك! تم تفعيل باقة Pro Plus وتوثيق متجرك بنجاح',
             'Félicitations ! Abonnement Pro Plus activé avec succès',
-            'Pro Plus activated! Your store is now verified',
+            appL10n.proPlusProPlusActivatedStoreIs,
           ),
         ),
       ),
@@ -1160,7 +1161,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
             _state.s.tr(
               'تم التحقق من المشتريات المرتبطة بحسابك.',
               'Vérification des achats effectuée.',
-              'Checked your account for active purchases.',
+              appL10n.proPlusCheckedAccountActivePurchases,
             ),
           ),
         ),
@@ -1229,7 +1230,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
         _error = _state.s.tr(
           'تعذر فتح نافذة Google Pay على هذا الجهاز حالياً. تأكد من تفعيل حساب Google Play.',
           'Impossible d’ouvrir Google Pay sur cet appareil.',
-          'Could not launch Google Pay on this device.',
+          appL10n.proPlusCouldNotLaunchGooglePay,
         );
       });
     }
@@ -1308,7 +1309,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                 label: s.tr(
                   'تأكيد الدفع عبر Google Pay',
                   'Payer avec Google Pay',
-                  'Pay with Google Pay',
+                  appL10n.proPlusPayGooglePay,
                 ),
                 variant: ApoloDlButtonVariant.primary,
                 borderRadius: 999,
@@ -1317,7 +1318,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
               ),
               const SizedBox(height: 8),
               ApoloDlButton(
-                label: s.tr('إلغاء', 'Annuler', 'Cancel'),
+                label: s.tr('إلغاء', 'Annuler', appL10n.cancelButton),
                 variant: ApoloDlButtonVariant.secondary,
                 borderRadius: 999,
                 fullWidth: true,
@@ -1346,12 +1347,12 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
       );
     }
     if (id.contains('year')) {
-      return s.tr('وفّر 25%', '-25%', 'Save 25%');
+      return s.tr('وفّر 25%', '-25%', appL10n.proPlusSave25);
     }
     if (id.contains('life')) {
-      return s.tr('مدى الحياة', 'À vie', 'Lifetime');
+      return s.tr('مدى الحياة', 'À vie', appL10n.proPlusLifetime);
     }
-    return s.tr('أساسي', 'Basic', 'Basic');
+    return s.tr('أساسي', 'Basic', appL10n.proPlusBasic);
   }
 
   String _periodLabelForPlan(Map<String, dynamic> plan, AppStrings s) {
@@ -1364,12 +1365,12 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
       );
     }
     if (id.contains('year')) {
-      return s.tr('12 شهراً', '12 mois', '12 months');
+      return s.tr('12 شهراً', '12 mois', appL10n.proPlus12Months);
     }
     if (id.contains('life')) {
-      return s.tr('دفعة واحدة', 'Unique', 'One-time');
+      return s.tr('دفعة واحدة', 'Unique', appL10n.proPlusOneTime);
     }
-    return s.tr('شهر واحد', '1 mois', '1 month');
+    return s.tr('شهر واحد', '1 mois', appL10n.proPlus1Month);
   }
 
   Widget _buildDlPlanCard({
@@ -1383,7 +1384,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
     final priceText = priceRaw is num && priceRaw == priceRaw.roundToDouble()
         ? '${priceRaw.toInt()}'
         : '$priceRaw';
-    final currency = s.tr('د.م', 'DH', 'MAD');
+    final currency = s.tr('د.م', 'DH', appL10n.proPlusMad);
     final headerText = _tierHeaderForPlan(plan, s);
     final periodText = _periodLabelForPlan(plan, s);
 
@@ -1507,7 +1508,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
               context,
               isAr: isAr,
               palette: palette,
-              title: s.tr('باقات Pro Plus', 'Offres Pro Plus', 'Paywall'),
+              title: s.tr('باقات Pro Plus', 'Offres Pro Plus', appL10n.proPlusPaywall),
               navKey: const Key('dl-paywall-top-nav'),
               backKey: const Key('dl-paywall-back-button'),
             ),
@@ -1537,7 +1538,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                               s.tr(
                                 'افتح الوصول الكامل',
                                 'Débloquez l’accès complet',
-                                'Unlock full access',
+                                appL10n.proPlusUnlockFullAccess,
                               ),
                               key: const Key('dl-paywall-title'),
                               textAlign: TextAlign.center,
@@ -1558,7 +1559,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                                   s.tr(
                                     'وصول غير محدود لتوثيق المتجر، صدارة البحث، وتمويل VIP',
                                     'Accès illimité au badge vérifié, visibilité maximale et boosts VIP',
-                                    'Unlimited access to all features and templates',
+                                    appL10n.proPlusUnlimitedAccessAllFeaturesTemplates,
                                   ),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
@@ -1589,17 +1590,17 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                                     s.tr(
                                       'حساب متجر Business رسمي + شارة التوثيق الزرقاء (Verified)',
                                       'Boutique Business officielle + badge bleu Verified',
-                                      'Official Business store + blue Verified badge',
+                                      appL10n.proPlusOfficialBusinessStoreBlueVerified,
                                     ),
                                     s.tr(
                                       'نشر إعلانات غير محدود يومياً (بدل 5 فـ النهار) + حتى 12 صورة',
                                       'Annonces illimitées par jour (au lieu de 5/j) + 12 photos',
-                                      'Unlimited daily listings (instead of 5/day) + 12 photos',
+                                      appL10n.proPlusUnlimitedDailyListingsInstead5,
                                     ),
                                     s.tr(
                                       '5 ترويجات VIP مجانية كل شهر + إحصائيات والردود السريعة',
                                       '5 boosts VIP gratuits/mois + statistiques & réponses rapides',
-                                      '5 free monthly VIP boosts + Pro Insights & quick replies',
+                                      appL10n.proPlus5FreeMonthlyVipBoosts,
                                     ),
                                   ])
                                     Padding(
@@ -1701,7 +1702,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                                       s.tr(
                                         'استعادة المشتريات',
                                         'Restaurer les achats',
-                                        'Restore purchases',
+                                        appL10n.proPlusRestorePurchases,
                                       ),
                                       style: TextStyle(
                                         color: palette.ink,
@@ -1753,7 +1754,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                                         s.tr(
                                           'اشترك بـ $priceDisplay د.م عبر Google Pay',
                                           'S’abonner ($priceDisplay DH) • Google Pay',
-                                          'Subscribe for $priceDisplay MAD • Google Pay',
+                                          appL10n.proPlusSubscribePricedisplayMadGooglePay(priceDisplay),
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -1786,7 +1787,7 @@ class _ProPlusScreenState extends State<ProPlusScreen> {
                                 s.tr(
                                   'لا، شكراً',
                                   'Non, merci',
-                                  'No, thank you',
+                                  appL10n.proPlusNoThankYou,
                                 ),
                                 style: TextStyle(
                                   color: palette.ink,

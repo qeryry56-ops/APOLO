@@ -17,6 +17,7 @@ import 'post_ad_screen.dart';
 import 'chat_list_screen.dart';
 import 'profile_screen.dart';
 import 'widgets/kinetic_widgets.dart';
+import '../l10n/l10n.dart';
 
 class MainShell extends StatefulWidget {
   final int initialIndex;
@@ -216,12 +217,12 @@ class _MainShellState extends State<MainShell>
               ? _state.s.tr(
                   'مكالمة فيديو واردة...',
                   'Appel vidéo entrant...',
-                  'Incoming video call...',
+                  appL10n.callIncomingVideoCall,
                 )
               : _state.s.tr(
                   'مكالمة صوتية واردة...',
                   'Appel vocal entrant...',
-                  'Incoming voice call...',
+                  appL10n.callIncomingVoiceCall,
                 ),
           channel: ApoloPushNotificationService.channelCalls,
           payload: <String, dynamic>{
@@ -262,7 +263,7 @@ class _MainShellState extends State<MainShell>
       final msg = _state.s.tr(
         'لديك إشعار جديد في Apolo',
         'Vous avez une nouvelle notification Apolo',
-        'You have a new Apolo notification',
+        appL10n.mainShellYouHaveNewApoloNotification,
       );
       unawaited(
         ApoloPushNotificationService.instance.showLocalNotification(
@@ -369,25 +370,25 @@ class _MainShellState extends State<MainShell>
         pageIndex: 0,
         icon: CupertinoIcons.house,
         activeIcon: CupertinoIcons.house_fill,
-        label: s.tr('الرئيسية', 'Accueil', 'Home'),
+        label: s.tr('الرئيسية', 'Accueil', appL10n.navHome),
       ),
       _TabSpec(
         pageIndex: 2,
         icon: CupertinoIcons.compass,
         activeIcon: CupertinoIcons.compass_fill,
-        label: s.tr('إعلانات', 'Annonces', 'Browse'),
+        label: s.tr('إعلانات', 'Annonces', appL10n.mainShellBrowse),
       ),
       _TabSpec(
         pageIndex: 3,
         icon: CupertinoIcons.chat_bubble_2,
         activeIcon: CupertinoIcons.chat_bubble_2_fill,
-        label: s.tr('رسائل', 'Messages', 'Messages'),
+        label: s.tr('رسائل', 'Messages', appL10n.navMessages),
       ),
       _TabSpec(
         pageIndex: 4,
         icon: CupertinoIcons.person,
         activeIcon: CupertinoIcons.person_fill,
-        label: s.tr('حسابي', 'Profil', 'Profile'),
+        label: s.tr('حسابي', 'Profil', appL10n.navProfile),
       ),
     ];
 
@@ -632,7 +633,7 @@ class _MainShellState extends State<MainShell>
                               child: Semantics(
                                 button: true,
                                 selected: isPostAdSelected,
-                                label: s.tr('نشر إعلان', 'Publier', 'Post Ad'),
+                                label: s.tr('نشر إعلان', 'Publier', appL10n.sellItemButton),
                                 child: AnimatedBuilder(
                                   animation: _squashCtrl,
                                   builder: (context, child) {

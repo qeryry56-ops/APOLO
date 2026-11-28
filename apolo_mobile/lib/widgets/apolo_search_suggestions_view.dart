@@ -11,6 +11,7 @@ import '../screens/widgets/app_image.dart';
 import '../screens/widgets/price_text.dart';
 import 'apolo_badges_kit.dart';
 import 'dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Model for a suggested account or verified store card in Dynamic Layer Search (`33215:34358`).
 class ApoloSuggestedAccount {
@@ -272,7 +273,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                 children: [
                   Semantics(
                     button: true,
-                    label: s.tr('رجوع', 'Retour', 'Back'),
+                    label: s.tr('رجوع', 'Retour', appL10n.backButton),
                     child: Material(
                       key: const Key('dl-search-back-button'),
                       color: palette.pill,
@@ -302,7 +303,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      s.tr('بحث', 'Rechercher', 'Search'),
+                      s.tr('بحث', 'Rechercher', appL10n.searchTitle),
                       key: const Key('dl-search-header-title'),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -357,7 +358,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                         hintText: s.tr(
                           'ابحث عن أسماء الحسابات أو الإعلانات',
                           'Rechercher des pseudos ou annonces',
-                          'Search for usernames',
+                          appL10n.searchSuggestionsSearchUsernames,
                         ),
                         hintStyle: TextStyle(
                           fontSize: 15,
@@ -410,7 +411,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                     child: Text(
-                      s.tr('اقتراحات', 'Suggestions', 'Suggestions'),
+                      s.tr('اقتراحات', 'Suggestions', appL10n.searchSuggestionsSuggestions),
                       key: const Key('dl-search-suggestions-label'),
                       style: TextStyle(
                         fontSize: 13.5,
@@ -486,7 +487,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                               s.tr(
                                 'عمليات البحث الأخيرة',
                                 'Recherches récentes',
-                                'Recent searches',
+                                appL10n.searchSuggestionsRecentSearches,
                               ),
                               key: const Key('dl-recent-searches-label'),
                               style: TextStyle(
@@ -504,7 +505,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                                 onClearRecentSearches!();
                               },
                               child: Text(
-                                s.tr('مسح الكل', 'Effacer', 'Clear'),
+                                s.tr('مسح الكل', 'Effacer', appL10n.clearButton),
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
@@ -588,7 +589,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                       s.tr(
                         'عمليات بحث مقترحة',
                         'Recherches populaires',
-                        'Popular searches',
+                        appL10n.searchSuggestionsPopularSearches,
                       ),
                       style: TextStyle(
                         fontSize: 13.5,
@@ -660,7 +661,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            s.tr('الإعلانات المطابقة', 'Annonces', 'Listings'),
+                            s.tr('الإعلانات المطابقة', 'Annonces', appL10n.profileListings),
                             style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w500,
@@ -672,7 +673,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                           key: const Key('dl-search-view-all-results'),
                           onTap: () => onSubmitQuery(rawQuery),
                           child: Text(
-                            s.tr('عرض الكل', 'Tout voir', 'See all'),
+                            s.tr('عرض الكل', 'Tout voir', appL10n.homeSeeAll),
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -710,7 +711,7 @@ class ApoloSearchSuggestionsView extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              '${s.tr('البحث عن', 'Rechercher', 'Search')} "$rawQuery"',
+                              '${s.tr('البحث عن', 'Rechercher', appL10n.searchTitle)} "$rawQuery"',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -863,8 +864,8 @@ class _SuggestedAccountCard extends StatelessWidget {
                     child: Center(
                       child: Text(
                         isFollowed
-                            ? s.tr('متابَع', 'Suivi', 'Followed')
-                            : s.tr('متابعة', 'Suivre', 'Follow'),
+                            ? s.tr('متابَع', 'Suivi', appL10n.followedButton)
+                            : s.tr('متابعة', 'Suivre', appL10n.followButton),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

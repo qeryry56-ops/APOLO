@@ -7,6 +7,7 @@ import '../core/state/app_state.dart';
 import '../features/bug_report/services/bug_report_controller.dart';
 import '../features/bug_report/ui/bug_report_strings.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 `Help & Support` Screen:
 /// - Pure `#FFFFFF` canvas + `ApoloDlTopNav`
@@ -45,7 +46,7 @@ class _SupportScreenState extends State<SupportScreen> {
         setState(() => _error = AppState().s.tr(
               'تعذر فتح تطبيق البريد. يمكنك مراسلة support@apolo.ma يدوياً.',
               'Impossible d’ouvrir votre messagerie. Écrivez à support@apolo.ma manuellement.',
-              'Could not open your mail app. Please email support@apolo.ma manually.',
+              appL10n.supportCouldNotOpenMailApp,
             ));
       }
     } finally {
@@ -69,7 +70,7 @@ class _SupportScreenState extends State<SupportScreen> {
             s.tr(
               'تم نسخ البريد الإلكتروني support@apolo.ma',
               'Adresse support@apolo.ma copiée',
-              'Copied support@apolo.ma',
+              appL10n.settingsSuggestionCopiedSupportApoloMa,
             ),
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -98,7 +99,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 title: s.tr(
                   'المساعدة والدعم',
                   'Aide et assistance',
-                  'Help & Support',
+                  appL10n.settingsBugReportHelpSupport,
                 ),
                 showSeparator: false,
               ),
@@ -142,7 +143,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                       s.tr(
                                         'كيف يمكننا مساعدتك؟',
                                         'Comment pouvons-nous vous aider ?',
-                                        'How can we help you?',
+                                        appL10n.supportHowCanWeHelpYou,
                                       ),
                                       style: const TextStyle(
                                         fontSize: 15.5,
@@ -155,7 +156,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                       s.tr(
                                         'اشرح المشكلة والخطوات التي سبقتها. يمكنك إرفاق صورة بعد إخفاء المعلومات الشخصية.',
                                         'Décrivez le problème et les étapes qui l’ont précédé. Vous pouvez joindre une capture après avoir masqué vos informations personnelles.',
-                                        'Explain the issue and the steps before it. You may attach a screenshot after masking personal details.',
+                                        appL10n.supportExplainIssueStepsBeforeIt,
                                       ),
                                       style: const TextStyle(
                                         fontSize: 13,
@@ -251,7 +252,7 @@ class _SupportScreenState extends State<SupportScreen> {
                           title: s.tr(
                             'التواصل المباشر',
                             'Contact direct',
-                            'Direct contact',
+                            appL10n.supportDirectContact,
                           ),
                         ),
                         Container(
@@ -300,7 +301,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                       iconSize: 16,
                                       backgroundColor: _dlBg,
                                       iconColor: _dlInk,
-                                      tooltip: s.tr('نسخ', 'Copier', 'Copy'),
+                                      tooltip: s.tr('نسخ', 'Copier', appL10n.adDetailCopy),
                                       onPressed: _copyEmail,
                                     ),
                                   ],
@@ -348,7 +349,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                             s.tr(
                                               'فتح تطبيق البريد',
                                               'Ouvrir la messagerie',
-                                              'Open Mail App',
+                                              appL10n.supportOpenMailApp,
                                             ),
                                             style: const TextStyle(
                                               color: _dlInk,
@@ -388,7 +389,7 @@ class _SupportScreenState extends State<SupportScreen> {
                             s.tr(
                               'لن تُرسل رسالة تلقائياً. راجعها ثم أرسلها من تطبيق البريد.',
                               'Aucun message n’est envoyé automatiquement. Relisez-le et envoyez-le depuis votre messagerie.',
-                              'No email is sent automatically. Review and send it from your mail app.',
+                              appL10n.supportNoEmailIsSentAutomatically,
                             ),
                             style: const TextStyle(
                               fontSize: 12,
@@ -403,7 +404,7 @@ class _SupportScreenState extends State<SupportScreen> {
                           title: s.tr(
                             'تذكير الأمان',
                             'Rappel de sécurité',
-                            'Safety reminder',
+                            appL10n.supportSafetyReminder,
                           ),
                         ),
                         Container(
@@ -435,7 +436,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                   s.tr(
                                     'لا تشارك كلمة المرور أو رمز التحقق أو بيانات الدفع مع أي شخص.',
                                     'Ne partagez jamais votre mot de passe, code de vérification ou données de paiement.',
-                                    'Never share your password, verification code, or payment details with anyone.',
+                                    appL10n.supportNeverSharePasswordVerificationCode,
                                   ),
                                   style: const TextStyle(
                                     color: _dlInk,

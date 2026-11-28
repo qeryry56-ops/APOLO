@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Opens an in-app Dynamic Layer v5.1 modal bottom sheet allowing the user to
 /// report AI-generated content or policy violations without leaving the app
@@ -102,7 +103,7 @@ Future<void> showAiContentReportSheet(
                               s.tr(
                                 'الإبلاغ عن محتوى أو مخالفة',
                                 'Signaler un contenu IA / Règles',
-                                'Report AI or Policy Issue',
+                                appL10n.privacyComplianceReportAiPolicyIssue,
                               ),
                               style: const TextStyle(
                                 fontSize: 17,
@@ -134,7 +135,7 @@ Future<void> showAiContentReportSheet(
                     s.tr(
                       'نلتزم بسلامة المحتوى وفق معايير App Store و Google Play. اختر سبب البلاغ للمراجعة الفورية:',
                       'Conformément aux règles App Store et Google Play, sélectionnez le motif du signalement :',
-                      'Select a reason to submit this report for immediate Trust & Safety review:',
+                      appL10n.privacyComplianceSelectReasonSubmitThisReport,
                     ),
                     style: const TextStyle(
                       fontSize: 13.5,
@@ -210,7 +211,7 @@ Future<void> showAiContentReportSheet(
                         hintText: s.tr(
                           'أضف تفاصيل إضافية (اختياري)...',
                           'Détails supplémentaires (optionnel)...',
-                          'Additional details (optional)...',
+                          appL10n.privacyComplianceAdditionalDetailsOptional,
                         ),
                         hintStyle: const TextStyle(
                           fontSize: 13.5,
@@ -226,11 +227,11 @@ Future<void> showAiContentReportSheet(
                   const SizedBox(height: 16),
                   ApoloDlButton(
                     label: submitting
-                        ? s.tr('جاري الإرسال...', 'Envoi en cours...', 'Sending...')
+                        ? s.tr('جاري الإرسال...', 'Envoi en cours...', appL10n.authSending)
                         : s.tr(
                             'إرسال البلاغ الآن',
                             'Envoyer le signalement',
-                            'Submit report',
+                            appL10n.privacyComplianceSubmitReport,
                           ),
                     leadingIcon: CupertinoIcons.paperplane_fill,
                     variant: ApoloDlButtonVariant.primary,
@@ -275,7 +276,7 @@ Future<void> showAiContentReportSheet(
                                       s.tr(
                                         'تعذر إرسال البلاغ. حاول مجدداً.',
                                         'Signalement non envoyé. Réessayez.',
-                                        'Could not send report. Please try again.',
+                                        appL10n.privacyComplianceCouldNotSendReportPlease,
                                       ),
                                     ),
                                   ),
@@ -293,7 +294,7 @@ Future<void> showAiContentReportSheet(
                                     s.tr(
                                       'تم إرسال بلاغك بنجاح داخل التطبيق ✓',
                                       'Signalement envoyé avec succès ✓',
-                                      'Report submitted successfully ✓',
+                                      appL10n.privacyComplianceReportSubmittedSuccessfully,
                                     ),
                                   ),
                                 ),
@@ -365,7 +366,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
               _state.s.tr(
                 'تم نسخ الرابط: $url',
                 'Lien copié : $url',
-                'Link copied: $url',
+                appL10n.privacyComplianceLinkCopiedUrl(url),
               ),
             ),
           ),
@@ -394,7 +395,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
               s.tr(
                 'تأكيد حذف الحساب نهائياً',
                 'Confirmer la suppression du compte',
-                'Confirm account deletion',
+                appL10n.privacyComplianceConfirmAccountDeletion,
               ),
               style: const TextStyle(
                 fontSize: 18,
@@ -406,7 +407,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
               s.tr(
                 'هل أنت متأكد من حذف حسابك وجميع بياناتك الشخصية وإعلاناتك ومحادثاتك نهائياً من خوادم Apolo.ma؟ لا يمكن التراجع عن هذا الإجراء.',
                 'Voulez-vous vraiment supprimer définitivement votre compte, vos données personnelles, vos annonces et vos messages des serveurs Apolo.ma ?',
-                'Are you sure you want to permanently delete your account, personal data, listings, and messages from Apolo? This cannot be undone.',
+                appL10n.privacyComplianceAreYouSureYouWant,
               ),
               style: const TextStyle(
                 fontSize: 14,
@@ -429,7 +430,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                 ),
                 onPressed: () => Navigator.pop(ctx, false),
                 child: Text(
-                  s.tr('إلغاء', 'Annuler', 'Cancel'),
+                  s.tr('إلغاء', 'Annuler', appL10n.cancelButton),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -451,7 +452,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                   s.tr(
                     'حذف حسابي وبياناتي',
                     'Supprimer définitivement',
-                    'Delete permanently',
+                    appL10n.privacyComplianceDeletePermanently,
                   ),
                   style: const TextStyle(
                     color: Colors.white,
@@ -486,7 +487,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
             s.tr(
               'تم حذف الحساب والبيانات بنجاح.',
               'Votre compte et vos données ont été supprimés.',
-              'Your account and data have been deleted.',
+              appL10n.privacyComplianceAccountDataHaveBeenDeleted,
             ),
           ),
         ),
@@ -501,7 +502,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
               s.tr(
                 'تعذر تأكيد حذف الحساب. لم يتم تسجيل خروجك. حاول مجدداً.',
                 'Suppression non confirmée. Vous restez connecté. Réessayez.',
-                'Could not confirm deletion. You remain signed in. Please try again.',
+                appL10n.privacyComplianceCouldNotConfirmDeletionYou,
               ),
             ),
           ),
@@ -532,7 +533,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                     title: s.tr(
                       'الخصوصية والشروط',
                       'Confidentialité & Conditions',
-                      'Privacy & Policies',
+                      appL10n.privacyCompliancePrivacyPolicies,
                     ),
                   ),
                   Expanded(
@@ -560,7 +561,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                                       label: s.tr(
                                         'الخصوصية',
                                         'Confidentialité',
-                                        'Privacy',
+                                        appL10n.privacyCompliancePrivacy,
                                       ),
                                     ),
                                     const SizedBox(width: 4),
@@ -570,7 +571,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                                       label: s.tr(
                                         'الشروط والسياسات',
                                         'Conditions',
-                                        'Policies',
+                                        appL10n.privacyCompliancePolicies,
                                       ),
                                     ),
                                     const SizedBox(width: 4),
@@ -580,7 +581,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                                       label: s.tr(
                                         'حذف البيانات',
                                         'Données',
-                                        'Data & Delete',
+                                        appL10n.privacyComplianceDataDelete,
                                       ),
                                     ),
                                   ],
@@ -735,17 +736,17 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           badgeText: s.tr(
             'محدث 2026 · القانون 09-08 (CNDP)',
             'Mis à jour 2026 · Loi 09-08 (CNDP)',
-            'Updated 2026 · Law 09-08 (CNDP)',
+            appL10n.privacyComplianceUpdated2026Law0908,
           ),
           headline: s.tr(
             'خصوصيتك وبياناتك تحت تحكمك الكامل',
             'Vos données restent sous votre contrôle',
-            'Your privacy, fully in your control',
+            appL10n.privacyCompliancePrivacyFullyControl,
           ),
           description: s.tr(
             'لا نبيع بياناتك الشخصية لأي طرف إعلاني خارجي. تُستخدم المعلومات حصرياً لتشغيل حسابك، إعلاناتك، محادثاتك، وإشعارات الهاتف على تطبيق Apolo (ma.apolo.apoloMobile).',
             'Nous ne vendons jamais vos données personnelles. Vos informations servent uniquement à vos annonces, messages et notifications sur Apolo (ma.apolo.apoloMobile).',
-            'We never sell your personal data. Information is used strictly to power your listings, secure chats, and mobile notifications on Apolo (ma.apolo.apoloMobile).',
+            appL10n.privacyComplianceWeNeverSellPersonalData,
           ),
         ),
         const SizedBox(height: 12),
@@ -755,7 +756,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'البيانات التي نجمعها',
             'Données collectées',
-            'Data We Collect',
+            appL10n.privacyComplianceDataWeCollect,
           ),
           body: s.tr(
             '• الهوية والحساب: الاسم، البريد الإلكتروني، رقم الهاتف، أو مصادقة Google / Apple الآمنة.\n'
@@ -766,10 +767,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
                 '• Annonces & Boutiques : Photos, titres, descriptions, prix et ville choisie.\n'
                 '• Messagerie : Messages, images et réactions échangés entre acheteurs et vendeurs.\n'
                 '• Jetons de notification (FCM / APNs) : Pour recevoir vos alertes mobiles, désactivés automatiquement à la déconnexion.',
-            '• Account identity: Name, email, phone number, or secure Google / Apple sign-in.\n'
-                '• Listings & stores: Photos, titles, descriptions, MAD prices, and selected city.\n'
-                '• Real-time messaging: Chat messages, media, and emoji reactions between buyers and sellers.\n'
-                '• Mobile push tokens (FCM / APNs): Used solely to deliver OS notifications and automatically deactivated on sign-out.',
+            appL10n.privacyComplianceAccountIdentityNameEmailPhone,
           ),
         ),
         const SizedBox(height: 10),
@@ -779,7 +777,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'أذونات الهاتف والتحكم بها',
             'Autorisations de l’appareil',
-            'Device Permissions & Controls',
+            appL10n.privacyComplianceDevicePermissionsControls,
           ),
           body: s.tr(
             '• الإشعارات: اختيارية لتلقي تنبيهات الرسائل الفورية على iOS و Android ويمكن إيقافها في أي وقت.\n'
@@ -788,9 +786,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
             '• Notifications : Optionnelles pour les nouveaux messages sur iOS et Android.\n'
                 '• Caméra & Photos : Utilisées uniquement lors de l’ajout d’images à une annonce ou un message.\n'
                 '• Localisation approximative : Filtrage par ville/zone sans suivi en arrière-plan.',
-            '• Notifications: Optional OS alerts for new messages on iOS & Android; adjustable anytime.\n'
-                '• Camera & Photos: Requested only when you upload listing photos or chat attachments.\n'
-                '• Approximate zone: City-level distance filtering with zero background GPS tracking.',
+            appL10n.privacyComplianceNotificationsOptionalOsAlertsNew,
           ),
         ),
         const SizedBox(height: 10),
@@ -800,12 +796,12 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'سلامة الذكاء الاصطناعي والإبلاغ الفوري',
             'Sécurité IA & Signalement',
-            'AI Safety & In-App Reporting',
+            appL10n.privacyComplianceAiSafetyAppReporting,
           ),
           body: s.tr(
             'يوفر التطبيق أدوات مساعدة ذكية لتنظيم الإعلانات والبحث، ويتيح زر إبلاغ فوري داخل التطبيق لمراجعة أي محتوى غير دقيق أو مخالف دون مغادرة التطبيق.',
             'L’application intègre un bouton de signalement direct permettant de signaler tout contenu généré par IA ou toute annonce inappropriée.',
-            'Smart listing and search tools include direct in-app reporting so you can flag inaccurate AI suggestions or abusive listings immediately.',
+            appL10n.privacyComplianceSmartListingSearchToolsInclude,
           ),
         ),
         const SizedBox(height: 10),
@@ -815,7 +811,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'حقوقك القانونية والتواصل معنا',
             'Vos droits & Contact (CNDP)',
-            'Your Legal Rights & Contact',
+            appL10n.privacyComplianceLegalRightsContact,
           ),
           body: s.tr(
             'وفقاً للقانون المغربي 09-08 ومعايير App Store و Google Play، يحق لك الاطلاع على بياناتك، تصحيحها، حظر المستخدمين المزعجين، أو حذف حسابك نهائياً.\n'
@@ -824,9 +820,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
             'Conformément à la loi marocaine 09-08 et aux règles App Store / Google Play, vous disposez d’un droit d’accès, de rectification et de suppression.\n'
                 '• Email : support@apolo.ma / contact@apolo.ma\n'
                 '• Site web : https://apolo.ma',
-            'Under Moroccan Law 09-08 and App Store / Google Play rules, you have the right to access, update, or permanently erase your personal data.\n'
-                '• Official email: support@apolo.ma / contact@apolo.ma\n'
-                '• Website: https://apolo.ma',
+            appL10n.privacyComplianceUnderMoroccanLaw0908,
           ),
         ),
         const SizedBox(height: 18),
@@ -835,7 +829,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           label: s.tr(
             'الإبلاغ عن محتوى أو مخالفة داخل التطبيق',
             'Signaler un contenu dans l’application',
-            'Report AI or Policy Issue In-App',
+            appL10n.privacyComplianceReportAiPolicyIssueApp,
           ),
           leadingIcon: CupertinoIcons.flag_fill,
           variant: ApoloDlButtonVariant.primary,
@@ -853,7 +847,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           label: s.tr(
             'فتح سياسة الخصوصية على الويب',
             'Ouvrir la politique web',
-            'Open Web Privacy Policy',
+            appL10n.privacyComplianceOpenWebPrivacyPolicy,
           ),
           leadingIcon: CupertinoIcons.globe,
           variant: ApoloDlButtonVariant.secondary,
@@ -878,17 +872,17 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           badgeText: s.tr(
             'شروط الاستخدام وسياسات البيع 2026',
             'Conditions Générales 2026',
-            'Terms of Use & Marketplace Rules',
+            appL10n.privacyComplianceTermsUseMarketplaceRules,
           ),
           headline: s.tr(
             'قواعد واضحة لبيع وشراء آمن بالمغرب',
             'Des règles claires pour acheter et vendre en confiance',
-            'Clear rules for safe buying & selling',
+            appL10n.privacyComplianceClearRulesSafeBuyingSelling,
           ),
           description: s.tr(
             'باستخدامك لتطبيق Apolo.ma، فإنك توافق على شروط النشر، قواعد المحادثة الآمنة، وسياسات التوثيق والرتب.',
             'En utilisant Apolo.ma, vous acceptez nos règles de publication, de messagerie respectueuse et de sécurité.',
-            'By using Apolo, you agree to authentic listings, respectful messaging, and transparent marketplace rules.',
+            appL10n.privacyComplianceByUsingApoloYouAgree,
           ),
         ),
         const SizedBox(height: 12),
@@ -898,15 +892,14 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'الأهلية ومصداقية الحساب والشارات',
             'Authenticité du compte & Badges',
-            'Account Integrity & Verified Badges',
+            appL10n.privacyComplianceAccountIntegrityVerifiedBadges,
           ),
           body: s.tr(
             '• يجب أن تكون معلومات الحساب والمتجر حقيقية ومحدثة.\n'
                 '• شارة التوثيق الزرقاء ورتب البائعين (Bronze إلى Champion) تُمنح حصرياً عبر نظام Apolo الرسمي ويُمنع انتحال صفة المتاجر أو الإدارة.',
             '• Les informations du profil et de la boutique doivent être exactes.\n'
                 '• Le badge vérifié et les rangs vendeurs (Bronze à Champion) sont attribués uniquement par Apolo ; toute usurpation est interdite.',
-            '• Account and store details must remain accurate and truthful.\n'
-                '• Verified seals and seller ranks (Bronze to Champion) are awarded strictly by Apolo; impersonation is prohibited.',
+            appL10n.privacyComplianceAccountStoreDetailsMustRemain,
           ),
         ),
         const SizedBox(height: 10),
@@ -916,15 +909,14 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'سياسة نشر الإعلانات والسلع الممنوعة',
             'Règles d’annonces & Produits interdits',
-            'Listing Rules & Prohibited Items',
+            appL10n.privacyComplianceListingRulesProhibitedItems,
           ),
           body: s.tr(
             '• يجب أن يعكس الإعلان منتجاً أو خدمة حقيقية بصور واضحة وسعر صادق.\n'
                 '• يُمنع منعاً كلياً نشر السلع المقلدة، الأسلحة، المواد غير القانونية أو الطبية الخاضعة للوصفة، الوثائق الرسمية، أو الإعلانات الوهمية.',
             '• Chaque annonce doit présenter un bien réel avec des photos authentiques et un prix honnête.\n'
                 '• Sont strictement interdits : contrefaçons, armes, substances illicites, médicaments sur ordonnance, documents officiels et arnaques.',
-            '• Listings must represent real items or services with genuine photos and honest pricing.\n'
-                '• Strictly prohibited: counterfeit goods, weapons, illegal substances, prescription drugs, stolen goods, and advance-fee scams.',
+            appL10n.privacyComplianceListingsMustRepresentRealItems,
           ),
         ),
         const SizedBox(height: 10),
@@ -934,15 +926,14 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'المعاملات الآمنة وآداب الدردشة',
             'Transactions sûres & Messagerie',
-            'Safe Transactions & Chat Conduct',
+            appL10n.privacyComplianceSafeTransactionsChatConduct,
           ),
           body: s.tr(
             '• ننصح دائماً بالمعاينة المباشرة في مكان عمومي وعدم إرسال أي تسبيق مالي قبل استلام المنتج.\n'
                 '• يُمنع الإزعاج، الرسائل العشوائية (Spam)، أو الإساءة في الدردشة؛ يمكنك حظر أي مستخدم أو الإبلاغ عنه بضغطة واحدة.',
             '• Privilégiez les rencontres dans un lieu public et ne versez jamais d’acompte avant d’avoir vérifié l’article.\n'
                 '• Le spam et le harcèlement sont interdits ; bloquez ou signalez tout abus en un geste.',
-            '• Always inspect items in person in a safe public place and avoid sending advance deposits.\n'
-                '• Spam, harassment, and abusive messages result in immediate suspension; block or report anytime.',
+            appL10n.privacyComplianceAlwaysInspectItemsPersonSafe,
           ),
         ),
         const SizedBox(height: 10),
@@ -952,15 +943,14 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'اشتراكات Pro+ وترقية الإعلانات (Boost)',
             'Abonnements Pro+ & Boosts',
-            'Pro+ Subscriptions & Listing Boosts',
+            appL10n.privacyComplianceProSubscriptionsListingBoosts,
           ),
           body: s.tr(
             '• تتم فوترة باقات Pro+ ومزايا الترويج بوضوح عبر حساب متجرك (App Store / Google Play).\n'
                 '• يمكنك إدارة أو إلغاء التجديد التلقائي في أي وقت قبل 24 ساعة من انتهاء الفترة الحالية من إعدادات المتجر.',
             '• Les offres Pro+ et Boost sont facturées de manière transparente via l’App Store ou Google Play.\n'
                 '• Vous pouvez annuler le renouvellement automatique jusqu’à 24h avant l’échéance dans les réglages de votre store.',
-            '• Pro+ plans and Boost upgrades are billed transparently through your App Store or Google Play account.\n'
-                '• Cancel auto-renewal anytime at least 24 hours before period end in your store account settings.',
+            appL10n.privacyComplianceProPlansBoostUpgradesAre,
           ),
         ),
         const SizedBox(height: 18),
@@ -969,7 +959,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           label: s.tr(
             'فتح الشروط والأحكام الكاملة على الويب',
             'Ouvrir les conditions sur le web',
-            'Open Web Terms & Policies',
+            appL10n.privacyComplianceOpenWebTermsPolicies,
           ),
           leadingIcon: CupertinoIcons.doc_text,
           variant: ApoloDlButtonVariant.secondary,
@@ -994,17 +984,17 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           badgeText: s.tr(
             'حذف فوري · App Store & Google Play',
             'Suppression directe · App Store & Play',
-            'Instant Erasure · App Store & Play',
+            appL10n.privacyComplianceInstantErasureAppStorePlay,
           ),
           headline: s.tr(
             'حذف الحساب والبيانات الشخصية نهائياً',
             'Suppression définitive du compte et des données',
-            'Permanent Account & Data Deletion',
+            appL10n.privacyCompliancePermanentAccountDataDeletion,
           ),
           description: s.tr(
             'يمكنك مسح حسابك وكافة بياناتك مباشرة من داخل التطبيق بضغطة واحدة، أو تقديم طلب عبر الرابط الخارجي دون تسجيل الدخول.',
             'Effacez votre compte et toutes vos données directement dans l’application, ou via notre lien web dédié.',
-            'Erase your account and all associated personal data directly in-app or via our external web deletion form.',
+            appL10n.privacyComplianceEraseAccountAllAssociatedPersonal,
           ),
         ),
         const SizedBox(height: 12),
@@ -1014,7 +1004,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           title: s.tr(
             'ما الذي يتم حذفه فوراً؟',
             'Données supprimées immédiatement',
-            'What Gets Permanently Deleted',
+            appL10n.privacyComplianceWhatGetsPermanentlyDeleted,
           ),
           body: s.tr(
             '• معلومات الملف الشخصي (الاسم، البريد الإلكتروني، رقم الهاتف، وربط Google / Apple).\n'
@@ -1023,9 +1013,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
             '• Informations du profil (nom, e-mail, téléphone et liaison OAuth).\n'
                 '• Toutes vos annonces publiées, photos et données de boutique.\n'
                 '• Historique des discussions, favoris et jetons de notifications mobiles.',
-            '• Profile credentials (name, email, phone number, and OAuth links).\n'
-                '• All published listings, uploaded photos, and store data.\n'
-                '• Chat history, saved favorites, and active mobile push notification tokens.',
+            appL10n.privacyComplianceProfileCredentialsNameEmailPhone,
           ),
         ),
         const SizedBox(height: 18),
@@ -1052,7 +1040,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
               s.tr(
                 'حذف حسابي وجميع بياناتي الآن (داخل التطبيق)',
                 'Supprimer mon compte maintenant (In-App)',
-                'Delete My Account Now (In-App)',
+                appL10n.privacyComplianceDeleteMyAccountNowApp,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1069,7 +1057,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
             s.tr(
               'سجّل الدخول لحذف حسابك مباشرة من التطبيق، أو استخدم رابط الحذف الخارجي أدناه.',
               'Connectez-vous pour supprimer votre compte dans l’app, ou utilisez le lien externe ci-dessous.',
-              'Sign in to delete your account directly in-app, or use the external web link below.',
+              appL10n.privacyComplianceSignDeleteAccountDirectlyApp,
             ),
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -1084,7 +1072,7 @@ class _PrivacyComplianceScreenState extends State<PrivacyComplianceScreen> {
           label: s.tr(
             'رابط حذف الحساب والبيانات على الويب',
             'Lien web externe de suppression',
-            'External Web Data Deletion Link',
+            appL10n.privacyComplianceExternalWebDataDeletionLink,
           ),
           leadingIcon: CupertinoIcons.arrow_up_right_square,
           variant: ApoloDlButtonVariant.secondary,

@@ -9,6 +9,7 @@ import '../../widgets/dl_qr_code.dart';
 import '../../widgets/dl_settings_kit.dart';
 import '../add_friends_screen.dart';
 import '../share_profile_screen.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated screen for sharing Apolo.ma with friends or copying the official link.
 class SettingsShareAppScreen extends StatefulWidget {
@@ -38,7 +39,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
     final shareText = s.tr(
       'اكتشف Apolo.ma — سوقك الأول للإعلانات المبوبة والمتاجر فالمغرب: $_shareUrl',
       'Découvrez Apolo.ma — la marketplace marocaine n°1 d’annonces et boutiques : $_shareUrl',
-      'Check out Apolo.ma — Morocco’s classifieds & stores marketplace: $_shareUrl',
+      appL10n.settingsShareAppCheckOutApoloMaMorocco(_shareUrl),
     );
     try {
       await Share.share(shareText, subject: AppConfig.appName);
@@ -66,7 +67,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                     title: s.tr(
                       'مشاركة التطبيق',
                       'Partager l’app',
-                      'Share App',
+                      appL10n.settingsShareAppShareApp,
                     ),
                     size: ApoloDlTopNavSize.md,
                   ),
@@ -113,7 +114,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                                     s.tr(
                                       'سوقك الأول للإعلانات المبوبة والمتاجر فالمغرب. شارك التطبيق مع أصدقائك وعائلتك.',
                                       'La marketplace marocaine pour acheter, vendre et découvrir les boutiques officielles.',
-                                      'Morocco’s marketplace for classifieds and official stores. Share with friends and family.',
+                                      appL10n.settingsShareAppMoroccoSMarketplaceClassifiedsOfficial,
                                     ),
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
@@ -151,7 +152,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                                 message: s.tr(
                                   'تم نسخ رابط التطبيق بنجاح: $_shareUrl',
                                   'Lien copié avec succès : $_shareUrl',
-                                  'App link copied: $_shareUrl',
+                                  appL10n.settingsShareAppAppLinkCopiedShareurl(_shareUrl),
                                 ),
                                 type: ApoloDlAlertType.success,
                               ),
@@ -162,7 +163,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                               label: s.tr(
                                 'مشاركة الآن',
                                 'Partager maintenant',
-                                'Share now',
+                                appL10n.settingsShareAppShareNow,
                               ),
                               leadingIcon:
                                   CupertinoIcons.arrowshape_turn_up_right_fill,
@@ -176,7 +177,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                               label: s.tr(
                                 'نسخ الرابط',
                                 'Copier le lien',
-                                'Copy link',
+                                appL10n.settingsShareAppCopyLink,
                               ),
                               leadingIcon: CupertinoIcons.doc_on_clipboard,
                               variant: ApoloDlButtonVariant.secondary,
@@ -189,7 +190,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                               label: s.tr(
                                 'أضف أصدقاءك (Contacts)',
                                 'Ajouter des amis',
-                                'Add your friends',
+                                appL10n.addFriendsAddFriends,
                               ),
                               leadingIcon: CupertinoIcons.person_2_fill,
                               variant: ApoloDlButtonVariant.secondary,
@@ -208,7 +209,7 @@ class _SettingsShareAppScreenState extends State<SettingsShareAppScreen> {
                                 label: s.tr(
                                   'مشاركة بطاقة QR الخاصة بي',
                                   'Partager mon profil QR',
-                                  'Share my QR profile',
+                                  appL10n.settingsShareAppShareMyQrProfile,
                                 ),
                                 leadingIcon: CupertinoIcons.qrcode,
                                 variant: ApoloDlButtonVariant.secondary,

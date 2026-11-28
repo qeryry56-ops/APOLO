@@ -18,6 +18,7 @@ import 'widgets/kinetic_widgets.dart';
 import 'widgets/marketplace_zone_sheet.dart';
 import 'widgets/price_text.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 class SearchScreen extends StatefulWidget {
   final int? initialCategoryId;
@@ -689,23 +690,23 @@ class _SearchScreenState extends State<SearchScreen>
     final sortOptions = <({String key, String label})>[
       (
         key: 'smart',
-        label: s.tr('مقترح لك', 'Recommandé', 'Recommended'),
+        label: s.tr('مقترح لك', 'Recommandé', appL10n.searchRecommended),
       ),
       (
         key: 'newest',
-        label: s.tr('الأحدث', 'Plus récents', 'Newest'),
+        label: s.tr('الأحدث', 'Plus récents', appL10n.searchNewest),
       ),
       (
         key: 'price_asc',
-        label: s.tr('الأقل ثمناً', 'Prix croissant', 'Lowest price'),
+        label: s.tr('الأقل ثمناً', 'Prix croissant', appL10n.searchLowestPrice),
       ),
       (
         key: 'price_desc',
-        label: s.tr('الأعلى ثمناً', 'Prix décroissant', 'Highest price'),
+        label: s.tr('الأعلى ثمناً', 'Prix décroissant', appL10n.searchHighestPrice),
       ),
       (
         key: 'popular',
-        label: s.tr('الأكثر مشاهدة', 'Populaires', 'Most viewed'),
+        label: s.tr('الأكثر مشاهدة', 'Populaires', appL10n.searchMostViewed),
       ),
     ];
 
@@ -751,7 +752,7 @@ class _SearchScreenState extends State<SearchScreen>
                               s.tr(
                                 'تصفية وترتيب الإعلانات',
                                 'Filtrer et trier',
-                                'Filter & Sort',
+                                appL10n.searchFilterSort,
                               ),
                               style: TextStyle(
                                 fontSize: 19,
@@ -783,7 +784,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                s.tr('إعادة ضبط', 'Réinitialiser', 'Reset'),
+                                s.tr('إعادة ضبط', 'Réinitialiser', appL10n.resetButton),
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   color: _dlInk,
@@ -805,7 +806,7 @@ class _SearchScreenState extends State<SearchScreen>
 
                       // 1. Sort By Pills
                       Text(
-                        s.tr('الترتيب حسب', 'Trier par', 'Sort by'),
+                        s.tr('الترتيب حسب', 'Trier par', appL10n.searchSortBy),
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -830,7 +831,7 @@ class _SearchScreenState extends State<SearchScreen>
 
                       // 2. City Pills
                       Text(
-                        s.tr('المدينة', 'Ville', 'City'),
+                        s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity),
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -846,7 +847,7 @@ class _SearchScreenState extends State<SearchScreen>
                             label: s.tr(
                               'كل المغرب',
                               'Tout le Maroc',
-                              'All Morocco',
+                              appL10n.searchAllMorocco,
                             ),
                             active: tempCityId == null,
                             onTap: () => setModalState(() => tempCityId = null),
@@ -874,7 +875,7 @@ class _SearchScreenState extends State<SearchScreen>
 
                       // 3. Category Pills
                       Text(
-                        s.tr('القسم', 'Catégorie', 'Category'),
+                        s.tr('القسم', 'Catégorie', appL10n.adDetailCategory),
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -887,7 +888,7 @@ class _SearchScreenState extends State<SearchScreen>
                         runSpacing: 8,
                         children: [
                           _ModalFilterChip(
-                            label: s.tr('جميع الأقسام', 'Toutes', 'All'),
+                            label: s.tr('جميع الأقسام', 'Toutes', appL10n.chatListAll),
                             active: tempCatId == null,
                             onTap: () => setModalState(() => tempCatId = null),
                           ),
@@ -910,7 +911,7 @@ class _SearchScreenState extends State<SearchScreen>
                         s.tr(
                           'نطاق الثمن (بالدرهم)',
                           'Fourchette de prix (DH)',
-                          'Price range (MAD)',
+                          appL10n.searchPriceRangeMad,
                         ),
                         style: TextStyle(
                           fontSize: 13.5,
@@ -947,7 +948,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 ),
                                 decoration: InputDecoration(
                                   hintText:
-                                      s.tr('أقل ثمن', 'Prix min', 'Min price'),
+                                      s.tr('أقل ثمن', 'Prix min', appL10n.searchMinPrice),
                                   hintStyle: TextStyle(
                                     color: _dlSubtle,
                                     fontWeight: FontWeight.w400,
@@ -990,7 +991,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 ),
                                 decoration: InputDecoration(
                                   hintText:
-                                      s.tr('أقصى ثمن', 'Prix max', 'Max price'),
+                                      s.tr('أقصى ثمن', 'Prix max', appL10n.searchMaxPrice),
                                   hintStyle: TextStyle(
                                     color: _dlSubtle,
                                     fontWeight: FontWeight.w400,
@@ -1045,7 +1046,7 @@ class _SearchScreenState extends State<SearchScreen>
                                   s.tr(
                                     'إظهار الإعلانات القابلة للتفاوض فقط',
                                     'Annonces négociables uniquement',
-                                    'Negotiable listings only',
+                                    appL10n.searchNegotiableListingsOnly,
                                   ),
                                   style: TextStyle(
                                     fontSize: 14,
@@ -1073,7 +1074,7 @@ class _SearchScreenState extends State<SearchScreen>
                         label: s.tr(
                           'تطبيق الفلتر',
                           'Appliquer les filtres',
-                          'Apply filters',
+                          appL10n.searchApplyFilters,
                         ),
                         variant: ApoloDlButtonVariant.primary,
                         borderRadius: 999,
@@ -1118,7 +1119,7 @@ class _SearchScreenState extends State<SearchScreen>
             s.tr(
               'سجّل الدخول لحفظ البحث والإعلانات',
               'Connectez-vous pour enregistrer',
-              'Sign in to save searches & listings',
+              appL10n.searchSignSaveSearchesListings,
             ),
           ),
           behavior: SnackBarBehavior.floating,
@@ -1148,12 +1149,12 @@ class _SearchScreenState extends State<SearchScreen>
                 ? s.tr(
                     'تم حفظ البحث بنجاح',
                     'Recherche enregistrée',
-                    'Search saved',
+                    appL10n.searchSaved,
                   )
                 : s.tr(
                     'تعذر حفظ البحث حالياً',
                     'Impossible d’enregistrer pour le moment',
-                    'Unable to save search right now',
+                    appL10n.searchUnableSaveSearchRightNow,
                   ),
           ),
           behavior: SnackBarBehavior.floating,
@@ -1168,7 +1169,7 @@ class _SearchScreenState extends State<SearchScreen>
             s.tr(
               'تعذر حفظ البحث حالياً',
               'Impossible d’enregistrer pour le moment',
-              'Unable to save search right now',
+              appL10n.searchUnableSaveSearchRightNow,
             ),
           ),
           behavior: SnackBarBehavior.floating,
@@ -1277,7 +1278,7 @@ class _SearchScreenState extends State<SearchScreen>
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            s.tr('الإعلانات المحفوظة', 'Enregistrés', 'Saved'),
+                            s.tr('الإعلانات المحفوظة', 'Enregistrés', appL10n.profileSaved),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -1304,7 +1305,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 s.tr(
                                   'حفظ البحث',
                                   'Sauver recherche',
-                                  'Save search',
+                                  appL10n.searchSaveSearch,
                                 ),
                                 style: TextStyle(
                                   fontSize: 12.5,
@@ -1355,7 +1356,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 s.tr(
                                   'لا توجد إعلانات محفوظة بعد',
                                   'Aucune annonce enregistrée',
-                                  'No saved listings yet',
+                                  appL10n.searchNoSavedListingsYet,
                                 ),
                                 style: TextStyle(
                                   fontSize: 15,
@@ -1368,7 +1369,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 s.tr(
                                   'اضغط على القلب في أي إعلان لحفظه هنا',
                                   'Appuyez sur le cœur d’une annonce pour la sauvegarder',
-                                  'Tap the heart on any listing to save it here',
+                                  appL10n.searchTapHeartAnyListingSave,
                                 ),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
@@ -1406,7 +1407,7 @@ class _SearchScreenState extends State<SearchScreen>
                             final priceLabel = formatted.isNotEmpty
                                 ? formatted
                                 : (priceRaw != null
-                                    ? '${priceRaw.toInt()} ${s.tr('د.م', 'MAD', 'MAD')}'
+                                    ? '${priceRaw.toInt()} ${s.tr('د.م', 'MAD', appL10n.proPlusMad)}'
                                     : '');
                             String imgUrl = '';
                             if (ad['images'] is List &&
@@ -1590,7 +1591,7 @@ class _SearchScreenState extends State<SearchScreen>
                               fontWeight: FontWeight.w400,
                             ),
                             decoration: InputDecoration(
-                              hintText: s.tr('بحث...', 'Rechercher...', 'Search'),
+                              hintText: s.tr('بحث...', 'Rechercher...', appL10n.searchTitle),
                               hintStyle: TextStyle(
                                 color: _dlSubtle,
                                 fontSize: 15,
@@ -1654,7 +1655,7 @@ class _SearchScreenState extends State<SearchScreen>
                   behavior: HitTestBehavior.opaque,
                   child: Semantics(
                     button: true,
-                    label: s.tr('المحفوظات', 'Enregistrés', 'Saved'),
+                    label: s.tr('المحفوظات', 'Enregistrés', appL10n.profileSaved),
                     child: SizedBox(
                       width: 38,
                       height: 44,
@@ -1685,7 +1686,7 @@ class _SearchScreenState extends State<SearchScreen>
                 if (index == 0) {
                   return Semantics(
                     button: true,
-                    label: s.tr('تصفية', 'Filtrer', 'Filter'),
+                    label: s.tr('تصفية', 'Filtrer', appL10n.searchFilter),
                     child: PressableScale(
                       key: const Key('dl-explore-filter-btn'),
                       onTap: _openFilterModal,
@@ -1732,9 +1733,9 @@ class _SearchScreenState extends State<SearchScreen>
                   return Semantics(
                     button: true,
                     selected: active,
-                    label: s.tr('جميع الأقسام', 'Toutes', 'All categories'),
+                    label: s.tr('جميع الأقسام', 'Toutes', appL10n.searchAllCategories),
                     child: Tooltip(
-                      message: s.tr('جميع الأقسام', 'Toutes', 'All categories'),
+                      message: s.tr('جميع الأقسام', 'Toutes', appL10n.searchAllCategories),
                       child: PressableScale(
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -1811,15 +1812,15 @@ class _SearchScreenState extends State<SearchScreen>
   String _sortShortLabel(AppStrings s) {
     switch (_sortBy) {
       case 'newest':
-        return s.tr('الأحدث', 'Plus récents', 'Newest');
+        return s.tr('الأحدث', 'Plus récents', appL10n.searchNewest);
       case 'price_asc':
-        return s.tr('الأقل ثمناً', 'Prix croissant', 'Lowest price');
+        return s.tr('الأقل ثمناً', 'Prix croissant', appL10n.searchLowestPrice);
       case 'price_desc':
-        return s.tr('الأعلى ثمناً', 'Prix décroissant', 'Highest price');
+        return s.tr('الأعلى ثمناً', 'Prix décroissant', appL10n.searchHighestPrice);
       case 'popular':
-        return s.tr('الأكثر مشاهدة', 'Populaires', 'Most viewed');
+        return s.tr('الأكثر مشاهدة', 'Populaires', appL10n.searchMostViewed);
       default:
-        return s.tr('مقترح لك', 'Recommandé', 'Recommended');
+        return s.tr('مقترح لك', 'Recommandé', appL10n.searchRecommended);
     }
   }
 
@@ -1979,7 +1980,7 @@ class _SearchScreenState extends State<SearchScreen>
       if (_onlyNegotiable)
         _buildActiveFilterChip(
           chipKey: const Key('explore-chip-negotiable'),
-          label: s.tr('قابل للتفاوض', 'Négociable', 'Negotiable'),
+          label: s.tr('قابل للتفاوض', 'Négociable', appL10n.negotiableBadge),
           onRemove: () {
             setState(() => _onlyNegotiable = false);
             _searchAds();
@@ -2086,7 +2087,7 @@ class _SearchScreenState extends State<SearchScreen>
                                             s.tr(
                                               'كل المغرب',
                                               'Tout voir',
-                                              'All areas',
+                                              appL10n.searchAllAreas,
                                             ),
                                             style: TextStyle(
                                               fontSize: 12.5,
@@ -2103,7 +2104,7 @@ class _SearchScreenState extends State<SearchScreen>
                                             s.tr(
                                               'حدد منطقتك',
                                               'Choisir zone',
-                                              'Set area',
+                                              appL10n.searchSetArea,
                                             ),
                                             style: TextStyle(
                                               fontSize: 12.5,
@@ -2120,12 +2121,12 @@ class _SearchScreenState extends State<SearchScreen>
                                               ? s.tr(
                                                   'عرض البطاقات الكبيرة',
                                                   'Vue détaillée',
-                                                  'Feed view',
+                                                  appL10n.searchFeedView,
                                                 )
                                               : s.tr(
                                                   'عرض الشبكة',
                                                   'Vue grille',
-                                                  'Grid view',
+                                                  appL10n.searchGridView,
                                                 ),
                                           child: PressableScale(
                                             key: const Key(
@@ -2178,7 +2179,7 @@ class _SearchScreenState extends State<SearchScreen>
                                               'explore-seller-type-all',
                                             ),
                                             value: 'all',
-                                            label: s.tr('الكل', 'Tous', 'All'),
+                                            label: s.tr('الكل', 'Tous', appL10n.chatListAll),
                                           ),
                                           const SizedBox(width: 6),
                                           _buildSellerTypePill(
@@ -2190,7 +2191,7 @@ class _SearchScreenState extends State<SearchScreen>
                                             label: s.tr(
                                               'أفراد',
                                               'Particuliers',
-                                              'Personal',
+                                              appL10n.personalAccountBadge,
                                             ),
                                           ),
                                           const SizedBox(width: 6),
@@ -2203,7 +2204,7 @@ class _SearchScreenState extends State<SearchScreen>
                                             label: s.tr(
                                               'متاجر Business',
                                               'Boutiques',
-                                              'Business',
+                                              appL10n.businessAccountBadge,
                                             ),
                                           ),
                                         ],
@@ -2247,23 +2248,23 @@ class _SearchScreenState extends State<SearchScreen>
                                     ? s.tr(
                                         'لا توجد إعلانات في نطاق ${_state.zoneRadiusKm.round()} كم من ${_state.activeZoneCityLabel(s)}. يمكنك توسيع النطاق أو عرض كل المغرب.',
                                         'Aucune annonce dans un rayon de ${_state.zoneRadiusKm.round()} km.',
-                                        'No listings within ${_state.zoneRadiusKm.round()} km of ${_state.activeZoneCityLabel(s)}.',
+                                        appL10n.searchNoListingsWithinZoneradiuskmKm(_state.zoneRadiusKm.round(), _state.activeZoneCityLabel(s)),
                                       )
                                     : s.tr(
                                         'جرب تبدل القسم أو توسع نطاق البحث والمدينة.',
                                         'Essayez une autre catégorie ou élargissez vos filtres.',
-                                        'Try another category or broaden your filters.',
+                                        appL10n.searchTryAnotherCategoryBroadenFilters,
                                       ),
                                 actionLabel: _state.hasActiveZone
                                     ? s.tr(
                                         'عرض كل المغرب',
                                         'Voir tout le Maroc',
-                                        'Show all Morocco',
+                                        appL10n.homeShowAllMorocco,
                                       )
                                     : s.tr(
                                         'إعادة ضبط الفلاتر',
                                         'Réinitialiser les filtres',
-                                        'Reset filters',
+                                        appL10n.searchResetFilters,
                                       ),
                                 onAction: () async {
                                   _setChromeVisible(true);

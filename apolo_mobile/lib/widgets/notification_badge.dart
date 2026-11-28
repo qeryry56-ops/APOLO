@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+
 /// Visual mode for [NotificationBadge] (Rule 4: never both dot and number).
 enum NotificationBadgeType {
   dot,
@@ -172,13 +174,18 @@ class _NotificationBadgeState extends State<NotificationBadge>
     }
     if (widget.type == NotificationBadgeType.dot) {
       return widget.variant == NotificationBadgeVariant.green
-          ? 'Online'
-          : 'Unread notification';
+          ? appL10n.badgeOnlineSemantic
+          : appL10n.badgeUnreadNotificationSemantic;
     }
     if (widget.count > 99) {
-      return '99+ unread notifications';
+      return appL10n.badgeUnreadMaxSemantic;
     }
-    return '${widget.count} unread notification${widget.count == 1 ? '' : 's'}';
+    return appL10n.badgeUnreadCountSemantic(
+      widget.count,
+      widget.count == 1
+          ? appL10n.notificationSingular
+          : appL10n.notificationPlural,
+    );
   }
 
   Widget _buildBadgeSurface(bool reduceMotion) {

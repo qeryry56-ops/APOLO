@@ -11,6 +11,7 @@ import 'features/bug_report/services/bug_report_controller.dart';
 import 'features/bug_report/services/bug_report_log_service.dart';
 import 'features/bug_report/services/bug_report_route_observer.dart';
 import 'features/bug_report/services/bug_report_screenshot_service.dart';
+import 'l10n/l10n.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_typography.dart';
@@ -124,6 +125,7 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
         Locale('ar'),
       ],
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

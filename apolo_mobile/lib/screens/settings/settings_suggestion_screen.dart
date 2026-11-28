@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated screen for submitting feature ideas and UX suggestions for Apolo.ma.
 class SettingsSuggestionScreen extends StatefulWidget {
@@ -41,7 +42,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
         _error = s.tr(
           'يرجى كتابة اقتراح من 5 أحرف على الأقل.',
           'Veuillez saisir une suggestion d’au moins 5 caractères.',
-          'Please enter a suggestion of at least 5 characters.',
+          appL10n.settingsSuggestionPleaseEnterSuggestionAtLeast,
         );
       });
       return;
@@ -81,7 +82,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
         _error = s.tr(
           'تعذر إرسال الاقتراح عبر الشبكة حالياً. يمكنك المحاولة مجدداً أو إرساله عبر البريد الإلكتروني.',
           'Envoi impossible pour le moment. Réessayez ou envoyez votre suggestion par e-mail.',
-          'Could not send over the network right now. Try again or send via email.',
+          appL10n.settingsSuggestionCouldNotSendOverNetwork,
         );
       });
     } finally {
@@ -114,7 +115,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
             s.tr(
               'تم نسخ البريد الإلكتروني support@apolo.ma',
               'Adresse support@apolo.ma copiée',
-              'Copied support@apolo.ma',
+              appL10n.settingsSuggestionCopiedSupportApoloMa,
             ),
           ),
         ),
@@ -133,19 +134,19 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
         final topics = <({String id, String label})>[
           (
             id: 'feature',
-            label: s.tr('ميزة جديدة', 'Nouvelle fonctionnalité', 'Feature'),
+            label: s.tr('ميزة جديدة', 'Nouvelle fonctionnalité', appL10n.settingsSuggestionFeature),
           ),
           (
             id: 'design',
-            label: s.tr('تحسين التصميم', 'Design & UI', 'Design'),
+            label: s.tr('تحسين التصميم', 'Design & UI', appL10n.settingsSuggestionDesign),
           ),
           (
             id: 'performance',
-            label: s.tr('الأداء والسرعة', 'Performance', 'Performance'),
+            label: s.tr('الأداء والسرعة', 'Performance', appL10n.settingsSuggestionPerformance),
           ),
           (
             id: 'other',
-            label: s.tr('أخرى', 'Autre', 'Other'),
+            label: s.tr('أخرى', 'Autre', appL10n.settingsSuggestionOther),
           ),
         ];
 
@@ -160,7 +161,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                     title: s.tr(
                       'تقديم اقتراح',
                       'Faire une suggestion',
-                      'Make a suggestion',
+                      appL10n.settingsSuggestionMakeSuggestion,
                     ),
                     size: ApoloDlTopNavSize.md,
                   ),
@@ -175,7 +176,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                               s.tr(
                                 'شاركنا أفكارك لتحسين تجربة الشراء والبيع على Apolo.ma.',
                                 'Partagez vos idées pour améliorer votre expérience sur Apolo.ma.',
-                                'Share your ideas to help us improve Apolo.ma.',
+                                appL10n.settingsSuggestionShareIdeasHelpUsImprove,
                               ),
                               style: TextStyle(
                                 fontSize: 14,
@@ -185,7 +186,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                             ),
                             const SizedBox(height: 18),
                             Text(
-                              s.tr('نوع الاقتراح', 'Thème', 'Topic'),
+                              s.tr('نوع الاقتراح', 'Thème', appL10n.settingsSuggestionTopic),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -234,7 +235,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                               s.tr(
                                 'تفاصيل الاقتراح',
                                 'Votre suggestion',
-                                'Your suggestion',
+                                appL10n.settingsSuggestionYourSuggestion,
                               ),
                               style: TextStyle(
                                 fontSize: 14,
@@ -283,7 +284,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                                     hintText: s.tr(
                                       'اكتب فكرتك هنا بوضوح...',
                                       'Décrivez votre idée ici...',
-                                      'Write your idea here...',
+                                      appL10n.settingsSuggestionWriteIdeaHere,
                                     ),
                                     hintStyle: TextStyle(
                                       fontSize: 14,
@@ -299,7 +300,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                                 message: s.tr(
                                   'شكراً لك! تم استلام اقتراحك بنجاح.',
                                   'Merci ! Votre suggestion a bien été envoyée.',
-                                  'Thank you! Your suggestion has been received.',
+                                  appL10n.settingsSuggestionThankYouSuggestionHasBeen,
                                 ),
                                 type: ApoloDlAlertType.success,
                               ),
@@ -317,7 +318,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                               label: s.tr(
                                 'إرسال الاقتراح',
                                 'Envoyer la suggestion',
-                                'Submit suggestion',
+                                appL10n.settingsSuggestionSubmitSuggestion,
                               ),
                               leadingIcon: CupertinoIcons.paperplane_fill,
                               variant: ApoloDlButtonVariant.primary,
@@ -331,7 +332,7 @@ class _SettingsSuggestionScreenState extends State<SettingsSuggestionScreen> {
                                 label: s.tr(
                                   'إرسال عبر support@apolo.ma',
                                   'Envoyer par e-mail à support@apolo.ma',
-                                  'Email support@apolo.ma',
+                                  appL10n.settingsSuggestionEmailSupportApoloMa,
                                 ),
                                 leadingIcon: CupertinoIcons.mail,
                                 variant: ApoloDlButtonVariant.secondary,

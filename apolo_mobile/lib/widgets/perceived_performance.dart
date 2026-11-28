@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
+
 /// Centralized Perceived Performance & Motion tokens implementing the 3 UX Principles:
 ///
 /// 1. **REACT AT ONCE**:
@@ -367,7 +369,9 @@ class _OptimisticLikeButtonState extends State<OptimisticLikeButton>
         Semantics(
           button: true,
           toggled: _isLiked,
-          label: _isLiked ? 'Unlike, $_likeCount likes' : 'Like, $_likeCount likes',
+          label: _isLiked
+              ? context.l10n.unlikeButtonSemantic(_likeCount)
+              : context.l10n.likeButtonSemantic(_likeCount),
           child: GestureDetector(
             key: const Key('optimistic-like-button'),
             behavior: HitTestBehavior.opaque,
@@ -454,7 +458,7 @@ class _OptimisticLikeButtonState extends State<OptimisticLikeButton>
           const SizedBox(width: 6),
           Semantics(
             button: true,
-            label: 'Failed to save like. Tap to retry',
+            label: context.l10n.likeSyncFailedSemantic,
             child: GestureDetector(
               key: const Key('optimistic-like-retry'),
               onTap: _retryFailedSync,
@@ -465,18 +469,18 @@ class _OptimisticLikeButtonState extends State<OptimisticLikeButton>
                   color: const Color(0xFFFEE2E2),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       CupertinoIcons.refresh_bold,
                       size: 12,
                       color: Color(0xFFD9261C),
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
-                      'Retry',
-                      style: TextStyle(
+                      context.l10n.retryButton,
+                      style: const TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFFD9261C),

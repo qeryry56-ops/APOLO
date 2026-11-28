@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:pinput/pinput.dart';
 import 'package:smart_auth/smart_auth.dart';
 
+import '../l10n/l10n.dart';
+
 /// Android 5.0+ SMS Auto-Read implementation using Google Play Services
 /// SMS User Consent API via `smart_auth` + `pinput`'s [SmsRetriever] interface.
 class SmartAuthSmsRetriever implements SmsRetriever {
@@ -206,7 +208,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       _isVerifying = false;
       _isVerified = false;
       _isError = true;
-      _errorMessage = 'Code incorrect, try again';
+      _errorMessage = appL10n.otpIncorrectCodeError;
     });
 
     await _shakeController.forward(from: 0.0);
@@ -356,10 +358,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                                 ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
-                          'Verify your code',
+                        Text(
+                          context.l10n.otpVerifyCodeTitle,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: _dlInk,
@@ -368,7 +370,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Enter the 6-digit code sent to \u2066${widget.destination}\u2069',
+                          context.l10n.otpEnterSixDigitCode(
+                            '\u2066${widget.destination}\u2069',
+                          ),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 14,
@@ -443,20 +447,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                             child: _isVerifying
                                 ? const CupertinoActivityIndicator(radius: 10)
                                 : _isVerified
-                                    ? const Row(
-                                        key: Key('otp-verified-badge'),
+                                    ? Row(
+                                        key: const Key('otp-verified-badge'),
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
+                                          const Icon(
                                             CupertinoIcons
                                                 .checkmark_circle_fill,
                                             size: 16,
                                             color: _successGreen,
                                           ),
-                                          SizedBox(width: 6),
+                                          const SizedBox(width: 6),
                                           Text(
-                                            'Code verified',
-                                            style: TextStyle(
+                                            context.l10n.otpCodeVerifiedLabel,
+                                            style: const TextStyle(
                                               fontSize: 13.5,
                                               fontWeight: FontWeight.w700,
                                               color: _successGreen,
@@ -496,8 +500,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                             width: 210,
                             child: Text(
                               _secondsRemaining > 0
-                                  ? 'Resend code in ${_secondsRemaining}s'
-                                  : 'Resend code',
+                                  ? context.l10n
+                                      .otpResendCodeCountdown(_secondsRemaining)
+                                  : context.l10n.otpResendCodeButton,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

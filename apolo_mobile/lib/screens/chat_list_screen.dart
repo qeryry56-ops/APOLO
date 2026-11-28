@@ -22,6 +22,7 @@ import 'widgets/apolo_safety_sheet.dart';
 import 'widgets/app_image.dart';
 import 'widgets/chat_utils.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 `Inbox` / `Chats` Screen (`21768:49231`):
 /// - Large `Chats` title (`16px` horizontal padding, pure `#FFFFFF` / `#121212` canvas) + 1-tap `Mark all read` pill.
@@ -641,7 +642,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               s.tr(
                                 'آخر رسالة $lastTime',
                                 'Dernier message $lastTime',
-                                'Last message $lastTime',
+                                appL10n.chatListLastMessageLasttime(lastTime),
                               ),
                               style: const TextStyle(
                                 color: Color(0xFF757575),
@@ -676,8 +677,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ? CupertinoIcons.pin_slash
                               : CupertinoIcons.pin,
                           label: isPinned
-                              ? s.tr('إلغاء التثبيت', 'Désépingler', 'Unpin chat')
-                              : s.tr('تثبيت في الأعلى', 'Épingler', 'Pin chat'),
+                              ? s.tr('إلغاء التثبيت', 'Désépingler', appL10n.chatListUnpinChat)
+                              : s.tr('تثبيت في الأعلى', 'Épingler', appL10n.chatListPinChat),
                           onTap: () {
                             Navigator.of(sheetCtx).pop();
                             HapticFeedback.mediumImpact();
@@ -697,12 +698,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   ? s.tr(
                                       'تم إلغاء تثبيت المحادثة',
                                       'Discussion désépinglée',
-                                      'Chat unpinned',
+                                      appL10n.chatListChatUnpinned,
                                     )
                                   : s.tr(
                                       'تم تثبيت المحادثة في الأعلى',
                                       'Discussion épinglée',
-                                      'Chat pinned to top',
+                                      appL10n.chatListChatPinnedTop,
                                     ),
                             );
                           },
@@ -715,7 +716,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             label: s.tr(
                               'تحديد كمقروء',
                               'Marquer comme lu',
-                              'Mark as read',
+                              appL10n.chatListMarkAsRead,
                             ),
                             onTap: () {
                               Navigator.of(sheetCtx).pop();
@@ -742,12 +743,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ? s.tr(
                                   'تفعيل الإشعارات',
                                   'Réactiver les alertes',
-                                  'Unmute notifications',
+                                  appL10n.chatListUnmuteNotifications,
                                 )
                               : s.tr(
                                   'كتم الإشعارات',
                                   'Mettre en sourdine',
-                                  'Mute notifications',
+                                  appL10n.chatListMuteNotifications,
                                 ),
                           onTap: () {
                             Navigator.of(sheetCtx).pop();
@@ -764,12 +765,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   ? s.tr(
                                       'تم إلغاء كتم الإشعارات',
                                       'Notifications réactivées',
-                                      'Notifications unmuted',
+                                      appL10n.chatListNotificationsUnmuted,
                                     )
                                   : s.tr(
                                       'تم كتم إشعارات المحادثة',
                                       'Discussion mise en sourdine',
-                                      'Chat muted',
+                                      appL10n.chatListChatMuted,
                                     ),
                             );
                           },
@@ -781,7 +782,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           label: s.tr(
                             'نقل إلى الأرشيف',
                             'Archiver la discussion',
-                            'Archive chat',
+                            appL10n.chatListArchiveChat,
                           ),
                           onTap: () {
                             Navigator.of(sheetCtx).pop();
@@ -794,7 +795,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               s.tr(
                                 'تم نقل المحادثة إلى الأرشيف',
                                 'Discussion archivée',
-                                'Chat archived',
+                                appL10n.chatListChatArchived,
                               ),
                             );
                           },
@@ -817,7 +818,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           label: s.tr(
                             'الإبلاغ عن المحادثة',
                             'Signaler la discussion',
-                            'Report chat',
+                            appL10n.chatListReportChat,
                           ),
                           onTap: () {
                             Navigator.of(sheetCtx).pop();
@@ -840,7 +841,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           label: s.tr(
                             'حظر $peerName',
                             'Bloquer $peerName',
-                            'Block $peerName',
+                            appL10n.chatListBlockPeername(peerName),
                           ),
                           onTap: () {
                             Navigator.of(sheetCtx).pop();
@@ -865,7 +866,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               s.tr(
                                 'تم حظر $peerName',
                                 '$peerName a été bloqué',
-                                'Blocked $peerName',
+                                appL10n.chatListBlockedPeername(peerName),
                               ),
                             );
                           },
@@ -877,7 +878,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           label: s.tr(
                             'حذف المحادثة',
                             'Supprimer la discussion',
-                            'Delete chat',
+                            appL10n.chatListDeleteChat,
                           ),
                           isDestructive: true,
                           onTap: () {
@@ -906,7 +907,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               s.tr(
                                 'تم حذف المحادثة',
                                 'Discussion supprimée',
-                                'Chat deleted',
+                                appL10n.chatListChatDeleted,
                               ),
                             );
                           },
@@ -1097,7 +1098,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               _state.s.tr(
                                 'حدد محادثة لبدء المراسلة',
                                 'Sélectionnez une discussion',
-                                'Select a conversation to start messaging',
+                                appL10n.chatListSelectConversationStartMessaging,
                               ),
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -1160,7 +1161,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             children: [
               Expanded(
                 child: Text(
-                  s.tr('المحادثات', 'Discussions', 'Chats'),
+                  s.tr('المحادثات', 'Discussions', appL10n.chatListChats),
                   key: const Key('inbox-title'),
                   style: TextStyle(
                     color: ink,
@@ -1196,7 +1197,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            s.tr('قراءة الكل', 'Tout lire', 'Mark all read'),
+                            s.tr('قراءة الكل', 'Tout lire', appL10n.chatListMarkAllRead),
                             style: TextStyle(
                               color: ink,
                               fontSize: 12.5,
@@ -1252,7 +1253,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       height: 20.0 / 15.0,
                     ),
                     decoration: InputDecoration(
-                      hintText: s.tr('بحث', 'Rechercher', 'Search'),
+                      hintText: s.tr('بحث', 'Rechercher', appL10n.searchTitle),
                       hintStyle: TextStyle(
                         color: mutedText,
                         fontSize: 15,
@@ -1315,7 +1316,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 _buildFilterPill(
                   index: 0,
                   key: const Key('inbox-filter-all'),
-                  label: s.tr('الكل', 'Tout', 'All'),
+                  label: s.tr('الكل', 'Tout', appL10n.chatListAll),
                   ink: ink,
                   pillBg: pillBg,
                   isDark: isDark,
@@ -1324,7 +1325,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 _buildFilterPill(
                   index: 1,
                   key: const Key('inbox-filter-unread'),
-                  label: s.tr('غير مقروءة', 'Non lus', 'Unread'),
+                  label: s.tr('غير مقروءة', 'Non lus', appL10n.chatListUnread),
                   ink: ink,
                   pillBg: pillBg,
                   isDark: isDark,
@@ -1334,7 +1335,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   _buildFilterPill(
                     index: 2,
                     key: const Key('inbox-filter-pinned'),
-                    label: s.tr('المثبتة', 'Épinglés', 'Pinned'),
+                    label: s.tr('المثبتة', 'Épinglés', appL10n.chatListPinned),
                     ink: ink,
                     pillBg: pillBg,
                     isDark: isDark,
@@ -1357,17 +1358,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       headline: s.tr(
                         'سجّل الدخول لعرض محادثاتك',
                         'Connectez-vous pour voir vos discussions',
-                        'Sign in to view your chats',
+                        appL10n.chatListSignViewChats,
                       ),
                       description: s.tr(
                         'تواصل مباشرة مع البائعين والمشترين وتابع رسائلك بأمان.',
                         'Échangez directement avec les vendeurs et acheteurs en toute sécurité.',
-                        'Message buyers and sellers directly and securely.',
+                        appL10n.chatListMessageBuyersSellersDirectlySecurely,
                       ),
                       actionLabel: s.tr(
                         'تسجيل الدخول',
                         'Se connecter',
-                        'Sign in',
+                        appL10n.signInButton,
                       ),
                       onAction: () {
                         Navigator.push(
@@ -1385,23 +1386,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ? s.tr(
                                   'لا توجد رسائل غير مقروءة',
                                   'Aucun message non lu',
-                                  'No unread chats',
+                                  appL10n.chatListNoUnreadChats,
                                 )
                               : _selectedFilterIndex == 2
                                   ? s.tr(
                                       'لا توجد محادثات مثبتة',
                                       'Aucune discussion épinglée',
-                                      'No pinned chats',
+                                      appL10n.chatListNoPinnedChats,
                                     )
                                   : s.tr(
                                       'لا توجد محادثات بعد',
                                       'Aucune discussion pour le moment',
-                                      'No chats yet',
+                                      appL10n.chatListNoChatsYet,
                                     ),
                           description: s.tr(
                             'تصفح الإعلانات وتواصل مع البائعين مباشرة بأمان تام.',
                             'Parcourez les annonces et discutez directement avec les vendeurs.',
-                            'Browse listings and message sellers directly.',
+                            appL10n.chatListBrowseListingsMessageSellersDirectly,
                           ),
                           actionLabel: (widget.onExploreAds != null &&
                                   _selectedFilterIndex == 0 &&
@@ -1409,7 +1410,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ? s.tr(
                                   'تصفح الإعلانات',
                                   'Parcourir les annonces',
-                                  'Explore listings',
+                                  appL10n.chatListExploreListings,
                                 )
                               : null,
                           onAction: (widget.onExploreAds != null &&
@@ -1537,7 +1538,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 s.tr(
                   'رسائلك الشخصية مشفرة تماماً بين الطرفين',
                   'Vos messages personnels sont chiffrés de bout en bout',
-                  'Your personal messages are end-to-end encrypted',
+                  appL10n.chatListPersonalMessagesAreEndEnd,
                 ),
                 key: const Key('inbox-e2ee-caption'),
                 textAlign: TextAlign.center,

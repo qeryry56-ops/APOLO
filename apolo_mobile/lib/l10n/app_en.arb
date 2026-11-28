@@ -1,0 +1,1671 @@
+{
+  "@@locale": "en",
+  "chatPlaceholder": "Message seller...",
+  "chatTypeMessageHint": "Type a message...",
+  "chatRecordingPlaceholder": "Recording...",
+  "chatAddAttachmentTooltip": "Add attachment",
+  "chatMessageInputLabel": "Message input",
+  "chatSendMessageTooltip": "Send message",
+  "chatStagedAttachmentLabel": "Staged attachment: {name}",
+  "@chatStagedAttachmentLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatRemoveAttachmentLabel": "Remove attachment {name}",
+  "@chatRemoveAttachmentLabel": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatDismissMessageMenu": "Dismiss Message Menu",
+  "chatJumpToLatest": "Jump to latest",
+  "chatNewMessagesJumpToLatest": "{count} new {messageWord}. Jump to latest",
+  "@chatNewMessagesJumpToLatest": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "messageWord": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatMessageSingular": "message",
+  "chatMessagePlural": "messages",
+  "chatCallAndOptionsTooltip": "Call and chat options",
+  "chatSendFailedRetrySemantic": ", Send failed, double tap to retry",
+  "chatSendingSemantic": ", Sending",
+  "chatEditedLabel": "Edited",
+  "chatRetrySendingTooltip": "Retry sending message",
+  "chatTypingIndicatorLabel": "Typing...",
+  "chatPhotoPreviewLabel": "📷 Photo",
+  "chatVoicePreviewLabel": "🎤 Voice message",
+  "voiceMicMutedIdleSemantic": "Mic muted. No audio detected. Hold mic button to record voice message",
+  "voiceHoldToRecordSemantic": "Hold to record voice message. Slide left to cancel, slide up to lock hands-free",
+  "voiceMicMutedSuffixSemantic": ". Warning: Mic muted, no audio detected",
+  "voiceReleaseToCancelSemantic": "Release to cancel voice recording{mutedSuffix}",
+  "@voiceReleaseToCancelSemantic": {
+    "placeholders": {
+      "mutedSuffix": {
+        "type": "Object"
+      }
+    }
+  },
+  "voiceLockedRecordingSemantic": "Recording locked hands-free, {timeStr}{mutedSuffix}. Tap STOP to end recording",
+  "@voiceLockedRecordingSemantic": {
+    "placeholders": {
+      "timeStr": {
+        "type": "Object"
+      },
+      "mutedSuffix": {
+        "type": "Object"
+      }
+    }
+  },
+  "voiceActiveRecordingSemantic": "Recording voice message, {timeStr}{mutedSuffix}. Slide left to cancel, slide up to lock",
+  "@voiceActiveRecordingSemantic": {
+    "placeholders": {
+      "timeStr": {
+        "type": "Object"
+      },
+      "mutedSuffix": {
+        "type": "Object"
+      }
+    }
+  },
+  "voiceWaveformMutedSemantic": "Flat audio waveform, mic muted",
+  "voiceWaveformPreviewSemantic": "Interactive audio preview waveform",
+  "voiceWaveformLiveSemantic": "Live audio waveform",
+  "voiceMicMutedWarningSemantic": "Mic muted warning. No audio detected.",
+  "voiceMicMutedBadge": "Mic muted",
+  "voiceCancelRecordingTooltip": "Cancel voice recording",
+  "voicePauseRecordingTooltip": "Pause voice recording or preview",
+  "voicePlayPreviewTooltip": "Play voice preview",
+  "voiceSendVoiceMessageTooltip": "Send voice message",
+  "voiceReleaseToCancelLabel": "Release to cancel",
+  "voiceSlideToCancelLabel": "Slide to cancel",
+  "voiceHoldMicPrompt": "Hold mic to record voice message",
+  "voiceRecordButtonSemantic": "Record voice message",
+  "voiceRecordGestureHint": "Tap or press and hold to record. Slide inward to cancel, slide up to lock",
+  "voiceWaveformScrubberSemantic": "Voice message waveform scrubber",
+  "voiceChatTitle": "Voice Chat",
+  "voiceMicPermissionRequired": "Microphone permission is required to record audio.",
+  "voiceCouldNotStartRecording": "Could not start recording on this device.",
+  "voiceTapMicEmptyPrompt": "Tap the microphone below to record a voice message",
+  "voiceTapMicInputHint": "Tap mic to record voice note...",
+  "voiceToggleWaveformTooltip": "Toggle fitWidth / longScroll waveform",
+  "voiceToggleThemeTooltip": "Toggle GTA 6 theme",
+  "otpVerifyCodeTitle": "Verify your code",
+  "otpEnterSixDigitCode": "Enter the 6-digit code sent to {destination}",
+  "@otpEnterSixDigitCode": {
+    "placeholders": {
+      "destination": {
+        "type": "Object"
+      }
+    }
+  },
+  "otpCodeVerifiedLabel": "Code verified",
+  "otpIncorrectCodeError": "Code incorrect, try again",
+  "otpResendCodeCountdown": "Resend code in {seconds}s",
+  "@otpResendCodeCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "Object"
+      }
+    }
+  },
+  "otpResendCodeButton": "Resend code",
+  "welcomeContinueAsGuestLabel": "Continue as guest",
+  "authEmailPlaceholder": "example@gmail.com",
+  "authPasswordPlaceholder": "Password",
+  "authFullNamePlaceholder": "Name",
+  "authUsernameHandlePlaceholder": "@username",
+  "authPlainUsernamePlaceholder": "username",
+  "moroccoPhonePlaceholder": "+212 6XX XXX XXX",
+  "likeButtonSemantic": "Like, {count} likes",
+  "@likeButtonSemantic": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "unlikeButtonSemantic": "Unlike, {count} likes",
+  "@unlikeButtonSemantic": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "likeSyncFailedSemantic": "Failed to save like. Tap to retry",
+  "pullToRefreshRefreshing": "Refreshing list",
+  "pullToRefreshRelease": "Release to refresh",
+  "pullToRefreshPullDown": "Pull down to refresh",
+  "badgeOnlineSemantic": "Online",
+  "badgeUnreadNotificationSemantic": "Unread notification",
+  "badgeUnreadMaxSemantic": "99+ unread notifications",
+  "badgeUnreadCountSemantic": "{count} unread {notificationWord}",
+  "@badgeUnreadCountSemantic": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "notificationWord": {
+        "type": "Object"
+      }
+    }
+  },
+  "notificationSingular": "notification",
+  "notificationPlural": "notifications",
+  "emojiReactWithSemantic": "React with {emoji}",
+  "@emojiReactWithSemantic": {
+    "placeholders": {
+      "emoji": {
+        "type": "Object"
+      }
+    }
+  },
+  "emojiFewerTooltip": "Fewer emojis",
+  "emojiMoreTooltip": "More emojis",
+  "listingFavoriteTooltip": "Favorite listing",
+  "accommodationFavoriteTooltip": "Favorite accommodation",
+  "listingBedroomsCount": "{bedrooms} bedrooms",
+  "@listingBedroomsCount": {
+    "placeholders": {
+      "bedrooms": {
+        "type": "Object"
+      }
+    }
+  },
+  "listingTaxesIncluded": "taxes incl.",
+  "accommodationTotalForNights": "{total} total · {nights} nights",
+  "@accommodationTotalForNights": {
+    "placeholders": {
+      "total": {
+        "type": "Object"
+      },
+      "nights": {
+        "type": "Object"
+      }
+    }
+  },
+  "boostActionLabel": "Boost",
+  "liveBadgeLabel": "LIVE",
+  "meetingEncryptionKeyHint": "AES-GCM 256-bit Secret Key",
+  "meetingDefaultTitle": "Apolo Meeting",
+  "meetingDefaultParticipantName": "SFU Participant",
+  "bugReportSafetyHeader": "Apolo.ma Safety",
+  "bugReportDescMinLengthError": "Description must be at least 5 characters.",
+  "bugReportNetworkFailedError": "Network request failed.",
+  "bugReportTimeoutError": "Request timed out. Please check your connection and retry.",
+  "bugReportServerUnreachableError": "Unable to reach Apolo.ma servers right now.",
+  "meetingSignInRequiredError": "Please sign in to join the meeting.",
+  "meetingPermissionDeniedError": "You do not have permission to access this meeting.",
+  "meetingAlreadyEndedError": "This meeting has already ended.",
+  "meetingRoomLockedError": "This room is currently locked by the host.",
+  "meetingMaxCapacityError": "This meeting has reached its maximum participant capacity.",
+  "meetingServiceUnreachableError": "Could not reach the meeting service. Check your connection.",
+  "accountOnboardingFormFinishSettingUpAccount": "Finish setting up your account",
+  "accountOnboardingFormChooseCityInterestsYouCan": "Choose your city and interests. You can switch to a Business account for free anytime in Settings.",
+  "accountOnboardingFormCity": "City",
+  "accountOnboardingFormChooseAtLeastOneInterest": "Choose at least one interest",
+  "accountOnboardingFormSaveContinue": "Save & continue",
+  "accountOnboardingFormReloadOptions": "Reload options",
+  "navHome": "Home",
+  "navExplore": "Explore",
+  "sellItemButton": "Post Ad",
+  "navStores": "Stores",
+  "navMessages": "Messages",
+  "navProfile": "Profile",
+  "categoriesTitle": "Categories",
+  "featuredAdsTitle": "VIP Ads",
+  "latestAdsTitle": "Latest Ads",
+  "allCitiesFilter": "All Cities",
+  "allCategoriesFilter": "All Categories",
+  "loginButton": "Login",
+  "createAccountButton": "Create Account",
+  "logoutButton": "Logout",
+  "callSellerButton": "Call",
+  "whatsappButton": "WhatsApp",
+  "chatInAppButton": "Chat",
+  "boostAdButton": "Boost Ad",
+  "deleteAccountButton": "Delete Account",
+  "reportAdButton": "Report Ad",
+  "blockUserButton": "Block User",
+  "searchHint": "Search for a car, apartment, phone...",
+  "noAdsFoundMessage": "No ads found matching your search",
+  "appStateDark": "Dark",
+  "appStateSystem": "System",
+  "appStateLight": "Light",
+  "appStateApoloMember": "Apolo Member",
+  "appStateJustNow": "Just now",
+  "appStateKm": "km",
+  "bugReportReportTechnicalProblem": "Report a technical problem",
+  "bugReportIfFeatureProductIsnT": "If a feature or product isn't working correctly, you can share feedback to help us improve Apolo.ma.",
+  "bugReportReportProblem": "Report a problem",
+  "bugReportReportsAboutAbuseSpamShouldn": "Reports about abuse or spam shouldn't be submitted here.",
+  "bugReportLearnHowReportAbuseSpam": "Learn how to report abuse, spam, fraud, or policy and safety violations on Apolo.ma.",
+  "bugReportShakePhoneReportProblem": "Shake phone to report a problem",
+  "bugReportEnabledMobileSensorsDesktopBrowser": "Enabled for mobile sensors (desktop browser has no accelerometer)",
+  "bugReportToggleEnable": "Toggle on to enable",
+  "bugReportToggleOffDisable": "Toggle off to disable",
+  "bugReportReportTechnicalProblem2": "Report technical problem",
+  "bugReportLearnMoreAboutReportingAbuse": "Learn more about reporting abuse or spam",
+  "bugReportWouldYouLikeIncludeAdditional": "Would you like to include additional logs and diagnostics?",
+  "bugReportAlwaysCollectedBasicContext": "Always collected basic context:",
+  "bugReportAuthenticatedUserIdIfSigned": "Your authenticated user ID (if signed in), app version/build number, platform/OS, current screen/route name, and locale/RTL state.",
+  "bugReportOptionalDiagnosticsOnlyAttachedIf": "Optional diagnostics (only attached if you opt in):",
+  "bugReportRecentMemoryLogBufferNavigation": "Recent in-memory log buffer, navigation and sanitized API error breadcrumbs, and device/viewport metadata to help reproduce the bug.",
+  "bugReportIncludeContinue": "Include and continue",
+  "bugReportDonTIncludeContinue": "Don't include and continue",
+  "sendButton": "Send",
+  "bugReportBrieflyExplainWhatHappenedWhat": "Briefly explain what happened or what's not working.",
+  "bugReportScreenshot": "Screenshot",
+  "bugReportUpload": "Upload",
+  "bugReportRemoveScreenshot": "Remove screenshot",
+  "bugReportPreviewScreenshot": "Preview screenshot",
+  "bugReportAutoCaptureWasnTAvailable": "Auto-capture wasn't available on this view — you can use Upload instead.",
+  "bugReportPleaseDescribeWhatHappenedBefore": "Please describe what happened before sending.",
+  "bugReportPleaseWriteAtLeast5": "Please write at least 5 characters to describe the issue.",
+  "bugReportImageExceeds5MbMaximum": "Image exceeds the 5 MB maximum size limit.",
+  "bugReportUnsupportedImageFormatPleaseChoose": "Unsupported image format. Please choose JPEG, PNG, or WebP.",
+  "bugReportCouldNotReadSelectedImage": "Could not read the selected image.",
+  "retryButton": "Retry",
+  "closeButton": "Close",
+  "bugReportThanksTechnicalReportHasBeen": "Thanks! Your technical report has been received (#{reportId})",
+  "@bugReportThanksTechnicalReportHasBeen": {
+    "placeholders": {
+      "reportId": {
+        "type": "Object"
+      }
+    }
+  },
+  "bugReportThanksTechnicalReportHasBeen2": "Thanks! Your technical report has been received.",
+  "bugReportCouldNotSendReportRight": "Could not send the report right now. Check your connection and retry.",
+  "bugReportTooManyReportsSentRecently": "Too many reports sent recently. Please retry in {seconds} seconds.",
+  "@bugReportTooManyReportsSentRecently": {
+    "placeholders": {
+      "seconds": {
+        "type": "Object"
+      }
+    }
+  },
+  "bugReportTooManyReportsSentRecently2": "Too many reports sent recently. Please wait a moment and retry.",
+  "bugReportReportingAbuseSpamSafetyIssues": "Reporting abuse, spam & safety issues",
+  "bugReportThisFormIsStrictlyTechnical": "This form is strictly for technical bugs. To report suspicious listings, harassment, fraud, or policy violations on Apolo.ma, tap the Report option on that listing or chat, or open our safety reporting form below.",
+  "bugReportOpenSafetyAbuseReport": "Open Safety & Abuse Report",
+  "bugReportFoundBugBrokenScreenSend": "Found a bug or broken screen? Send a technical report with an optional screenshot.",
+  "meetingLobby": "Meeting Lobby",
+  "meetingNewGroupMeeting": "New Group Meeting",
+  "meetingJoinRoomCode": "Join with Room Code",
+  "meetingTitle": "Meeting Title",
+  "meetingEGLivePropertyWalkthrough": "e.g. Live property walkthrough",
+  "meetingRoomCodeApoXxxxXxxx": "Room code (apo-xxxx-xxxx)",
+  "meetingJoinMeeting": "Join Meeting",
+  "meetingStartMeeting": "Start Meeting",
+  "meetingEndEndEncryptionE2ee": "End-to-End Encryption (E2EE)",
+  "meetingSfuForwardsEncryptedPacketsWithout": "SFU forwards encrypted packets without ever seeing your media",
+  "meetingSharedRoomEncryptionKey": "Shared Room Encryption Key",
+  "meetingAdaptiveSfuSvc25Participants": "Adaptive SFU + SVC (25+ participants)",
+  "meetingMicOn": "Mic On",
+  "meetingMuted": "Muted",
+  "meetingCameraOn": "Camera On",
+  "meetingCameraOff": "Camera Off",
+  "meetingShareScreen": "Share Screen",
+  "meetingStopSharing": "Stop Sharing",
+  "meetingSpeaker": "Speaker",
+  "meetingFlipCamera": "Flip Camera",
+  "meetingParticipants": "Participants",
+  "meetingLeave": "Leave",
+  "meetingEndAll": "End for All",
+  "meetingUnstableNetworkAutomaticallyReconnectingVia": "Unstable network... Automatically reconnecting via UDP/TURN",
+  "meetingLowBandwidthVideoLayersStepped": "Low bandwidth: video layers stepped down (SVC) to protect audio & battery",
+  "meetingAudioOnly": "Audio Only",
+  "meetingResumeVideo": "Resume Video",
+  "meetingDataBatterySaverAudioOnly": "Data & battery saver (Audio-only) active",
+  "meetingYou": "You",
+  "meetingHost": "Host",
+  "meetingCoHost": "Co-host",
+  "meetingLockRoom": "Lock Room",
+  "meetingUnlockRoom": "Unlock Room",
+  "meetingMuteMic": "Mute Mic",
+  "meetingRemove": "Remove",
+  "meetingCopyInviteLink": "Copy Invite Link",
+  "meetingInviteCopied": "Invite copied",
+  "meetingConnectingSecureSfuMediaRouter": "Connecting to secure SFU media router...",
+  "meetingPageCurrentTotal": "Page {current} of {total}",
+  "@meetingPageCurrentTotal": {
+    "placeholders": {
+      "current": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "accountSecurityEnterValidEmailAddress": "Enter a valid email address.",
+  "accountSecurityEnterValidPhoneNumber": "Enter a valid phone number.",
+  "accountSecurityContactDetailsUpdatedSuccessfully": "Contact details updated successfully.",
+  "accountSecurityPasswordMustBeAtLeast": "Password must be at least 8 characters.",
+  "accountSecurityPasswordsDoNotMatch": "Passwords do not match.",
+  "accountSecurityPasswordUpdatedSuccessfully": "Password updated successfully.",
+  "accountSecurityAccountSecurity": "Account security",
+  "accountSecurityStayControlLogin": "Stay in control of your login",
+  "accountSecurityUpdatePasswordEmailPhoneDirectly": "Update your password, email, or phone directly in the app.",
+  "accountSecurityContactDetails": "Contact details",
+  "accountSecurityEmailAddress": "Email address",
+  "accountSecurityPhoneNumber": "Phone number",
+  "accountSecuritySaveContactDetails": "Save contact details",
+  "accountSecurityChangePassword": "Change password",
+  "accountSecurityCurrentPassword": "Current password",
+  "accountSecurityNewPassword": "New password",
+  "accountSecurityConfirmNewPassword": "Confirm new password",
+  "accountSecurityUpdatePassword": "Update password",
+  "accountSecuritySecurityOptions": "Security options",
+  "accountSecuritySignUpdateThisInformation": "Sign in to update this information",
+  "accountSetupCreateAccount": "Create account",
+  "accountSetupAccountType": "Account type",
+  "accountSetupChooseAtLeastOneProfile": "Choose at least one profile type to personalize your setup.",
+  "continueButton": "Continue",
+  "adDetailHiIsThisStillAvailable": "Hi, is this still available?",
+  "adDetailCouldNotUpdateFavoritesPlease": "Could not update favorites. Please try again.",
+  "adDetailPhoneNumberCopied": "Phone number copied",
+  "adDetailCopy": "Copy",
+  "adDetailCouldNotStartConversationPlease": "Could not start conversation. Please try again.",
+  "adDetailUserBlocked": "User blocked",
+  "adDetailReportThisListingAiContent": "Report this listing or AI content",
+  "adDetailQuickReviewByTrustSafety": "Quick review by our Trust & Safety team",
+  "adDetailHideAllListingsFromThis": "Hide all listings from this seller",
+  "adDetailDetails": "Details",
+  "adDetailListingUnavailable": "Listing unavailable",
+  "adDetailThisItemMayHaveBeen": "This item may have been sold or removed by the seller.",
+  "adDetailGoBack": "Go back",
+  "adDetailCategory": "Category",
+  "adDetailCondition": "Condition",
+  "adDetailNotSpecified": "Not specified",
+  "adDetailReference": "Reference",
+  "backButton": "Back",
+  "adDetailFavorite": "Favorite",
+  "adDetailMore": "More",
+  "adDetailFree": "Free",
+  "adDetailOnRequest": "On request",
+  "negotiableBadge": "Negotiable",
+  "fixedPriceBadge": "Fixed price",
+  "adDetailGuests": "Guests",
+  "adDetailBedrooms": "Bedrooms",
+  "adDetailBeds": "Beds",
+  "adDetailBaths": "Baths",
+  "adDetailGood": "Good",
+  "adDetailRef": "Ref",
+  "adDetailViews": "Views",
+  "adDetailGuestFavourite": "Guest favourite",
+  "adDetailVideoTour": "Video tour",
+  "adDetailJustListedMMAgo": "Just listed · {m}m ago",
+  "@adDetailJustListedMMAgo": {
+    "placeholders": {
+      "m": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailJustListedHHoursAgo": "Just listed · {h} hours ago",
+  "@adDetailJustListedHHoursAgo": {
+    "placeholders": {
+      "h": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailDDaysAgo": "{d} days ago",
+  "@adDetailDDaysAgo": {
+    "placeholders": {
+      "d": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailJustListed": "Just listed",
+  "adDetailBoostThisListing": "Boost this listing ⚡",
+  "adDetailMessageSeller": "Message seller",
+  "adDetailFastReply": "Fast reply",
+  "adDetailWriteMessage": "Write a message...",
+  "adDetailAlertsEnabledSimilarListings": "Alerts enabled for similar listings",
+  "adDetailAlertsPaused": "Alerts paused",
+  "adDetailAlerts": "Alerts",
+  "adDetailMessage": "Message",
+  "shareButton": "Share",
+  "saveButton": "Save",
+  "adDetailNoDescriptionProvidedMessageSeller": "No description provided. Message the seller for details.",
+  "adDetailDescription": "Description",
+  "adDetailSeeLess": "See less",
+  "adDetailSeeMore": "See more",
+  "adDetailCallSeller": "Call seller",
+  "adDetailApoloStoreCityname": "Apolo Store · {cityName}",
+  "@adDetailApoloStoreCityname": {
+    "placeholders": {
+      "cityName": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailApoloSellerCityname": "Apolo Seller · {cityName}",
+  "@adDetailApoloSellerCityname": {
+    "placeholders": {
+      "cityName": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailBusinessStore": "Business Store",
+  "adDetailSeller": "Seller",
+  "adDetailSeeReviews": "See reviews",
+  "followingButton": "Following",
+  "followButton": "Follow",
+  "adDetailYourRating": "Your rating",
+  "adDetailRateThisSeller": "Rate this seller",
+  "adDetailEditReview": "Edit review",
+  "adDetailWriteReview": "Write review",
+  "adDetailLocation": "Location",
+  "adDetailZoneDistkmKm": "In your zone · {distKm} km",
+  "@adDetailZoneDistkmKm": {
+    "placeholders": {
+      "distKm": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailDistkmKmAway": "{distKm} km away",
+  "@adDetailDistkmKmAway": {
+    "placeholders": {
+      "distKm": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailLocationIsApproximate": "Location is approximate",
+  "adDetailFullMap": "Full map",
+  "adDetailRelatedSearches": "Related searches",
+  "adDetailIfYouDonTLike": "If you don't like this, you can ",
+  "adDetailHideThisListing": "hide this listing",
+  "adDetailWeLlShowYouFewer": " and we'll show you fewer listings like this.",
+  "adDetailListingHiddenFromFeed": "Listing hidden from your feed",
+  "adDetailListingRestored": "Listing restored",
+  "adDetailHidden": "Hidden",
+  "adDetailHideListing": "Hide listing",
+  "adDetailReportSafety": "Report & Safety",
+  "adDetailSimilarListings": "Similar listings",
+  "adDetailAllReviews": "All Reviews",
+  "adDetailSellerRating": "Seller rating",
+  "adDetailEditReview2": "Edit your review",
+  "adDetailWriteReview2": "Write a review",
+  "adDetailSellerReviewsTotalcount": "Seller reviews ({totalCount})",
+  "@adDetailSellerReviewsTotalcount": {
+    "placeholders": {
+      "totalCount": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailShowAll": "Show all",
+  "adDetail5Stars": "5 stars",
+  "filtersTitle": "Filters",
+  "adDetailHighest": "Highest",
+  "adDetailSort": "Sort",
+  "adDetailNoWrittenReviewsSellernameYet": "No written reviews for {sellerName} yet",
+  "@adDetailNoWrittenReviewsSellernameYet": {
+    "placeholders": {
+      "sellerName": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailHelpful": "Helpful",
+  "addFriendsJoinMeApoloMaMorocco": "Join me on Apolo.ma — Morocco’s marketplace: https://apolo.ma",
+  "addFriendsAddFriends": "Add your friends",
+  "addFriendsInvited": "Invited",
+  "addFriendsInvite": "Invite",
+  "addFriendsContacts": "Contacts",
+  "authUnableOpenGoogleSignRight": "Unable to open Google sign-in right now.",
+  "authUnableStartGoogleSign": "Unable to start Google sign-in.",
+  "authNoEmailAddressIsLinked": "No email address is linked to this account to receive the code.",
+  "authVerificationCodeWasSentMasked": "A verification code was sent to {masked}.",
+  "@authVerificationCodeWasSentMasked": {
+    "placeholders": {
+      "masked": {
+        "type": "Object"
+      }
+    }
+  },
+  "authPleaseEnterValidEmailAddress": "Please enter a valid email address",
+  "authPasswordMustBeAtLeast": "Your password must be at least 8 characters",
+  "authPleaseEnterNameAtLeast": "Please enter your name (at least 2 characters)",
+  "authUsernameMustBeAtLeast": "Username must be at least 3 letters or numbers",
+  "authPleaseEnterValidMoroccanPhone": "Please enter a valid Moroccan phone number (e.g. 650-123456)",
+  "authEnter6DigitVerificationCode": "Enter the 6-digit verification code.",
+  "authNewVerificationCodeWasSent": "A new verification code was sent to {masked}.",
+  "@authNewVerificationCodeWasSent": {
+    "placeholders": {
+      "masked": {
+        "type": "Object"
+      }
+    }
+  },
+  "authNewVerificationCodeWasSent2": "A new verification code was sent to your email.",
+  "authBasevalueTriedAtHhMm": "{baseValue} (Tried at {hh}:{mm})",
+  "@authBasevalueTriedAtHhMm": {
+    "placeholders": {
+      "baseValue": {
+        "type": "Object"
+      },
+      "hh": {
+        "type": "Object"
+      },
+      "mm": {
+        "type": "Object"
+      }
+    }
+  },
+  "signUpButton": "Sign up",
+  "authEnterEmail": "Enter your email",
+  "authEnterPassword": "Enter your password",
+  "authForgotPassword": "Forgot password?",
+  "authWhatSEmail": "What's your email?",
+  "authChoosePassword": "Choose a password",
+  "authWhatSFirstName": "What's your first name?",
+  "authPickUsername": "Pick a username",
+  "authOthersCanFindYouUsername": "Others can find you with your username!",
+  "authWhatSPhoneNumber": "What's your phone number?",
+  "authEnterValidMoroccanPhoneNumber": "Enter a valid Moroccan phone number to secure your account",
+  "authWeSent6DigitVerification": "We sent a 6-digit verification code to {maskedEmail}",
+  "@authWeSent6DigitVerification": {
+    "placeholders": {
+      "maskedEmail": {
+        "type": "Object"
+      }
+    }
+  },
+  "authWeSent6DigitVerification2": "We sent a 6-digit verification code to your email",
+  "authEnterVerificationCode": "Enter verification code",
+  "authSending": "Sending...",
+  "authResendCodeRemainingS": "Resend code ({remaining}s)",
+  "@authResendCodeRemainingS": {
+    "placeholders": {
+      "remaining": {
+        "type": "Object"
+      }
+    }
+  },
+  "businessSwitchWelcomeStoreApoloHowCan": "Welcome to our store on Apolo! How can we help you today?",
+  "businessSwitchPleaseEnterStoreNameAt": "Please enter a store name (at least 2 characters).",
+  "businessSwitchPleaseEnterStoreName": "Please enter your store name.",
+  "businessSwitchBusinessProfileUpdated": "Business profile updated!",
+  "businessSwitchVerifiedBusinessStoreIsNow": "Your Verified Business store is now active!",
+  "businessSwitchCouldNotSaveBusinessProfile": "Could not save business profile. Please try again.",
+  "businessSwitchBusinessSettings": "Business Settings",
+  "businessSwitchSwitchBusiness": "Switch to Business",
+  "businessSwitchPreviousStoreDetailsAreReady": "Your previous store details are ready to reactivate!",
+  "savingLabel": "Saving...",
+  "businessSwitchSaveChanges": "Save Changes",
+  "businessSwitchActivateFreeBusiness": "Activate Free Business",
+  "businessSwitchWhatBestDescribesBusiness": "What best describes your business?",
+  "businessSwitchThisCategoryBadgeAppearsUnder": "This category badge appears under your name on your profile and store.",
+  "businessSwitchStoreIdentityHoursLocation": "Store identity, hours & location",
+  "businessSwitchStoreAppearsStoresDirectoryOnce": "Your store appears in the Stores directory once you have at least 1 active listing.",
+  "businessSwitchStoreName": "Store name *",
+  "businessSwitchEGAutoCasa": "e.g. Auto Casa",
+  "businessSwitchBioDescription": "Bio / Description",
+  "businessSwitchTellCustomersAboutProductsService": "Tell customers about your products & service...",
+  "businessSwitchCityAddress": "City & address",
+  "businessSwitchEGMaarifCasablanca": "e.g. Maarif, Casablanca",
+  "businessSwitchGoogleMapsLinkOptional": "Google Maps link (optional)",
+  "businessSwitchWorkingHours": "Working hours",
+  "businessSwitchContactDirectOrderTools": "Contact & direct order tools",
+  "businessSwitchEnable1TapOrdersAutomatic": "Enable 1-tap orders and automatic chat greetings.",
+  "businessSwitchBusinessPhone": "Business phone",
+  "businessSwitchEnableDirectOrderButtonStore": "Enable \"Direct Order\" button on store",
+  "businessSwitchReceiveInstantOrdersCustomerDetails": "Receive instant orders with customer details.",
+  "businessSwitchAutoGreetingMessageChat": "Auto-greeting message in Chat",
+  "businessSwitchWelcomeStoreHowCanWe": "Welcome to our store! How can we help?",
+  "callIncomingVideoCall": "Incoming video call...",
+  "callIncomingVoiceCall": "Incoming voice call...",
+  "callRinging": "Ringing...",
+  "callAllowMicCameraAccess": "Allow mic/camera access",
+  "callConnecting": "Connecting...",
+  "callCalls": "Calls",
+  "callCallsAreUnavailableThisDevice": "Calls are unavailable on this device",
+  "callBackChat": "Back to Chat",
+  "callVideoCall": "Video Call",
+  "callVoiceCall": "Voice Call",
+  "callDecline": "Decline",
+  "callAccept": "Accept",
+  "callMic": "Mic",
+  "callCamera": "Camera",
+  "callEnd": "End",
+  "chatListLastMessageLasttime": "Last message {lastTime}",
+  "@chatListLastMessageLasttime": {
+    "placeholders": {
+      "lastTime": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatListUnpinChat": "Unpin chat",
+  "chatListPinChat": "Pin chat",
+  "chatListChatUnpinned": "Chat unpinned",
+  "chatListChatPinnedTop": "Chat pinned to top",
+  "chatListMarkAsRead": "Mark as read",
+  "chatListUnmuteNotifications": "Unmute notifications",
+  "chatListMuteNotifications": "Mute notifications",
+  "chatListNotificationsUnmuted": "Notifications unmuted",
+  "chatListChatMuted": "Chat muted",
+  "chatListArchiveChat": "Archive chat",
+  "chatListChatArchived": "Chat archived",
+  "chatListReportChat": "Report chat",
+  "chatListBlockPeername": "Block {peerName}",
+  "@chatListBlockPeername": {
+    "placeholders": {
+      "peerName": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatListBlockedPeername": "Blocked {peerName}",
+  "@chatListBlockedPeername": {
+    "placeholders": {
+      "peerName": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatListDeleteChat": "Delete chat",
+  "chatListChatDeleted": "Chat deleted",
+  "chatListSelectConversationStartMessaging": "Select a conversation to start messaging",
+  "chatListChats": "Chats",
+  "chatListMarkAllRead": "Mark all read",
+  "searchTitle": "Search",
+  "chatListAll": "All",
+  "chatListUnread": "Unread",
+  "chatListPinned": "Pinned",
+  "chatListSignViewChats": "Sign in to view your chats",
+  "chatListMessageBuyersSellersDirectlySecurely": "Message buyers and sellers directly and securely.",
+  "signInButton": "Sign in",
+  "chatListNoUnreadChats": "No unread chats",
+  "chatListNoPinnedChats": "No pinned chats",
+  "chatListNoChatsYet": "No chats yet",
+  "chatListBrowseListingsMessageSellersDirectly": "Browse listings and message sellers directly.",
+  "chatListExploreListings": "Explore listings",
+  "chatListPersonalMessagesAreEndEnd": "Your personal messages are end-to-end encrypted",
+  "chatRoomFailedLoadMessagesPleaseTry": "Failed to load messages. Please try again.",
+  "chatRoomMessageEdited": "Message edited",
+  "chatRoomDeletedEveryone": "Deleted for everyone",
+  "chatRoomMessagePinned": "Message pinned",
+  "chatRoomMessageUnpinned": "Message unpinned",
+  "chatRoomMessageStarred": "Message starred ⭐",
+  "chatRoomStarRemoved": "Star removed",
+  "chatRoomReportConversation": "Report conversation",
+  "chatRoomUserUnblocked": "User unblocked",
+  "chatRoomUnblockPeername": "Unblock {peerName}",
+  "@chatRoomUnblockPeername": {
+    "placeholders": {
+      "peerName": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatRoomReply": "Reply",
+  "chatRoomUnpin": "Unpin",
+  "chatRoomPin": "Pin",
+  "chatRoomUnstar": "Unstar",
+  "chatRoomStar": "Star",
+  "chatRoomCopied": "Copied",
+  "editButton": "Edit",
+  "reportButton": "Report",
+  "deleteButton": "Delete",
+  "chatRoomDeleteEveryone": "Delete for everyone",
+  "chatRoomMorocco": "Morocco",
+  "chatRoomMyLocationResolvedcity": "📍 My location: {resolvedCity}",
+  "@chatRoomMyLocationResolvedcity": {
+    "placeholders": {
+      "resolvedCity": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatRoomPriceOfferTitleDhCleaned": "💰 Price offer for \"{title}\": DH {cleaned}",
+  "@chatRoomPriceOfferTitleDhCleaned": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      },
+      "cleaned": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatRoomPriceOfferDhCleaned": "💰 Price offer: DH {cleaned}",
+  "@chatRoomPriceOfferDhCleaned": {
+    "placeholders": {
+      "cleaned": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatRoomCouldNotCaptureAudioPlease": "Could not capture audio. Please allow microphone access and try again.",
+  "chatRoomVoiceMessageIsTooLong": "Voice message is too long. Please record a shorter message.",
+  "chatRoomThisMessageWasDeleted": "This message was deleted",
+  "chatRoomRead": "Read",
+  "chatRoomDelivered": "Delivered",
+  "chatRoomLastSeenClock": "Last seen {clock}",
+  "@chatRoomLastSeenClock": {
+    "placeholders": {
+      "clock": {
+        "type": "Object"
+      }
+    }
+  },
+  "chatRoomOffline": "Offline",
+  "chatRoomVideoCallUnavailable": "Video Call — unavailable",
+  "chatRoomVoiceCallUnavailable": "Voice Call — unavailable",
+  "chatRoomSafetyReport": "Safety & Report",
+  "chatRoomYouBlockedThisUser": "You blocked this user",
+  "chatRoomUnblock": "Unblock",
+  "chatRoomEditingMessage": "Editing message",
+  "chatRoomSendMessage": "Send a message",
+  "editProfileMinimum3CharactersRequired": "Minimum 3 characters required",
+  "editProfileCleanIsAvailable": "@{clean} is available",
+  "@editProfileCleanIsAvailable": {
+    "placeholders": {
+      "clean": {
+        "type": "Object"
+      }
+    }
+  },
+  "editProfileAlreadyTaken": "Already taken.",
+  "editProfileProfilePhoto": "Profile photo",
+  "editProfileChooseFromLibrary": "Choose from library",
+  "editProfileTakePhoto": "Take photo",
+  "editProfileRemoveCurrentPhoto": "Remove current photo",
+  "editProfileChoosePresetAvatar": "Or choose a preset avatar",
+  "editProfileSelectCity": "Select your city",
+  "clearButton": "Clear",
+  "editProfilePhoneWhatsapp": "Phone & WhatsApp",
+  "confirmButton": "Confirm",
+  "editProfileNameIsRequired": "Name is required.",
+  "editProfileUsernameMustBeAtLeast": "Username must be at least 3 characters.",
+  "editProfileThisUsernameIsAlreadyTaken": "This username is already taken.",
+  "editProfileCouldNotSaveChangesPlease": "Could not save changes. Please try again.",
+  "editProfileTitle": "Edit profile",
+  "editProfileEditPicture": "Edit picture",
+  "editProfileFullName": "Your full name",
+  "editProfileUsername": "Username",
+  "editProfileBio": "Bio",
+  "editProfileWriteShortBioAboutYourself": "Write a short bio about yourself...",
+  "editProfileAddCity": "Add city",
+  "editProfilePhone": "Phone",
+  "editProfileAddPhoneNumber": "Add phone number",
+  "editProfileManageStoreDetails": "Manage store details",
+  "editProfileGetVerifiedBusinessStore": "Get Verified & Business Store",
+  "editProfilePersonalInformation": "Personal information",
+  "editProfileEmailPasswordSettings": "Email & password settings",
+  "saveChangesButton": "Save changes",
+  "forgotPasswordWeSent6DigitVerification": "We sent a 6-digit verification code to {masked}.",
+  "@forgotPasswordWeSent6DigitVerification": {
+    "placeholders": {
+      "masked": {
+        "type": "Object"
+      }
+    }
+  },
+  "forgotPasswordPleaseEnter6DigitVerification": "Please enter the 6-digit verification code.",
+  "forgotPasswordPasswordUpdatedSignedSuccessfully": "Password updated and signed in successfully!",
+  "forgotPasswordYouWillReceiveEmailSet": "You will receive an email to set a new password",
+  "forgotPasswordChooseNewPassword": "Choose a new password",
+  "homeInternetConnectionLost": "Internet connection lost",
+  "homeCheckNetworkConnectionTryAgain": "Check your network connection and try again to load listings.",
+  "tryAgainButton": "Try again",
+  "homeWelcomeApolo": "Welcome to Apolo",
+  "homeSearchCarsHomesPhonesAccounts": "Search cars, homes, phones, or accounts...",
+  "homeLatestListings": "Latest listings",
+  "homeSeeAll": "See all",
+  "homeNoListingsWithinZoneradiuskmKm": "No listings within {zoneRadiusKm} km of {s} yet",
+  "@homeNoListingsWithinZoneradiuskmKm": {
+    "placeholders": {
+      "zoneRadiusKm": {
+        "type": "Object"
+      },
+      "s": {
+        "type": "Object"
+      }
+    }
+  },
+  "homeShowAllMorocco": "Show all Morocco",
+  "homeChangeZone": "Change zone",
+  "homeBrowseAllListingsMorocco": "Browse all listings in Morocco",
+  "home1MarketplaceMorocco": "#1 Marketplace in Morocco 🇲🇦",
+  "homeBuySellSafelyWithoutMiddlemen": "Buy and sell safely without middlemen",
+  "homeCarsPhonesRealEstateDiscover": "Cars, phones, real estate. Discover listings near you.",
+  "homeExclusiveDeals": "Exclusive Deals",
+  "homeWhyChooseApolo": "Why choose Apolo?",
+  "home0CommissionFree": "0% Commission & Free",
+  "homeBuySellFreeZeroMiddlemen": "Buy and sell for free with zero middlemen.",
+  "homeDirectChatCall": "Direct Chat & Call",
+  "homeMessageSellerDirectlyMakeOffer": "Message the seller directly and make an offer in one tap.",
+  "homeVerifiedListings": "Verified Listings",
+  "homeContinuousReviewKeepAllTransactions": "Continuous review to keep all transactions safe.",
+  "homeGotSomethingSellPostNow": "Got something to sell? Post now",
+  "homePublishFree30SecondsGet": "Publish free in 30 seconds and get buyer inquiries fast",
+  "homePost": "Post +",
+  "homeVerifiedOfficialStores": "Verified Official Stores",
+  "homeBrowseDealsFromCertifiedStores": "Browse deals from certified stores and agencies",
+  "intentOnboardingWhatWillYouUseApolo": "What will you\nuse Apolo for?",
+  "mainShellYouHaveNewApoloNotification": "You have a new Apolo notification",
+  "mainShellBrowse": "Browse",
+  "notificationsEnableNotifications": "Enable notifications",
+  "notificationsAreBlocked": "Notifications are blocked",
+  "notificationsPleaseEnableNotificationsPhoneBrowser": "Please enable notifications in your phone or browser settings, then tap Continue again.",
+  "notificationsGotIt": "Got it",
+  "notificationsNotificationPreferences": "Notification preferences",
+  "notificationsChooseWhichApoloAlertsYou": "Choose which Apolo alerts you want to receive",
+  "notificationsMessagesBuyerOffers": "Messages & buyer offers",
+  "notificationsInstantAlertWhenBuyerMessages": "Instant alert when a buyer messages or makes an offer",
+  "notificationsPriceDropsSavedListings": "Price drops & saved listings",
+  "notificationsUpdatesListingsYouBookmarked": "Updates on listings you bookmarked",
+  "notificationsOfficialStoresUpdates": "Official stores & updates",
+  "notificationsNewArrivalsFromVerifiedSellers": "New arrivals from verified sellers you follow",
+  "notificationsMarkAllAsRead": "Mark all as read",
+  "doneButton": "Done",
+  "notificationsPleaseAllowNotificationsContinue": "Please allow notifications to continue",
+  "notificationsActivatedInstantAlerts": " activated instant alerts for ",
+  "notificationsApoloMaBuyerMessagesOffers": "Apolo.ma — Buyer Messages & Offers",
+  "notificationsJustNow": "just now",
+  "notificationsApoloTeam": "Apolo Team",
+  "notificationsSharedTipAddClearPhotos": " shared a tip: Add clear photos to your listing to close deals faster.",
+  "notifications2hAgo": "2h ago",
+  "notificationsApoloOfficialStores": "Apolo Official Stores",
+  "notificationsUpdated": " updated ",
+  "notificationsVerifiedCarsRealEstateTech": "Verified Cars, Real Estate & Tech Listings",
+  "notificationsAcrossAllMoroccanCities": " across all Moroccan cities.",
+  "notificationsThisWeek": "This week",
+  "notificationsNotifications": "Notifications",
+  "notificationsHeyItSApolo": "Hey, it's Apolo!",
+  "notificationsIAmReadyHelpYou": "I am ready to help you out. How about you?",
+  "notificationsNow": "now",
+  "notificationsNotification": "Notification",
+  "notificationsActivateNotificationsReceiveMessages": "Activate notifications to receive messages",
+  "notificationsUpdates": "Updates",
+  "notificationsNoNotificationsThisCategory": "No notifications in this category",
+  "notificationsBuyerMessagesOffersListingUpdates": "Buyer messages, offers, and listing updates will appear here.",
+  "notificationsNoInternetConnection": "No Internet connection",
+  "notificationsCheckWiFiMobileData": "Check your Wi-Fi or mobile data to refresh your notifications.",
+  "notificationsToday": "Today",
+  "postAdCouldNotDetectGpsLocation": "Could not detect GPS location — pick your city",
+  "postAdPleaseSelectCategoryCity": "Please select a category and city",
+  "postAdAddAtLeastOnePhoto": "Add at least one photo for your listing",
+  "postAdEnterClearTitleAtLeast": "Enter a clear title (at least 3 characters)",
+  "postAdEnterValidPriceFreeVerify": "Enter a valid price or Free and verify your phone number",
+  "postAdDailyFreeLimitReachedMaxdailyfreeads": "Daily free limit reached ({maxDailyFreeAds} ads/day)",
+  "@postAdDailyFreeLimitReachedMaxdailyfreeads": {
+    "placeholders": {
+      "maxDailyFreeAds": {
+        "type": "Object"
+      }
+    }
+  },
+  "postAdPersonalAccountsIncludeUpMaxdailyfreeads": "Personal accounts include up to {maxDailyFreeAds} free ads per day. Upgrade to Apolo Premium ({monthlyPremiumPriceMad} MAD/mo via Google Pay) for unlimited daily ads, Business store, and Verified badge.",
+  "@postAdPersonalAccountsIncludeUpMaxdailyfreeads": {
+    "placeholders": {
+      "maxDailyFreeAds": {
+        "type": "Object"
+      },
+      "monthlyPremiumPriceMad": {
+        "type": "Object"
+      }
+    }
+  },
+  "postAdSubscribeMonthlypremiumpricemadMadMoGoogle": "Subscribe ({monthlyPremiumPriceMad} MAD/mo) • Google Pay",
+  "@postAdSubscribeMonthlypremiumpricemadMadMoGoogle": {
+    "placeholders": {
+      "monthlyPremiumPriceMad": {
+        "type": "Object"
+      }
+    }
+  },
+  "postAdMaybeLater": "Maybe later",
+  "postAdPleaseSignPublishListing": "Please sign in to publish your listing",
+  "postAdAvailableGreatConditionApolo": "Available in great condition on Apolo",
+  "postAdFailedPublishListing": "Failed to publish your listing",
+  "postAdCategoriesCitiesUnavailableRetry": "Categories and cities unavailable. Retry",
+  "postAdUnlimitedDailyAdsApoloPremium": "Unlimited daily ads · Apolo Premium",
+  "postAdMaxdailyfreeadsMaxdailyfreeads2DailyLimitReached": "{maxDailyFreeAds}/{maxDailyFreeAds2} daily limit reached · Upgrade ({monthlyPremiumPriceMad} MAD)",
+  "@postAdMaxdailyfreeadsMaxdailyfreeads2DailyLimitReached": {
+    "placeholders": {
+      "maxDailyFreeAds": {
+        "type": "Object"
+      },
+      "maxDailyFreeAds2": {
+        "type": "Object"
+      },
+      "monthlyPremiumPriceMad": {
+        "type": "Object"
+      }
+    }
+  },
+  "postAdTodayTodaypostedadscountMaxdailyfreeadsFreeAds": "Today: {todayPostedAdsCount}/{maxDailyFreeAds} free ads · Unlimited with Premium",
+  "@postAdTodayTodaypostedadscountMaxdailyfreeadsFreeAds": {
+    "placeholders": {
+      "todayPostedAdsCount": {
+        "type": "Object"
+      },
+      "maxDailyFreeAds": {
+        "type": "Object"
+      }
+    }
+  },
+  "postAdWhereAreYouListing": "Where are you listing?",
+  "postAdChooseCategoryCitySoNearby": "Choose a category and city so nearby buyers can find it easily",
+  "postAdAddClearPhotos": "Add clear photos",
+  "postAdListingsRealClearPhotosSell": "Listings with real, clear photos sell up to 3x faster",
+  "postAdDescribeItem": "Describe your item",
+  "postAdClearTitleHonestDescriptionBuild": "A clear title and honest description build buyer trust",
+  "postAdSetPriceContact": "Set price and contact",
+  "postAdSetFairPriceReviewListing": "Set a fair price and review your listing before publishing",
+  "postAdGpsLocationSet": "GPS location set",
+  "postAdDetectAdLocationGps": "Detect ad location (GPS)",
+  "postAdTapAddPhotos": "Tap to add photos",
+  "postAdAddMorePhotosTotalphotos8": "Add more photos ({totalPhotos}/8)",
+  "@postAdAddMorePhotosTotalphotos8": {
+    "placeholders": {
+      "totalPhotos": {
+        "type": "Object"
+      }
+    }
+  },
+  "postAdFirstPhotoWillBeUsed": "The first photo will be used as the main cover",
+  "postAdGallery": "Gallery",
+  "postAdSelectedPhotos": "Selected photos",
+  "postAdCover": "Cover",
+  "postAdListingTitle": "Listing title",
+  "postAdGreat": "Great ✓",
+  "postAdEGIphone15Pro": "e.g. iPhone 15 Pro Max 256GB like new",
+  "postAdDetailedDescription": "Detailed description",
+  "postAdMentionConditionIncludedAccessoriesKey": "Mention condition, included accessories, and key details...",
+  "postAdSpecifications": "Specifications",
+  "postAdPriceMad": "Price (MAD)",
+  "postAdEG2500": "e.g. 2500",
+  "postAdHideNumber": "Hide number",
+  "postAdListingPreview": "Listing preview",
+  "postAdPublishNow": "Publish now",
+  "postAdListingUpdated": "Listing updated",
+  "postAdListingIsLive": "Your listing is live",
+  "postAdListingIsNowVisibleBuyers": "Your listing is now visible to buyers across Apolo.ma.",
+  "postAdNewListing": "Your new listing",
+  "postAdBackHome": "Back to home",
+  "postAdPostAnotherListing": "Post another listing",
+  "privacyComplianceReportAiPolicyIssue": "Report AI or Policy Issue",
+  "privacyComplianceSelectReasonSubmitThisReport": "Select a reason to submit this report for immediate Trust & Safety review:",
+  "privacyComplianceAdditionalDetailsOptional": "Additional details (optional)...",
+  "privacyComplianceSubmitReport": "Submit report",
+  "privacyComplianceCouldNotSendReportPlease": "Could not send report. Please try again.",
+  "privacyComplianceReportSubmittedSuccessfully": "Report submitted successfully ✓",
+  "privacyComplianceLinkCopiedUrl": "Link copied: {url}",
+  "@privacyComplianceLinkCopiedUrl": {
+    "placeholders": {
+      "url": {
+        "type": "Object"
+      }
+    }
+  },
+  "privacyComplianceConfirmAccountDeletion": "Confirm account deletion",
+  "privacyComplianceAreYouSureYouWant": "Are you sure you want to permanently delete your account, personal data, listings, and messages from Apolo? This cannot be undone.",
+  "cancelButton": "Cancel",
+  "privacyComplianceDeletePermanently": "Delete permanently",
+  "privacyComplianceAccountDataHaveBeenDeleted": "Your account and data have been deleted.",
+  "privacyComplianceCouldNotConfirmDeletionYou": "Could not confirm deletion. You remain signed in. Please try again.",
+  "privacyCompliancePrivacyPolicies": "Privacy & Policies",
+  "privacyCompliancePrivacy": "Privacy",
+  "privacyCompliancePolicies": "Policies",
+  "privacyComplianceDataDelete": "Data & Delete",
+  "privacyComplianceUpdated2026Law0908": "Updated 2026 · Law 09-08 (CNDP)",
+  "privacyCompliancePrivacyFullyControl": "Your privacy, fully in your control",
+  "privacyComplianceWeNeverSellPersonalData": "We never sell your personal data. Information is used strictly to power your listings, secure chats, and mobile notifications on Apolo (ma.apolo.apoloMobile).",
+  "privacyComplianceDataWeCollect": "Data We Collect",
+  "privacyComplianceAccountIdentityNameEmailPhone": "• Account identity: Name, email, phone number, or secure Google / Apple sign-in.\n• Listings & stores: Photos, titles, descriptions, MAD prices, and selected city.\n• Real-time messaging: Chat messages, media, and emoji reactions between buyers and sellers.\n• Mobile push tokens (FCM / APNs): Used solely to deliver OS notifications and automatically deactivated on sign-out.",
+  "privacyComplianceDevicePermissionsControls": "Device Permissions & Controls",
+  "privacyComplianceNotificationsOptionalOsAlertsNew": "• Notifications: Optional OS alerts for new messages on iOS & Android; adjustable anytime.\n• Camera & Photos: Requested only when you upload listing photos or chat attachments.\n• Approximate zone: City-level distance filtering with zero background GPS tracking.",
+  "privacyComplianceAiSafetyAppReporting": "AI Safety & In-App Reporting",
+  "privacyComplianceSmartListingSearchToolsInclude": "Smart listing and search tools include direct in-app reporting so you can flag inaccurate AI suggestions or abusive listings immediately.",
+  "privacyComplianceLegalRightsContact": "Your Legal Rights & Contact",
+  "privacyComplianceUnderMoroccanLaw0908": "Under Moroccan Law 09-08 and App Store / Google Play rules, you have the right to access, update, or permanently erase your personal data.\n• Official email: support@apolo.ma / contact@apolo.ma\n• Website: https://apolo.ma",
+  "privacyComplianceReportAiPolicyIssueApp": "Report AI or Policy Issue In-App",
+  "privacyComplianceOpenWebPrivacyPolicy": "Open Web Privacy Policy",
+  "privacyComplianceTermsUseMarketplaceRules": "Terms of Use & Marketplace Rules",
+  "privacyComplianceClearRulesSafeBuyingSelling": "Clear rules for safe buying & selling",
+  "privacyComplianceByUsingApoloYouAgree": "By using Apolo, you agree to authentic listings, respectful messaging, and transparent marketplace rules.",
+  "privacyComplianceAccountIntegrityVerifiedBadges": "Account Integrity & Verified Badges",
+  "privacyComplianceAccountStoreDetailsMustRemain": "• Account and store details must remain accurate and truthful.\n• Verified seals and seller ranks (Bronze to Champion) are awarded strictly by Apolo; impersonation is prohibited.",
+  "privacyComplianceListingRulesProhibitedItems": "Listing Rules & Prohibited Items",
+  "privacyComplianceListingsMustRepresentRealItems": "• Listings must represent real items or services with genuine photos and honest pricing.\n• Strictly prohibited: counterfeit goods, weapons, illegal substances, prescription drugs, stolen goods, and advance-fee scams.",
+  "privacyComplianceSafeTransactionsChatConduct": "Safe Transactions & Chat Conduct",
+  "privacyComplianceAlwaysInspectItemsPersonSafe": "• Always inspect items in person in a safe public place and avoid sending advance deposits.\n• Spam, harassment, and abusive messages result in immediate suspension; block or report anytime.",
+  "privacyComplianceProSubscriptionsListingBoosts": "Pro+ Subscriptions & Listing Boosts",
+  "privacyComplianceProPlansBoostUpgradesAre": "• Pro+ plans and Boost upgrades are billed transparently through your App Store or Google Play account.\n• Cancel auto-renewal anytime at least 24 hours before period end in your store account settings.",
+  "privacyComplianceOpenWebTermsPolicies": "Open Web Terms & Policies",
+  "privacyComplianceInstantErasureAppStorePlay": "Instant Erasure · App Store & Play",
+  "privacyCompliancePermanentAccountDataDeletion": "Permanent Account & Data Deletion",
+  "privacyComplianceEraseAccountAllAssociatedPersonal": "Erase your account and all associated personal data directly in-app or via our external web deletion form.",
+  "privacyComplianceWhatGetsPermanentlyDeleted": "What Gets Permanently Deleted",
+  "privacyComplianceProfileCredentialsNameEmailPhone": "• Profile credentials (name, email, phone number, and OAuth links).\n• All published listings, uploaded photos, and store data.\n• Chat history, saved favorites, and active mobile push notification tokens.",
+  "privacyComplianceDeleteMyAccountNowApp": "Delete My Account Now (In-App)",
+  "privacyComplianceSignDeleteAccountDirectlyApp": "Sign in to delete your account directly in-app, or use the external web link below.",
+  "privacyComplianceExternalWebDataDeletionLink": "External Web Data Deletion Link",
+  "proPlusRecurringBillingCancelAnytimePayment": "Recurring billing. Cancel anytime. Payment will be charged to your Google Pay / Store account at confirmation of purchase and automatically renews unless turned off at least 24 hours before the end of the current period.\nAll personal data is handled under the ",
+  "proPlusTermsConditions": "terms and conditions",
+  "proPlusAnd": " and ",
+  "proPlusPrivacyPolicy": "privacy policy",
+  "proPlusSubscription": "Subscription",
+  "proPlusCancelPremiumSubscription": "Cancel your Premium subscription?",
+  "proPlusAutoRenewalWillBeTurned": "Auto-renewal will be turned off while keeping your store and listings safe.",
+  "proPlusCancelMySubscription": "Cancel my subscription",
+  "proPlusKeepPremium": "Keep Premium",
+  "proPlusYouUsePremium": "You use Premium",
+  "proPlusGetPremium": "Get Premium",
+  "proPlusYouHaveUnlimitedAccessAll": "You have unlimited access to all premium features",
+  "proPlusGetUnlimitedAccessAllPremium": "Get unlimited access to all premium features",
+  "proPlusCheckedAccountActivePurchases": "Checked your account for active purchases.",
+  "proPlusHowTrialWorks": "How your trial works",
+  "proPlusUnlimitedFreeAccess3Days": "Unlimited free access for 3 days, then only {monthlyPremiumPriceMad} MAD/month via Google Pay",
+  "@proPlusUnlimitedFreeAccess3Days": {
+    "placeholders": {
+      "monthlyPremiumPriceMad": {
+        "type": "Object"
+      }
+    }
+  },
+  "proPlusGetInstantAccessSeeHow": "Get instant access and see how Pro Plus transforms your sales.",
+  "proPlusDay2": "Day 2",
+  "proPlusWeLlRemindYouNotification": "We'll remind you with a notification that your trial is ending.",
+  "proPlusDay3": "Day 3",
+  "proPlusYouLlBeChargedDay": "You'll be charged on Day 3, cancel anytime before.",
+  "proPlusViewAllPlans": "View all plans",
+  "proPlusRestorePurchases": "Restore purchases",
+  "proPlusStartFree3DayTrial": "Start free 3-day trial",
+  "proPlusPaymentVerificationFailed": "Payment verification failed.",
+  "proPlusProPlusActivatedStoreIs": "Pro Plus activated! Your store is now verified",
+  "proPlusCouldNotLaunchGooglePay": "Could not launch Google Pay on this device.",
+  "proPlusPayGooglePay": "Pay with Google Pay",
+  "proPlusSave25": "Save 25%",
+  "proPlusLifetime": "Lifetime",
+  "proPlusBasic": "Basic",
+  "proPlus12Months": "12 months",
+  "proPlusOneTime": "One-time",
+  "proPlus1Month": "1 month",
+  "proPlusMad": "MAD",
+  "proPlusPaywall": "Paywall",
+  "proPlusUnlockFullAccess": "Unlock full access",
+  "proPlusUnlimitedAccessAllFeaturesTemplates": "Unlimited access to all features and templates",
+  "proPlusOfficialBusinessStoreBlueVerified": "Official Business store + blue Verified badge",
+  "proPlusUnlimitedDailyListingsInstead5": "Unlimited daily listings (instead of 5/day) + 12 photos",
+  "proPlus5FreeMonthlyVipBoosts": "5 free monthly VIP boosts + Pro Insights & quick replies",
+  "proPlusSubscribePricedisplayMadGooglePay": "Subscribe for {priceDisplay} MAD • Google Pay",
+  "@proPlusSubscribePricedisplayMadGooglePay": {
+    "placeholders": {
+      "priceDisplay": {
+        "type": "Object"
+      }
+    }
+  },
+  "proPlusNoThankYou": "No, thank you",
+  "profileCouldNotLoadListingsPull": "Could not load listings. Pull to retry.",
+  "profileMyAccount": "My account",
+  "profileSettingsSupport": "Settings & support",
+  "profileSignManageListingsSavedItems": "Sign in to manage your listings, saved items, and instant chats.",
+  "profileSignViewProfile": "Sign in to view your profile",
+  "welcomeCreateAccountButton": "Create an account",
+  "profileLightMode": "Light mode",
+  "profileDarkMode": "Dark mode",
+  "profileListings": "Listings",
+  "profileLikes": "Likes",
+  "profileSaved": "Saved",
+  "shareProfileButton": "Share profile",
+  "profileMyListings": "My Listings",
+  "profileProInsightsBoost": "Pro Insights & Boost",
+  "profileUpgradeApoloPremiumMonthlypremiumpricemadMad": "Upgrade to Apolo Premium · {monthlyPremiumPriceMad} MAD/mo",
+  "@profileUpgradeApoloPremiumMonthlypremiumpricemadMad": {
+    "placeholders": {
+      "monthlyPremiumPriceMad": {
+        "type": "Object"
+      }
+    }
+  },
+  "profileBusinessStoreVerifiedBadgeUnlimited": "Business store + Verified badge + unlimited daily ads via Google Pay.",
+  "profileViewStore": "View store",
+  "profileEditStore": "Edit store",
+  "profileQuickReplies": "Quick replies",
+  "profileNoListingsYet": "No listings yet",
+  "profilePublishFirstListingShowcaseIt": "Publish your first listing to showcase it here.",
+  "profilePostListing": "Post a listing",
+  "profileTotalViews": "Total views",
+  "profileActiveListings": "Active listings",
+  "profileAvgListing": "Avg. / listing",
+  "profileBoostedListings": "Boosted listings",
+  "profileCallTaps": "Call taps",
+  "profileCustomerChats": "Customer chats",
+  "profileDirectOrders": "Direct orders",
+  "profileFreeVipCredits": "Free VIP credits",
+  "profileUnlockCallOrderStatsPro": "Unlock call & order stats + PRO+ Badge",
+  "profileGet3FreeVipBoosts": "Get 3 free VIP boosts/month and priority visibility.",
+  "profileViewsBreakdown": "Views breakdown",
+  "profileLive": "Live",
+  "profilePublishFirstListingTrackViews": "Publish your first listing to track views and performance here.",
+  "profileTopPerformingListings": "Top performing listings",
+  "profileViews": "views",
+  "profileSalesTip": "Sales tip",
+  "profileAddClearPhotosFairPrice": "Add clear photos and a fair price on your first listing to attract buyers fast.",
+  "profileRefreshingPhotosBoostingTopListing": "Refreshing photos or boosting your top listing helps it sell faster.",
+  "profileEditListing": "Edit listing",
+  "profileBoostThisListing": "Boost this listing",
+  "profileDeleteListing": "Delete listing",
+  "profileCouldNotDeleteListingPlease": "Could not delete listing. Please try again.",
+  "profileDeleteThisListing": "Delete this listing?",
+  "profileThisListingWillBePermanently": "This listing will be permanently removed from your profile and search results.",
+  "profileListingDeletedSuccessfully": "Listing deleted successfully",
+  "scanProfileCodeThisIsOwnProfile": "This is your own profile",
+  "scanProfileCodeApoloMemberSellerid": "Apolo Member #{sellerId}",
+  "@scanProfileCodeApoloMemberSellerid": {
+    "placeholders": {
+      "sellerId": {
+        "type": "Object"
+      }
+    }
+  },
+  "scanProfileCodeScannedCode": "Scanned Code",
+  "scanProfileCodeCodeDetected": "Code Detected",
+  "scanProfileCodeOpenLink": "Open link",
+  "scanProfileCodeScanAgain": "Scan again",
+  "scanProfileCodeFlashlightIsUnavailableThisBrowser": "Flashlight is unavailable in this browser",
+  "scanProfileCodeFlashlightIsUnavailableThisCamera": "Flashlight is unavailable on this camera",
+  "scanProfileCodeCouldNotToggleFlashlightRight": "Could not toggle flashlight right now",
+  "scanProfileCodeNoQrCodeDetectedSelected": "No QR code detected in the selected image",
+  "scanProfileCodeEnterCode": "Enter code",
+  "scanProfileCodeCouldNotOpenPhotoLibrary": "Could not open photo library",
+  "scanProfileCodeScanQrCode": "Scan QR code",
+  "scanProfileCodePickQrImage": "Pick QR image",
+  "scanProfileCodeTapEnableCamera": "Tap to enable camera",
+  "scanProfileCodeEnterCodeManually": "Enter code manually",
+  "scanProfileCodePleaseEnterLinkHandle": "Please enter a link or handle",
+  "scanProfileCodePasteApoloProfileLinkEnter": "Paste an Apolo profile link or enter @handle",
+  "scanProfileCodeOpenProfile": "Open profile",
+  "searchRecommended": "Recommended",
+  "searchNewest": "Newest",
+  "searchLowestPrice": "Lowest price",
+  "searchHighestPrice": "Highest price",
+  "searchMostViewed": "Most viewed",
+  "searchFilterSort": "Filter & Sort",
+  "resetButton": "Reset",
+  "searchSortBy": "Sort by",
+  "searchAllMorocco": "All Morocco",
+  "searchPriceRangeMad": "Price range (MAD)",
+  "searchMinPrice": "Min price",
+  "searchMaxPrice": "Max price",
+  "searchNegotiableListingsOnly": "Negotiable listings only",
+  "searchApplyFilters": "Apply filters",
+  "searchSignSaveSearchesListings": "Sign in to save searches & listings",
+  "searchSaved": "Search saved",
+  "searchUnableSaveSearchRightNow": "Unable to save search right now",
+  "searchSaveSearch": "Save search",
+  "searchNoSavedListingsYet": "No saved listings yet",
+  "searchTapHeartAnyListingSave": "Tap the heart on any listing to save it here",
+  "searchFilter": "Filter",
+  "searchAllCategories": "All categories",
+  "searchAllAreas": "All areas",
+  "searchSetArea": "Set area",
+  "searchFeedView": "Feed view",
+  "searchGridView": "Grid view",
+  "personalAccountBadge": "Personal",
+  "businessAccountBadge": "Business",
+  "searchNoListingsWithinZoneradiuskmKm": "No listings within {zoneRadiusKm} km of {s}.",
+  "@searchNoListingsWithinZoneradiuskmKm": {
+    "placeholders": {
+      "zoneRadiusKm": {
+        "type": "Object"
+      },
+      "s": {
+        "type": "Object"
+      }
+    }
+  },
+  "searchTryAnotherCategoryBroadenFilters": "Try another category or broaden your filters.",
+  "searchResetFilters": "Reset filters",
+  "sellerProfileSellerPhoneNumberNotAvailable": "Seller phone number not available",
+  "sellerProfileSelectListingMessageThisSeller": "Select a listing to message this seller.",
+  "sellerProfileReportSeller": "Report seller",
+  "sellerProfileBlockSeller": "Block seller",
+  "sellerProfileSellerBlockedSuccessfully": "Seller blocked successfully",
+  "sellerProfileFollowers": "Followers",
+  "sellerProfileRating": "Rating",
+  "sellerProfileStorecategorylabelCityStorehours": "{storeCategoryLabel} · {city} · {storeHours}",
+  "@sellerProfileStorecategorylabelCityStorehours": {
+    "placeholders": {
+      "storeCategoryLabel": {
+        "type": "Object"
+      },
+      "city": {
+        "type": "Object"
+      },
+      "storeHours": {
+        "type": "Object"
+      }
+    }
+  },
+  "sellerProfileIndividualSellerCityDirectChat": "Individual seller in {city} · Direct chat reply.",
+  "@sellerProfileIndividualSellerCityDirectChat": {
+    "placeholders": {
+      "city": {
+        "type": "Object"
+      }
+    }
+  },
+  "sellerProfileVisitStore": "Visit store",
+  "sellerProfileListingsSellerads": "Listings ({sellerAds})",
+  "@sellerProfileListingsSellerads": {
+    "placeholders": {
+      "sellerAds": {
+        "type": "Object"
+      }
+    }
+  },
+  "sellerProfileReviewsCount": "Reviews ({count})",
+  "@sellerProfileReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "sellerProfileTrustInfo": "Trust & Info",
+  "sellerProfileNoListingsAvailableRightNow": "No listings available right now",
+  "sellerProfile3DaysAgo": "3 days ago",
+  "sellerProfileVeryReliableSellerItemMatched": "Very reliable seller, item matched the photos and great communication throughout.",
+  "sellerProfile1WeekAgo": "1 week ago",
+  "sellerProfileSmoothBuyingExperienceInspectedBefore": "Smooth buying experience, inspected before payment. Highly recommended!",
+  "sellerProfile2WeeksAgo": "2 weeks ago",
+  "sellerProfileHonestRespectfulSellerLetMe": "Honest and respectful seller. Let me inspect the laptop thoroughly.",
+  "sellerProfile1MonthAgo": "1 month ago",
+  "sellerProfileGreatTransactionFullTrustFast": "Great transaction with full trust. Fast replies on Apolo chat.",
+  "sellerProfileCountVerifiedReviews": "{count} verified reviews",
+  "@sellerProfileCountVerifiedReviews": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "sellerProfileGovernmentIdVerified": "Government ID Verified",
+  "sellerProfileOfficialIdentityDocumentReviewedVerified": "Official identity document reviewed and verified by Apolo Trust Team.",
+  "sellerProfileVerifiedPhoneNumber": "Verified Phone Number",
+  "sellerProfilePhoneNumberConfirmedViaSms": "Phone number confirmed via SMS OTP verification.",
+  "sellerProfileApoloSafetyProtection": "Apolo Safety Protection",
+  "sellerProfileWeRecommendInspectingItemPerson": "We recommend inspecting the item in person before making any payment.",
+  "sellerProfileAvailableDeliveryMethods": "Available Delivery Methods",
+  "sellerProfileHandHandPickupCityInsured": "Hand-to-hand pickup in {city}, or insured express shipping by agreement.",
+  "@sellerProfileHandHandPickupCityInsured": {
+    "placeholders": {
+      "city": {
+        "type": "Object"
+      }
+    }
+  },
+  "accountCenterSwitchPersonalAccount": "Switch to Personal Account",
+  "accountCenterReturnPersonalAccount": "Return to a personal account?",
+  "accountCenterBusinessStorePageWillBe": "Your business store page will be paused. You can re-enable it anytime.",
+  "accountCenterConfirmSwitch": "Confirm switch",
+  "accountCenterSwitchedPersonalAccount": "Switched to Personal Account.",
+  "accountCenterCouldNotSwitchAccountType": "Could not switch account type. Please try again.",
+  "accountCenterApoloAccount": "Apolo Account",
+  "accountCenterPersonalDetails": "Personal details",
+  "accountCenterEmailPhone": "Email & phone",
+  "accountCenterAccountTypePreferences": "Account type & preferences",
+  "accountCenterPasswordSecurity": "Password & security",
+  "accountCenterResetPassword": "Reset password",
+  "accountCenterBusinessStore": "Business & Store",
+  "accountCenterEditStoreProfile": "Edit Store Profile",
+  "accountCenterSwitchBusinessAccount": "Switch to Business Account",
+  "accountCenterAccountOwnership": "Account ownership",
+  "accountCenterDeleteAccountData": "Delete account & data",
+  "accountCenterManageApoloAccount": "Manage your Apolo Account",
+  "accountCenterSignManageSecurityPersonalDetails": "Sign in to manage security, personal details, and your store.",
+  "logInButton": "Log in",
+  "settingsAppDataAppDataRefreshedSuccessfully": "App data refreshed successfully.",
+  "settingsAppDataCouldNotRefreshDataCheck": "Could not refresh data. Check your connection and try again.",
+  "settingsAppDataAppDataSync": "App data & sync",
+  "settingsAppDataSystemInformationLocalSyncStatus": "System information and local sync status with Apolo.ma.",
+  "settingsAppDataApplicationStatus": "Application status",
+  "settingsAppDataAppVersion": "App version",
+  "settingsAppDataServer": "Server",
+  "settingsAppDataSyncedCategories": "Synced categories",
+  "settingsAppDataSyncedCities": "Synced cities",
+  "settingsAppDataActiveZone": "Active zone",
+  "settingsAppDataOpenSourceLicenses": "Open-source licenses",
+  "settingsAppDataRefreshDataNow": "Refresh data now",
+  "settingsAppearanceAppearance": "Appearance",
+  "settingsAppearanceChooseHowApoloLooksSwitch": "Choose how Apolo looks. Switch between Light mode, Dark mode, or match your device settings automatically.",
+  "settingsAppearanceCleanWhiteSurfacesCrispDaylight": "Clean white surfaces and crisp daylight contrast",
+  "settingsAppearanceEasyEyesLowLightSaves": "Easy on the eyes in low light and saves battery",
+  "settingsAppearanceSystemDefault": "System default",
+  "settingsAppearanceAutomaticallyMatchesPhoneBrowserTheme": "Automatically matches your phone or browser theme",
+  "settingsBlockedAccountsUnblockedName": "Unblocked {name}",
+  "@settingsBlockedAccountsUnblockedName": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsBlockedAccountsBlockedAccounts": "Blocked accounts",
+  "settingsBlockedAccountsNoBlockedAccountsYet": "No blocked accounts yet",
+  "settingsBlockedAccountsUsersStoresYouBlockFrom": "Users or stores you block from chats or listings will appear here so you can unblock them anytime.",
+  "settingsBlockedAccountsYouCanUnblockAnyUser": "You can unblock any user or store anytime.",
+  "settingsBlockedAccountsBlockedStore": "Blocked store",
+  "settingsBlockedAccountsBlockedUser": "Blocked user",
+  "settingsBugReportQuickTrigger": "Quick trigger",
+  "settingsBugReportDiagnosticsSummary": "Diagnostics summary",
+  "settingsBugReportPlatform": "Platform",
+  "settingsBugReportActiveLanguage": "Active language",
+  "settingsBugReportHelpSupport": "Help & Support",
+  "settingsLanguageCouldNotSaveLanguagePlease": "Could not save language. Please try again.",
+  "settingsLanguageAppLanguage": "App language",
+  "settingsLanguageChooseLanguageAppInterfaceListings": "Choose the language for the app interface and listings. Changes apply immediately across the app.",
+  "settingsRateAppNeedsWork": "Needs work",
+  "settingsRateAppFair": "Fair",
+  "settingsRateAppGreat": "Great",
+  "settingsRateAppAwesome": "Awesome!",
+  "settingsRateAppSelectStars": "Select stars",
+  "settingsRateAppPleaseSelect15Stars": "Please select 1 to 5 stars.",
+  "settingsRateAppRateApp": "Rate App",
+  "settingsRateAppHowIsExperienceApoloMa": "How is your experience with Apolo.ma?",
+  "settingsRateAppAddQuickNoteOptional": "Add a quick note (optional)...",
+  "settingsRateAppThankYouRatingUsRating": "Thank you for rating us {rating}/5!",
+  "@settingsRateAppThankYouRatingUsRating": {
+    "placeholders": {
+      "rating": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsRateAppSubmitRating": "Submit rating",
+  "settingsRateAppVisitApoloMa": "Visit Apolo.ma",
+  "settingsSavedAdsCouldNotRemoveSavedListing": "Could not remove saved listing. Please try again.",
+  "settingsSavedAdsSignViewSavedListings": "Sign in to view saved listings",
+  "settingsSavedAdsSaveListingsYouLikeRevisit": "Save listings you like to revisit them anytime.",
+  "settingsSavedAdsCouldNotLoadSavedListings": "Could not load saved listings",
+  "settingsSavedAdsCheckInternetConnectionTryAgain": "Check your internet connection and try again.",
+  "settingsSavedAdsTapFavoriteIconAnyListing": "Tap the favorite icon on any listing to save it here.",
+  "settingsShareAppCheckOutApoloMaMorocco": "Check out Apolo.ma — Morocco’s classifieds & stores marketplace: {shareUrl}",
+  "@settingsShareAppCheckOutApoloMaMorocco": {
+    "placeholders": {
+      "shareUrl": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsShareAppShareApp": "Share App",
+  "settingsShareAppMoroccoSMarketplaceClassifiedsOfficial": "Morocco’s marketplace for classifieds and official stores. Share with friends and family.",
+  "settingsShareAppAppLinkCopiedShareurl": "App link copied: {shareUrl}",
+  "@settingsShareAppAppLinkCopiedShareurl": {
+    "placeholders": {
+      "shareUrl": {
+        "type": "Object"
+      }
+    }
+  },
+  "settingsShareAppShareNow": "Share now",
+  "settingsShareAppCopyLink": "Copy link",
+  "settingsShareAppShareMyQrProfile": "Share my QR profile",
+  "settingsSuggestionPleaseEnterSuggestionAtLeast": "Please enter a suggestion of at least 5 characters.",
+  "settingsSuggestionCouldNotSendOverNetwork": "Could not send over the network right now. Try again or send via email.",
+  "settingsSuggestionCopiedSupportApoloMa": "Copied support@apolo.ma",
+  "settingsSuggestionFeature": "Feature",
+  "settingsSuggestionDesign": "Design",
+  "settingsSuggestionPerformance": "Performance",
+  "settingsSuggestionOther": "Other",
+  "settingsSuggestionMakeSuggestion": "Make a suggestion",
+  "settingsSuggestionShareIdeasHelpUsImprove": "Share your ideas to help us improve Apolo.ma.",
+  "settingsSuggestionTopic": "Topic",
+  "settingsSuggestionYourSuggestion": "Your suggestion",
+  "settingsSuggestionWriteIdeaHere": "Write your idea here...",
+  "settingsSuggestionThankYouSuggestionHasBeen": "Thank you! Your suggestion has been received.",
+  "settingsSuggestionSubmitSuggestion": "Submit suggestion",
+  "settingsSuggestionEmailSupportApoloMa": "Email support@apolo.ma",
+  "settingsZoneMarketplaceZone": "Marketplace Zone",
+  "logOutButton": "Log out",
+  "settingsLogOutAccount": "Log out of your account?",
+  "settingsYouCanSignBackAnytime": "You can sign back in anytime to access your listings and messages.",
+  "settingsProActive": "PRO+ Active",
+  "settingsNotSubscribed": "Not subscribed",
+  "settingsVipBoostCredits": "VIP Boost Credits",
+  "settingsPrivacyTerms": "Privacy & Terms",
+  "settingsAppDataLicenses": "App data & licenses",
+  "settingsActivity": "Settings and activity",
+  "settingsNoMatchingSettings": "No matching settings",
+  "settingsTryAnotherKeywordSuchAs": "Try another keyword such as Saved, Language, or Pro+.",
+  "settingsYourAccount": "Your account",
+  "settingsHowYouUseApolo": "How you use Apolo",
+  "settingsSubscriptions": "Subscriptions",
+  "settingsCommunityPrivacy": "Community & Privacy",
+  "settingsSupport": "Support",
+  "settingsAccount": "Account",
+  "settingsPasswordSecurityPersonalDetailsStore": "Password, security, personal details, store & business",
+  "shareProfileProfileLinkCopied": "Profile link copied",
+  "shareProfileCheckOutNameHandleApolo": "Check out {name} ({handle}) on Apolo.ma:\n{url}",
+  "@shareProfileCheckOutNameHandleApolo": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "handle": {
+        "type": "Object"
+      },
+      "url": {
+        "type": "Object"
+      }
+    }
+  },
+  "shareProfileShareLink": "Share link",
+  "shareProfileQrCodeIsPrivateIf": "Your QR code is private. If you share it with someone, that person can scan it with their camera to add you as a contact.",
+  "shareProfileScanCode": "Scan code",
+  "storeDetailReportStore": "Report store",
+  "storeDetailStoreBlocked": "Store blocked",
+  "storeDetailBlockStore": "Block store",
+  "storeDetailDirectStoreOrder": "Direct Store Order",
+  "storeDetailSelectItem": "Select item",
+  "storeDetailFullName": "Full name",
+  "storeDetailDeliveryAddress": "Delivery address",
+  "storeDetailOrderNotes": "Order notes",
+  "storeDetailConfirmOrder": "Confirm order",
+  "storeDetailOrderSubmittedSuccessfully": "Order submitted successfully",
+  "storeDetailStoreNotFound": "Store not found",
+  "storeDetailCheckLinkBrowseVerifiedStores": "Check the link or browse verified stores.",
+  "storeDetailOrderNow": "Order now",
+  "storeDetailOpenWorkinghours": "Open · {workingHours}",
+  "@storeDetailOpenWorkinghours": {
+    "placeholders": {
+      "workingHours": {
+        "type": "Object"
+      }
+    }
+  },
+  "storeDetailClosedWorkinghours": "Closed · {workingHours}",
+  "@storeDetailClosedWorkinghours": {
+    "placeholders": {
+      "workingHours": {
+        "type": "Object"
+      }
+    }
+  },
+  "storeDetailOpenGoogleMaps": "Open in Google Maps",
+  "storeDetailOrder": "Order",
+  "storeDetailProducts": "Products",
+  "verifiedBadgeLabel": "Verified",
+  "storeDetailDelivery": "Delivery",
+  "storeDetailStoreCatalog": "Store Catalog",
+  "storesTotalstoresVerifiedOfficialStores": "{totalStores} verified official stores",
+  "@storesTotalstoresVerifiedOfficialStores": {
+    "placeholders": {
+      "totalStores": {
+        "type": "Object"
+      }
+    }
+  },
+  "storesSearchOfficialStores": "Search official stores...",
+  "storesMostProducts": "Most products",
+  "storesTopRated": "Top rated",
+  "storesNoMatchingStores": "No matching stores",
+  "storesTryAnotherKeywordReloadVerified": "Try another keyword or reload the verified stores list.",
+  "storesItems": "items",
+  "storesVisit": "Visit",
+  "supportCouldNotOpenMailApp": "Could not open your mail app. Please email support@apolo.ma manually.",
+  "supportHowCanWeHelpYou": "How can we help you?",
+  "supportExplainIssueStepsBeforeIt": "Explain the issue and the steps before it. You may attach a screenshot after masking personal details.",
+  "supportDirectContact": "Direct contact",
+  "supportOpenMailApp": "Open Mail App",
+  "supportNoEmailIsSentAutomatically": "No email is sent automatically. Review and send it from your mail app.",
+  "supportSafetyReminder": "Safety reminder",
+  "supportNeverSharePasswordVerificationCode": "Never share your password, verification code, or payment details with anyone.",
+  "welcomeUnableStartGoogleSignRight": "Unable to start Google sign-in right now.",
+  "welcomeContinueGoogle": "Continue with Google",
+  "welcomeOr": "or",
+  "welcomeIHaveAccount": "I have an account",
+  "welcomeNewOfferReceivedListing": "New offer received on your listing!",
+  "welcomeY": "Y",
+  "welcomeYassineCasablanca": "Yassine • Casablanca",
+  "welcomeYesAvailableWelcome": "Yes available, welcome!",
+  "accommodationCardSintraPortugal": "Sintra, Portugal",
+  "accommodationCardExclusiveDeal": "Exclusive deal",
+  "adCardVip": "VIP",
+  "safetyReportMessage": "Report message",
+  "safetyReportListing": "Report listing",
+  "safetyReportUser": "Report user",
+  "safetyAlsoBlockThisAccount": "Also block this account",
+  "safetySubmitReport": "Submit Report",
+  "safetyReportSubmittedSuccessfully": "Report submitted successfully",
+  "safetyBlockedAccounts": "Blocked Accounts",
+  "boostCouldNotCompletePayment": "Could not complete payment",
+  "boostListingBoosted": "Listing boosted!",
+  "boostPaymentNotConfirmedContactSupport": "Payment not confirmed. Contact support before retrying.",
+  "boostVipBoostActivatedUsingPro": "VIP Boost activated using your Pro+ credit!",
+  "boostListing": "Boost your listing",
+  "boostActivateFreeVipProVipboostcredits": "Activate free VIP with Pro+ ({vipBoostCredits})",
+  "@boostActivateFreeVipProVipboostcredits": {
+    "placeholders": {
+      "vipBoostCredits": {
+        "type": "Object"
+      }
+    }
+  },
+  "boostGet3FreeVipBoosts": "Get 3 free VIP boosts/month with Apolo Pro+",
+  "boostPlansAreCurrentlyUnavailablePlease": "Plans are currently unavailable. Please try again later.",
+  "boostInstantWebCheckoutIsEnabled": "Instant web checkout is enabled for your account.",
+  "boostActivateBoostNow": "Activate Boost now",
+  "chatUtilsYesterday": "Yesterday",
+  "guestFavoriteBadge": "Guest favorite",
+  "exploreListingCardContactSeller": "Contact seller",
+  "marketplaceZoneCouldNotAutoDetectLocation": "Could not auto-detect location — select your city below",
+  "marketplaceZoneMarketplaceLocation": "Marketplace Location",
+  "marketplaceZoneOnlySeeListingsInsideLocal": "Only see listings inside your local area",
+  "marketplaceZoneSearchNeighborhoodCityAddress": "Search neighborhood, city, address...",
+  "marketplaceZoneNationwide": "Nationwide",
+  "marketplaceZoneDetectMyLocationAutomatically": "Detect my location automatically",
+  "marketplaceZoneDistanceRadius": "Distance radius",
+  "marketplaceZoneAllMorocco": "All of Morocco",
+  "marketplaceZoneSelectCity": "Select city",
+  "marketplaceZoneApplyZone": "Apply zone",
+  "quickRepliesLimitReachedMaxallowedUpgradePro": "Limit reached ({maxAllowed}). Upgrade to Pro Plus for more!",
+  "@quickRepliesLimitReachedMaxallowedUpgradePro": {
+    "placeholders": {
+      "maxAllowed": {
+        "type": "Object"
+      }
+    }
+  },
+  "quickRepliesQuickRepliesSaved": "Quick replies saved ⚡",
+  "quickRepliesChatQuickReplies": "Chat Quick Replies",
+  "quickRepliesTapAnyShortcutInsideChat": "Tap any shortcut inside Chat to reply to buyers in one tap.",
+  "quickRepliesAddQuickReply": "Add quick reply",
+  "quickRepliesLabel": "Label",
+  "quickRepliesReplyText": "Reply text...",
+  "quickRepliesAutoGreetingMessage": "Auto-greeting message",
+  "quickRepliesWelcomeStore": "Welcome to our store!",
+  "quickRepliesSaveQuickReplies": "Save Quick Replies",
+  "quickRepliesManage": "Manage",
+  "realMarketplaceMapApproximateMapArea": "Approximate map area",
+  "realMarketplaceMapDistkmKmFromYou": "{distKm} km from you",
+  "@realMarketplaceMapDistkmKmFromYou": {
+    "placeholders": {
+      "distKm": {
+        "type": "Object"
+      }
+    }
+  },
+  "realMarketplaceMapSetAsMyZone": "Set as my zone",
+  "badgesKitBronze": "Bronze",
+  "badgesKitSilver": "Silver",
+  "badgesKitGold": "Gold",
+  "badgesKitPlatinum": "Platinum",
+  "badgesKitDiamond": "Diamond",
+  "badgesKitChampion": "Champion",
+  "badgesKitStarterMemberApolo": "Starter member on Apolo",
+  "badgesKitVerifiedAccount2Listings": "Verified account or 2+ listings",
+  "badgesKitBusinessStore5Listings": "Business store or 5+ listings",
+  "badgesKitActiveProActiveStore8": "Active Pro+ or active store (8+)",
+  "badgesKitPro10Listings1500": "Pro+ with 10+ listings or 1,500 views",
+  "badgesKitTopTierPro20Listings": "Top tier: Pro+ with 20+ listings or 5,000 views",
+  "badgesKitSellerRank": "Seller rank:",
+  "badgesKitTopRankUnlockedApolo": "Top rank unlocked on Apolo!",
+  "badgesKitNext": "Next:",
+  "badgesKitTrustSellerRanks": "Trust & Seller Ranks",
+  "badgesKitCurrentRank": "Current rank:",
+  "badgesKitVerifiedApoloAccount": "Verified Apolo Account",
+  "badgesKitVerifiedSeal": "Verified Seal",
+  "badgesKitIdentityContactDetailsVerifiedSafer": "Identity and contact details verified for safer transactions.",
+  "badgesKitEarnedByVerifyingPhoneNumber": "Earned by verifying your phone number or activating a Pro store.",
+  "badgesKitAllSellerRanks": "All Seller Ranks",
+  "badgesKitCurrent": "Current",
+  "infeedUpgradeCardYourProfile": "your_profile",
+  "infeedUpgradeCardBuildCredibilityBuyersWhenYou": "Build credibility with buyers when you subscribe to Apolo Premium.",
+  "infeedUpgradeCardUpgradeProfile": "Upgrade your profile",
+  "infeedUpgradeCardNotNow": "Not now",
+  "searchSuggestionsSearchUsernames": "Search for usernames",
+  "searchSuggestionsSuggestions": "Suggestions",
+  "searchSuggestionsRecentSearches": "Recent searches",
+  "searchSuggestionsPopularSearches": "Popular searches",
+  "followedButton": "Followed",
+  "writeReviewExcellent": "Excellent",
+  "writeReviewVeryGood": "Very good",
+  "writeReviewPoor": "Poor",
+  "writeReviewGreatCommunication": "Great communication",
+  "writeReviewAsDescribed": "As described",
+  "writeReviewFastResponse": "Fast response",
+  "writeReviewFairPrice": "Fair price",
+  "writeReviewReviewHasBeenPosted": "Your review has been posted",
+  "writeReviewShareExperienceThisSeller": "Share your experience with this seller...",
+  "writeReviewUpdateReview": "Update review",
+  "writeReviewSubmitReview": "Submit review",
+  "interestsSurveyWhatAreInterests": "What are your interests?",
+  "interestsSurveyDiscoverProducts": "Discover products",
+  "interestsSurveySaveContinueSelectedcategoryids": "Save & continue ({selectedCategoryIds})",
+  "@interestsSurveySaveContinueSelectedcategoryids": {
+    "placeholders": {
+      "selectedCategoryIds": {
+        "type": "Object"
+      }
+    }
+  },
+  "interestsSurveySkipNow": "Skip for now"
+}

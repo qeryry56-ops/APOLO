@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/state/app_state.dart';
 import 'account_helpers.dart';
+import '../l10n/l10n.dart';
 
 /// Mandatory server onboarding; choices are never backed by fabricated IDs.
 class AccountOnboardingForm extends StatefulWidget {
@@ -94,19 +95,19 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
   Widget build(BuildContext context) {
     final s = AppState().s;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(s.tr('أكمل إعداد حسابك', 'Complétez votre compte', 'Finish setting up your account'),
+      Text(s.tr('أكمل إعداد حسابك', 'Complétez votre compte', appL10n.accountOnboardingFormFinishSettingUpAccount),
           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
       Text(s.tr(
           'اختر مدينتك والمجالات التي تهمك. يمكنك التحويل إلى حساب أعمال (Business) مجاناً في أي وقت من الإعدادات.',
           'Choisissez votre ville et vos centres d’intérêt. Vous pourrez passer en compte Business gratuitement à tout moment.',
-          'Choose your city and interests. You can switch to a Business account for free anytime in Settings.')),
+          appL10n.accountOnboardingFormChooseCityInterestsYouCan)),
       const SizedBox(height: 24),
       if (_cities.isNotEmpty && _categories.isNotEmpty) ...[
         DropdownButtonFormField<int>(
             initialValue: _city,
             isExpanded: true,
-            decoration: InputDecoration(labelText: s.tr('المدينة', 'Ville', 'City')),
+            decoration: InputDecoration(labelText: s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity)),
             items: _cities
                 .map((item) => DropdownMenuItem(
                     value: _id(item),
@@ -116,7 +117,7 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
         const SizedBox(height: 24),
         Text(s.tr('اختر مجالاً واحداً على الأقل',
             'Choisissez au moins un centre d’intérêt',
-            'Choose at least one interest')),
+            appL10n.accountOnboardingFormChooseAtLeastOneInterest)),
         const SizedBox(height: 12),
         Wrap(
             spacing: 8,
@@ -136,7 +137,7 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
         FilledButton(
             onPressed:
                 _busy || _city == null || _selected.isEmpty ? null : _save,
-            child: Text(s.tr('حفظ ومتابعة', 'Enregistrer et continuer', 'Save & continue'))),
+            child: Text(s.tr('حفظ ومتابعة', 'Enregistrer et continuer', appL10n.accountOnboardingFormSaveContinue))),
       ],
       if (_busy)
         const Padding(
@@ -150,7 +151,7 @@ class _AccountOnboardingFormState extends State<AccountOnboardingForm> {
         if (_cities.isEmpty || _categories.isEmpty)
           TextButton(
               onPressed: _busy ? null : _load,
-              child: Text(s.tr('إعادة تحميل الخيارات', 'Recharger les choix', 'Reload options'))),
+              child: Text(s.tr('إعادة تحميل الخيارات', 'Recharger les choix', appL10n.accountOnboardingFormReloadOptions))),
       ],
     ]);
   }

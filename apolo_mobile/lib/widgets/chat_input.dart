@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
 import 'chat_message.dart';
 import 'ios26_imessage_kit.dart';
 import 'perceived_performance.dart';
@@ -58,8 +59,8 @@ class ChatInput extends StatefulWidget {
   final String? replySenderName;
   final String? replyBody;
   final VoidCallback? onCancelReply;
-  final String hintText;
-  final String recordingText;
+  final String? hintText;
+  final String? recordingText;
   final int minLines;
   final int maxLines;
   final bool isDrawerOpen;
@@ -88,8 +89,8 @@ class ChatInput extends StatefulWidget {
     this.replySenderName,
     this.replyBody,
     this.onCancelReply,
-    this.hintText = 'Type a message...',
-    this.recordingText = 'Recording...',
+    this.hintText,
+    this.recordingText,
     this.minLines = 1,
     this.maxLines = 5,
     this.isDrawerOpen = false,
@@ -199,7 +200,7 @@ class _ChatInputState extends State<ChatInput> {
               padding: const EdgeInsetsDirectional.only(end: 8),
               child: Semantics(
                 container: true,
-                label: 'Staged attachment: ${att.name}',
+                label: context.l10n.chatStagedAttachmentLabel(att.name),
                 child: Container(
                   key: Key('chat-attachment-item-${att.id}'),
                   padding: const EdgeInsets.all(6),
@@ -273,7 +274,7 @@ class _ChatInputState extends State<ChatInput> {
                       const SizedBox(width: 6),
                       Semantics(
                         button: true,
-                        label: 'Remove attachment ${att.name}',
+                        label: context.l10n.chatRemoveAttachmentLabel(att.name),
                         child: InkWell(
                           key: Key('chat-attachment-remove-${att.id}'),
                           onTap: () => widget.onRemoveAttachment?.call(att),
@@ -475,7 +476,7 @@ class _ChatInputState extends State<ChatInput> {
                   // Dynamic Layer v5.1 flat `#EEEEEE` circular `+` button (`45 × 45`)
                   Semantics(
                     button: true,
-                    label: 'Add attachment',
+                    label: context.l10n.chatAddAttachmentTooltip,
                     child: Material(
                       key: const Key('chat-attach-button'),
                       color: Theme.of(context).brightness == Brightness.dark
@@ -564,7 +565,7 @@ class _ChatInputState extends State<ChatInput> {
                                   onKeyEvent: _handleKeyEvent,
                                   child: Semantics(
                                     textField: true,
-                                    label: 'Message input',
+                                    label: context.l10n.chatMessageInputLabel,
                                     child: TextField(
                                       key: const Key('chat-draft'),
                                       controller: widget.controller,
@@ -600,7 +601,8 @@ class _ChatInputState extends State<ChatInput> {
                                         filled: false,
                                         fillColor: Colors.transparent,
                                         hoverColor: Colors.transparent,
-                                        hintText: widget.hintText,
+                                        hintText: widget.hintText ??
+                                            context.l10n.chatTypeMessageHint,
                                         hintMaxLines: 1,
                                         hintStyle: const TextStyle(
                                           color: Ios26IMessageTokens
@@ -661,7 +663,7 @@ class _ChatInputState extends State<ChatInput> {
                                 Semantics(
                                   button: true,
                                   enabled: true,
-                                  label: 'Send message',
+                                  label: context.l10n.chatSendMessageTooltip,
                                   child: GestureDetector(
                                     key: const Key('chat-send'),
                                     behavior: HitTestBehavior.opaque,

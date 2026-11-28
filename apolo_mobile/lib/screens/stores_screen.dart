@@ -12,6 +12,7 @@ import 'store_detail_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Verified Official Stores Directory:
 /// - Pure `#FFFFFF` canvas + `#EEEEEE` `40×40` circular back button
@@ -230,7 +231,7 @@ class _StoresScreenState extends State<StoresScreen> {
                               s.tr(
                                 '$_totalStores متجر رسمي موثق في المغرب',
                                 '$_totalStores boutiques officielles vérifiées',
-                                '$_totalStores verified official stores',
+                                appL10n.storesTotalstoresVerifiedOfficialStores(_totalStores),
                               ),
                               style: TextStyle(
                                 fontSize: 12,
@@ -311,7 +312,7 @@ class _StoresScreenState extends State<StoresScreen> {
                             hintText: s.tr(
                               'ابحث عن متجر احترافي معتمد...',
                               'Rechercher une boutique officielle...',
-                              'Search official stores...',
+                              appL10n.storesSearchOfficialStores,
                             ),
                             hintStyle: TextStyle(
                               color: _dlMuted,
@@ -358,20 +359,20 @@ class _StoresScreenState extends State<StoresScreen> {
                   physics: const BouncingScrollPhysics(),
                   child: Row(
                     children: [
-                      _buildFilterPill(0, s.tr('الكل', 'Toutes', 'All')),
+                      _buildFilterPill(0, s.tr('الكل', 'Toutes', appL10n.chatListAll)),
                       const SizedBox(width: 8),
                       _buildFilterPill(
                         1,
                         s.tr(
                           'الأكثر منتجات',
                           'Plus de produits',
-                          'Most products',
+                          appL10n.storesMostProducts,
                         ),
                       ),
                       const SizedBox(width: 8),
                       _buildFilterPill(
                         2,
-                        s.tr('الأعلى تقييماً', 'Mieux notées', 'Top rated'),
+                        s.tr('الأعلى تقييماً', 'Mieux notées', appL10n.storesTopRated),
                       ),
                     ],
                   ),
@@ -388,17 +389,17 @@ class _StoresScreenState extends State<StoresScreen> {
                             headline: s.tr(
                               'لا توجد متاجر مطابقة حالياً',
                               'Aucune boutique trouvée',
-                              'No matching stores',
+                              appL10n.storesNoMatchingStores,
                             ),
                             description: s.tr(
                               'جرب البحث بكلمة أخرى أو إعادة تحميل قائمة المتاجر المعتمدة.',
                               'Essayez un autre mot-clé ou actualisez la liste des boutiques.',
-                              'Try another keyword or reload the verified stores list.',
+                              appL10n.storesTryAnotherKeywordReloadVerified,
                             ),
                             actionLabel: s.tr(
                               'إعادة المحاولة',
                               'Réessayer',
-                              'Try again',
+                              appL10n.tryAgainButton,
                             ),
                             onAction: () {
                               _searchCtrl.clear();
@@ -694,7 +695,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                           ),
                                                           Flexible(
                                                             child: Text(
-                                                              '$count ${s.tr('منتج', 'produits', 'items')}',
+                                                              '$count ${s.tr('منتج', 'produits', appL10n.storesItems)}',
                                                               maxLines: 1,
                                                               overflow:
                                                                   TextOverflow
@@ -735,7 +736,7 @@ class _StoresScreenState extends State<StoresScreen> {
                                                           s.tr(
                                                             'زيارة المتجر',
                                                             'Visiter',
-                                                            'Visit',
+                                                            appL10n.storesVisit,
                                                           ),
                                                           maxLines: 1,
                                                           overflow: TextOverflow

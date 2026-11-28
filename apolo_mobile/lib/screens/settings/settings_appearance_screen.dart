@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 `Appearance` (`Light` / `Dark` / `System`) settings screen
 /// with interactive mini preview cards and instant app-wide persistence.
@@ -41,7 +42,7 @@ class _SettingsAppearanceScreenState extends State<SettingsAppearanceScreen> {
               child: Column(
                 children: [
                   ApoloDlTopNav(
-                    title: s.tr('المظهر', 'Apparence', 'Appearance'),
+                    title: s.tr('المظهر', 'Apparence', appL10n.settingsAppearanceAppearance),
                     size: ApoloDlTopNavSize.md,
                   ),
                   Expanded(
@@ -55,7 +56,7 @@ class _SettingsAppearanceScreenState extends State<SettingsAppearanceScreen> {
                               s.tr(
                                 'اختر مظهر Apolo المناسب لك. يمكنك التبديل بين الوضع الفاتح والوضع الداكن أو اتباع إعدادات جهازك تلقائياً.',
                                 'Choisissez l’apparence d’Apolo. Basculez entre le mode clair, le mode sombre ou suivez votre appareil.',
-                                'Choose how Apolo looks. Switch between Light mode, Dark mode, or match your device settings automatically.',
+                                appL10n.settingsAppearanceChooseHowApoloLooksSwitch,
                               ),
                               style: TextStyle(
                                 fontSize: 14,
@@ -71,7 +72,7 @@ class _SettingsAppearanceScreenState extends State<SettingsAppearanceScreen> {
                                 Expanded(
                                   child: _AppearancePreviewCard(
                                     key: const Key('theme-card-light'),
-                                    label: s.tr('فاتح', 'Clair', 'Light'),
+                                    label: s.tr('فاتح', 'Clair', appL10n.appStateLight),
                                     icon: CupertinoIcons.sun_max_fill,
                                     selected: currentMode == ThemeMode.light,
                                     canvasColor: const Color(0xFFFFFFFF),
@@ -89,7 +90,7 @@ class _SettingsAppearanceScreenState extends State<SettingsAppearanceScreen> {
                                 Expanded(
                                   child: _AppearancePreviewCard(
                                     key: const Key('theme-card-dark'),
-                                    label: s.tr('داكن', 'Sombre', 'Dark'),
+                                    label: s.tr('داكن', 'Sombre', appL10n.appStateDark),
                                     icon: CupertinoIcons.moon_fill,
                                     selected: currentMode == ThemeMode.dark,
                                     canvasColor: const Color(0xFF0A0A0A),
@@ -114,12 +115,12 @@ class _SettingsAppearanceScreenState extends State<SettingsAppearanceScreen> {
                               title: s.tr(
                                 'الوضع الفاتح',
                                 'Mode clair',
-                                'Light mode',
+                                appL10n.profileLightMode,
                               ),
                               description: s.tr(
                                 'خلفية بيضاء ناصعة وتباين واضح في النهار',
                                 'Fond blanc épuré et contraste optimal de jour',
-                                'Clean white surfaces and crisp daylight contrast',
+                                appL10n.settingsAppearanceCleanWhiteSurfacesCrispDaylight,
                               ),
                               type: ApoloDlLineItemType.radio,
                               value: currentMode == ThemeMode.light,
@@ -131,12 +132,12 @@ class _SettingsAppearanceScreenState extends State<SettingsAppearanceScreen> {
                               title: s.tr(
                                 'الوضع الداكن',
                                 'Mode sombre',
-                                'Dark mode',
+                                appL10n.profileDarkMode,
                               ),
                               description: s.tr(
                                 'مريح للعين في الإضاءة المنخفضة ويوفر طاقة البطارية',
                                 'Confortable la nuit et économise la batterie',
-                                'Easy on the eyes in low light and saves battery',
+                                appL10n.settingsAppearanceEasyEyesLowLightSaves,
                               ),
                               type: ApoloDlLineItemType.radio,
                               value: currentMode == ThemeMode.dark,
@@ -148,12 +149,12 @@ class _SettingsAppearanceScreenState extends State<SettingsAppearanceScreen> {
                               title: s.tr(
                                 'تلقائي حسب الجهاز',
                                 'Automatique (système)',
-                                'System default',
+                                appL10n.settingsAppearanceSystemDefault,
                               ),
                               description: s.tr(
                                 'يتغير تلقائياً مع مظهر الهاتف أو المتصفح',
                                 'S’adapte automatiquement au thème de votre appareil',
-                                'Automatically matches your phone or browser theme',
+                                appL10n.settingsAppearanceAutomaticallyMatchesPhoneBrowserTheme,
                               ),
                               type: ApoloDlLineItemType.radio,
                               showSeparator: false,

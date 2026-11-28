@@ -9,6 +9,7 @@ import '../core/state/app_state.dart';
 import '../widgets/apolo_badges_kit.dart';
 import '../widgets/dl_settings_kit.dart';
 import 'widgets/app_image.dart';
+import '../l10n/l10n.dart';
 
 /// Real-time WebRTC Audio & Video Call screen using Firestore signaling.
 class CallScreen extends StatefulWidget {
@@ -288,17 +289,17 @@ class _CallScreenState extends State<CallScreen> {
         return _isIncoming
             ? (widget.isVideo
                 ? s.tr('مكالمة فيديو واردة...', 'Appel vidéo entrant...',
-                    'Incoming video call...')
+                    appL10n.callIncomingVideoCall)
                 : s.tr('مكالمة صوتية واردة...', 'Appel vocal entrant...',
-                    'Incoming voice call...'))
-            : s.tr('جاري الرنين...', 'Sonnerie...', 'Ringing...');
+                    appL10n.callIncomingVoiceCall))
+            : s.tr('جاري الرنين...', 'Sonnerie...', appL10n.callRinging);
       case 'connected':
         return _formatDuration(_elapsedSec);
       case 'error':
         return s.tr('يرجى السماح بالوصول للميكروفون/الكاميرا',
-            'Veuillez autoriser le micro/caméra', 'Allow mic/camera access');
+            'Veuillez autoriser le micro/caméra', appL10n.callAllowMicCameraAccess);
       default:
-        return s.tr('جاري الاتصال...', 'Connexion...', 'Connecting...');
+        return s.tr('جاري الاتصال...', 'Connexion...', appL10n.callConnecting);
     }
   }
 
@@ -314,7 +315,7 @@ class _CallScreenState extends State<CallScreen> {
             child: Column(
               children: [
                 ApoloDlTopNav(
-                  title: s.tr('المكالمات', 'Appels', 'Calls'),
+                  title: s.tr('المكالمات', 'Appels', appL10n.callCalls),
                   onBack: () => Navigator.maybePop(context),
                 ),
                 Expanded(
@@ -354,7 +355,7 @@ class _CallScreenState extends State<CallScreen> {
                                 s.tr(
                                   'المكالمات غير متاحة على هذا الجهاز حالياً',
                                   'Appels indisponibles sur cet appareil',
-                                  'Calls are unavailable on this device',
+                                  appL10n.callCallsAreUnavailableThisDevice,
                                 ),
                                 key: const Key('calls-unavailable'),
                                 textAlign: TextAlign.center,
@@ -369,7 +370,7 @@ class _CallScreenState extends State<CallScreen> {
                                 label: s.tr(
                                   'العودة للمحادثة',
                                   'Revenir à la conversation',
-                                  'Back to Chat',
+                                  appL10n.callBackChat,
                                 ),
                                 variant: ApoloDlButtonVariant.primary,
                                 borderRadius: 999,
@@ -422,9 +423,9 @@ class _CallScreenState extends State<CallScreen> {
                         Text(
                           widget.isVideo
                               ? s.tr(
-                                  'مكالمة فيديو', 'Appel vidéo', 'Video Call')
+                                  'مكالمة فيديو', 'Appel vidéo', appL10n.callVideoCall)
                               : s.tr(
-                                  'مكالمة صوتية', 'Appel vocal', 'Voice Call'),
+                                  'مكالمة صوتية', 'Appel vocal', appL10n.callVoiceCall),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -540,7 +541,7 @@ class _CallScreenState extends State<CallScreen> {
                       children: [
                         _buildCallActionButton(
                           icon: CupertinoIcons.phone_down_fill,
-                          label: s.tr('رفض', 'Refuser', 'Decline'),
+                          label: s.tr('رفض', 'Refuser', appL10n.callDecline),
                           bgColor: const Color(0xFFE31B23),
                           onTap: () {
                             HapticFeedback.heavyImpact();
@@ -549,7 +550,7 @@ class _CallScreenState extends State<CallScreen> {
                         ),
                         _buildCallActionButton(
                           icon: CupertinoIcons.phone_fill,
-                          label: s.tr('قبول', 'Accepter', 'Accept'),
+                          label: s.tr('قبول', 'Accepter', appL10n.callAccept),
                           bgColor: const Color(0xFF16A34A),
                           onTap: () {
                             HapticFeedback.mediumImpact();
@@ -566,8 +567,8 @@ class _CallScreenState extends State<CallScreen> {
                               ? CupertinoIcons.mic_slash_fill
                               : CupertinoIcons.mic_fill,
                           label: _muted
-                              ? s.tr('صامت', 'Muet', 'Muted')
-                              : s.tr('الميكرو', 'Micro', 'Mic'),
+                              ? s.tr('صامت', 'Muet', appL10n.meetingMuted)
+                              : s.tr('الميكرو', 'Micro', appL10n.callMic),
                           bgColor: _muted
                               ? Colors.white
                               : Colors.white.withValues(alpha: 0.16),
@@ -583,7 +584,7 @@ class _CallScreenState extends State<CallScreen> {
                             icon: _cameraEnabled
                                 ? CupertinoIcons.videocam_fill
                                 : CupertinoIcons.video_camera,
-                            label: s.tr('الكاميرا', 'Caméra', 'Camera'),
+                            label: s.tr('الكاميرا', 'Caméra', appL10n.callCamera),
                             bgColor: !_cameraEnabled
                                 ? Colors.white
                                 : Colors.white.withValues(alpha: 0.16),
@@ -598,7 +599,7 @@ class _CallScreenState extends State<CallScreen> {
                           ),
                         _buildCallActionButton(
                           icon: CupertinoIcons.phone_down_fill,
-                          label: s.tr('إنهاء', 'Terminer', 'End'),
+                          label: s.tr('إنهاء', 'Terminer', appL10n.callEnd),
                           bgColor: const Color(0xFFE31B23),
                           onTap: () {
                             HapticFeedback.heavyImpact();

@@ -10,6 +10,7 @@ import '../screens/widgets/app_image.dart';
 import '../screens/widgets/kinetic_widgets.dart';
 import '../theme/app_typography.dart';
 import 'dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Cardless, open in-feed "Upgrade your profile" section inspired by Instagram's
 /// inline profile upsell and harmonized with Apolo's Dynamic Layer v5.1 system:
@@ -39,7 +40,7 @@ class ApoloInFeedUpgradePromoCard extends StatelessWidget {
     if (name.isNotEmpty) {
       return name;
     }
-    return s.tr('حسابك على Apolo', 'votre_profil', 'your_profile');
+    return s.tr('حسابك على Apolo', 'votre_profil', appL10n.infeedUpgradeCardYourProfile);
   }
 
   String _resolveAvatarUrl(Map<String, dynamic>? user) {
@@ -234,7 +235,7 @@ class ApoloInFeedUpgradePromoCard extends StatelessWidget {
                           s.tr(
                             'ابني ثقة أكبر مع المشترين، وافتح متجر Business ونشر غير محدود مع Apolo Premium.',
                             'Inspirez confiance aux acheteurs avec le badge Verified et votre boutique Business.',
-                            'Build credibility with buyers when you subscribe to Apolo Premium.',
+                            appL10n.infeedUpgradeCardBuildCredibilityBuyersWhenYou,
                           ),
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -266,7 +267,7 @@ class ApoloInFeedUpgradePromoCard extends StatelessWidget {
                               s.tr(
                                 'ترقية ملفك الشخصي',
                                 'Mettre à niveau votre profil',
-                                'Upgrade your profile',
+                                appL10n.infeedUpgradeCardUpgradeProfile,
                               ),
                               style: TextStyle(
                                 color: palette.onInk,
@@ -295,7 +296,7 @@ class ApoloInFeedUpgradePromoCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           child: Text(
-                            s.tr('ليس الآن', 'Pas maintenant', 'Not now'),
+                            s.tr('ليس الآن', 'Pas maintenant', appL10n.infeedUpgradeCardNotNow),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: palette.muted,

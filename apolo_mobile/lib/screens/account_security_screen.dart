@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../account/account_helpers.dart';
 import '../core/state/app_state.dart';
 import '../widgets/dl_settings_kit.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 `Account security` Screen:
 /// - Pure `#FFFFFF` canvas + `ApoloDlTopNav`
@@ -70,7 +71,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         _error = s.tr(
           'أدخل بريداً إلكترونياً صالحاً.',
           'Entrez une adresse e-mail valide.',
-          'Enter a valid email address.',
+          appL10n.accountSecurityEnterValidEmailAddress,
         );
         _successMessage = null;
       });
@@ -83,7 +84,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         _error = s.tr(
           'أدخل رقم هاتف مغربي صالح.',
           'Entrez un numéro marocain valide.',
-          'Enter a valid phone number.',
+          appL10n.accountSecurityEnterValidPhoneNumber,
         );
         _successMessage = null;
       });
@@ -118,7 +119,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         setState(() => _successMessage = s.tr(
               'تم تحديث بيانات الاتصال بنجاح.',
               'Coordonnées mises à jour avec succès.',
-              'Contact details updated successfully.',
+              appL10n.accountSecurityContactDetailsUpdatedSuccessfully,
             ));
       }
     } catch (e) {
@@ -143,7 +144,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         _error = s.tr(
           'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
           'Le mot de passe doit contenir au moins 8 caractères.',
-          'Password must be at least 8 characters.',
+          appL10n.accountSecurityPasswordMustBeAtLeast,
         );
         _successMessage = null;
       });
@@ -154,7 +155,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         _error = s.tr(
           'كلمتا المرور غير متطابقتين.',
           'Les mots de passe ne correspondent pas.',
-          'Passwords do not match.',
+          appL10n.accountSecurityPasswordsDoNotMatch,
         );
         _successMessage = null;
       });
@@ -179,7 +180,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
         setState(() => _successMessage = s.tr(
               'تم تحديث كلمة المرور بنجاح.',
               'Mot de passe mis à jour avec succès.',
-              'Password updated successfully.',
+              appL10n.accountSecurityPasswordUpdatedSuccessfully,
             ));
       }
     } catch (e) {
@@ -264,7 +265,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                 title: s.tr(
                   'أمان الحساب',
                   'Sécurité du compte',
-                  'Account security',
+                  appL10n.accountSecurityAccountSecurity,
                 ),
                 showSeparator: false,
               ),
@@ -308,7 +309,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                       s.tr(
                                         'بيانات الدخول تبقى تحت سيطرتك',
                                         'Gardez la main sur vos accès',
-                                        'Stay in control of your login',
+                                        appL10n.accountSecurityStayControlLogin,
                                       ),
                                       style: const TextStyle(
                                         fontSize: 15.5,
@@ -321,7 +322,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                       s.tr(
                                         'يمكنك تحديث كلمة المرور أو البريد الإلكتروني أو رقم الهاتف مباشرة من التطبيق.',
                                         'Mettez à jour votre mot de passe, votre adresse e-mail ou votre numéro directement ici.',
-                                        'Update your password, email, or phone directly in the app.',
+                                        appL10n.accountSecurityUpdatePasswordEmailPhoneDirectly,
                                       ),
                                       style: const TextStyle(
                                         fontSize: 13,
@@ -413,7 +414,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             title: s.tr(
                               'بيانات الاتصال',
                               'Coordonnées',
-                              'Contact details',
+                              appL10n.accountSecurityContactDetails,
                             ),
                           ),
                           Container(
@@ -432,7 +433,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   label: s.tr(
                                     'البريد الإلكتروني',
                                     'Adresse e-mail',
-                                    'Email address',
+                                    appL10n.accountSecurityEmailAddress,
                                   ),
                                   icon: CupertinoIcons.at,
                                 ),
@@ -444,7 +445,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   label: s.tr(
                                     'رقم الهاتف',
                                     'Numéro de téléphone',
-                                    'Phone number',
+                                    appL10n.accountSecurityPhoneNumber,
                                   ),
                                   icon: CupertinoIcons.phone,
                                 ),
@@ -454,7 +455,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   label: s.tr(
                                     'حفظ بيانات الاتصال',
                                     'Enregistrer les coordonnées',
-                                    'Save contact details',
+                                    appL10n.accountSecuritySaveContactDetails,
                                   ),
                                   variant: ApoloDlButtonVariant.primary,
                                   borderRadius: 999,
@@ -472,7 +473,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             title: s.tr(
                               'تغيير كلمة المرور',
                               'Modifier le mot de passe',
-                              'Change password',
+                              appL10n.accountSecurityChangePassword,
                             ),
                           ),
                           Container(
@@ -492,7 +493,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   label: s.tr(
                                     'كلمة المرور الحالية',
                                     'Mot de passe actuel',
-                                    'Current password',
+                                    appL10n.accountSecurityCurrentPassword,
                                   ),
                                   icon: CupertinoIcons.lock,
                                   suffixIcon: IconButton(
@@ -516,7 +517,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   label: s.tr(
                                     'كلمة المرور الجديدة',
                                     'Nouveau mot de passe',
-                                    'New password',
+                                    appL10n.accountSecurityNewPassword,
                                   ),
                                   icon: CupertinoIcons.lock_rotation,
                                   suffixIcon: IconButton(
@@ -541,7 +542,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   label: s.tr(
                                     'تأكيد كلمة المرور الجديدة',
                                     'Confirmer le nouveau mot de passe',
-                                    'Confirm new password',
+                                    appL10n.accountSecurityConfirmNewPassword,
                                   ),
                                   icon: CupertinoIcons.checkmark_shield,
                                   suffixIcon: IconButton(
@@ -563,7 +564,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   label: s.tr(
                                     'تحديث كلمة المرور',
                                     'Mettre à jour le mot de passe',
-                                    'Update password',
+                                    appL10n.accountSecurityUpdatePassword,
                                   ),
                                   variant: ApoloDlButtonVariant.primary,
                                   borderRadius: 999,
@@ -581,7 +582,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                             title: s.tr(
                               'إعدادات الأمان',
                               'Options de sécurité',
-                              'Security options',
+                              appL10n.accountSecuritySecurityOptions,
                             ),
                           ),
                           Container(
@@ -597,12 +598,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   title: s.tr(
                                     'كلمة المرور',
                                     'Mot de passe',
-                                    'Password',
+                                    appL10n.authPasswordPlaceholder,
                                   ),
                                   subtitle: s.tr(
                                     'سجّل الدخول في التطبيق لتعديل هذه البيانات',
                                     'Connectez-vous dans l’application pour modifier ces informations',
-                                    'Sign in to update this information',
+                                    appL10n.accountSecuritySignUpdateThisInformation,
                                   ),
                                 ),
                                 const Padding(
@@ -621,12 +622,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   title: s.tr(
                                     'البريد الإلكتروني',
                                     'Adresse e-mail',
-                                    'Email address',
+                                    appL10n.accountSecurityEmailAddress,
                                   ),
                                   subtitle: s.tr(
                                     'سجّل الدخول في التطبيق لتعديل هذه البيانات',
                                     'Connectez-vous dans l’application pour modifier ces informations',
-                                    'Sign in to update this information',
+                                    appL10n.accountSecuritySignUpdateThisInformation,
                                   ),
                                 ),
                                 const Padding(
@@ -645,12 +646,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                                   title: s.tr(
                                     'رقم الهاتف',
                                     'Numéro de téléphone',
-                                    'Phone number',
+                                    appL10n.accountSecurityPhoneNumber,
                                   ),
                                   subtitle: s.tr(
                                     'سجّل الدخول في التطبيق لتعديل هذه البيانات',
                                     'Connectez-vous dans l’application pour modifier ces informations',
-                                    'Sign in to update this information',
+                                    appL10n.accountSecuritySignUpdateThisInformation,
                                   ),
                                 ),
                               ],

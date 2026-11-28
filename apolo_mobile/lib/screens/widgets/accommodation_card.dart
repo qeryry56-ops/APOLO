@@ -8,6 +8,7 @@ import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Exclusive Deals / Accommodation Showcase Card:
 /// - 0.84:1 portrait aspect ratio (width : height)
@@ -211,7 +212,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
     if (priceFormatted.isNotEmpty) return priceFormatted;
 
     if (ad['is_free'] == true) {
-      return _state.s.tr('مجاني', 'Gratuit', 'Free');
+      return _state.s.tr('مجاني', 'Gratuit', appL10n.adDetailFree);
     }
 
     final rawPrice = ad['price'];
@@ -228,7 +229,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
     }
     return _hasStayMetadata
         ? '\$148'
-        : _state.s.tr('عند الطلب', 'Sur demande', 'On request');
+        : _state.s.tr('عند الطلب', 'Sur demande', appL10n.adDetailOnRequest);
   }
 
   String _resolvePriceUnit() {
@@ -272,7 +273,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
         .trim();
     if (cityStr.isNotEmpty) return cityStr;
 
-    return _state.s.tr('المغرب', 'Maroc', 'Sintra, Portugal');
+    return _state.s.tr('المغرب', 'Maroc', appL10n.accommodationCardSintraPortugal);
   }
 
   String _resolveTotalSummary() {
@@ -291,21 +292,21 @@ class _AccommodationCardState extends State<AccommodationCard> {
           final currency = (ad['currency_symbol'] ?? '\$').toString();
           final formattedTotal =
               currency == '\$' ? '\$$total' : '$total $currency';
-          return '$formattedTotal total · $nights nights';
+          return appL10n.accommodationTotalForNights(formattedTotal, nights);
         }
       }
-      return '\$651 total · 4 nights';
+      return appL10n.accommodationTotalForNights('\$651', 4);
     }
 
     if (ad['is_negotiable'] == true || ad['negotiable'] == true) {
-      return _state.s.tr('قابل للتفاوض', 'Négociable', 'Negotiable');
+      return _state.s.tr('قابل للتفاوض', 'Négociable', appL10n.negotiableBadge);
     }
     final views =
         int.tryParse((ad['views_count'] ?? ad['views'] ?? '').toString()) ?? 0;
     if (views > 0) {
-      return '$views ${_state.s.tr('مشاهدة', 'vues', 'views')}';
+      return '$views ${_state.s.tr('مشاهدة', 'vues', appL10n.profileViews)}';
     }
-    return _state.s.tr('عرض حصري', 'Offre exclusive', 'Exclusive deal');
+    return _state.s.tr('عرض حصري', 'Offre exclusive', appL10n.accommodationCardExclusiveDeal);
   }
 
   Widget _buildBackgroundImage(String imageUrl) {
@@ -475,7 +476,7 @@ class _AccommodationCardState extends State<AccommodationCard> {
                     ),
                     Semantics(
                       button: true,
-                      label: 'Favorite accommodation',
+                      label: context.l10n.accommodationFavoriteTooltip,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: _handleFavoriteTap,

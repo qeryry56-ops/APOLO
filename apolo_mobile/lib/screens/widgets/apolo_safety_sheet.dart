@@ -6,6 +6,7 @@ import '../../core/services/firebase_chat_service.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
 import 'app_image.dart';
+import '../../l10n/l10n.dart';
 
 /// Unified Dynamic Layer v5.1 Safety & Reporting Sheet for Messages, Chats, Ads, Stores, and Users.
 Future<bool?> showApoloReportSheet(
@@ -31,8 +32,8 @@ Future<bool?> showApoloReportSheet(
     case 'message':
     case 'chat':
       headerTitle = targetType == 'message'
-          ? s.tr('الإبلاغ عن هذه الرسالة', 'Signaler ce message', 'Report message')
-          : s.tr('الإبلاغ عن المحادثة', 'Signaler la conversation', 'Report chat');
+          ? s.tr('الإبلاغ عن هذه الرسالة', 'Signaler ce message', appL10n.safetyReportMessage)
+          : s.tr('الإبلاغ عن المحادثة', 'Signaler la conversation', appL10n.chatListReportChat);
       reasons = [
         {
           'ar': 'تحرش أو كلام مسيء',
@@ -58,7 +59,7 @@ Future<bool?> showApoloReportSheet(
       break;
     case 'ad':
       headerTitle = s.tr(
-          'الإبلاغ عن هذا الإعلان', 'Signaler cette annonce', 'Report listing');
+          'الإبلاغ عن هذا الإعلان', 'Signaler cette annonce', appL10n.safetyReportListing);
       reasons = [
         {
           'ar': 'إعلان احتيالي أو سلعة وهمية',
@@ -84,8 +85,8 @@ Future<bool?> showApoloReportSheet(
       break;
     default:
       headerTitle = targetType == 'store'
-          ? s.tr('الإبلاغ عن هذا المتجر', 'Signaler cette boutique', 'Report store')
-          : s.tr('الإبلاغ عن هذا الحساب', 'Signaler ce compte', 'Report user');
+          ? s.tr('الإبلاغ عن هذا المتجر', 'Signaler cette boutique', appL10n.storeDetailReportStore)
+          : s.tr('الإبلاغ عن هذا الحساب', 'Signaler ce compte', appL10n.safetyReportUser);
       reasons = [
         {
           'ar': 'متجر أو حساب وهمي / انتحال صفة',
@@ -322,7 +323,7 @@ Future<bool?> showApoloReportSheet(
                           hintText: s.tr(
                             'أضف تفاصيل إضافية (اختياري)...',
                             'Détails supplémentaires (optionnel)...',
-                            'Additional details (optional)...',
+                            appL10n.privacyComplianceAdditionalDetailsOptional,
                           ),
                           hintStyle: const TextStyle(
                             fontSize: 13,
@@ -373,7 +374,7 @@ Future<bool?> showApoloReportSheet(
                                 s.tr(
                                   'حظر هذا الحساب أيضاً',
                                   'Bloquer aussi ce compte',
-                                  'Also block this account',
+                                  appL10n.safetyAlsoBlockThisAccount,
                                 ),
                                 style: const TextStyle(
                                   fontSize: 13.5,
@@ -392,7 +393,7 @@ Future<bool?> showApoloReportSheet(
                     label: s.tr(
                       'إرسال البلاغ الآن',
                       'Envoyer le signalement',
-                      'Submit Report',
+                      appL10n.safetySubmitReport,
                     ),
                     variant: ApoloDlButtonVariant.primary,
                     borderRadius: 999,
@@ -469,7 +470,7 @@ Future<bool?> showApoloReportSheet(
             s.tr(
               'تم إرسال بلاغك للإدارة بنجاح',
               'Signalement envoyé à notre équipe',
-              'Report submitted successfully',
+              appL10n.safetyReportSubmittedSuccessfully,
             ),
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -548,7 +549,7 @@ Future<void> showBlockedAccountsSheet(BuildContext context) async {
                               s.tr(
                                 'الحسابات المحظورة',
                                 'Comptes bloqués',
-                                'Blocked Accounts',
+                                appL10n.safetyBlockedAccounts,
                               ),
                               style: const TextStyle(
                                 fontSize: 18,
@@ -561,7 +562,7 @@ Future<void> showBlockedAccountsSheet(BuildContext context) async {
                               s.tr(
                                 'يمكنك إلغاء حظر أي مستخدم أو متجر في أي وقت.',
                                 'Débloquez un utilisateur ou une boutique à tout moment.',
-                                'You can unblock any user or store anytime.',
+                                appL10n.settingsBlockedAccountsYouCanUnblockAnyUser,
                               ),
                               style: const TextStyle(
                                 fontSize: 12.5,
@@ -620,7 +621,7 @@ Future<void> showBlockedAccountsSheet(BuildContext context) async {
                             s.tr(
                               'لا توجد حسابات محظورة حالياً',
                               'Aucun compte bloqué pour le moment',
-                              'No blocked accounts yet',
+                              appL10n.settingsBlockedAccountsNoBlockedAccountsYet,
                             ),
                             style: const TextStyle(
                               fontSize: 13.5,
@@ -698,7 +699,7 @@ Future<void> showBlockedAccountsSheet(BuildContext context) async {
                                   label: s.tr(
                                     'إلغاء الحظر',
                                     'Débloquer',
-                                    'Unblock',
+                                    appL10n.chatRoomUnblock,
                                   ),
                                   variant: ApoloDlButtonVariant.primary,
                                   size: ApoloDlButtonSize.xs,

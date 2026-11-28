@@ -10,6 +10,7 @@ import '../auth_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
 import 'price_text.dart';
+import '../../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Compact Product/Listing Card (`AdCard`):
 /// - Flat `#F6F6F6` / `#161618` card with `1px` `#EEEEEE` / `#242429` border and zero drop shadows
@@ -217,7 +218,7 @@ class AdCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 3),
                   Text(
-                    state.s.tr('مميز', 'VIP', 'VIP'),
+                    state.s.tr('مميز', 'VIP', appL10n.adCardVip),
                     style: TextStyle(
                       color: palette.onInk,
                       fontSize: 10,
@@ -347,7 +348,7 @@ class AdCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        state.s.tr('تفاوض', 'Négo', 'Negotiable'),
+                        state.s.tr('تفاوض', 'Négo', appL10n.negotiableBadge),
                         style: TextStyle(
                           color: palette.ink,
                           fontSize: 9.5,

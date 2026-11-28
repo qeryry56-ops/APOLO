@@ -9,6 +9,7 @@ import '../ad_detail_screen.dart';
 import '../auth_screen.dart';
 import '../widgets/app_image.dart';
 import '../widgets/price_text.dart';
+import '../../l10n/l10n.dart';
 
 class SettingsSavedAdsScreen extends StatefulWidget {
   const SettingsSavedAdsScreen({super.key});
@@ -96,7 +97,7 @@ class _SettingsSavedAdsScreenState extends State<SettingsSavedAdsScreen> {
               _state.s.tr(
                 'تعذر إزالة الإعلان من المحفوظات. حاول مجدداً.',
                 'Impossible de retirer des favoris. Réessayez.',
-                'Could not remove saved listing. Please try again.',
+                appL10n.settingsSavedAdsCouldNotRemoveSavedListing,
               ),
             ),
           ),
@@ -125,7 +126,7 @@ class _SettingsSavedAdsScreenState extends State<SettingsSavedAdsScreen> {
     if (formatted.isNotEmpty) return formatted;
     final price = ad['price'];
     if (price == null) return '';
-    return '$price ${s.tr('د.م', 'DH', 'MAD')}';
+    return '$price ${s.tr('د.م', 'DH', appL10n.proPlusMad)}';
   }
 
   @override
@@ -144,7 +145,7 @@ class _SettingsSavedAdsScreenState extends State<SettingsSavedAdsScreen> {
               child: Column(
                 children: [
                   ApoloDlTopNav(
-                    title: s.tr('المحفوظات', 'Enregistrés', 'Saved'),
+                    title: s.tr('المحفوظات', 'Enregistrés', appL10n.profileSaved),
                     showSeparator: false,
                   ),
                   Expanded(
@@ -171,14 +172,14 @@ class _SettingsSavedAdsScreenState extends State<SettingsSavedAdsScreen> {
         headline: s.tr(
           'سجّل الدخول لعرض المحفوظات',
           'Connectez-vous pour voir vos favoris',
-          'Sign in to view saved listings',
+          appL10n.settingsSavedAdsSignViewSavedListings,
         ),
         description: s.tr(
           'احفظ الإعلانات التي تعجبك للرجوع إليها في أي وقت.',
           'Enregistrez des annonces pour les retrouver facilement.',
-          'Save listings you like to revisit them anytime.',
+          appL10n.settingsSavedAdsSaveListingsYouLikeRevisit,
         ),
-        actionLabel: s.tr('تسجيل الدخول', 'Se connecter', 'Log in'),
+        actionLabel: s.tr('تسجيل الدخول', 'Se connecter', appL10n.logInButton),
         onAction: () async {
           await Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -204,14 +205,14 @@ class _SettingsSavedAdsScreenState extends State<SettingsSavedAdsScreen> {
         headline: s.tr(
           'تعذر تحميل المحفوظات',
           'Impossible de charger les favoris',
-          'Could not load saved listings',
+          appL10n.settingsSavedAdsCouldNotLoadSavedListings,
         ),
         description: s.tr(
           'تحقق من اتصالك بالإنترنت وأعد المحاولة.',
           'Vérifiez votre connexion et réessayez.',
-          'Check your internet connection and try again.',
+          appL10n.settingsSavedAdsCheckInternetConnectionTryAgain,
         ),
-        actionLabel: s.tr('إعادة المحاولة', 'Réessayer', 'Try again'),
+        actionLabel: s.tr('إعادة المحاولة', 'Réessayer', appL10n.tryAgainButton),
         onAction: _fetchSavedAds,
       );
     }
@@ -222,12 +223,12 @@ class _SettingsSavedAdsScreenState extends State<SettingsSavedAdsScreen> {
         headline: s.tr(
           'لا توجد إعلانات محفوظة بعد',
           'Aucune annonce enregistrée',
-          'No saved listings yet',
+          appL10n.searchNoSavedListingsYet,
         ),
         description: s.tr(
           'اضغط على أيقونة الحفظ في أي إعلان لإضافته هنا.',
           'Appuyez sur le cœur d’une annonce pour l’enregistrer ici.',
-          'Tap the favorite icon on any listing to save it here.',
+          appL10n.settingsSavedAdsTapFavoriteIconAnyListing,
         ),
       );
     }

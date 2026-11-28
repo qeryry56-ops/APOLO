@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../core/config/app_config.dart';
 import '../features/chat/models/chat_ack_models.dart';
 import '../features/chat/widgets/chat_ack_indicator.dart';
+import '../l10n/l10n.dart';
 import '../screens/widgets/app_image.dart';
 import '../screens/widgets/chat_utils.dart';
 import 'apolo_emoji_reaction_bar.dart';
@@ -691,8 +692,10 @@ class _ChatMessageState extends State<ChatMessage>
     }
 
     final semanticStatus = isFailed
-        ? ', Send failed, double tap to retry'
-        : (widget.status == ChatMessageStatus.sending ? ', Sending' : '');
+        ? context.l10n.chatSendFailedRetrySemantic
+        : (widget.status == ChatMessageStatus.sending
+            ? context.l10n.chatSendingSemantic
+            : '');
     final semanticTime =
         widget.timestamp.isNotEmpty ? ', ${widget.timestamp}' : '';
 
@@ -1121,7 +1124,7 @@ class _ChatMessageState extends State<ChatMessage>
                           padding: const EdgeInsets.only(top: 4),
                           child: Semantics(
                             button: true,
-                            label: 'Retry sending message',
+                            label: context.l10n.chatRetrySendingTooltip,
                             child: InkWell(
                               key: Key('chat-retry-${widget.messageKey}'),
                               onTap: widget.onRetry,

@@ -17,6 +17,7 @@ import 'business_switch_screen.dart';
 import 'pro_plus_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
+import '../l10n/l10n.dart';
 
 /// Clean, cardless Dynamic Layer v5.1 Edit Profile screen supporting Light Mode
 /// (`#FFFFFF`), Dark Mode (`#0A0A0A`), Arabic RTL, French, and English.
@@ -156,7 +157,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _usernameStatusMsg = _state.s.tr(
           'يجب أن يكون 3 أحرف على الأقل',
           'Minimum 3 caractères requis',
-          'Minimum 3 characters required',
+          appL10n.editProfileMinimum3CharactersRequired,
         );
         _usernameSuggestions = [];
       });
@@ -200,13 +201,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ? _state.s.tr(
                   'اسم المستخدم @$clean متاح',
                   '@$clean est disponible',
-                  '@$clean is available',
+                  appL10n.editProfileCleanIsAvailable(clean),
                 )
               : (msg ??
                   _state.s.tr(
                     'اسم المستخدم محجوز بالفعل.',
                     'Déjà utilisé.',
-                    'Already taken.',
+                    appL10n.editProfileAlreadyTaken,
                   ));
           _usernameSuggestions = sugg;
         });
@@ -278,7 +279,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           s.tr(
                             'صورة الملف الشخصي',
                             'Photo de profil',
-                            'Profile photo',
+                            appL10n.editProfileProfilePhoto,
                           ),
                           style: TextStyle(
                             fontSize: 17,
@@ -301,7 +302,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     label: s.tr(
                       'اختيار من المعرض',
                       'Choisir depuis la galerie',
-                      'Choose from library',
+                      appL10n.editProfileChooseFromLibrary,
                     ),
                     onTap: () {
                       Navigator.pop(sheetCtx);
@@ -316,7 +317,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       label: s.tr(
                         'التقاط صورة جديدة',
                         'Prendre une photo',
-                        'Take photo',
+                        appL10n.editProfileTakePhoto,
                       ),
                       onTap: () {
                         Navigator.pop(sheetCtx);
@@ -332,7 +333,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       label: s.tr(
                         'حذف الصورة الحالية',
                         'Supprimer la photo actuelle',
-                        'Remove current photo',
+                        appL10n.editProfileRemoveCurrentPhoto,
                       ),
                       isDestructive: true,
                       onTap: () {
@@ -346,7 +347,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     s.tr(
                       'أو اختر أفاتار سريع',
                       'Ou choisir un avatar rapide',
-                      'Or choose a preset avatar',
+                      appL10n.editProfileChoosePresetAvatar,
                     ),
                     style: TextStyle(
                       fontSize: 12.5,
@@ -518,7 +519,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             s.tr(
                               'اختر مدينتك',
                               'Choisir votre ville',
-                              'Select your city',
+                              appL10n.editProfileSelectCity,
                             ),
                             style: TextStyle(
                               fontSize: 17,
@@ -537,7 +538,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               Navigator.pop(sheetCtx);
                             },
                             child: Text(
-                              s.tr('مسح', 'Effacer', 'Clear'),
+                              s.tr('مسح', 'Effacer', appL10n.clearButton),
                               style: TextStyle(
                                 color: palette.muted,
                                 fontWeight: FontWeight.w600,
@@ -667,7 +668,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           s.tr(
                             'رقم الهاتف والواتساب',
                             'Téléphone & WhatsApp',
-                            'Phone & WhatsApp',
+                            appL10n.editProfilePhoneWhatsapp,
                           ),
                           style: TextStyle(
                             fontSize: 17,
@@ -707,7 +708,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           size: 18,
                           color: palette.muted,
                         ),
-                        hintText: '+212 6XX XXX XXX',
+                        hintText: context.l10n.moroccoPhonePlaceholder,
                         hintStyle: TextStyle(color: palette.subtle),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
@@ -720,7 +721,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 16),
                   ApoloDlButton(
                     key: const Key('edit-profile-phone-confirm'),
-                    label: s.tr('تأكيد الرقم', 'Confirmer', 'Confirm'),
+                    label: s.tr('تأكيد الرقم', 'Confirmer', appL10n.confirmButton),
                     fullWidth: true,
                     onPressed: () =>
                         Navigator.pop(sheetCtx, phoneCtrl.text.trim()),
@@ -752,7 +753,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _error = s.tr(
           'الاسم مطلوب.',
           'Le nom est requis.',
-          'Name is required.',
+          appL10n.editProfileNameIsRequired,
         );
       });
       return;
@@ -765,7 +766,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _error = s.tr(
           'اسم المستخدم يجب أن يكون 3 أحرف على الأقل.',
           'Le nom d’utilisateur doit contenir au moins 3 caractères.',
-          'Username must be at least 3 characters.',
+          appL10n.editProfileUsernameMustBeAtLeast,
         );
       });
       return;
@@ -777,7 +778,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             s.tr(
               'اسم المستخدم هذا محجوز بالفعل، اختر اسماً آخر.',
               'Ce nom d’utilisateur est déjà pris.',
-              'This username is already taken.',
+              appL10n.editProfileThisUsernameIsAlreadyTaken,
             );
       });
       return;
@@ -835,7 +836,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       String errText = s.tr(
         'تعذر حفظ التغييرات. حاول مجدداً.',
         'Enregistrement impossible. Réessayez.',
-        'Could not save changes. Please try again.',
+        appL10n.editProfileCouldNotSaveChangesPlease,
       );
       if (e is DioException && e.response?.data is Map) {
         final serverMsg =
@@ -882,7 +883,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   title: s.tr(
                     'تعديل الملف الشخصي',
                     'Modifier le profil',
-                    'Edit profile',
+                    appL10n.editProfileTitle,
                   ),
                   showSeparator: true,
                   backButtonKey: const Key('edit-profile-back'),
@@ -987,7 +988,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                         s.tr(
                                           'تغيير الصورة',
                                           'Modifier la photo',
-                                          'Edit picture',
+                                          appL10n.editProfileEditPicture,
                                         ),
                                         style: TextStyle(
                                           fontSize: 13.5,
@@ -1006,11 +1007,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               _buildFlatInputField(
                                 palette: palette,
                                 fieldKey: const Key('edit-profile-name-field'),
-                                label: s.tr('الاسم', 'Nom', 'Name'),
+                                label: s.tr('الاسم', 'Nom', appL10n.authFullNamePlaceholder),
                                 hint: s.tr(
                                   'اسمك الكامل',
                                   'Votre nom complet',
-                                  'Your full name',
+                                  appL10n.editProfileFullName,
                                 ),
                                 controller: _nameCtrl,
                                 focusNode: _nameFocus,
@@ -1036,9 +1037,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 label: s.tr(
                                   'اسم المستخدم',
                                   'Nom d’utilisateur',
-                                  'Username',
+                                  appL10n.editProfileUsername,
                                 ),
-                                hint: 'username',
+                                hint: context.l10n.authPlainUsernamePlaceholder,
                                 controller: _usernameCtrl,
                                 focusNode: _usernameFocus,
                                 textDirection: TextDirection.ltr,
@@ -1113,7 +1114,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                           _usernameStatusMsg = s.tr(
                                             'اسم المستخدم @$sugg متاح',
                                             '@$sugg est disponible',
-                                            '@$sugg is available',
+                                            appL10n.editProfileCleanIsAvailable(sugg),
                                           );
                                           _usernameSuggestions = [];
                                           _error = null;
@@ -1152,13 +1153,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 label: s.tr(
                                   'النبذة التعريفية',
                                   'Biographie',
-                                  'Bio',
+                                  appL10n.editProfileBio,
                                 ),
                                 trailingLabel: '${_bioCtrl.text.length}/150',
                                 hint: s.tr(
                                   'عرّف بنفسك أو بما تبيعه باختصار...',
                                   'Présentez-vous en quelques mots...',
-                                  'Write a short bio about yourself...',
+                                  appL10n.editProfileWriteShortBioAboutYourself,
                                 ),
                                 controller: _bioCtrl,
                                 focusNode: _bioFocus,
@@ -1176,13 +1177,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 key: const Key('edit-profile-city-row'),
                                 palette: palette,
                                 isAr: isAr,
-                                label: s.tr('المدينة', 'Ville', 'City'),
+                                label: s.tr('المدينة', 'Ville', appL10n.accountOnboardingFormCity),
                                 value: _selectedCity.isNotEmpty
                                     ? _selectedCity
                                     : s.tr(
                                         'إضافة مدينة',
                                         'Ajouter une ville',
-                                        'Add city',
+                                        appL10n.editProfileAddCity,
                                       ),
                                 isPlaceholder: _selectedCity.isEmpty,
                                 onTap: _openCityPickerSheet,
@@ -1193,13 +1194,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 key: const Key('edit-profile-phone-row'),
                                 palette: palette,
                                 isAr: isAr,
-                                label: s.tr('الهاتف', 'Téléphone', 'Phone'),
+                                label: s.tr('الهاتف', 'Téléphone', appL10n.editProfilePhone),
                                 value: _phoneValue.isNotEmpty
                                     ? _phoneValue
                                     : s.tr(
                                         'إضافة رقم الهاتف',
                                         'Ajouter un numéro',
-                                        'Add phone number',
+                                        appL10n.editProfileAddPhoneNumber,
                                       ),
                                 valueTextDirection: _phoneValue.isNotEmpty
                                     ? TextDirection.ltr
@@ -1218,12 +1219,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     label: s.tr(
                                       'متجر Business',
                                       'Boutique Business',
-                                      'Business Store',
+                                      appL10n.adDetailBusinessStore,
                                     ),
                                     value: s.tr(
                                       'إعدادات المتجر وساعات العمل',
                                       'Paramètres de la boutique',
-                                      'Manage store details',
+                                      appL10n.editProfileManageStoreDetails,
                                     ),
                                     trailingBadge: const ApoloVerifiedBadge(
                                       size: 16,
@@ -1253,7 +1254,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     value: s.tr(
                                       'تفعيل التوثيق ومتجر Business',
                                       'Badge vérifié & Boutique',
-                                      'Get Verified & Business Store',
+                                      appL10n.editProfileGetVerifiedBusinessStore,
                                     ),
                                     valueColor: palette.info,
                                     trailingBadge: const ApoloVerifiedBadge(
@@ -1285,12 +1286,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 label: s.tr(
                                   'المعلومات الشخصية',
                                   'Infos personnelles',
-                                  'Personal information',
+                                  appL10n.editProfilePersonalInformation,
                                 ),
                                 value: s.tr(
                                   'البريد الإلكتروني وكلمة المرور',
                                   'Email et mot de passe',
-                                  'Email & password settings',
+                                  appL10n.editProfileEmailPasswordSettings,
                                 ),
                                 isPlaceholder: true,
                                 onTap: () {
@@ -1378,12 +1379,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 ? s.tr(
                                     'جارٍ الحفظ...',
                                     'Enregistrement...',
-                                    'Saving...',
+                                    appL10n.savingLabel,
                                   )
                                 : s.tr(
                                     'حفظ التغييرات',
                                     'Enregistrer',
-                                    'Save changes',
+                                    appL10n.saveChangesButton,
                                   ),
                             style: const TextStyle(
                               fontSize: 15,

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/app_config.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated screen for rating the Apolo.ma experience and leaving quick feedback.
 class SettingsRateAppScreen extends StatefulWidget {
@@ -30,12 +31,12 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
 
   String _ratingCaption(AppStrings s) {
     return switch (_rating) {
-      1 => s.tr('يحتاج لتحسين كبير', 'À améliorer', 'Needs work'),
-      2 => s.tr('تجربة مقبولة', 'Passable', 'Fair'),
-      3 => s.tr('جيد', 'Bien', 'Good'),
-      4 => s.tr('ممتاز جداً', 'Très bien', 'Great'),
-      5 => s.tr('رائع! شكراً لدعمك', 'Excellent !', 'Awesome!'),
-      _ => s.tr('اختر عدد النجوم', 'Choisissez une note', 'Select stars'),
+      1 => s.tr('يحتاج لتحسين كبير', 'À améliorer', appL10n.settingsRateAppNeedsWork),
+      2 => s.tr('تجربة مقبولة', 'Passable', appL10n.settingsRateAppFair),
+      3 => s.tr('جيد', 'Bien', appL10n.adDetailGood),
+      4 => s.tr('ممتاز جداً', 'Très bien', appL10n.settingsRateAppGreat),
+      5 => s.tr('رائع! شكراً لدعمك', 'Excellent !', appL10n.settingsRateAppAwesome),
+      _ => s.tr('اختر عدد النجوم', 'Choisissez une note', appL10n.settingsRateAppSelectStars),
     };
   }
 
@@ -47,7 +48,7 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
         _error = s.tr(
           'يرجى اختيار تقييم من 1 إلى 5 نجوم.',
           'Veuillez sélectionner entre 1 et 5 étoiles.',
-          'Please select 1 to 5 stars.',
+          appL10n.settingsRateAppPleaseSelect15Stars,
         );
       });
       return;
@@ -85,7 +86,7 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
                     title: s.tr(
                       'تقييم التطبيق',
                       'Noter l’app',
-                      'Rate App',
+                      appL10n.settingsRateAppRateApp,
                     ),
                     size: ApoloDlTopNavSize.md,
                   ),
@@ -108,7 +109,7 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
                                     s.tr(
                                       'كيف هي تجربتك مع Apolo.ma؟',
                                       'Que pensez-vous d’Apolo.ma ?',
-                                      'How is your experience with Apolo.ma?',
+                                      appL10n.settingsRateAppHowIsExperienceApoloMa,
                                     ),
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
@@ -197,7 +198,7 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
                                     hintText: s.tr(
                                       'أضف ملاحظة سريعة (اختياري)...',
                                       'Ajouter un commentaire (optionnel)...',
-                                      'Add a quick note (optional)...',
+                                      appL10n.settingsRateAppAddQuickNoteOptional,
                                     ),
                                     hintStyle: TextStyle(
                                       fontSize: 14,
@@ -213,7 +214,7 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
                                 message: s.tr(
                                   'شكراً على تقييمك ($_rating/5)! رأيك كيساعدنا نطورو Apolo.ma.',
                                   'Merci pour votre note ($_rating/5) !',
-                                  'Thank you for rating us $_rating/5!',
+                                  appL10n.settingsRateAppThankYouRatingUsRating(_rating),
                                 ),
                                 type: ApoloDlAlertType.success,
                               ),
@@ -231,7 +232,7 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
                               label: s.tr(
                                 'إرسال التقييم',
                                 'Envoyer la note',
-                                'Submit rating',
+                                appL10n.settingsRateAppSubmitRating,
                               ),
                               leadingIcon: CupertinoIcons.star_fill,
                               variant: ApoloDlButtonVariant.primary,
@@ -243,7 +244,7 @@ class _SettingsRateAppScreenState extends State<SettingsRateAppScreen> {
                               label: s.tr(
                                 'زيارة موقع Apolo.ma',
                                 'Visiter Apolo.ma',
-                                'Visit Apolo.ma',
+                                appL10n.settingsRateAppVisitApoloMa,
                               ),
                               leadingIcon: CupertinoIcons.globe,
                               variant: ApoloDlButtonVariant.secondary,

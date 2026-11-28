@@ -20,6 +20,7 @@ import 'widgets/app_image.dart';
 import 'widgets/kinetic_widgets.dart';
 import 'widgets/price_text.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Public Seller Profile Screen:
 /// - Pure #FFFFFF canvas + ApoloDlTopNav + ApoloDlAccountHeader + ApoloIdentityBadgesRow
@@ -137,7 +138,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               _state.s.tr(
                 'رقم هاتف البائع غير متوفر حالياً',
                 'Numéro non disponible',
-                'Seller phone number not available',
+                appL10n.sellerProfileSellerPhoneNumberNotAvailable,
               ),
             ),
             backgroundColor: _dlInk,
@@ -166,7 +167,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             AppState().s.tr(
               'اختر إعلاناً للبائع لبدء المحادثة.',
               'Choisissez une annonce pour contacter ce vendeur.',
-              'Select a listing to message this seller.',
+              appL10n.sellerProfileSelectListingMessageThisSeller,
             ),
           ),
         ),
@@ -214,7 +215,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title: _state.s.tr(
                     'مشاركة البروفايل',
                     'Partager le profil',
-                    'Share profile',
+                    appL10n.shareProfileButton,
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -230,7 +231,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                     title: _state.s.tr(
                       'اتصال بالبائع',
                       'Appeler le vendeur',
-                      'Call seller',
+                      appL10n.adDetailCallSeller,
                     ),
                     onTap: () {
                       Navigator.pop(ctx);
@@ -245,7 +246,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title: _state.s.tr(
                     'الإبلاغ عن البائع',
                     'Signaler le vendeur',
-                    'Report seller',
+                    appL10n.sellerProfileReportSeller,
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -260,7 +261,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title: _state.s.tr(
                     'حظر هذا البائع',
                     'Bloquer le vendeur',
-                    'Block seller',
+                    appL10n.sellerProfileBlockSeller,
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -348,7 +349,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           _state.s.tr(
             'تم حظر البائع بنجاح',
             'Vendeur bloqué avec succès',
-            'Seller blocked successfully',
+            appL10n.sellerProfileSellerBlockedSuccessfully,
           ),
         ),
         behavior: SnackBarBehavior.floating,
@@ -360,7 +361,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   String get _resolvedCity =>
       (widget.sellerCity != null && widget.sellerCity!.trim().isNotEmpty)
           ? widget.sellerCity!.trim()
-          : _state.s.tr('المغرب', 'Maroc', 'Morocco');
+          : _state.s.tr('المغرب', 'Maroc', appL10n.chatRoomMorocco);
 
   String _sellerHandle() {
     final explicit = (widget.sellerHandle ?? '')
@@ -545,7 +546,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                       label: s.tr(
                                         'إعلانات',
                                         'Annonces',
-                                        'Listings',
+                                        appL10n.profileListings,
                                       ),
                                       onTap: () =>
                                           setState(() => _selectedTab = 0),
@@ -556,7 +557,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                       label: s.tr(
                                         'متابع',
                                         'Abonnés',
-                                        'Followers',
+                                        appL10n.sellerProfileFollowers,
                                       ),
                                     ),
                                     ApoloDlAccountStat(
@@ -565,7 +566,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                       label: s.tr(
                                         'التقييم',
                                         'Note',
-                                        'Rating',
+                                        appL10n.sellerProfileRating,
                                       ),
                                       onTap: () =>
                                           setState(() => _selectedTab = 1),
@@ -574,8 +575,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                   primaryAction: ApoloDlButton(
                                     key: const Key('seller-follow-btn'),
                                     label: isFollowing
-                                        ? s.tr('متابَع', 'Abonné', 'Following')
-                                        : s.tr('متابعة', 'Suivre', 'Follow'),
+                                        ? s.tr('متابَع', 'Abonné', appL10n.followingButton)
+                                        : s.tr('متابعة', 'Suivre', appL10n.followButton),
                                     variant: isFollowing
                                         ? ApoloDlButtonVariant.tertiary
                                         : ApoloDlButtonVariant.primary,
@@ -590,7 +591,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                     label: s.tr(
                                       'مراسلة',
                                       'Message',
-                                      'Message',
+                                      appL10n.adDetailMessage,
                                     ),
                                     leadingIcon:
                                         CupertinoIcons.chat_bubble_2_fill,
@@ -605,12 +606,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                       ? s.tr(
                                           '$storeCategoryLabel · $city · $storeHours',
                                           '$storeCategoryLabel · $city · $storeHours',
-                                          '$storeCategoryLabel · $city · $storeHours',
+                                          appL10n.sellerProfileStorecategorylabelCityStorehours(storeCategoryLabel, city, storeHours),
                                         )
                                       : s.tr(
                                           'بائع فردي في $city · تواصل مباشر عبر الشات.',
                                           'Vendeur particulier à $city · Contact direct par chat.',
-                                          'Individual seller in $city · Direct chat reply.',
+                                          appL10n.sellerProfileIndividualSellerCityDirectChat(city),
                                         ),
                                   extraActions: effectiveIsBusiness
                                       ? Container(
@@ -734,7 +735,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                                       s.tr(
                                                         'زيارة المتجر',
                                                         'Voir boutique',
-                                                        'Visit store',
+                                                        appL10n.sellerProfileVisitStore,
                                                       ),
                                                       style: TextStyle(
                                                         fontSize: 12,
@@ -784,7 +785,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                           _state.s.tr(
                                             'الإعلانات (${_sellerAds.length})',
                                             'Annonces (${_sellerAds.length})',
-                                            'Listings (${_sellerAds.length})',
+                                            appL10n.sellerProfileListingsSellerads(_sellerAds.length),
                                           ),
                                         ),
                                         const SizedBox(width: 4),
@@ -793,7 +794,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                           _state.s.tr(
                                             'التقييمات (${ratingStats.count})',
                                             'Avis (${ratingStats.count})',
-                                            'Reviews (${ratingStats.count})',
+                                            appL10n.sellerProfileReviewsCount(ratingStats.count),
                                           ),
                                         ),
                                         const SizedBox(width: 4),
@@ -802,7 +803,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                           _state.s.tr(
                                             'حول والضمانات',
                                             'Garanties',
-                                            'Trust & Info',
+                                            appL10n.sellerProfileTrustInfo,
                                           ),
                                         ),
                                       ],
@@ -896,7 +897,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
               _state.s.tr(
                 'لا توجد إعلانات منشورة حالياً',
                 'Aucune annonce disponible',
-                'No listings available right now',
+                appL10n.sellerProfileNoListingsAvailableRightNow,
               ),
               style: TextStyle(color: _dlMuted, fontSize: 14),
             ),
@@ -983,7 +984,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                   _state.s.tr(
                                     'تفاوض',
                                     'Négociable',
-                                    'Negotiable',
+                                    appL10n.negotiableBadge,
                                   ),
                                   style: TextStyle(
                                     color: _dlInk,
@@ -1081,48 +1082,48 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
       {
         'name': 'حمزة التازي',
         'rating': 5,
-        'date': _state.s.tr('منذ 3 أيام', 'Il y a 3 jours', '3 days ago'),
+        'date': _state.s.tr('منذ 3 أيام', 'Il y a 3 jours', appL10n.sellerProfile3DaysAgo),
         'item': 'Porsche Macan GTS',
         'comment': _state.s.tr(
           'البائع معقول بزاف، السلعة نقية كيف فالتصاور والمعاملة ممتازة، كيشرح ليك كلشي بالتفصيل.',
           'Vendeur très sérieux, produit impeccable conforme aux photos et excellente communication.',
-          'Very reliable seller, item matched the photos and great communication throughout.',
+          appL10n.sellerProfileVeryReliableSellerItemMatched,
         ),
         'verified': true,
       },
       {
         'name': 'هدى بناني',
         'rating': 5,
-        'date': _state.s.tr('منذ أسبوع', 'Il y a 1 semaine', '1 week ago'),
+        'date': _state.s.tr('منذ أسبوع', 'Il y a 1 semaine', appL10n.sellerProfile1WeekAgo),
         'item': 'iPhone 16 Pro Max',
         'comment': _state.s.tr(
           'تجربة شراء سريعة وموثوقة، التيليفون مختوم بالباكية وجربتو عاد خلصت. الله يعطيه الصحة.',
           'Expérience d’achat fluide, téléphone scellé vérifié avant paiement. Je recommande vivement !',
-          'Smooth buying experience, inspected before payment. Highly recommended!',
+          appL10n.sellerProfileSmoothBuyingExperienceInspectedBefore,
         ),
         'verified': true,
       },
       {
         'name': 'رشيد الإدريسي',
         'rating': 5,
-        'date': _state.s.tr('منذ أسبوعين', 'Il y a 2 semaines', '2 weeks ago'),
+        'date': _state.s.tr('منذ أسبوعين', 'Il y a 2 semaines', appL10n.sellerProfile2WeeksAgo),
         'item': 'MacBook Pro M3 Max',
         'comment': _state.s.tr(
           'ما شاء الله إنسان صادق ومحترم، جا حتى لعندي وخلاني نفحص البيسي كامل على خاطري.',
           'Personne honnête et respectueuse. J’ai pu tester la machine tranquillement.',
-          'Honest and respectful seller. Let me inspect the laptop thoroughly.',
+          appL10n.sellerProfileHonestRespectfulSellerLetMe,
         ),
         'verified': true,
       },
       {
         'name': 'سفيان الفيلالي',
         'rating': 4,
-        'date': _state.s.tr('منذ شهر', 'Il y a 1 mois', '1 month ago'),
+        'date': _state.s.tr('منذ شهر', 'Il y a 1 mois', appL10n.sellerProfile1MonthAgo),
         'item': 'Montre Rolex Submariner',
         'comment': _state.s.tr(
           'معاملة ممتازة وثقة كاملة. استجابة سريعة فـ شات Apolo.',
           'Très bonne transaction en toute confiance. Réponse rapide.',
-          'Great transaction with full trust. Fast replies on Apolo chat.',
+          appL10n.sellerProfileGreatTransactionFullTrustFast,
         ),
         'verified': true,
       },
@@ -1175,7 +1176,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                                 _state.s.tr(
                                   '${ratingStats.count} تقييم حقيقي',
                                   '${ratingStats.count} avis réels',
-                                  '${ratingStats.count} verified reviews',
+                                  appL10n.sellerProfileCountVerifiedReviews(ratingStats.count),
                                 ),
                                 style: TextStyle(
                                   fontSize: 11,
@@ -1207,12 +1208,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                               ? _state.s.tr(
                                   'تعديل تقييمك',
                                   'Modifier mon avis',
-                                  'Edit your review',
+                                  appL10n.adDetailEditReview2,
                                 )
                               : _state.s.tr(
                                   'أضف تقييمك',
                                   'Donner un avis',
-                                  'Write a review',
+                                  appL10n.adDetailWriteReview2,
                                 ),
                           leadingIcon: CupertinoIcons.star_fill,
                           variant: ApoloDlButtonVariant.primary,
@@ -1410,12 +1411,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title: _state.s.tr(
                     'بطاقة التعريف الوطنية مؤكدة',
                     'Pièce d’identité vérifiée',
-                    'Government ID Verified',
+                    appL10n.sellerProfileGovernmentIdVerified,
                   ),
                   desc: _state.s.tr(
                     'تم فحص ومصادقة وثائق الهوية الوطنية من طرف فريق التوثيق في Apolo.',
                     'Document d’identité officiel validé par l’équipe de conformité Apolo.',
-                    'Official identity document reviewed and verified by Apolo Trust Team.',
+                    appL10n.sellerProfileOfficialIdentityDocumentReviewedVerified,
                   ),
                 ),
                 _buildTrustRow(
@@ -1423,12 +1424,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title: _state.s.tr(
                     'رقم هاتف مغربي موثق',
                     'Numéro marocain vérifié',
-                    'Verified Phone Number',
+                    appL10n.sellerProfileVerifiedPhoneNumber,
                   ),
                   desc: _state.s.tr(
                     'رقم الهاتف مفعل عبر رمز التحقق OTP ومربوط مباشرة بحساب البائع.',
                     'Numéro de téléphone validé par code SMS OTP.',
-                    'Phone number confirmed via SMS OTP verification.',
+                    appL10n.sellerProfilePhoneNumberConfirmedViaSms,
                   ),
                 ),
                 _buildTrustRow(
@@ -1436,12 +1437,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title: _state.s.tr(
                     'حماية المعاملات Apolo Safety',
                     'Protection Apolo Safety',
-                    'Apolo Safety Protection',
+                    appL10n.sellerProfileApoloSafetyProtection,
                   ),
                   desc: _state.s.tr(
                     'ينصح فريق Apolo بمعاينة وفحص السلعة شخصياً قبل دفع أي مبلغ.',
                     'Nous vous recommandons de vérifier l’article en personne avant tout paiement.',
-                    'We recommend inspecting the item in person before making any payment.',
+                    appL10n.sellerProfileWeRecommendInspectingItemPerson,
                   ),
                 ),
                 _buildTrustRow(
@@ -1449,12 +1450,12 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                   title: _state.s.tr(
                     'طرق التسليم المتاحة',
                     'Modes de livraison disponibles',
-                    'Available Delivery Methods',
+                    appL10n.sellerProfileAvailableDeliveryMethods,
                   ),
                   desc: _state.s.tr(
                     'التسليم يداً بيد في $city، أو الإرسال عبر أمانة كوليس بعد الاتفاق.',
                     'Remise en main propre à $city ou livraison express sécurisée selon accord.',
-                    'Hand-to-hand pickup in $city, or insured express shipping by agreement.',
+                    appL10n.sellerProfileHandHandPickupCityInsured(city),
                   ),
                 ),
               ],

@@ -13,6 +13,7 @@ import '../../widgets/dl_settings_kit.dart';
 import '../pro_plus_screen.dart';
 import 'kinetic_widgets.dart';
 import 'skeleton_loader.dart';
+import '../../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Listing Boost Modal Sheet (`#FFFFFF` canvas, `#F6F6F6` plan cards,
 /// `#EEEEEE` pills/circles, `#000000` primary ink & capsule CTAs).
@@ -165,7 +166,7 @@ class _BoostSheetState extends State<BoostSheet> {
               _state.s.tr(
                 'تعذر إتمام عملية الدفع',
                 'Erreur lors du paiement',
-                'Could not complete payment',
+                appL10n.boostCouldNotCompletePayment,
               ),
             ),
           ),
@@ -209,7 +210,7 @@ class _BoostSheetState extends State<BoostSheet> {
                     _state.s.tr(
                       'تم تمييز إعلانك بنجاح!',
                       'Annonce boostée avec succès !',
-                      'Listing boosted!',
+                      appL10n.boostListingBoosted,
                     ),
               ),
             ),
@@ -229,7 +230,7 @@ class _BoostSheetState extends State<BoostSheet> {
             _state.s.tr(
               'لم يتم تأكيد الدفع. تواصل مع الدعم قبل إعادة الشراء.',
               'Paiement non confirmé. Contactez l’assistance avant de racheter.',
-              'Payment not confirmed. Contact support before retrying.',
+              appL10n.boostPaymentNotConfirmedContactSupport,
             ),
           ),
         ),
@@ -269,7 +270,7 @@ class _BoostSheetState extends State<BoostSheet> {
                   _state.s.tr(
                     'تم تفعيل VIP مجاناً من رصيد Pro Plus!',
                     'Boost VIP activé via votre crédit Pro Plus !',
-                    'VIP Boost activated using your Pro+ credit!',
+                    appL10n.boostVipBoostActivatedUsingPro,
                   ),
             ),
           ),
@@ -339,7 +340,7 @@ class _BoostSheetState extends State<BoostSheet> {
                                   s.tr(
                                     'ميّز إعلانك وضاعف مبيعاتك',
                                     'Boostez votre annonce',
-                                    'Boost your listing',
+                                    appL10n.boostListing,
                                   ),
                                   style: TextStyle(
                                     fontSize: 18.5,
@@ -402,7 +403,7 @@ class _BoostSheetState extends State<BoostSheet> {
                                     s.tr(
                                       'تفعيل VIP مجاناً من رصيد Pro Plus (${_state.vipBoostCredits})',
                                       'Activer VIP gratuit via Pro Plus (${_state.vipBoostCredits})',
-                                      'Activate free VIP with Pro+ (${_state.vipBoostCredits})',
+                                      appL10n.boostActivateFreeVipProVipboostcredits(_state.vipBoostCredits),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -465,7 +466,7 @@ class _BoostSheetState extends State<BoostSheet> {
                                     s.tr(
                                       'احصل على 3 تمويلات VIP مجانية شهرياً مع Apolo Pro+',
                                       '3 Boosts VIP offerts/mois avec Apolo Pro+',
-                                      'Get 3 free VIP boosts/month with Apolo Pro+',
+                                      appL10n.boostGet3FreeVipBoosts,
                                     ),
                                     style: const TextStyle(
                                       fontSize: 12.8,
@@ -500,7 +501,7 @@ class _BoostSheetState extends State<BoostSheet> {
                             s.tr(
                               'العروض غير متوفرة حالياً. أعد المحاولة لاحقاً.',
                               'Les offres sont indisponibles. Réessayez plus tard.',
-                              'Plans are currently unavailable. Please try again later.',
+                              appL10n.boostPlansAreCurrentlyUnavailablePlease,
                             ),
                             style: const TextStyle(
                               fontSize: 13.5,
@@ -516,7 +517,7 @@ class _BoostSheetState extends State<BoostSheet> {
                             s.tr(
                               'الدفع الفوري عبر الويب متاح لحسابك.',
                               'Le paiement instantané sur le Web est activé pour votre compte.',
-                              'Instant web checkout is enabled for your account.',
+                              appL10n.boostInstantWebCheckoutIsEnabled,
                             ),
                             style: const TextStyle(
                               fontSize: 12.5,
@@ -670,7 +671,7 @@ class _BoostSheetState extends State<BoostSheet> {
                                 s.tr(
                                   'تفعيل التمييز الآن',
                                   'Activer le Boost maintenant',
-                                  'Activate Boost now',
+                                  appL10n.boostActivateBoostNow,
                                 ),
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
 import '../widgets/marketplace_zone_sheet.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated full-screen settings route for choosing the Marketplace GPS zone.
 class SettingsZoneScreen extends StatelessWidget {
@@ -28,7 +29,7 @@ class SettingsZoneScreen extends StatelessWidget {
                     title: s.tr(
                       'منطقة الإعلانات (GPS)',
                       'Zone des annonces',
-                      'Marketplace Zone',
+                      appL10n.settingsZoneMarketplaceZone,
                     ),
                     size: ApoloDlTopNavSize.md,
                   ),

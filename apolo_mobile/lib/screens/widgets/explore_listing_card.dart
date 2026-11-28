@@ -11,6 +11,7 @@ import '../ad_detail_screen.dart';
 import 'app_image.dart';
 import 'kinetic_widgets.dart';
 import '../../widgets/dl_settings_kit.dart';
+import '../../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Explore Screen full-width listing card:
 /// - Full width inside 20px screen margins (~350px on 390px mobile), ~370px height
@@ -240,7 +241,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
         int.tryParse((ad['views_count'] ?? ad['views'] ?? 0).toString()) ?? 0;
 
     if (isFeatured || views >= 100) {
-      return _state.s.tr('موصى به', 'Coup de cœur', 'Guest favorite');
+      return _state.s.tr('موصى به', 'Coup de cœur', appL10n.guestFavoriteBadge);
     }
     return null;
   }
@@ -325,7 +326,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
 
     final bedrooms = (ad['bedrooms'] ?? '').toString().trim();
     if (bedrooms.isNotEmpty) {
-      parts.add('$bedrooms bedrooms');
+      parts.add(appL10n.listingBedroomsCount(bedrooms));
     } else if (ad['surface'] != null &&
         ad['surface'].toString().trim().isNotEmpty) {
       parts.add('${ad['surface']} m²');
@@ -382,7 +383,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       if (s.isNotEmpty) return s;
     }
 
-    return _state.s.tr('معلن', 'Vendeur', 'Seller');
+    return _state.s.tr('معلن', 'Vendeur', appL10n.adDetailSeller);
   }
 
   String _resolveSellerAvatar() {
@@ -496,7 +497,9 @@ class _ExploreListingCardState extends State<ExploreListingCard>
       return (
         mainAmount: explicitTotal,
         unitSuffix: unit,
-        subLine: explicitNightly.isNotEmpty ? explicitNightly : 'taxes incl.',
+        subLine: explicitNightly.isNotEmpty
+            ? explicitNightly
+            : appL10n.listingTaxesIncluded,
       );
     }
 
@@ -505,8 +508,8 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     final defaultSub = explicitNightly.isNotEmpty
         ? explicitNightly
         : (isNeg
-            ? _state.s.tr('قابل للتفاوض', 'Négociable', 'Negotiable')
-            : _state.s.tr('السعر المعلن', 'Prix affiché', 'Fixed price'));
+            ? _state.s.tr('قابل للتفاوض', 'Négociable', appL10n.negotiableBadge)
+            : _state.s.tr('السعر المعلن', 'Prix affiché', appL10n.fixedPriceBadge));
 
     if (priceFormatted.isNotEmpty) {
       return (
@@ -530,12 +533,12 @@ class _ExploreListingCardState extends State<ExploreListingCard>
     }
 
     return (
-      mainAmount: _state.s.tr('عند الطلب', 'Sur demande', 'On request'),
+      mainAmount: _state.s.tr('عند الطلب', 'Sur demande', appL10n.adDetailOnRequest),
       unitSuffix: '',
       subLine: _state.s.tr(
         'تواصل مع المعلن',
         'Contacter le vendeur',
-        'Contact seller',
+        appL10n.exploreListingCardContactSeller,
       ),
     );
   }
@@ -732,7 +735,7 @@ class _ExploreListingCardState extends State<ExploreListingCard>
                       end: 6,
                       child: Semantics(
                         button: true,
-                        label: 'Favorite listing',
+                        label: context.l10n.listingFavoriteTooltip,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTapDown: (_) {

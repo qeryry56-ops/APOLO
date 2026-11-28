@@ -9,6 +9,7 @@ import '../../features/bug_report/services/bug_report_controller.dart';
 import '../../features/bug_report/ui/bug_report_strings.dart';
 import '../../widgets/dl_settings_kit.dart';
 import '../support_screen.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated full-screen settings view for bug reporting, shake trigger, and diagnostics.
 class SettingsBugReportScreen extends StatelessWidget {
@@ -68,7 +69,7 @@ class SettingsBugReportScreen extends StatelessWidget {
                               title: s.tr(
                                 'التشغيل السريع',
                                 'Déclenchement rapide',
-                                'Quick trigger',
+                                appL10n.settingsBugReportQuickTrigger,
                               ),
                             ),
                             ValueListenableBuilder<bool>(
@@ -99,14 +100,14 @@ class SettingsBugReportScreen extends StatelessWidget {
                               title: s.tr(
                                 'ملخص التشخيص',
                                 'Résumé du diagnostic',
-                                'Diagnostics summary',
+                                appL10n.settingsBugReportDiagnosticsSummary,
                               ),
                             ),
                             ApoloDlLineItem(
                               title: s.tr(
                                 'إصدار التطبيق',
                                 'Version de l’app',
-                                'App version',
+                                appL10n.settingsAppDataAppVersion,
                               ),
                               leadingIcon: CupertinoIcons.app_badge,
                               trailingText:
@@ -117,7 +118,7 @@ class SettingsBugReportScreen extends StatelessWidget {
                               title: s.tr(
                                 'المنصة',
                                 'Plateforme',
-                                'Platform',
+                                appL10n.settingsBugReportPlatform,
                               ),
                               leadingIcon: CupertinoIcons.device_phone_portrait,
                               trailingText: _platformLabel(),
@@ -127,7 +128,7 @@ class SettingsBugReportScreen extends StatelessWidget {
                               title: s.tr(
                                 'اللغة النشطة',
                                 'Langue active',
-                                'Active language',
+                                appL10n.settingsBugReportActiveLanguage,
                               ),
                               leadingIcon: CupertinoIcons.globe,
                               trailingText: state.locale.languageCode,
@@ -152,7 +153,7 @@ class SettingsBugReportScreen extends StatelessWidget {
                               label: s.tr(
                                 'المساعدة والدعم',
                                 'Aide et assistance',
-                                'Help & Support',
+                                appL10n.settingsBugReportHelpSupport,
                               ),
                               leadingIcon: Icons.help_outline,
                               variant: ApoloDlButtonVariant.secondary,

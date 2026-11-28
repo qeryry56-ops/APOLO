@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
+import '../../../l10n/l10n.dart';
 import '../models/meeting_models.dart';
 
 /// Stateless HTTP Control Plane client for Apolo.ma Group Meetings (`/api/v1/meetings`).
@@ -160,13 +161,13 @@ class MeetingStringsFallback {
       );
     }
     if (lang == 'en') {
-      return const MeetingStringsFallback(
-        unauthorized: 'Please sign in to join the meeting.',
-        forbidden: 'You do not have permission to access this meeting.',
-        ended: 'This meeting has already ended.',
-        locked: 'This room is currently locked by the host.',
-        full: 'This meeting has reached its maximum participant capacity.',
-        generic: 'Could not reach the meeting service. Check your connection.',
+      return MeetingStringsFallback(
+        unauthorized: appL10n.meetingSignInRequiredError,
+        forbidden: appL10n.meetingPermissionDeniedError,
+        ended: appL10n.meetingAlreadyEndedError,
+        locked: appL10n.meetingRoomLockedError,
+        full: appL10n.meetingMaxCapacityError,
+        generic: appL10n.meetingServiceUnreachableError,
       );
     }
     return const MeetingStringsFallback(

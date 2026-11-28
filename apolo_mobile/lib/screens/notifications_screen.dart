@@ -22,6 +22,7 @@ import 'search_screen.dart';
 import 'stores_screen.dart';
 import 'widgets/app_image.dart';
 import 'widgets/skeleton_loader.dart';
+import '../l10n/l10n.dart';
 
 /// Dynamic Layer v5.1 Two-Stage Notification Center:
 /// 1. **Stage 1 — `Notification / Default` (`45849:25601`)**:
@@ -150,7 +151,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       headerTitle: s.tr(
         'تفعيل الإشعارات',
         'Activer les notifications',
-        'Enable notifications',
+        appL10n.notificationsEnableNotifications,
       ),
       media: Container(
         width: 56,
@@ -168,17 +169,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       contentTitle: s.tr(
         'الإشعارات غير مفعّلة على الجهاز',
         'Notifications désactivées',
-        'Notifications are blocked',
+        appL10n.notificationsAreBlocked,
       ),
       contentDescription: s.tr(
         'يرجى تفعيل الإشعارات من إعدادات التطبيق في الهاتف أو أيقونة القفل في المتصفح ثم الضغط على "متابعة" مرة أخرى.',
         'Autorisez les notifications dans les réglages de votre appareil ou navigateur puis appuyez sur Continuer.',
-        'Please enable notifications in your phone or browser settings, then tap Continue again.',
+        appL10n.notificationsPleaseEnableNotificationsPhoneBrowser,
       ),
       actions: [
         ApoloDlButton(
           key: const Key('dl-notification-blocked-dismiss'),
-          label: s.tr('حسناً، فهمت', 'Compris', 'Got it'),
+          label: s.tr('حسناً، فهمت', 'Compris', appL10n.notificationsGotIt),
           variant: ApoloDlButtonVariant.primary,
           borderRadius: 999,
           fullWidth: true,
@@ -248,7 +249,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 s.tr(
                                   'إعدادات التنبيهات',
                                   'Préférences d’alertes',
-                                  'Notification preferences',
+                                  appL10n.notificationsNotificationPreferences,
                                 ),
                                 style: TextStyle(
                                   color: _dlInk,
@@ -261,7 +262,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 s.tr(
                                   'اختر التنبيهات التي تهمك على Apolo',
                                   'Choisissez les alertes à recevoir sur Apolo',
-                                  'Choose which Apolo alerts you want to receive',
+                                  appL10n.notificationsChooseWhichApoloAlertsYou,
                                 ),
                                 style: TextStyle(
                                   color: _dlMuted,
@@ -296,12 +297,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             title: s.tr(
                               'رسائل وعروض المشترين',
                               'Messages & offres acheteurs',
-                              'Messages & buyer offers',
+                              appL10n.notificationsMessagesBuyerOffers,
                             ),
                             subtitle: s.tr(
                               'تنبيه فوري عند وصول رسالة أو عرض سعر',
                               'Alerte instantanée dès qu’un acheteur écrit',
-                              'Instant alert when a buyer messages or makes an offer',
+                              appL10n.notificationsInstantAlertWhenBuyerMessages,
                             ),
                             value: _prefMessages,
                             onChanged: (val) {
@@ -327,12 +328,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             title: s.tr(
                               'تخفيضات الأسعار والمحفوظات',
                               'Baisses de prix & favoris',
-                              'Price drops & saved listings',
+                              appL10n.notificationsPriceDropsSavedListings,
                             ),
                             subtitle: s.tr(
                               'إشعارات الإعلانات التي حفظتها في المفضلة',
                               'Mises à jour sur vos annonces enregistrées',
-                              'Updates on listings you bookmarked',
+                              appL10n.notificationsUpdatesListingsYouBookmarked,
                             ),
                             value: _prefSaved,
                             onChanged: (val) {
@@ -358,12 +359,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             title: s.tr(
                               'تحديثات المتاجر الرسمية',
                               'Boutiques officielles & actus',
-                              'Official stores & updates',
+                              appL10n.notificationsOfficialStoresUpdates,
                             ),
                             subtitle: s.tr(
                               'جديد المتاجر الموثقة التي تتابعها',
                               'Nouveautés des vendeurs vérifiés suivis',
-                              'New arrivals from verified sellers you follow',
+                              appL10n.notificationsNewArrivalsFromVerifiedSellers,
                             ),
                             value: _prefStores,
                             onChanged: (val) {
@@ -382,7 +383,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         label: s.tr(
                           'تحديد الكل كمقروء',
                           'Tout marquer comme lu',
-                          'Mark all as read',
+                          appL10n.notificationsMarkAllAsRead,
                         ),
                         variant: ApoloDlButtonVariant.secondary,
                         borderRadius: 999,
@@ -398,7 +399,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     const SizedBox(height: 12),
                     ApoloDlButton(
                       key: const Key('dl-notif-pref-done'),
-                      label: s.tr('تم', 'Terminé', 'Done'),
+                      label: s.tr('تم', 'Terminé', appL10n.doneButton),
                       variant: ApoloDlButtonVariant.primary,
                       borderRadius: 999,
                       fullWidth: true,
@@ -518,7 +519,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               s.tr(
                 'يرجى الضغط على "سماح / Allow" لتفعيل الإشعارات',
                 'Veuillez appuyer sur « Autoriser » pour activer les alertes',
-                'Please allow notifications to continue',
+                appL10n.notificationsPleaseAllowNotificationsContinue,
               ),
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -710,14 +711,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         'nav_target': 'explore',
         'spans': <Map<String, dynamic>>[
           {
-            'text': s.tr('أنت', 'Vous', 'You'),
+            'text': s.tr('أنت', 'Vous', appL10n.meetingYou),
             'bold': true,
           },
           {
             'text': s.tr(
               ' قمت بتفعيل التنبيهات الفورية لـ ',
               ' avez activé les alertes en direct sur ',
-              ' activated instant alerts for ',
+              appL10n.notificationsActivatedInstantAlerts,
             ),
             'bold': false,
           },
@@ -725,12 +726,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'text': s.tr(
               'Apolo.ma — الرسائل والعروض',
               'Apolo.ma — Messages & Offres',
-              'Apolo.ma — Buyer Messages & Offers',
+              appL10n.notificationsApoloMaBuyerMessagesOffers,
             ),
             'bold': true,
           },
         ],
-        'time': s.tr('الآن', 'maintenant', 'just now'),
+        'time': s.tr('الآن', 'maintenant', appL10n.notificationsJustNow),
       },
       {
         'id': 'apolo_seller_tip',
@@ -745,7 +746,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         'nav_target': 'post_ad',
         'spans': <Map<String, dynamic>>[
           {
-            'text': s.tr('فريق Apolo', 'Équipe Apolo', 'Apolo Team'),
+            'text': s.tr('فريق Apolo', 'Équipe Apolo', appL10n.notificationsApoloTeam),
             'bold': true,
             'verified': true,
           },
@@ -753,12 +754,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'text': s.tr(
               ' شارك معك نصيحة: أضف صوراً واضحة وثمناً مناسباً لبيع إعلانك بسرعة.',
               ' : Ajoutez des photos nettes à votre annonce pour vendre plus vite.',
-              ' shared a tip: Add clear photos to your listing to close deals faster.',
+              appL10n.notificationsSharedTipAddClearPhotos,
             ),
             'bold': false,
           },
         ],
-        'time': s.tr('اليوم', "Aujourd'hui", '2h ago'),
+        'time': s.tr('اليوم', "Aujourd'hui", appL10n.notifications2hAgo),
       },
       {
         'id': 'apolo_stores_weekly',
@@ -776,7 +777,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'text': s.tr(
               'متاجر Apolo الرسمية',
               'Boutiques Apolo PRO',
-              'Apolo Official Stores',
+              appL10n.notificationsApoloOfficialStores,
             ),
             'bold': true,
             'verified': true,
@@ -785,7 +786,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'text': s.tr(
               ' قامت بتحديث ',
               ' a mis à jour ',
-              ' updated ',
+              appL10n.notificationsUpdated,
             ),
             'bold': false,
           },
@@ -793,7 +794,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'text': s.tr(
               'عروض السيارات، العقارات والإلكترونيات الموثقة',
               'les annonces vérifiées Auto, Immo & Tech',
-              'Verified Cars, Real Estate & Tech Listings',
+              appL10n.notificationsVerifiedCarsRealEstateTech,
             ),
             'bold': true,
           },
@@ -801,12 +802,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'text': s.tr(
               ' في جميع مدن المغرب.',
               ' dans toutes les villes du Maroc.',
-              ' across all Moroccan cities.',
+              appL10n.notificationsAcrossAllMoroccanCities,
             ),
             'bold': false,
           },
         ],
-        'time': s.tr('هذا الأسبوع', 'Cette semaine', 'This week'),
+        'time': s.tr('هذا الأسبوع', 'Cette semaine', appL10n.notificationsThisWeek),
       },
     ];
   }
@@ -958,7 +959,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       child: showFeedHeader
                           ? Text(
                               s.tr('الإشعارات', 'Notifications',
-                                  'Notifications'),
+                                  appL10n.notificationsNotifications),
                               key: const Key('dl-notifications-header-title'),
                               textAlign: TextAlign.center,
                               maxLines: 1,
@@ -983,7 +984,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         tooltip: s.tr(
                           'إعدادات التنبيهات',
                           'Préférences',
-                          'Notification preferences',
+                          appL10n.notificationsNotificationPreferences,
                         ),
                         onPressed: _openPreferencesSheet,
                       )
@@ -1005,14 +1006,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final previewTitle = s.tr(
       'مرحباً، معك Apolo!',
       'Bonjour, c’est Apolo !',
-      "Hey, it's Apolo!",
+      appL10n.notificationsHeyItSApolo,
     );
     final previewBody = s.tr(
       'أنا جاهز لتنبيهك فور وصول رسائل وعروض المشترين. ماذا عنك؟',
       'Je suis prêt à vous alerter dès qu’un message arrive. Et vous ?',
-      'I am ready to help you out. How about you?',
+      appL10n.notificationsIAmReadyHelpYou,
     );
-    final nowLabel = s.tr('الآن', 'maintenant', 'now');
+    final nowLabel = s.tr('الآن', 'maintenant', appL10n.notificationsNow);
 
     return Center(
       child: ConstrainedBox(
@@ -1213,7 +1214,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          s.tr('الإشعارات', 'Notifications', 'Notification'),
+                          s.tr('الإشعارات', 'Notifications', appL10n.notificationsNotification),
                           key: const Key('dl-notification-title'),
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -1231,7 +1232,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             s.tr(
                               'فعّل الإشعارات للتوصل بالرسائل',
                               'Activez les notifications pour recevoir des messages',
-                              'Activate notifications to receive messages',
+                              appL10n.notificationsActivateNotificationsReceiveMessages,
                             ),
                             key: const Key('dl-notification-subtitle'),
                             textAlign: TextAlign.center,
@@ -1268,7 +1269,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   : _activateAndVerifyNotifications,
                               child: Center(
                                 child: Text(
-                                  s.tr('متابعة', 'Continuer', 'Continue'),
+                                  s.tr('متابعة', 'Continuer', appL10n.continueButton),
                                   style: TextStyle(
                                     color: _dlOnInk,
                                     fontSize: 16.0,
@@ -1635,17 +1636,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       (
         0,
         const Key('dl-notif-filter-all'),
-        s.tr('الكل', 'Tout', 'All'),
+        s.tr('الكل', 'Tout', appL10n.chatListAll),
       ),
       (
         1,
         const Key('dl-notif-filter-messages'),
-        s.tr('الرسائل', 'Messages', 'Messages'),
+        s.tr('الرسائل', 'Messages', appL10n.navMessages),
       ),
       (
         2,
         const Key('dl-notif-filter-updates'),
-        s.tr('التحديثات', 'Activité', 'Updates'),
+        s.tr('التحديثات', 'Activité', appL10n.notificationsUpdates),
       ),
     ];
 
@@ -1692,7 +1693,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        s.tr('قراءة الكل', 'Tout lire', 'Mark all read'),
+                        s.tr('قراءة الكل', 'Tout lire', appL10n.chatListMarkAllRead),
                         style: TextStyle(
                           color: _dlInk,
                           fontSize: 13,
@@ -1770,7 +1771,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             s.tr(
               'لا توجد إشعارات في هذا القسم',
               'Aucune notification dans cet onglet',
-              'No notifications in this category',
+              appL10n.notificationsNoNotificationsThisCategory,
             ),
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -1784,7 +1785,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             s.tr(
               'ستظهر هنا رسائل وعروض المشترين وتحديثات الإعلانات فور وصولها.',
               'Les messages acheteurs et mises à jour apparaîtront ici.',
-              'Buyer messages, offers, and listing updates will appear here.',
+              appL10n.notificationsBuyerMessagesOffersListingUpdates,
             ),
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -1796,7 +1797,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           const SizedBox(height: 16),
           ApoloDlButton(
             key: const Key('dl-notifications-filter-reset'),
-            label: s.tr('عرض الكل', 'Tout afficher', 'Show all'),
+            label: s.tr('عرض الكل', 'Tout afficher', appL10n.adDetailShowAll),
             variant: ApoloDlButtonVariant.primary,
             size: ApoloDlButtonSize.sm,
             borderRadius: 999,
@@ -1842,7 +1843,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   s.tr(
                     'لا يوجد اتصال بالإنترنت',
                     'Aucune connexion Internet',
-                    'No Internet connection',
+                    appL10n.notificationsNoInternetConnection,
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -1856,7 +1857,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   s.tr(
                     'تأكد من اتصالك بشبكة Wi-Fi أو بيانات الهاتف لتحميل آخر الإشعارات والرسائل.',
                     'Vérifiez votre connexion Wi-Fi ou mobile pour actualiser vos notifications.',
-                    'Check your Wi-Fi or mobile data to refresh your notifications.',
+                    appL10n.notificationsCheckWiFiMobileData,
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -1869,8 +1870,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ApoloDlButton(
                   key: const Key('dl-notifications-retry-btn'),
                   label: _isReconnecting
-                      ? s.tr('جاري الاتصال...', 'Connexion...', 'Connecting...')
-                      : s.tr('إعادة المحاولة', 'Réessayer', 'Try again'),
+                      ? s.tr('جاري الاتصال...', 'Connexion...', appL10n.callConnecting)
+                      : s.tr('إعادة المحاولة', 'Réessayer', appL10n.tryAgainButton),
                   variant: ApoloDlButtonVariant.primary,
                   borderRadius: 999,
                   height: 48,
@@ -1940,7 +1941,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         _buildDlSectionBlock(
                           sectionKey:
                               const Key('dl-notifications-section-today'),
-                          heading: s.tr('اليوم', "Aujourd'hui", 'Today'),
+                          heading: s.tr('اليوم', "Aujourd'hui", appL10n.notificationsToday),
                           rows: todayItems,
                         ),
                       if (todayItems.isNotEmpty && weekItems.isNotEmpty)
@@ -1952,7 +1953,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           heading: s.tr(
                             'هذا الأسبوع',
                             'Cette semaine',
-                            'This week',
+                            appL10n.notificationsThisWeek,
                           ),
                           rows: weekItems,
                         ),

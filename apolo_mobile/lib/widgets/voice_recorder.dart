@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/services/media_rtc_bridge.dart';
+import '../l10n/l10n.dart';
 
 /// Recorded voice note payload emitted by [VoiceRecorder.onSend].
 class VoiceRecordingData {
@@ -526,19 +527,19 @@ class VoiceRecorderState extends State<VoiceRecorder> {
   String _buildSemanticStateLabel() {
     if (!_isRecording) {
       return _isMicMutedWarning
-          ? 'Mic muted. No audio detected. Hold mic button to record voice message'
-          : 'Hold to record voice message. Slide left to cancel, slide up to lock hands-free';
+          ? appL10n.voiceMicMutedIdleSemantic
+          : appL10n.voiceHoldToRecordSemantic;
     }
     final timeStr = VoiceRecorder.formatDuration(recordSeconds);
     final mutedSuffix =
-        _isMicMutedWarning ? '. Warning: Mic muted, no audio detected' : '';
+        _isMicMutedWarning ? appL10n.voiceMicMutedSuffixSemantic : '';
     if (_isPastCancelThreshold) {
-      return 'Release to cancel voice recording$mutedSuffix';
+      return appL10n.voiceReleaseToCancelSemantic(mutedSuffix);
     }
     if (_isLocked) {
-      return 'Recording locked hands-free, $timeStr$mutedSuffix. Tap STOP to end recording';
+      return appL10n.voiceLockedRecordingSemantic(timeStr, mutedSuffix);
     }
-    return 'Recording voice message, $timeStr$mutedSuffix. Slide left to cancel, slide up to lock';
+    return appL10n.voiceActiveRecordingSemantic(timeStr, mutedSuffix);
   }
 
   Widget _buildWaveformBars({required bool isDark}) {
@@ -558,10 +559,10 @@ class VoiceRecorderState extends State<VoiceRecorder> {
     return Semantics(
       key: const Key('voice-recorder-waveform'),
       label: _isMicMutedWarning
-          ? 'Flat audio waveform, mic muted'
+          ? appL10n.voiceWaveformMutedSemantic
           : (_isPausedForPreview
-              ? 'Interactive audio preview waveform'
-              : 'Live audio waveform'),
+              ? appL10n.voiceWaveformPreviewSemantic
+              : appL10n.voiceWaveformLiveSemantic),
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: SizedBox(
@@ -613,7 +614,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
   Widget _buildMicMutedWarningBanner() {
     return Semantics(
       liveRegion: true,
-      label: 'Mic muted warning. No audio detected.',
+      label: appL10n.voiceMicMutedWarningSemantic,
       child: Container(
         key: const Key('voice-recorder-mic-muted-warning'),
         margin: const EdgeInsets.only(bottom: 6),
@@ -623,18 +624,18 @@ class VoiceRecorderState extends State<VoiceRecorder> {
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: const Color(0xFFF59E0B)),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               CupertinoIcons.mic_slash_fill,
               size: 14,
               color: Color(0xFFB45309),
             ),
-            SizedBox(width: 6),
+            const SizedBox(width: 6),
             Text(
-              'Mic muted',
-              style: TextStyle(
+              appL10n.voiceMicMutedBadge,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFFB45309),
@@ -694,7 +695,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
           // 1. Start: Close / Cancel button (✕)
           Semantics(
             button: true,
-            label: 'Cancel voice recording',
+            label: appL10n.voiceCancelRecordingTooltip,
             child: GestureDetector(
               key: const Key('voice-recorder-locked-cancel-button'),
               behavior: HitTestBehavior.opaque,
@@ -726,8 +727,8 @@ class VoiceRecorderState extends State<VoiceRecorder> {
           Semantics(
             button: true,
             label: showPauseGlyph
-                ? 'Pause voice recording or preview'
-                : 'Play voice preview',
+                ? appL10n.voicePauseRecordingTooltip
+                : appL10n.voicePlayPreviewTooltip,
             child: GestureDetector(
               key: const Key('voice-recorder-play-pause-button'),
               behavior: HitTestBehavior.opaque,
@@ -787,7 +788,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
           // 5. End: Native iOS Blue Circular Send Button with upward arrow (↑)
           Semantics(
             button: true,
-            label: 'Send voice message',
+            label: appL10n.voiceSendVoiceMessageTooltip,
             child: GestureDetector(
               key: const Key('voice-recorder-stop-button'),
               behavior: HitTestBehavior.opaque,
@@ -974,8 +975,8 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                                   Flexible(
                                     child: Text(
                                       _isPastCancelThreshold
-                                          ? 'Release to cancel'
-                                          : 'Slide to cancel',
+                                          ? appL10n.voiceReleaseToCancelLabel
+                                          : appL10n.voiceSlideToCancelLabel,
                                       key: const Key(
                                           'voice-recorder-cancel-label'),
                                       maxLines: 1,
@@ -1011,7 +1012,7 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                         borderRadius: BorderRadius.circular(22),
                       ),
                       child: Text(
-                        'Hold mic to record voice message',
+                        appL10n.voiceHoldMicPrompt,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1026,9 +1027,8 @@ class VoiceRecorderState extends State<VoiceRecorder> {
                 // Press-and-hold (or tap to open capsule) Mic button Listener
                 Semantics(
                   button: true,
-                  label: 'Record voice message',
-                  hint:
-                      'Tap or press and hold to record. Slide inward to cancel, slide up to lock',
+                  label: appL10n.voiceRecordButtonSemantic,
+                  hint: appL10n.voiceRecordGestureHint,
                   child: Listener(
                     key: const Key('voice-recorder-mic-button'),
                     behavior: HitTestBehavior.opaque,

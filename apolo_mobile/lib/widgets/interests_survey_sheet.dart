@@ -5,6 +5,7 @@ import '../account/account_helpers.dart';
 import '../core/config/app_config.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
+import '../l10n/l10n.dart';
 
 /// Interactive Interests Survey Modal (نافذة منبثقة لاستطلاع الاهتمامات والتصنيفات)
 ///
@@ -258,7 +259,7 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                         s.tr(
                             'ما هي اهتماماتك؟',
                             'Quels sont vos centres d’intérêt ?',
-                            'What are your interests?'),
+                            appL10n.interestsSurveyWhatAreInterests),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -394,12 +395,12 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                             ? s.tr(
                                 'اكتشاف المنتجات',
                                 'Découvrir les produits',
-                                'Discover products',
+                                appL10n.interestsSurveyDiscoverProducts,
                               )
                             : s.tr(
                                 'حفظ وتأكيد (${_selectedCategoryIds.length})',
                                 'Enregistrer et continuer (${_selectedCategoryIds.length})',
-                                'Save & continue (${_selectedCategoryIds.length})',
+                                appL10n.interestsSurveySaveContinueSelectedcategoryids(_selectedCategoryIds.length),
                               ),
                         style: const TextStyle(
                           fontSize: 15.5,
@@ -423,7 +424,7 @@ class _InterestsSurveySheetState extends State<InterestsSurveySheet> {
                         widget.onFinished?.call();
                       },
                 child: Text(
-                  s.tr('تخطي الآن', 'Passer pour le moment', 'Skip for now'),
+                  s.tr('تخطي الآن', 'Passer pour le moment', appL10n.interestsSurveySkipNow),
                   style: const TextStyle(
                     fontSize: 13.5,
                     color: Color(0xFF9CA3AF),

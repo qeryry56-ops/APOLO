@@ -7,6 +7,7 @@ import '../../core/services/firebase_chat_service.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/dl_settings_kit.dart';
 import '../widgets/app_image.dart';
+import '../../l10n/l10n.dart';
 
 /// Dedicated full-screen view for inspecting and unblocking blocked accounts.
 class SettingsBlockedAccountsScreen extends StatefulWidget {
@@ -68,7 +69,7 @@ class _SettingsBlockedAccountsScreenState
             s.tr(
               'تم إلغاء حظر $name',
               '$name a été débloqué',
-              'Unblocked $name',
+              appL10n.settingsBlockedAccountsUnblockedName(name),
             ),
           ),
         ),
@@ -99,7 +100,7 @@ class _SettingsBlockedAccountsScreenState
                     title: s.tr(
                       'الحسابات المحظورة',
                       'Comptes bloqués',
-                      'Blocked accounts',
+                      appL10n.settingsBlockedAccountsBlockedAccounts,
                     ),
                     size: ApoloDlTopNavSize.md,
                   ),
@@ -147,14 +148,14 @@ class _SettingsBlockedAccountsScreenState
             headline: s.tr(
               'لا توجد حسابات محظورة حالياً',
               'Aucun compte bloqué pour le moment',
-              'No blocked accounts yet',
+              appL10n.settingsBlockedAccountsNoBlockedAccountsYet,
             ),
             description: s.tr(
               'الحسابات أو المتاجر التي تقوم بحظرها من المحادثات أو الإعلانات ستظهر هنا ويمكنك إلغاء حظرها في أي وقت.',
               'Les comptes ou boutiques que vous bloquez apparaîtront ici et vous pourrez les débloquer à tout moment.',
-              'Users or stores you block from chats or listings will appear here so you can unblock them anytime.',
+              appL10n.settingsBlockedAccountsUsersStoresYouBlockFrom,
             ),
-            actionLabel: s.tr('تحديث', 'Actualiser', 'Try again'),
+            actionLabel: s.tr('تحديث', 'Actualiser', appL10n.tryAgainButton),
             onAction: _loadBlocked,
           ),
         ],
@@ -173,7 +174,7 @@ class _SettingsBlockedAccountsScreenState
               s.tr(
                 'يمكنك إلغاء حظر أي مستخدم أو متجر في أي وقت.',
                 'Débloquez un utilisateur ou une boutique à tout moment.',
-                'You can unblock any user or store anytime.',
+                appL10n.settingsBlockedAccountsYouCanUnblockAnyUser,
               ),
               style: TextStyle(
                 fontSize: 13.5,
@@ -195,8 +196,8 @@ class _SettingsBlockedAccountsScreenState
           key: Key('blocked-account-$id'),
           title: name,
           description: type == 'store'
-              ? s.tr('متجر محظور', 'Boutique bloquée', 'Blocked store')
-              : s.tr('حساب محظور', 'Compte bloqué', 'Blocked user'),
+              ? s.tr('متجر محظور', 'Boutique bloquée', appL10n.settingsBlockedAccountsBlockedStore)
+              : s.tr('حساب محظور', 'Compte bloqué', appL10n.settingsBlockedAccountsBlockedUser),
           leadingWidget: Container(
             width: 40,
             height: 40,
@@ -226,7 +227,7 @@ class _SettingsBlockedAccountsScreenState
           state: isBusy
               ? ApoloDlLineItemState.disabled
               : ApoloDlLineItemState.normal,
-          buttonLabel: s.tr('إلغاء الحظر', 'Débloquer', 'Unblock'),
+          buttonLabel: s.tr('إلغاء الحظر', 'Débloquer', appL10n.chatRoomUnblock),
           showSeparator: !isLast,
           onButtonPressed: () => _unblock(id, name),
         );

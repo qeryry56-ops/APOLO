@@ -7,6 +7,7 @@ import '../location/marketplace_location.dart';
 import '../network/api_client.dart';
 import '../config/app_config.dart';
 import '../services/push_notification_service.dart';
+import '../../l10n/l10n.dart';
 
 class AppState extends ChangeNotifier {
   static final AppState _instance = AppState._internal();
@@ -205,11 +206,11 @@ class AppState extends ChangeNotifier {
   String themeModeLabel(AppStrings strings) {
     switch (_themeMode) {
       case ThemeMode.dark:
-        return strings.tr('داكن', 'Sombre', 'Dark');
+        return strings.tr('داكن', 'Sombre', appL10n.appStateDark);
       case ThemeMode.system:
-        return strings.tr('تلقائي', 'Système', 'System');
+        return strings.tr('تلقائي', 'Système', appL10n.appStateSystem);
       case ThemeMode.light:
-        return strings.tr('فاتح', 'Clair', 'Light');
+        return strings.tr('فاتح', 'Clair', appL10n.appStateLight);
     }
   }
 
@@ -388,7 +389,7 @@ class AppState extends ChangeNotifier {
             .trim();
     final String authorName = rawName.isNotEmpty
         ? rawName
-        : s.tr('عضو Apolo', 'Membre Apolo', 'Apolo Member');
+        : s.tr('عضو Apolo', 'Membre Apolo', appL10n.appStateApoloMember);
 
     final entry = <String, dynamic>{
       'id': 'rev_${DateTime.now().millisecondsSinceEpoch}',
@@ -401,7 +402,7 @@ class AppState extends ChangeNotifier {
       'comment': comment.trim(),
       'tags': tags,
       'item': (adTitle ?? '').trim(),
-      'date': s.tr('الآن', 'À l’instant', 'Just now'),
+      'date': s.tr('الآن', 'À l’instant', appL10n.appStateJustNow),
       'verified': isLoggedIn,
       'is_mine': true,
       'created_at': DateTime.now().toIso8601String(),
@@ -794,7 +795,7 @@ class AppState extends ChangeNotifier {
   String activeZoneBadgeLabel(AppStrings s) {
     if (!hasActiveZone) return s.allCities;
     final city = activeZoneCityLabel(s);
-    final unit = s.tr('كم', 'km', 'km');
+    final unit = s.tr('كم', 'km', appL10n.appStateKm);
     return '$city · ${zoneRadiusKm.round()} $unit';
   }
 
