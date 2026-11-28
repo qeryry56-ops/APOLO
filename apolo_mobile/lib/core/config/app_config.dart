@@ -116,7 +116,8 @@ class AppStrings {
 
   String tr(String ar, String fr, [String? en]) {
     if (isAr) return ar;
-    if (isEn && en != null) return en;
+    if (isFr) return fr;
+    if (en != null) return en;
     return fr;
   }
 

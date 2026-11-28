@@ -86,6 +86,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'العربية';
       case 'fr':
         return 'Français';
+      case 'es':
+        return 'Español';
+      case 'de':
+        return 'Deutsch';
+      case 'ja':
+        return '日本語';
       default:
         return 'English';
     }

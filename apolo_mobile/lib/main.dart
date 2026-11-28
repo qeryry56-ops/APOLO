@@ -123,6 +123,9 @@ class _ApoloMobileAppState extends State<ApoloMobileApp> {
         Locale('en'),
         Locale('fr'),
         Locale('ar'),
+        Locale('es'),
+        Locale('de'),
+        Locale('ja'),
       ],
       localizationsDelegates: const [
         AppLocalizations.delegate,

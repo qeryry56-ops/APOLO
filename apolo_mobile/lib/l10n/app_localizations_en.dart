@@ -3800,4 +3800,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get interestsSurveySkipNow => 'Skip for now';
+
+  @override
+  String get priceLabel => 'Price';
+
+  @override
+  String get conditionLabel => 'Condition';
+
+  @override
+  String get conditionNew => 'New';
+
+  @override
+  String get conditionLikeNew => 'Like New';
+
+  @override
+  String get conditionUsed => 'Used';
+
+  @override
+  String get fulfillmentMeetInPerson => 'Meet in person';
+
+  @override
+  String get fulfillmentDelivery => 'Delivery';
+
+  @override
+  String get listingStatusSold => 'Sold';
+
+  @override
+  String get listingStatusReserved => 'Reserved';
+
+  @override
+  String get safetyTipsTitle => 'Safety tips';
 }

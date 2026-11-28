@@ -5,7 +5,12 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_ar.dart';
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_es.dart';
+import 'app_localizations_fr.dart';
+import 'app_localizations_ja.dart';
 
 // ignore_for_file: type=lint
 
@@ -92,7 +97,14 @@ abstract class AppLocalizations {
   ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('ar'),
+    Locale('de'),
+    Locale('en'),
+    Locale('es'),
+    Locale('fr'),
+    Locale('ja')
+  ];
 
   /// No description provided for @chatPlaceholder.
   ///
@@ -6745,6 +6757,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip for now'**
   String get interestsSurveySkipNow;
+
+  /// No description provided for @priceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get priceLabel;
+
+  /// No description provided for @conditionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition'**
+  String get conditionLabel;
+
+  /// No description provided for @conditionNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get conditionNew;
+
+  /// No description provided for @conditionLikeNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Like New'**
+  String get conditionLikeNew;
+
+  /// No description provided for @conditionUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Used'**
+  String get conditionUsed;
+
+  /// No description provided for @fulfillmentMeetInPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet in person'**
+  String get fulfillmentMeetInPerson;
+
+  /// No description provided for @fulfillmentDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get fulfillmentDelivery;
+
+  /// No description provided for @listingStatusSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get listingStatusSold;
+
+  /// No description provided for @listingStatusReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved'**
+  String get listingStatusReserved;
+
+  /// No description provided for @safetyTipsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Safety tips'**
+  String get safetyTipsTitle;
 }
 
 class _AppLocalizationsDelegate
@@ -6757,8 +6829,14 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+        'ar',
+        'de',
+        'en',
+        'es',
+        'fr',
+        'ja'
+      ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -6767,8 +6845,18 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'ar':
+      return AppLocalizationsAr();
+    case 'de':
+      return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
+    case 'es':
+      return AppLocalizationsEs();
+    case 'fr':
+      return AppLocalizationsFr();
+    case 'ja':
+      return AppLocalizationsJa();
   }
 
   throw FlutterError(

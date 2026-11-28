@@ -1667,5 +1667,15 @@
       }
     }
   },
-  "interestsSurveySkipNow": "Skip for now"
+  "interestsSurveySkipNow": "Skip for now",
+  "priceLabel": "Price",
+  "conditionLabel": "Condition",
+  "conditionNew": "New",
+  "conditionLikeNew": "Like New",
+  "conditionUsed": "Used",
+  "fulfillmentMeetInPerson": "Meet in person",
+  "fulfillmentDelivery": "Delivery",
+  "listingStatusSold": "Sold",
+  "listingStatusReserved": "Reserved",
+  "safetyTipsTitle": "Safety tips"
 }

@@ -1,17 +1,28 @@
 import 'package:flutter/widgets.dart';
 
+import '../core/state/app_state.dart';
 import 'app_localizations.dart';
 
 export 'app_localizations.dart';
 
-final AppLocalizations _fallbackEnglishL10n =
-    lookupAppLocalizations(const Locale('en'));
+final Map<String, AppLocalizations> _cachedByLang = <String, AppLocalizations>{};
 
-/// Synchronous English source-of-truth accessor for non-widget helpers,
-/// validators, and standalone widget tests without localization delegates.
-AppLocalizations get appL10n => _fallbackEnglishL10n;
+AppLocalizations lookupAppL10nByCode(String languageCode) {
+  final normalized = switch (languageCode) {
+    'ar' || 'fr' || 'en' || 'es' || 'de' || 'ja' => languageCode,
+    _ => 'en',
+  };
+  return _cachedByLang.putIfAbsent(
+    normalized,
+    () => lookupAppLocalizations(Locale(normalized)),
+  );
+}
+
+/// Active locale accessor backed by generated `.arb` catalogs (`en`, `fr`,
+/// `ar`, `es`, `de`, `ja`), usable in non-widget helpers and standalone tests.
+AppLocalizations get appL10n =>
+    lookupAppL10nByCode(AppState().locale.languageCode);
 
 extension AppLocalizationsBuildContextX on BuildContext {
-  AppLocalizations get l10n =>
-      AppLocalizations.of(this) ?? _fallbackEnglishL10n;
+  AppLocalizations get l10n => AppLocalizations.of(this) ?? appL10n;
 }

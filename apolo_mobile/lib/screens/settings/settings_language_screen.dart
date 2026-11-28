@@ -132,8 +132,41 @@ class _SettingsLanguageScreenState extends State<SettingsLanguageScreen> {
                                   ? ApoloDlLineItemState.disabled
                                   : ApoloDlLineItemState.normal,
                               value: currentCode == 'en',
-                              showSeparator: false,
                               onChanged: (_) => _selectLanguage('en'),
+                            ),
+                            ApoloDlLineItem(
+                              key: const Key('lang-option-es'),
+                              title: 'Español',
+                              description: 'Interfaz en español (LTR)',
+                              type: ApoloDlLineItemType.radio,
+                              state: _busy
+                                  ? ApoloDlLineItemState.disabled
+                                  : ApoloDlLineItemState.normal,
+                              value: currentCode == 'es',
+                              onChanged: (_) => _selectLanguage('es'),
+                            ),
+                            ApoloDlLineItem(
+                              key: const Key('lang-option-de'),
+                              title: 'Deutsch',
+                              description: 'Deutsche Oberfläche (LTR)',
+                              type: ApoloDlLineItemType.radio,
+                              state: _busy
+                                  ? ApoloDlLineItemState.disabled
+                                  : ApoloDlLineItemState.normal,
+                              value: currentCode == 'de',
+                              onChanged: (_) => _selectLanguage('de'),
+                            ),
+                            ApoloDlLineItem(
+                              key: const Key('lang-option-ja'),
+                              title: '日本語',
+                              description: '日本語インターフェース (LTR)',
+                              type: ApoloDlLineItemType.radio,
+                              state: _busy
+                                  ? ApoloDlLineItemState.disabled
+                                  : ApoloDlLineItemState.normal,
+                              value: currentCode == 'ja',
+                              showSeparator: false,
+                              onChanged: (_) => _selectLanguage('ja'),
                             ),
                           ],
                         ),

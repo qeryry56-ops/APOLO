@@ -239,7 +239,14 @@ class AppState extends ChangeNotifier {
 
   bool get hasPersonalizedInterests => categoryInterestWeights.isNotEmpty;
 
-  static const Set<String> supportedLanguageCodes = {'ar', 'fr', 'en'};
+  static const Set<String> supportedLanguageCodes = {
+    'ar',
+    'fr',
+    'en',
+    'es',
+    'de',
+    'ja',
+  };
 
   static String _normalizeLanguageCode(String code) =>
       supportedLanguageCodes.contains(code) ? code : 'en';
