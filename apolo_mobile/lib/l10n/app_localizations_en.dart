@@ -3830,4 +3830,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safetyTipsTitle => 'Safety tips';
+
+  @override
+  String get adDetailTranslate => 'Translate';
+
+  @override
+  String get adDetailTranslating => 'Translating...';
+
+  @override
+  String adDetailTranslatedFrom(Object language) {
+    return 'Translated from $language';
+  }
+
+  @override
+  String get adDetailOriginalVersion => 'Original';
+
+  @override
+  String get adDetailTranslationFailed =>
+      'Could not translate listing right now';
+
+  @override
+  String get langNameEnglish => 'English';
+
+  @override
+  String get langNameFrench => 'French';
+
+  @override
+  String get langNameArabic => 'Arabic';
+
+  @override
+  String get langNameSpanish => 'Spanish';
+
+  @override
+  String get langNameGerman => 'German';
+
+  @override
+  String get langNameJapanese => 'Japanese';
 }

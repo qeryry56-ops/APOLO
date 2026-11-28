@@ -6817,6 +6817,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Safety tips'**
   String get safetyTipsTitle;
+
+  /// No description provided for @adDetailTranslate.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get adDetailTranslate;
+
+  /// No description provided for @adDetailTranslating.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating...'**
+  String get adDetailTranslating;
+
+  /// No description provided for @adDetailTranslatedFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated from {language}'**
+  String adDetailTranslatedFrom(Object language);
+
+  /// No description provided for @adDetailOriginalVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get adDetailOriginalVersion;
+
+  /// No description provided for @adDetailTranslationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not translate listing right now'**
+  String get adDetailTranslationFailed;
+
+  /// No description provided for @langNameEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get langNameEnglish;
+
+  /// No description provided for @langNameFrench.
+  ///
+  /// In en, this message translates to:
+  /// **'French'**
+  String get langNameFrench;
+
+  /// No description provided for @langNameArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic'**
+  String get langNameArabic;
+
+  /// No description provided for @langNameSpanish.
+  ///
+  /// In en, this message translates to:
+  /// **'Spanish'**
+  String get langNameSpanish;
+
+  /// No description provided for @langNameGerman.
+  ///
+  /// In en, this message translates to:
+  /// **'German'**
+  String get langNameGerman;
+
+  /// No description provided for @langNameJapanese.
+  ///
+  /// In en, this message translates to:
+  /// **'Japanese'**
+  String get langNameJapanese;
 }
 
 class _AppLocalizationsDelegate

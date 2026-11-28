@@ -1116,5 +1116,16 @@
   "fulfillmentDelivery": "Livraison",
   "listingStatusSold": "Vendu",
   "listingStatusReserved": "Réservé",
-  "safetyTipsTitle": "Conseils de sécurité"
+  "safetyTipsTitle": "Conseils de sécurité",
+  "adDetailTranslate": "Traduire",
+  "adDetailTranslating": "Traduction...",
+  "adDetailTranslatedFrom": "Traduit depuis : {language}",
+  "adDetailOriginalVersion": "Original",
+  "adDetailTranslationFailed": "Impossible de traduire l'annonce pour le moment",
+  "langNameEnglish": "anglais",
+  "langNameFrench": "français",
+  "langNameArabic": "arabe",
+  "langNameSpanish": "espagnol",
+  "langNameGerman": "allemand",
+  "langNameJapanese": "japonais"
 }

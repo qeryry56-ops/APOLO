@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../core/config/app_config.dart';
 import '../core/location/marketplace_location.dart';
 import '../core/services/firebase_chat_service.dart';
+import '../core/services/listing_translation_service.dart';
 import '../core/state/app_state.dart';
 import '../theme/app_typography.dart';
 import '../widgets/apolo_badges_kit.dart';
@@ -62,6 +63,10 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   bool _alertEnabled = false;
   bool _followingSellerLocal = false;
   bool _hiddenListing = false;
+  bool _translatingListing = false;
+  ListingTranslationResult? _translatedListing;
+  bool _showTranslatedListing = false;
+  String? _lastTranslationLang;
 
   // Dynamic Layer v5.1 Strict Palette Tokens
   Color get _dlBg => ApoloDlPalette.of(context).bg;
@@ -94,7 +99,9 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
       }
     }
     _state.addListener(_onStateChanged);
+    _syncCachedTranslation();
     _fetchDetails().then((_) {
+      if (mounted) _syncCachedTranslation();
       if (mounted && widget.openChatOnLoad && _ad != null) _openInAppChat();
     });
   }
@@ -108,7 +115,90 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
   }
 
   void _onStateChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final currentLang =
+        ListingTranslationService.normalizeLang(_state.s.lang);
+    if (_lastTranslationLang != null && _lastTranslationLang != currentLang) {
+      _translatedListing = null;
+      _showTranslatedListing = false;
+      _syncCachedTranslation();
+    }
+    setState(() {});
+  }
+
+  String _currentTargetLang(BuildContext ctx) {
+    final localeLang = Localizations.maybeLocaleOf(ctx)?.languageCode;
+    return ListingTranslationService.normalizeLang(
+      localeLang ?? _state.s.lang,
+    );
+  }
+
+  Future<void> _syncCachedTranslation() async {
+    final ad = _ad;
+    if (ad == null) return;
+    final rawTitle = (ad['title'] ?? '').toString().trim();
+    final rawDesc = (ad['description'] ?? '').toString().trim();
+    final targetLang = ListingTranslationService.normalizeLang(_state.s.lang);
+    _lastTranslationLang = targetLang;
+    if (!ListingTranslationService.shouldOfferTranslation(
+      title: rawTitle,
+      description: rawDesc,
+      appLang: targetLang,
+      ad: ad,
+    )) {
+      return;
+    }
+    final cached = await ListingTranslationService.instance
+        .getCachedTranslation(rawTitle, rawDesc, targetLang);
+    if (!mounted || cached == null) return;
+    setState(() {
+      _translatedListing = cached;
+    });
+  }
+
+  Future<void> _handleTranslateTap(
+    Map<String, dynamic> ad,
+    String targetLang,
+  ) async {
+    if (_translatingListing) return;
+    HapticFeedback.selectionClick();
+    final rawTitle = (ad['title'] ?? '').toString().trim();
+    final rawDesc = (ad['description'] ?? '').toString().trim();
+    if (_translatedListing != null &&
+        _translatedListing!.targetLang == targetLang) {
+      setState(() => _showTranslatedListing = !_showTranslatedListing);
+      return;
+    }
+    setState(() => _translatingListing = true);
+    try {
+      final result = await translateListing(
+        rawTitle,
+        rawDesc,
+        targetLang,
+        sourceLangOverride: ListingTranslationService.detectListingLanguage(
+          rawTitle,
+          rawDesc,
+          ad: ad,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _translatedListing = result;
+        _showTranslatedListing = true;
+        _translatingListing = false;
+        _lastTranslationLang = targetLang;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _translatingListing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: _dlInk,
+          content: Text(context.l10n.adDetailTranslationFailed),
+        ),
+      );
+    }
   }
 
   bool _isFollowingSeller(int sellerId) {
@@ -1609,6 +1699,34 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
     required String priceFrequency,
   }) {
     final String listedLabel = _resolveListedTimeLabel(ad, s);
+    final String rawDesc = (ad['description'] ?? '').toString().trim();
+    final String targetLang = _currentTargetLang(context);
+    final bool canTranslate = ListingTranslationService.shouldOfferTranslation(
+      title: title,
+      description: rawDesc,
+      appLang: targetLang,
+      ad: ad,
+    );
+    final bool isTranslatedActive = canTranslate &&
+        _showTranslatedListing &&
+        _translatedListing != null &&
+        _translatedListing!.targetLang == targetLang;
+    final String displayTitle =
+        isTranslatedActive && _translatedListing!.title.trim().isNotEmpty
+            ? _translatedListing!.title
+            : title;
+    final String sourceLangCode = isTranslatedActive
+        ? _translatedListing!.sourceLang
+        : ListingTranslationService.detectListingLanguage(
+            title,
+            rawDesc,
+            ad: ad,
+          );
+    final String sourceLangLabel =
+        ListingTranslationService.languageDisplayName(
+      sourceLangCode,
+      context.l10n,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1616,7 +1734,8 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            displayTitle,
+            key: const Key('ad-detail-title-text'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -1627,6 +1746,104 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
               height: 1.22,
             ),
           ),
+          if (isTranslatedActive) ...[
+            const SizedBox(height: 6),
+            Container(
+              key: const Key('ad-detail-translated-badge'),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: _dlPill,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.translate_rounded, size: 13, color: _dlInk),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      context.l10n.adDetailTranslatedFrom(sourceLangLabel),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: _dlInk,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (title.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${context.l10n.adDetailOriginalVersion}: $title',
+                key: const Key('ad-detail-original-title'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: _dlMuted,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ],
+          if (canTranslate) ...[
+            const SizedBox(height: 8),
+            InkWell(
+              key: const Key('ad-detail-translate-btn'),
+              onTap: _translatingListing
+                  ? null
+                  : () => _handleTranslateTap(ad, targetLang),
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 11, vertical: 5.5),
+                decoration: BoxDecoration(
+                  color: isTranslatedActive ? _dlInk : _dlPill,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_translatingListing)
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.8,
+                          color: _dlInk,
+                        ),
+                      )
+                    else
+                      Icon(
+                        Icons.translate_rounded,
+                        size: 13.5,
+                        color: isTranslatedActive ? _dlOnInk : _dlInk,
+                      ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _translatingListing
+                          ? context.l10n.adDetailTranslating
+                          : (isTranslatedActive
+                              ? context.l10n.adDetailOriginalVersion
+                              : context.l10n.adDetailTranslate),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isTranslatedActive ? _dlOnInk : _dlInk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -2120,6 +2337,21 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             appL10n.adDetailNoDescriptionProvidedMessageSeller,
           )
         : rawDesc;
+    final String targetLang = _currentTargetLang(context);
+    final bool isTranslatedActive = _showTranslatedListing &&
+        _translatedListing != null &&
+        _translatedListing!.targetLang == targetLang &&
+        rawDesc.isNotEmpty;
+    final String displayDescription = isTranslatedActive &&
+            _translatedListing!.description.trim().isNotEmpty
+        ? _translatedListing!.description
+        : fullDescription;
+    final String sourceLangLabel = isTranslatedActive
+        ? ListingTranslationService.languageDisplayName(
+            _translatedListing!.sourceLang,
+            context.l10n,
+          )
+        : '';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -2136,17 +2368,55 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  s.tr('الوصف', 'Description', appL10n.adDetailDescription),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _dlInk,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        s.tr(
+                          'الوصف',
+                          'Description',
+                          appL10n.adDetailDescription,
+                        ),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: _dlInk,
+                        ),
+                      ),
+                    ),
+                    if (isTranslatedActive)
+                      Flexible(
+                        flex: 0,
+                        child: Container(
+                          key: const Key('ad-detail-desc-translated-badge'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _dlBg,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            context.l10n.adDetailTranslatedFrom(
+                              sourceLangLabel,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _dlMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  fullDescription,
+                  displayDescription,
+                  key: const Key('ad-detail-description-text'),
                   maxLines: _descExpanded ? 50 : 4,
                   overflow: _descExpanded
                       ? TextOverflow.visible
@@ -2158,7 +2428,34 @@ class _AdDetailScreenState extends State<AdDetailScreen> {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                if (fullDescription.length > 140) ...[
+                if (isTranslatedActive) ...[
+                  const SizedBox(height: 12),
+                  Divider(height: 1, thickness: 1, color: _dlSeparator),
+                  const SizedBox(height: 10),
+                  Text(
+                    context.l10n.adDetailOriginalVersion,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: _dlMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    rawDesc,
+                    key: const Key('ad-detail-original-description'),
+                    maxLines: _descExpanded ? 50 : 4,
+                    overflow: _descExpanded
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.45,
+                      color: _dlMuted,
+                    ),
+                  ),
+                ],
+                if (displayDescription.length > 140) ...[
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () => setState(() => _descExpanded = !_descExpanded),

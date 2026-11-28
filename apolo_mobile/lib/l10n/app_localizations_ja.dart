@@ -3675,4 +3675,39 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get safetyTipsTitle => '安全取引のヒント';
+
+  @override
+  String get adDetailTranslate => '翻訳';
+
+  @override
+  String get adDetailTranslating => '翻訳中...';
+
+  @override
+  String adDetailTranslatedFrom(Object language) {
+    return '$languageから翻訳';
+  }
+
+  @override
+  String get adDetailOriginalVersion => '原文';
+
+  @override
+  String get adDetailTranslationFailed => '現在この出品を翻訳できません';
+
+  @override
+  String get langNameEnglish => '英語';
+
+  @override
+  String get langNameFrench => 'フランス語';
+
+  @override
+  String get langNameArabic => 'アラビア語';
+
+  @override
+  String get langNameSpanish => 'スペイン語';
+
+  @override
+  String get langNameGerman => 'ドイツ語';
+
+  @override
+  String get langNameJapanese => '日本語';
 }

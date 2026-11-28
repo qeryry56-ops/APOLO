@@ -1116,5 +1116,16 @@
   "fulfillmentDelivery": "配送",
   "listingStatusSold": "売り切れ",
   "listingStatusReserved": "取り置き中",
-  "safetyTipsTitle": "安全取引のヒント"
+  "safetyTipsTitle": "安全取引のヒント",
+  "adDetailTranslate": "翻訳",
+  "adDetailTranslating": "翻訳中...",
+  "adDetailTranslatedFrom": "{language}から翻訳",
+  "adDetailOriginalVersion": "原文",
+  "adDetailTranslationFailed": "現在この出品を翻訳できません",
+  "langNameEnglish": "英語",
+  "langNameFrench": "フランス語",
+  "langNameArabic": "アラビア語",
+  "langNameSpanish": "スペイン語",
+  "langNameGerman": "ドイツ語",
+  "langNameJapanese": "日本語"
 }

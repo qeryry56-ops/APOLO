@@ -1677,5 +1677,23 @@
   "fulfillmentDelivery": "Delivery",
   "listingStatusSold": "Sold",
   "listingStatusReserved": "Reserved",
-  "safetyTipsTitle": "Safety tips"
+  "safetyTipsTitle": "Safety tips",
+  "adDetailTranslate": "Translate",
+  "adDetailTranslating": "Translating...",
+  "adDetailTranslatedFrom": "Translated from {language}",
+  "@adDetailTranslatedFrom": {
+    "placeholders": {
+      "language": {
+        "type": "Object"
+      }
+    }
+  },
+  "adDetailOriginalVersion": "Original",
+  "adDetailTranslationFailed": "Could not translate listing right now",
+  "langNameEnglish": "English",
+  "langNameFrench": "French",
+  "langNameArabic": "Arabic",
+  "langNameSpanish": "Spanish",
+  "langNameGerman": "German",
+  "langNameJapanese": "Japanese"
 }

@@ -1116,5 +1116,16 @@
   "fulfillmentDelivery": "Versand",
   "listingStatusSold": "Verkauft",
   "listingStatusReserved": "Reserviert",
-  "safetyTipsTitle": "Sicherheitstipps"
+  "safetyTipsTitle": "Sicherheitstipps",
+  "adDetailTranslate": "Übersetzen",
+  "adDetailTranslating": "Übersetze...",
+  "adDetailTranslatedFrom": "Übersetzt aus: {language}",
+  "adDetailOriginalVersion": "Original",
+  "adDetailTranslationFailed": "Anzeige konnte nicht übersetzt werden",
+  "langNameEnglish": "Englisch",
+  "langNameFrench": "Französisch",
+  "langNameArabic": "Arabisch",
+  "langNameSpanish": "Spanisch",
+  "langNameGerman": "Deutsch",
+  "langNameJapanese": "Japanisch"
 }

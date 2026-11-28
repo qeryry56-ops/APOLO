@@ -1116,5 +1116,16 @@
   "fulfillmentDelivery": "توصيل",
   "listingStatusSold": "تم البيع",
   "listingStatusReserved": "محجوز",
-  "safetyTipsTitle": "نصائح الأمان"
+  "safetyTipsTitle": "نصائح الأمان",
+  "adDetailTranslate": "ترجمة",
+  "adDetailTranslating": "جاري الترجمة...",
+  "adDetailTranslatedFrom": "مترجم من {language}",
+  "adDetailOriginalVersion": "النص الأصلي",
+  "adDetailTranslationFailed": "تعذر ترجمة الإعلان حالياً",
+  "langNameEnglish": "الإنجليزية",
+  "langNameFrench": "الفرنسية",
+  "langNameArabic": "العربية",
+  "langNameSpanish": "الإسبانية",
+  "langNameGerman": "الألمانية",
+  "langNameJapanese": "اليابانية"
 }

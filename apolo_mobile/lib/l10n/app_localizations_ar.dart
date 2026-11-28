@@ -3829,4 +3829,39 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get safetyTipsTitle => 'نصائح الأمان';
+
+  @override
+  String get adDetailTranslate => 'ترجمة';
+
+  @override
+  String get adDetailTranslating => 'جاري الترجمة...';
+
+  @override
+  String adDetailTranslatedFrom(Object language) {
+    return 'مترجم من $language';
+  }
+
+  @override
+  String get adDetailOriginalVersion => 'النص الأصلي';
+
+  @override
+  String get adDetailTranslationFailed => 'تعذر ترجمة الإعلان حالياً';
+
+  @override
+  String get langNameEnglish => 'الإنجليزية';
+
+  @override
+  String get langNameFrench => 'الفرنسية';
+
+  @override
+  String get langNameArabic => 'العربية';
+
+  @override
+  String get langNameSpanish => 'الإسبانية';
+
+  @override
+  String get langNameGerman => 'الألمانية';
+
+  @override
+  String get langNameJapanese => 'اليابانية';
 }
